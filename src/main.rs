@@ -6,7 +6,7 @@ use packed_struct::prelude::*;
 use std::io;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
-use utils::{convert_u16_to_u8s_be, convert_u32_to_u8s_be};
+use utils::{convert_u16_to_u8s_be, convert_i32_to_u8s_be};
 
 mod tests;
 mod utils;
@@ -441,7 +441,7 @@ pub struct ResourceRecord {
     // cached before it should be discarded.  Zero values are
     // interpreted to mean that the RR can only be used for the
     // transaction in progress, and should not be cached.
-    ttl: u32,
+    ttl: i32,
     // RDLENGTH        an unsigned 16 bit integer that specifies the length in octets of the RDATA field.
     rdlength: u16,
 
@@ -463,7 +463,7 @@ impl From<ResourceRecord> for Vec<u8> {
         // class
         retval.push(record.class as u8);
         // reply ttl
-        retval.extend(convert_u32_to_u8s_be(record.ttl));
+        retval.extend(convert_i32_to_u8s_be(record.ttl));
         // reply data length
         retval.extend(convert_u16_to_u8s_be(record.rdlength));
         // rdata
