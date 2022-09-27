@@ -3,21 +3,26 @@
 // TODO: lowercase all reply name fields
 use packed_struct::prelude::*;
 
-use bit_vec::{self, BitVec};
-use tokio::net::UdpSocket;
-// use utils::get_u16_from_packets;
 use std::io;
 use std::net::SocketAddr;
+use tokio::net::UdpSocket;
+use utils::{convert_u16_to_u8s_be, convert_u32_to_u8s_be};
 
+mod tests;
 mod utils;
 
 /// Query handler
 async fn parse_query(len: usize, buf: [u8; 4096]) -> Result<Reply, String> {
-    let mut split_header: [u8; 16] = [0; 16];
-    split_header.copy_from_slice(&buf[0..16]);
+    // we only want the first 12 bytes for the header
+    let mut split_header: [u8; 12] = [0; 12];
+    split_header.copy_from_slice(&buf[0..12]);
+    // unpack the header for great justice
     let header = match PacketHeader::unpack(&split_header) {
         Ok(value) => value,
-        Err(error) => return Err(format!("Failed to parse packet: {:?}", error)),
+        Err(error) => {
+            // TODO this should be a SERVFAIL response
+            return Err(format!("Failed to parse packet: {:?}", error));
+        }
     };
     eprintln!("Buffer length: {}", len);
     eprintln!("Parsed header: {:?}", header);
@@ -27,27 +32,35 @@ async fn parse_query(len: usize, buf: [u8; 4096]) -> Result<Reply, String> {
             let question = Question::from_packets(&buf[12..len]).await;
             eprintln!("Resolved question: {:?}", question);
 
-            let question = question.unwrap();
-            let answer_rdata = String::from("butts");
+            let question = match question {
+                Ok(value) => value,
+                Err(error) => {
+                    // TODO: this should return a SERVFAIL
+                    return Err(error);
+                }
+            };
+            let answer_rdata = String::from("1.1.1.1");
+            // let answer_rdata = String::from("1.2.3.4");
             Ok(Reply {
                 header: PacketHeader {
                     id: header.id,
                     qr: PacketType::Answer,
-                    opcode: header.opcode,
-                    authoritative: true, // TODO: maybe?
+                    opcode: OpCode::Query, // TODO: should this match the query?
+                    authoritative: true,   // TODO: maybe?
                     truncated: false,
                     recursion_desired: header.recursion_desired,
                     recursion_available: header.recursion_desired, // TODO: work this out
                     z: false,
-                    ad: false,             // TODO: figure this out
-                    cd: false,             // TODO: figure this out
+                    ad: false, // TODO: figure this out
+                    cd: false, // TODO: figure this out
+                    // rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
                     rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
-                    qdcount: 0,
+                    qdcount: 1,
                     ancount: 1, // TODO: work out how many we'll return
                     nscount: 0,
                     arcount: 0,
                 },
-
+                question: question.clone(),
                 answer: ResourceRecord {
                     name: question.qname,
                     record_type: question.qtype,
@@ -74,19 +87,8 @@ async fn parse_query(len: usize, buf: [u8; 4096]) -> Result<Reply, String> {
 #[derive(Debug)]
 struct Reply {
     header: PacketHeader,
+    question: Question,
     answer: ResourceRecord,
-}
-
-fn convert_u16_to_u8s_be(integer: u16) -> [u8; 2] {
-    [(integer >> 8) as u8, integer as u8]
-}
-fn convert_u32_to_u8s_be(integer: u32) -> [u8; 4] {
-    [
-        (integer >> 24) as u8,
-        (integer >> 16) as u8,
-        (integer >> 8) as u8,
-        integer as u8,
-    ]
 }
 
 /// This is used to turn into a series of bytes to yeet back to the client
@@ -94,72 +96,20 @@ impl From<Reply> for Vec<u8> {
     fn from(reply: Reply) -> Self {
         let mut retval: Vec<u8> = vec![];
 
-        for id_byte in convert_u16_to_u8s_be(reply.header.id) {
-            retval.push(id_byte);
-        }
+        // use the packed_struct to build the bytes
+        let reply_header = match reply.header.pack() {
+            Ok(value) => value,
+            // TODO: this should not be a panic
+            Err(err) => panic!("Failed to pack reply header bytes: {:?}", err),
+        };
+        eprintln!("reply_header {:?}", reply_header);
+        retval.extend(reply_header);
 
-        // QR | Opcode | AA | TC | RD
+        // need to add the question in here
+        retval.extend(reply.question.to_bytes());
 
-        let mut second_byte: u8 = 0;
-        // response
-        second_byte |= 1 << 7;
-        // set opcode
-        // eprintln!("second_byte: {:?}", second_byte);
-        // eprintln!("opcode: {} ({:?})", reply.header.opcode as u8, reply.header.opcode);
-        second_byte |= (reply.header.opcode as u8) << 4;
-        // eprintln!("second_byte: {:?}", second_byte);
-        // eprintln!("second_byte: {:?}", second_byte);
-
-        second_byte |= (reply.header.authoritative as u8) << 2;
-        // eprintln!("second_byte: {:?}", second_byte);
-
-        second_byte |= (reply.header.truncated as u8) << 1;
-        // eprintln!("second_byte: {:?}", second_byte);
-
-        second_byte |= reply.header.recursion_desired as u8;
-        // eprintln!("second_byte: {:?}", second_byte);
-
-        retval.push(second_byte);
-        // RA & Z & RCODE
-        let mut third_byte: u8 = 0;
-
-        third_byte &= third_byte | (reply.header.recursion_available as u8) << 7;
-
-        // eprintln!("third_byte: {:?}", third_byte);
-        third_byte &= third_byte | (reply.header.rcode as u8);
-        // eprintln!("third_byte: {:?}", third_byte);
-        retval.push(third_byte);
-
-        // QDCOUNT
-        for id_byte in convert_u16_to_u8s_be(reply.header.qdcount) {
-            retval.push(id_byte);
-        }
-        // ANCOUNT
-        for id_byte in convert_u16_to_u8s_be(reply.header.ancount) {
-            retval.push(id_byte);
-        }
-        // NSCOUNT
-        for id_byte in convert_u16_to_u8s_be(reply.header.nscount) {
-            retval.push(id_byte);
-        }
-        // ARCOUNT
-        for id_byte in convert_u16_to_u8s_be(reply.header.arcount) {
-            retval.push(id_byte);
-        }
-
-        // reply.answer.
-        // name: String,
-        // record_type: RecordType,
-        // class: RecordClass,
-        // add the reply ttl
-        for x in convert_u32_to_u8s_be(reply.answer.ttl) {
-            retval.push(x);
-        }
-        // add the reply data length
-        for x in convert_u16_to_u8s_be(reply.answer.rdlength) {
-            retval.push(x);
-        }
-        // rdata: String,
+        let reply_bytes: Vec<u8> = reply.answer.into();
+        retval.extend(reply_bytes);
 
         retval
     }
@@ -183,7 +133,7 @@ impl From<bool> for PacketType {
 /// https://www.rfc-editor.org/rfc/rfc1035 Section 4.1.1
 #[allow(dead_code)]
 #[derive(Debug, PackedStruct)]
-#[packed_struct(bit_numbering = "msb0", size_bytes = "16")]
+#[packed_struct(bit_numbering = "msb0", size_bytes = "12")]
 pub struct PacketHeader {
     /// The query ID
     #[packed_field(bits = "0..=15", endian = "msb")]
@@ -227,74 +177,74 @@ pub struct PacketHeader {
 
 // TODO: probably bin this, because moved to packed struct
 /// When you want to parse a request
-impl From<[u8; 12]> for PacketHeader {
-    fn from(packets: [u8; 12]) -> PacketHeader {
-        let packet_bits = BitVec::from_bytes(&packets);
+// impl From<[u8; 12]> for PacketHeader {
+//     fn from(packets: [u8; 12]) -> PacketHeader {
+//         let packet_bits = BitVec::from_bytes(&packets);
 
-        let id = crate::utils::get_query_id(&packets);
+//         let id = crate::utils::get_query_id(&packets);
 
-        // ignored in a query
-        let authoritative = false;
-        let truncated = packet_bits.get(22).unwrap();
-        let recursion_desired = packet_bits.get(23).unwrap();
-        // ignored in a query
-        let recursion_available = false;
+//         // ignored in a query
+//         let authoritative = false;
+//         let truncated = packet_bits.get(22).unwrap();
+//         let recursion_desired = packet_bits.get(23).unwrap();
+//         // ignored in a query
+//         let recursion_available = false;
 
-        let qdcount = crate::utils::get_u16_from_packets(&packets, 4);
-        // let opcode: OpCode = crate::utils::get_u8_from_bits(&packet_bits,17, 4).into();
+//         let qdcount = crate::utils::get_u16_from_packets(&packets, 4);
+//         // let opcode: OpCode = crate::utils::get_u8_from_bits(&packet_bits,17, 4).into();
 
-        let opcode: OpCode = ((packets[2] & 0b011100) >> 2).into();
+//         let opcode: OpCode = ((packets[2] & 0b011100) >> 2).into();
 
-        PacketHeader {
-            id,
-            qr: packet_bits[16].into(),
-            opcode,
-            authoritative,
-            truncated,
-            recursion_desired,
-            recursion_available,
-            // should always be 0
-            z: false,
-            ad: false, // TODO: figure this out
-            cd: false, // TODO: figure this out
-            // ignored in a query
-            rcode: PacketHeader::default().rcode,
-            qdcount,
-            // not used in a query
-            ancount: 0,
-            // not used in a query
-            nscount: 0,
-            // not used in a query
-            arcount: 0,
-        }
-    }
-}
+//         PacketHeader {
+//             id,
+//             qr: packet_bits[16].into(),
+//             opcode,
+//             authoritative,
+//             truncated,
+//             recursion_desired,
+//             recursion_available,
+//             // should always be 0
+//             z: false,
+//             ad: false, // TODO: figure this out
+//             cd: false, // TODO: figure this out
+//             // ignored in a query
+//             rcode: PacketHeader::default().rcode,
+//             qdcount,
+//             // not used in a query
+//             ancount: 0,
+//             // not used in a query
+//             nscount: 0,
+//             // not used in a query
+//             arcount: 0,
+//         }
+//     }
+// }
 
-impl Default for PacketHeader {
-    fn default() -> Self {
-        PacketHeader {
-            id: 0,
-            qr: PacketType::Query,
-            opcode: OpCode::Query,
-            authoritative: false,
-            truncated: false,
-            recursion_desired: false,
-            recursion_available: false,
-            z: false,  // TODO: figure this out
-            ad: false, // TODO: figure this out
-            cd: false, // TODO: figure this out
-            rcode: Rcode::NoError,
-            qdcount: 0,
-            ancount: 0,
-            nscount: 0,
-            arcount: 0,
-        }
-    }
-}
+// impl Default for PacketHeader {
+//     fn default() -> Self {
+//         PacketHeader {
+//             id: 0,
+//             qr: PacketType::Query,
+//             opcode: OpCode::Query,
+//             authoritative: false,
+//             truncated: false,
+//             recursion_desired: false,
+//             recursion_available: false,
+//             z: false,  // TODO: figure this out
+//             ad: false, // TODO: figure this out
+//             cd: false, // TODO: figure this out
+//             rcode: Rcode::NoError,
+//             qdcount: 0,
+//             ancount: 0,
+//             nscount: 0,
+//             arcount: 0,
+//         }
+//     }
+// }
 
+#[derive(Debug, Eq, PartialEq, PrimitiveEnum_u8, Copy, Clone)]
 /// A four bit field that specifies kind of query in this message.
 /// This value is set by the originator of a query and copied into the response.
-#[derive(Debug, Eq, PartialEq, PrimitiveEnum_u8, Copy, Clone)]
 pub enum OpCode {
     Query = 0,
     // 0               a standard query (QUERY)
@@ -330,6 +280,7 @@ impl From<OpCode> for i32 {
 }
 
 #[derive(PrimitiveEnum_u8, Clone, Copy, Debug, Eq, PartialEq)]
+/// Response code, things like NOERROR, FORMATERROR, SERVFAIL etc.
 pub enum Rcode {
     NoError = 0,        // 0 - No error condition
     FormatError = 1,    // 1 - Format error - The name server was unable to interpret the query.
@@ -354,32 +305,32 @@ impl From<Rcode> for u8 {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum RecordType {
-    A,     // 1 a host address
-    NS,    // 2 an authoritative name server
-    MD,    // 3 a mail destination (Obsolete - use MX)
-    MF,    // 4 a mail forwarder (Obsolete - use MX)
-    CNAME, // 5 the canonical name for an alias
-    SOA,   // 6 marks the start of a zone of authority
-    MB,    // 7 a mailbox domain name (EXPERIMENTAL)
-    MG,    // 8 a mail group member (EXPERIMENTAL)
-    MR,    // 9 a mail rename domain name (EXPERIMENTAL)
-    NULL,  // 10 a null RR (EXPERIMENTAL)
-    WKS,   // 11 a well known service description
-    PTR,   // 12 a domain name pointer
-    HINFO, // 13 host information
-    MINFO, // 14 mailbox or mail list information
-    MX,    // 15 mail exchange
-    TXT,   // 16 text strings
-    AAAA,  // 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
-    AXFR,  // 252 A request for a transfer of an entire zone
+    A = 1,      // 1 a host address
+    NS = 2,     // 2 an authoritative name server
+    MD = 3,     // 3 a mail destination (Obsolete - use MX)
+    MF = 4,     // 4 a mail forwarder (Obsolete - use MX)
+    CNAME = 5,  // 5 the canonical name for an alias
+    SOA = 6,    // 6 marks the start of a zone of authority
+    MB = 7,     // 7 a mailbox domain name (EXPERIMENTAL)
+    MG = 8,     // 8 a mail group member (EXPERIMENTAL)
+    MR = 9,     // 9 a mail rename domain name (EXPERIMENTAL)
+    NULL = 10,  // 10 a null RR (EXPERIMENTAL)
+    WKS = 11,   // 11 a well known service description
+    PTR = 12,   // 12 a domain name pointer
+    HINFO = 13, // 13 host information
+    MINFO = 14, // 14 mailbox or mail list information
+    MX = 15,    // 15 mail exchange
+    TXT = 16,   // 16 text strings
+    AAAA = 28,  // 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+    AXFR = 252, // 252 A request for a transfer of an entire zone
 
-    MAILB, // 253 A request for mailbox-related records (MB, MG or MR)
+    MAILB = 253, // 253 A request for mailbox-related records (MB, MG or MR)
 
-    MAILA, // 254 A request for mail agent RRs (Obsolete - see MX)
+    MAILA = 254, // 254 A request for mail agent RRs (Obsolete - see MX)
 
-    ALL, // 255 A request for all records (*)
+    ALL = 255, // 255 A request for all records (*)
     InvalidType,
 }
 
@@ -441,20 +392,20 @@ impl From<&u16> for RecordType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 /// 3.2.4. CLASS values
 /// CLASS fields appear in resource records.
 pub enum RecordClass {
     // IN              1 the Internet
-    Internet,
+    Internet = 1,
     // CS              2 the CSNET class (Obsolete - used only for examples in some obsolete RFCs)
-    CsNet,
+    CsNet = 2,
     // CH              3 the CHAOS class
-    Chaos,
+    Chaos = 3,
     // HS              4 Hesiod [Dyer 87]
-    Hesiod,
+    Hesiod = 4,
 
-    InvalidType,
+    InvalidType = 0,
 }
 
 impl From<&u8> for RecordClass {
@@ -472,8 +423,10 @@ impl From<&u8> for RecordClass {
 /// The answer, authority, and additional sections all share the same
 /// format: a variable number of resource records, where the number of
 /// records is specified in the corresponding count field in the header.
+///
+/// https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.3
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ResourceRecord {
     // NAME            a domain name to which this resource record pertains.
     name: String,
@@ -498,9 +451,30 @@ pub struct ResourceRecord {
     // For example, the if the TYPE is A and the CLASS is IN, the RDATA field is a 4 octet ARPA Internet address.
     rdata: String,
 }
+impl ResourceRecord {}
+
+impl From<ResourceRecord> for Vec<u8> {
+    fn from(record: ResourceRecord) -> Self {
+        let mut retval: Vec<u8> = vec![];
+
+        retval.extend(crate::utils::name_as_bytes(record.name));
+        // type
+        retval.push(record.record_type as u8);
+        // class
+        retval.push(record.class as u8);
+        // reply ttl
+        retval.extend(convert_u32_to_u8s_be(record.ttl));
+        // reply data length
+        retval.extend(convert_u16_to_u8s_be(record.rdlength));
+        // rdata
+        retval.extend(record.rdata.as_bytes());
+        eprintln!("ResourceRecord Bytes: {:?}", retval);
+        retval
+    }
+}
 
 // TODO: can this be a packed struct for parsing? the qname is a padded string, so it doesn't have a set length
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Question {
     qname: String,
     qtype: RecordType,
@@ -554,6 +528,18 @@ impl Question {
             qclass,
         })
     }
+
+    /// turn a question into a vec of bytes to send back to the user
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut retval: Vec<u8> = vec![];
+
+        let name_as_bytes = crate::utils::name_as_bytes(self.qname.to_owned());
+        retval.extend(name_as_bytes);
+        retval.extend(crate::utils::convert_u16_to_u8s_be(self.qtype as u16));
+        retval.extend(crate::utils::convert_u16_to_u8s_be(self.qclass as u16));
+        eprintln!("Question: {:?}", retval);
+        retval
+    }
 }
 
 /// Pulled from https://docs.rs/tokio/latest/tokio/net/struct.UdpSocket.html#example-one-to-many-bind
@@ -577,6 +563,7 @@ async fn main() -> io::Result<()> {
                 println!("Result: {:?}", r);
 
                 let reply_bytes: Vec<u8> = r.into();
+                eprintln!("reply_bytes: {:?}", reply_bytes);
                 let len = sock.send_to(&reply_bytes as &[u8], addr).await?;
                 // let len = sock.send_to(r.answer.as_bytes(), addr).await?;
                 println!("{:?} bytes sent", len);

@@ -1,0 +1,19 @@
+---
+name: "Rust Test"
+"on":
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  rust_build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Build Release
+        run: cargo test
