@@ -37,8 +37,9 @@ fn test_convert_u32_to_u8s_be() {
     assert_eq!(convert_u32_to_u8s_be(testval), [0, 0, 0, 1]);
     let testval: u32 = 256;
     assert_eq!(convert_u32_to_u8s_be(testval), [0, 0, 1, 0]);
-    let testval: u32 = 65535;
-    assert_eq!(convert_u32_to_u8s_be(testval), [0, 0, 255, 255]);
+    let testval: u32 = 2_u32.pow(31);
+    assert_eq!(convert_u32_to_u8s_be(testval), [128, 0, 0, 0]);
+
 }
 
 pub fn convert_u32_to_u8s_be(integer: u32) -> [u8; 4] {
