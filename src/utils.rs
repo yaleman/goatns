@@ -30,6 +30,17 @@ fn test_convert_u16_to_u8s_be() {
 pub fn convert_u16_to_u8s_be(integer: u16) -> [u8; 2] {
     [(integer >> 8) as u8, integer as u8]
 }
+
+#[test]
+fn test_convert_u32_to_u8s_be() {
+    let testval: u32 = 1;
+    assert_eq!(convert_u32_to_u8s_be(testval), [0, 0, 0, 1]);
+    let testval: u32 = 256;
+    assert_eq!(convert_u32_to_u8s_be(testval), [0, 0, 1, 0]);
+    let testval: u32 = 65535;
+    assert_eq!(convert_u32_to_u8s_be(testval), [0, 0, 255, 255]);
+}
+
 pub fn convert_u32_to_u8s_be(integer: u32) -> [u8; 4] {
     [
         (integer >> 24) as u8,
