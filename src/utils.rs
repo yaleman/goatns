@@ -1,4 +1,3 @@
-
 // use bit_vec::{self, BitVec};
 
 /// gets the query ID from the question packets
@@ -7,7 +6,7 @@ pub fn get_query_id(packets: &[u8]) -> u16 {
 }
 /// gets a u16 based on the bit start point
 pub fn get_u16_from_packets(packets: &[u8], start_point: usize) -> u16 {
-    let mut result_bytes: [u8;2] = [0,0];
+    let mut result_bytes: [u8; 2] = [0, 0];
     let end_point: usize = start_point + 2;
     result_bytes.copy_from_slice(&packets[start_point..end_point]);
     u16::from_be_bytes(result_bytes)
