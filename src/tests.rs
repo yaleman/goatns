@@ -228,4 +228,28 @@ mod tests {
         }
         assert_eq!([reply_bytes[0], reply_bytes[1]], [0x3D, 0xE1]);
     }
+
+    #[tokio::test]
+    async fn test_from_bytes() {
+        let input = [
+            0x9c, 0x58, 0x01, 0x20, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x79,
+            0x61, 0x6c, 0x65, 0x6d, 0x61, 0x6e, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, 0x00,
+            0x01,
+        ];
+
+        let mut buf: [u8; 4096] = [0; 4096];
+        for (i, b) in input.iter().enumerate() {
+            buf[i] = *b as u8;
+        }
+
+        let config = crate::utils::get_config();
+
+        let result = crate::parse_query(crate::enums::Protocol::Udp, input.len(), buf, config)
+            .await
+            .unwrap();
+
+        assert_eq!(result.question.qclass, crate::enums::RecordClass::Internet);
+        assert_eq!(result.question.qname, "yaleman.org".as_bytes().to_vec());
+        // TODO: make sure *everything* is right here
+    }
 }

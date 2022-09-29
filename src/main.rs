@@ -18,7 +18,9 @@ use log::{debug, error, info, LevelFilter};
 use packed_struct::prelude::*;
 use std::io;
 use std::net::SocketAddr;
+use std::time::Duration;
 use tokio::net::UdpSocket;
+use tokio::time::timeout;
 use utils::{convert_u32_to_u8s_be, get_config, ConfigFile};
 
 use crate::enums::*;
@@ -37,6 +39,7 @@ mod utils;
 // }
 
 const HEADER_BYTES: usize = 12;
+const REPLY_TIMEOUT_MS: u64 = 200;
 
 /// https://www.rfc-editor.org/rfc/rfc1035 Section 4.1.1
 #[allow(dead_code)]
@@ -378,10 +381,10 @@ impl Question {
         let mut read_pointer = 0;
         let mut next_end = 0;
         let mut in_record_data: bool = false;
+        // until we hit a null, read bytes to get the name. I'm sure this won't blow up at any point.
         for qchar in buf.iter().take_while(|b| b != &&0) {
             // eprintln!("p: {}, np: {} {:?} {:?}", read_pointer, next_end, qchar, std::str::from_utf8(&[qchar.to_owned()]).unwrap());
             if read_pointer == next_end {
-                // eprintln!("we got to the next read point");
                 in_record_data = false;
                 next_end = read_pointer + qchar + 1;
                 if read_pointer != 0 {
@@ -390,26 +393,18 @@ impl Question {
                 }
             } else if in_record_data {
                 next_end = read_pointer + qchar;
-                // eprintln!("Updated next end to {}", next_end);
                 in_record_data = true;
-                // query.push(qchar.to_owned());
             } else {
-                // eprintln!("adding {}", qchar);
-                qname.push(qchar.to_owned());
+                qname.push(*qchar);
             }
-
             read_pointer += 1;
         }
-        // let qname = match std::str::from_utf8(&query) {
-        //     Ok(value) => value,
-        //     Err(error) => return Err(format!("Failed to parse query: {:?}", error)),
-        // };
-
+        read_pointer += 2;
         // next byte after the query is the type
-        let qtype = &buf[(read_pointer as usize) + 2];
+        let qtype = &buf[(read_pointer as usize)];
         let qtype: RecordType = qtype.into();
         // next byte after the type is the the class
-        let qclass = &buf[(read_pointer as usize) + 4];
+        let qclass = &buf[(read_pointer as usize) + 2];
         let qclass: RecordClass = qclass.into();
 
         Ok(Question {
@@ -431,35 +426,6 @@ impl Question {
         retval
     }
 }
-
-// async fn process_socket(stream: TcpStream, addr: SocketAddr) ->  Result<(), Box<dyn Error>> {
-//     eprintln!("TCP Connection: {:?}, {:?}", stream, addr);
-//     loop {
-//         // Wait for the socket to be readable
-//         stream.readable().await?;
-
-//         let mut buf = Vec::with_capacity(4096);
-
-//         // Try to read data, this may still fail with `WouldBlock`
-//         // if the readiness event is a false positive.
-//         match stream.try_read_buf(&mut buf) {
-//             Ok(0) => break,
-//             Ok(n) => {
-//                 println!("read {} bytes", n);
-//                 eprintln!("buf: {:?}", buf);
-//             }
-//             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-//                 continue;
-//             }
-//             Err(e) => {
-//                 return Err(e.into());
-//             }
-//         }
-//     }
-//     Ok(())
-// }
-
-/// Pulled from https://docs.rs/tokio/latest/tokio/net/struct.UdpSocket.html#example-one-to-many-bind
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -494,8 +460,19 @@ async fn main() -> io::Result<()> {
         };
         debug!("{:?} bytes received from {:?}", len, addr);
 
-        // add a timeout here: https://docs.rs/tokio/latest/tokio/time/fn.timeout.html
-        let udp_result = parse_query(Protocol::Udp, len, udp_buffer, config).await;
+        let udp_result = match timeout(
+            Duration::from_millis(REPLY_TIMEOUT_MS),
+            parse_query(Protocol::Udp, len, udp_buffer, config),
+        )
+        .await
+        {
+            Ok(reply) => reply,
+            Err(_) => {
+                error!("Did not receive response from parse_query within 10 ms");
+                continue;
+            }
+        };
+
         match udp_result {
             Ok(mut r) => {
                 debug!("Result: {:?}", r);
