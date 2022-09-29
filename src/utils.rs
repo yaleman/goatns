@@ -1,5 +1,5 @@
-use log::error;
 use config::{Config, File};
+use log::error;
 use serde::Deserialize;
 
 // use bit_vec::{self, BitVec};
@@ -91,33 +91,52 @@ pub fn convert_u8s_to_u32_be(input: [u8; 4]) -> u32 {
 //     ]
 // }
 
+pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
+    for (index, curr_byte) in search.iter().enumerate() {
+        if &(item as u8) == curr_byte {
+            return Some(index);
+        }
+    }
+    None
+}
+
 /// turn the NAME field into the bytes for a response
 ///
 /// so example.com turns into
 ///
 /// (7)example(3)com(0)
-pub fn name_as_bytes(name: String) -> Vec<u8> {
+///
+/// compress_target is the index of the octet in the response to point the response at
+/// which should typically be the qname in the question bytes
+pub fn name_as_bytes(name: Vec<u8>, compress_target: Option<u16>) -> Vec<u8> {
+    if let Some(target) = compress_target {
+        // we need the first two bits to be 1, to mark it as compressed
+        // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
+        let result: u16 = 0b1100000000000000 | target as u16;
+        return convert_u16_to_u8s_be(result).to_vec();
+    }
+
     let mut result: Vec<u8> = vec![];
-    // eprintln!("name_as_bytes: {:?}", name);
-    // if somehow it's a weird bare domain then YOLO it
-    if !name.contains('.') {
+    // if somehow it's a weird bare domain then we don't have to do much it
+    if !name.contains(&46) {
         result.push(name.len() as u8);
-        for b in name.as_bytes() {
-            result.push(b.to_owned())
-        }
+        result.extend(name);
     } else {
-        let mut name_bytes = name.clone();
+        let mut next_dot: usize = match vec_find(46, &name) {
+            Some(value) => value,
+            None => return result,
+        };
+        let mut name_bytes: Vec<u8> = name.to_vec();
         let mut keep_looping = true;
-        let mut next_dot: usize = name.find('.').unwrap();
         let mut current_position: usize = 0;
         // add the first segment length
         result.push(next_dot as u8);
 
         while keep_looping {
             if next_dot == current_position {
-                name_bytes = name_bytes[current_position + 1..].into();
-                next_dot = match name_bytes.find('.') {
-                    Some(value) => value as usize,
+                name_bytes = name_bytes.to_vec()[current_position + 1..].into();
+                next_dot = match vec_find(46, &name_bytes) {
+                    Some(value) => value,
                     None => name_bytes.len(),
                 };
                 current_position = 0;
@@ -126,7 +145,7 @@ pub fn name_as_bytes(name: String) -> Vec<u8> {
                 result.push(next_dot as u8);
             } else {
                 // we are processing bytes
-                result.push(name_bytes.as_bytes()[current_position]);
+                result.push(name_bytes[current_position]);
                 // eprintln!("{:?} {:?}", current_position, name_bytes.as_bytes()[current_position]);
                 current_position += 1;
             }
@@ -136,20 +155,18 @@ pub fn name_as_bytes(name: String) -> Vec<u8> {
         }
     }
     // make sure we have a trailing null
-    if !name.ends_with('.') {
-        result.push(0);
-    }
+    // if !name.ends_with('.') {
+    result.push(0);
+    // }
 
     result
 }
-
-
 
 #[derive(Deserialize, Debug, Eq, PartialEq, Copy, Clone)]
 pub struct ConfigFile<'a> {
     pub address: &'a str,
     pub port: u16,
-    pub capture_packets: bool
+    pub capture_packets: bool,
 }
 
 impl Default for ConfigFile<'static> {
@@ -157,18 +174,18 @@ impl Default for ConfigFile<'static> {
         Self {
             address: "0.0.0.0",
             port: 15353,
-            capture_packets: false
+            capture_packets: false,
         }
     }
 }
 
 impl From<Config> for ConfigFile<'static> {
     fn from(config: Config) -> Self {
-        let address  = config.get("addr").unwrap_or(Self::default().address);
+        let address = config.get("addr").unwrap_or(Self::default().address);
         ConfigFile {
             address,
             port: config.get("port").unwrap_or_default(),
-            capture_packets: config.get("capture_packets").unwrap_or_default()
+            capture_packets: config.get("capture_packets").unwrap_or_default(),
         }
     }
 }
@@ -177,10 +194,8 @@ pub fn get_config() -> ConfigFile<'static> {
     let config_file = String::from("~/.config/goatns.json");
     let config_filename: String = shellexpand::tilde(&config_file).into_owned();
 
-    let builder = Config::builder().add_source(File::new(
-        &config_filename,
-        config::FileFormat::Json,
-    ));
+    let builder =
+        Config::builder().add_source(File::new(&config_filename, config::FileFormat::Json));
 
     match builder.build() {
         Ok(config) => config.into(),
