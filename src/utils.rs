@@ -1,3 +1,7 @@
+use log::error;
+use config::{Config, File};
+use serde::Deserialize;
+
 // use bit_vec::{self, BitVec};
 
 /// gets a u16 based on the bit start point
@@ -43,7 +47,6 @@ fn test_convert_u32_to_u8s_be() {
     assert_eq!(0b10101010, 170);
 }
 // we might find a use for this yet
-#[cfg(test)]
 pub fn convert_u32_to_u8s_be(integer: u32) -> [u8; 4] {
     [
         (integer >> 24) as u8,
@@ -53,29 +56,40 @@ pub fn convert_u32_to_u8s_be(integer: u32) -> [u8; 4] {
     ]
 }
 
-#[test]
-fn test_convert_i32_to_u8s_be() {
-    let mut testval: i32 = 1;
-    assert_eq!(convert_i32_to_u8s_be(testval), [0, 0, 0, 1]);
-    testval = 256;
-    assert_eq!(convert_i32_to_u8s_be(testval), [0, 0, 1, 0]);
-    testval = 2_i32.pow(30);
-    eprintln!("testval 2_i32 ^ 30 = {}", testval);
-    assert_eq!(convert_i32_to_u8s_be(testval), [64, 0, 0, 0]);
-    testval = -32768;
-    assert_eq!(convert_i32_to_u8s_be(testval), [255, 255, 128, 0]);
+#[allow(dead_code)]
+pub fn convert_u8s_to_u32_be(input: [u8; 4]) -> u32 {
+    let mut result: u32 = 0;
+    result |= input[3] as u32;
+    result |= (input[2] as u32) << 8;
+    result |= (input[1] as u32) << 16;
+    result |= (input[0] as u32) << 24;
 
-    // random test of most significant bit things
-    assert_eq!(0b10101010, 170);
+    result
 }
-pub fn convert_i32_to_u8s_be(integer: i32) -> [u8; 4] {
-    [
-        (integer >> 24) as u8,
-        (integer >> 16) as u8,
-        (integer >> 8) as u8,
-        integer as u8,
-    ]
-}
+
+// #[test]
+// fn test_convert_i32_to_u8s_be() {
+//     let mut testval: i32 = 1;
+//     assert_eq!(convert_i32_to_u8s_be(testval), [0, 0, 0, 1]);
+//     testval = 256;
+//     assert_eq!(convert_i32_to_u8s_be(testval), [0, 0, 1, 0]);
+//     testval = 2_i32.pow(30);
+//     eprintln!("testval 2_i32 ^ 30 = {}", testval);
+//     assert_eq!(convert_i32_to_u8s_be(testval), [64, 0, 0, 0]);
+//     testval = -32768;
+//     assert_eq!(convert_i32_to_u8s_be(testval), [255, 255, 128, 0]);
+
+//     // random test of most significant bit things
+//     assert_eq!(0b10101010, 170);
+// }
+// pub fn convert_i32_to_u8s_be(integer: i32) -> [u8; 4] {
+//     [
+//         (integer >> 24) as u8,
+//         (integer >> 16) as u8,
+//         (integer >> 8) as u8,
+//         integer as u8,
+//     ]
+// }
 
 /// turn the NAME field into the bytes for a response
 ///
@@ -121,8 +135,61 @@ pub fn name_as_bytes(name: String) -> Vec<u8> {
             }
         }
     }
-    // trailing null
-    result.push(0);
+    // make sure we have a trailing null
+    if !name.ends_with('.') {
+        result.push(0);
+    }
 
     result
+}
+
+
+
+#[derive(Deserialize, Debug, Eq, PartialEq, Copy, Clone)]
+pub struct ConfigFile<'a> {
+    pub address: &'a str,
+    pub port: u16,
+    pub capture_packets: bool
+}
+
+impl Default for ConfigFile<'static> {
+    fn default() -> Self {
+        Self {
+            address: "0.0.0.0",
+            port: 15353,
+            capture_packets: false
+        }
+    }
+}
+
+impl From<Config> for ConfigFile<'static> {
+    fn from(config: Config) -> Self {
+        let address  = config.get("addr").unwrap_or(Self::default().address);
+        ConfigFile {
+            address,
+            port: config.get("port").unwrap_or_default(),
+            capture_packets: config.get("capture_packets").unwrap_or_default()
+        }
+    }
+}
+
+pub fn get_config() -> ConfigFile<'static> {
+    let config_file = String::from("~/.config/goatns.json");
+    let config_filename: String = shellexpand::tilde(&config_file).into_owned();
+
+    let builder = Config::builder().add_source(File::new(
+        &config_filename,
+        config::FileFormat::Json,
+    ));
+
+    match builder.build() {
+        Ok(config) => config.into(),
+        Err(error) => {
+            error!(
+                "Couldn't load config from {:?}: {:?}",
+                config_filename, error
+            );
+            ConfigFile::default()
+        }
+    }
 }

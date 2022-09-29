@@ -1,21 +1,45 @@
 // TODO: SLIST? https://www.rfc-editor.org/rfc/rfc1034 something about state handling.
 // TODO: lowercase all question name fields
 // TODO: lowercase all reply name fields
-use packed_struct::prelude::*;
 
+// all the types and codes and things - https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
+
+use log::{debug, error, info, LevelFilter};
+use packed_struct::prelude::*;
 use std::io;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
-use utils::{convert_u16_to_u8s_be, convert_i32_to_u8s_be};
+use utils::{ConfigFile, convert_u32_to_u8s_be, get_config};
 
+use crate::ip_address::IPAddress;
+use crate::utils::convert_u16_to_u8s_be;
+
+mod ip_address;
+mod packet_dumper;
 mod tests;
 mod utils;
 
+
+/// builds a servfail response
+// async fn reply_servfail(question: Question) -> Reply {
+//     Reply{}
+// }
+
+const HEADER_BYTES: usize = 12;
+
+enum Protocol {
+    // Tcp,
+    Udp,
+}
+
 /// Query handler
-async fn parse_query(len: usize, buf: [u8; 4096]) -> Result<Reply, String> {
+async fn parse_query(_proto: Protocol, len: usize, buf: [u8; 4096], config: ConfigFile<'static>) -> Result<Reply, String> {
+    if config.capture_packets {
+        crate::packet_dumper::dump_bytes(buf[0..len].into()).await;
+    }
     // we only want the first 12 bytes for the header
-    let mut split_header: [u8; 12] = [0; 12];
-    split_header.copy_from_slice(&buf[0..12]);
+    let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
+    split_header.copy_from_slice(&buf[0..HEADER_BYTES]);
     // unpack the header for great justice
     let header = match PacketHeader::unpack(&split_header) {
         Ok(value) => value,
@@ -24,12 +48,12 @@ async fn parse_query(len: usize, buf: [u8; 4096]) -> Result<Reply, String> {
             return Err(format!("Failed to parse packet: {:?}", error));
         }
     };
-    eprintln!("Buffer length: {}", len);
+    debug!("Buffer length: {}", len);
     eprintln!("Parsed header: {:?}", header);
 
     match header.opcode {
         OpCode::Query => {
-            let question = Question::from_packets(&buf[12..len]).await;
+            let question = Question::from_packets(&buf[HEADER_BYTES..len]).await;
             eprintln!("Resolved question: {:?}", question);
 
             let question = match question {
@@ -39,20 +63,25 @@ async fn parse_query(len: usize, buf: [u8; 4096]) -> Result<Reply, String> {
                     return Err(error);
                 }
             };
-            let answer_rdata = String::from("1.1.1.1");
-            // let answer_rdata = String::from("1.2.3.4");
+            // let answer_rdata = String::from("0.0.0.0");
+            let answer_rdata = IPAddress::new(0,0,0,0).pack().unwrap();
+
+            // this is our reply - static until that bit's done
             Ok(Reply {
                 header: PacketHeader {
                     id: header.id,
                     qr: PacketType::Answer,
-                    opcode: OpCode::Query, // TODO: should this match the query?
-                    authoritative: true,   // TODO: maybe?
-                    truncated: false,
+                    opcode: header.opcode,
+                    authoritative: false, // TODO: are we authoritative
+                    truncated: false,     // TODO: work out if it's truncated (ie, UDP)
                     recursion_desired: header.recursion_desired,
                     recursion_available: header.recursion_desired, // TODO: work this out
                     z: false,
-                    ad: false, // TODO: figure this out
-                    cd: false, // TODO: figure this out
+                    ad: true, // TODO: decide how the ad flag should be set -  "authentic data" - This requests the server to return whether all of the answer and
+                    // authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all
+                    // records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer
+                    // was insecure or not validated. This bit is set by default.
+                    cd: false, // TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
                     // rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
                     rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
                     qdcount: 1,
@@ -67,7 +96,7 @@ async fn parse_query(len: usize, buf: [u8; 4096]) -> Result<Reply, String> {
                     class: question.qclass,
                     ttl: 60, // TODO: set a TTL
                     rdlength: (answer_rdata.len() as u16),
-                    rdata: answer_rdata,
+                    rdata: answer_rdata.to_vec(),
                 },
             })
         }
@@ -109,6 +138,7 @@ impl From<Reply> for Vec<u8> {
         retval.extend(reply.question.to_bytes());
 
         let reply_bytes: Vec<u8> = reply.answer.into();
+
         retval.extend(reply_bytes);
 
         retval
@@ -248,8 +278,8 @@ pub struct PacketHeader {
 pub enum OpCode {
     Query = 0,
     // 0               a standard query (QUERY)
-    IQuery = 1,
-    // 1               an inverse query (IQUERY)
+    // IQuery = 1, an inverse query (IQUERY) - obsolete in https://www.rfc-editor.org/rfc/rfc3425
+
     Status = 2,
     // 2               a server status request (STATUS)
     Reserved = 15,
@@ -260,7 +290,7 @@ impl From<u8> for OpCode {
     fn from(input: u8) -> Self {
         match input {
             0 => Self::Query,
-            1 => Self::IQuery,
+            // 1 => Self::IQuery,
             2 => Self::Status,
             _ => Self::Reserved,
         }
@@ -271,7 +301,7 @@ impl From<OpCode> for i32 {
     fn from(val: OpCode) -> i32 {
         match val {
             OpCode::Query => 0b00,
-            OpCode::IQuery => 0b01,
+            // OpCode::IQuery => 0b01,
             OpCode::Status => 0b10,
             //  Self::Reserved
             _ => 0b11,
@@ -292,18 +322,18 @@ pub enum Rcode {
                  // 6-15 - Reserved for future use
 }
 
-impl From<Rcode> for u8 {
-    fn from(val: Rcode) -> u8 {
-        match val {
-            Rcode::NoError => 0,
-            Rcode::FormatError => 1,
-            Rcode::ServFail => 2,
-            Rcode::NameError => 3,
-            Rcode::NotImplemented => 4,
-            Rcode::Refused => 5,
-        }
-    }
-}
+// impl From<Rcode> for u8 {
+//     fn from(val: Rcode) -> u8 {
+//         match val {
+//             Rcode::NoError => 0,
+//             Rcode::FormatError => 1,
+//             Rcode::ServFail => 2,
+//             Rcode::NameError => 3,
+//             Rcode::NotImplemented => 4,
+//             Rcode::Refused => 5,
+//         }
+//     }
+// }
 
 #[derive(Clone, Copy, Debug)]
 pub enum RecordType {
@@ -441,15 +471,15 @@ pub struct ResourceRecord {
     // cached before it should be discarded.  Zero values are
     // interpreted to mean that the RR can only be used for the
     // transaction in progress, and should not be cached.
-    ttl: i32,
+    ttl: u32,
     // RDLENGTH        an unsigned 16 bit integer that specifies the length in octets of the RDATA field.
-    rdlength: u16,
+    rdlength: u16, // TODO this probably doesn't need to be set, since it can come off the length of rdata
 
     // TODO: this probably shouldn't be a string, but it is!
     // RDATA           a variable length string of octets that describes the resource.
     // The format of this information varies according to the TYPE and CLASS of the resource record.
     // For example, the if the TYPE is A and the CLASS is IN, the RDATA field is a 4 octet ARPA Internet address.
-    rdata: String,
+    rdata: Vec<u8>,
 }
 impl ResourceRecord {}
 
@@ -457,18 +487,51 @@ impl From<ResourceRecord> for Vec<u8> {
     fn from(record: ResourceRecord) -> Self {
         let mut retval: Vec<u8> = vec![];
 
+        eprintln!("{:?}", record);
         retval.extend(crate::utils::name_as_bytes(record.name));
         // type
         retval.push(record.record_type as u8);
         // class
         retval.push(record.class as u8);
         // reply ttl
-        retval.extend(convert_i32_to_u8s_be(record.ttl));
+        retval.extend(convert_u32_to_u8s_be(record.ttl));
         // reply data length
         retval.extend(convert_u16_to_u8s_be(record.rdlength));
         // rdata
-        retval.extend(record.rdata.as_bytes());
-        eprintln!("ResourceRecord Bytes: {:?}", retval);
+        retval.extend(record.rdata);
+        // match record.record_type {
+        //     RecordType::A => {
+        //         let ip_to_int = crate::ip_address::IPAddress::new(1, 2, 3, 4)
+        //             .pack()
+        //             .unwrap();
+        //         // rdata length
+        //         retval.extend([0, 4]); // TODO: this is a hack to just yolo a 32 bit address in
+        //                                // ip address
+        //         retval.extend(ip_to_int);
+        //     }
+        //     RecordType::NS => todo!(),
+        //     RecordType::MD => todo!(),
+        //     RecordType::MF => todo!(),
+        //     RecordType::CNAME => todo!(),
+        //     RecordType::SOA => todo!(),
+        //     RecordType::MB => todo!(),
+        //     RecordType::MG => todo!(),
+        //     RecordType::MR => todo!(),
+        //     RecordType::NULL => todo!(),
+        //     RecordType::WKS => todo!(),
+        //     RecordType::PTR => todo!(),
+        //     RecordType::HINFO => todo!(),
+        //     RecordType::MINFO => todo!(),
+        //     RecordType::MX => todo!(),
+        //     RecordType::TXT => todo!(),
+        //     RecordType::AAAA => todo!(),
+        //     RecordType::AXFR => todo!(),
+        //     RecordType::MAILB => todo!(),
+        //     RecordType::MAILA => todo!(),
+        //     RecordType::ALL => todo!(),
+        //     RecordType::InvalidType => todo!(),
+        // }
+        info!("ResourceRecord Bytes: {:?}", retval);
         retval
     }
 }
@@ -542,33 +605,91 @@ impl Question {
     }
 }
 
+// async fn process_socket(stream: TcpStream, addr: SocketAddr) ->  Result<(), Box<dyn Error>> {
+//     eprintln!("TCP Connection: {:?}, {:?}", stream, addr);
+//     loop {
+//         // Wait for the socket to be readable
+//         stream.readable().await?;
+
+//         let mut buf = Vec::with_capacity(4096);
+
+//         // Try to read data, this may still fail with `WouldBlock`
+//         // if the readiness event is a false positive.
+//         match stream.try_read_buf(&mut buf) {
+//             Ok(0) => break,
+//             Ok(n) => {
+//                 println!("read {} bytes", n);
+//                 eprintln!("buf: {:?}", buf);
+//             }
+//             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+//                 continue;
+//             }
+//             Err(e) => {
+//                 return Err(e.into());
+//             }
+//         }
+//     }
+//     Ok(())
+// }
+
+
+
 /// Pulled from https://docs.rs/tokio/latest/tokio/net/struct.UdpSocket.html#example-one-to-many-bind
+
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    let addr = "0.0.0.0";
-    let port = "15353";
 
-    let sock = UdpSocket::bind(format!("{}:{}", addr, port).parse::<SocketAddr>().unwrap()).await?;
-    println!("Listening on {}:{}", addr, port);
+    femme::with_level(LevelFilter::Trace);
 
-    let mut buf = [0; 4096];
+    let config: ConfigFile = get_config();
+
+    let listen_addr = format!("{}:{}", config.address, config.port);
+
+    info!("Starting UDP server on {}:{}", config.address, config.port);
+    let bind_address = match listen_addr.parse::<SocketAddr>() {
+        Ok(value) => value,
+        Err(error) => {
+            error!("Failed to parse address: {:?}", error);
+            return Ok(())
+        }
+    };
+    let udp_sock = match UdpSocket::bind(bind_address).await {
+        Ok(value) => value,
+        Err(error) => {
+            error!("Failed to start UDP listener: {:?}", error);
+            return Ok(())
+        }
+    };
+
+    let mut udp_buffer = [0; 4096];
+
     loop {
-        let (len, addr) = sock.recv_from(&mut buf).await?;
-        println!("{:?} bytes received from {:?}", len, addr);
+        let (len, addr) = match udp_sock.recv_from(&mut udp_buffer).await{
+            Ok(value) => value,
+            Err(error) => panic!("{:?}", error)
+        };
+        debug!("{:?} bytes received from {:?}", len, addr);
 
         // add a timeout here: https://docs.rs/tokio/latest/tokio/time/fn.timeout.html
-        let result = parse_query(len, buf).await;
-        match result {
+        let udp_result = parse_query(Protocol::Udp, len, udp_buffer, config).await;
+        match udp_result {
             Ok(r) => {
-                println!("Result: {:?}", r);
+                debug!("Result: {:?}", r);
 
                 let reply_bytes: Vec<u8> = r.into();
-                eprintln!("reply_bytes: {:?}", reply_bytes);
-                let len = sock.send_to(&reply_bytes as &[u8], addr).await?;
+                debug!("reply_bytes: {:?}", reply_bytes);
+                let len = match udp_sock.send_to(&reply_bytes as &[u8], addr).await {
+                        Ok(value) => value,
+                        Err(err) => {
+                            error!("Failed to send data back to {:?}: {:?}", addr, err);
+                            return Ok(())
+                        }
+                };
                 // let len = sock.send_to(r.answer.as_bytes(), addr).await?;
-                println!("{:?} bytes sent", len);
+                debug!("{:?} bytes sent", len);
             }
-            Err(error) => eprintln!("Error: {}", error),
+            Err(error) => error!("Error: {}", error),
         }
     }
 }
+
