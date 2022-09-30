@@ -2,6 +2,7 @@ use config::{Config, File};
 use log::error;
 use serde::Deserialize;
 
+use crate::{Header, PacketType, Rcode, Reply};
 // use bit_vec::{self, BitVec};
 
 /// gets a u16 based on the bit start point
@@ -207,4 +208,21 @@ pub fn get_config() -> ConfigFile<'static> {
             ConfigFile::default()
         }
     }
+}
+
+/// Want a generic empty reply with an ID and an RCODE? Here's your function.
+pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, String> {
+    let header = Header {
+        id,
+        qr: PacketType::Answer,
+        rcode,
+        ..Default::default()
+    };
+    Ok(Reply {
+        header,
+        question: None,
+        answers: vec![],
+        authorities: vec![],
+        additional: vec![],
+    })
 }

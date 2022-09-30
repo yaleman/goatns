@@ -150,6 +150,16 @@ impl From<&u16> for RecordType {
     }
 }
 
+impl RecordType {
+    pub fn supported(self: RecordType) -> bool {
+        // match self {
+        //     RecordType::A => true,
+        //     _ => false
+        // }
+        matches!(self, RecordType::A)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// 3.2.4. CLASS values
 /// CLASS fields appear in resource records.

@@ -14,29 +14,25 @@ then the 12th octet (0b00001100)
 
 // all the types and codes and things - https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
 
-use log::{debug, error, info, LevelFilter};
+use log::{debug, error, info, warn, LevelFilter};
 use packed_struct::prelude::*;
 use std::io;
 use std::net::SocketAddr;
+use std::str::from_utf8;
 use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::time::timeout;
 use utils::{convert_u32_to_u8s_be, get_config, ConfigFile};
 
 use crate::enums::*;
-use crate::ip_address::IPAddress;
 use crate::utils::*;
 
 mod enums;
 mod ip_address;
 mod packet_dumper;
+mod resourcerecord;
 mod tests;
 mod utils;
-
-/// builds a servfail response
-// async fn reply_servfail(question: Question) -> Reply {
-//     Reply{}
-// }
 
 const HEADER_BYTES: usize = 12;
 const REPLY_TIMEOUT_MS: u64 = 200;
@@ -131,27 +127,27 @@ pub struct Header {
 //     }
 // }
 
-// impl Default for Header {
-//     fn default() -> Self {
-//         Header {
-//             id: 0,
-//             qr: PacketType::Query,
-//             opcode: OpCode::Query,
-//             authoritative: false,
-//             truncated: false,
-//             recursion_desired: false,
-//             recursion_available: false,
-//             z: false,  // TODO: figure this out
-//             ad: false, // TODO: figure this out
-//             cd: false, // TODO: figure this out
-//             rcode: Rcode::NoError,
-//             qdcount: 0,
-//             ancount: 0,
-//             nscount: 0,
-//             arcount: 0,
-//         }
-//     }
-// }
+impl Default for Header {
+    fn default() -> Self {
+        Header {
+            id: 0,
+            qr: PacketType::Query,
+            opcode: OpCode::Query,
+            authoritative: false,
+            truncated: false,
+            recursion_desired: false,
+            recursion_available: false,
+            z: false,
+            ad: false,
+            cd: false,
+            rcode: Rcode::NoError,
+            qdcount: 0,
+            ancount: 0,
+            nscount: 0,
+            arcount: 0,
+        }
+    }
+}
 
 /// Query handler
 async fn parse_query(
@@ -161,7 +157,7 @@ async fn parse_query(
     config: ConfigFile<'static>,
 ) -> Result<Reply, String> {
     if config.capture_packets {
-        crate::packet_dumper::dump_bytes(buf[0..len].into()).await;
+        packet_dumper::dump_bytes(buf[0..len].into(), packet_dumper::DumpType::ClientRequest).await;
     }
     // we only want the first 12 bytes for the header
     let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
@@ -170,27 +166,41 @@ async fn parse_query(
     let header = match Header::unpack(&split_header) {
         Ok(value) => value,
         Err(error) => {
-            // TODO this should be a SERVFAIL response
-            return Err(format!("Failed to parse packet: {:?}", error));
+            // can't return a servfail if we can't unpack the header, they're probably doing something bad.
+            let errstr = format!("Failed to parse header: {:?}", error);
+            error!("{}", errstr);
+            return Err(errstr);
         }
     };
     debug!("Buffer length: {}", len);
-    eprintln!("Parsed header: {:?}", header);
+    debug!("Parsed header: {:?}", header);
 
     match header.opcode {
         OpCode::Query => {
             let question = Question::from_packets(&buf[HEADER_BYTES..len]).await;
-            eprintln!("Resolved question: {:?}", question);
-
             let question = match question {
-                Ok(value) => value,
+                Ok(value) => {
+                    debug!("Parsed question: {:?}", value);
+                    value
+                }
                 Err(error) => {
                     // TODO: this should return a SERVFAIL
-                    return Err(error);
+                    error!("Failed to parse question: {} id={}", error, header.id);
+                    return reply_builder(header.id, Rcode::ServFail);
                 }
             };
+
+            // yeet them when we get a request we can't handle
+            if !question.qtype.supported() {
+                warn!(
+                    "Unsupported request: {} {:?}, returning NotImplemented",
+                    from_utf8(&question.qname).unwrap_or("<unable to parse>"),
+                    question.qtype,
+                );
+                return reply_builder(header.id, Rcode::NotImplemented);
+            }
             // let answer_rdata = String::from("0.0.0.0");
-            let answer_rdata = IPAddress::new(0, 0, 0, 0).pack().unwrap();
+            let answer_rdata = ip_address::IPAddress::new(0, 0, 0, 0).pack().unwrap();
 
             // this is our reply - static until that bit's done
             Ok(Reply {
@@ -215,7 +225,7 @@ async fn parse_query(
                     nscount: 0,
                     arcount: 0,
                 },
-                question: question.clone(),
+                question: Some(question.clone()),
                 answers: vec![ResourceRecord {
                     name: question.qname,
                     record_type: question.qtype,
@@ -238,9 +248,9 @@ async fn parse_query(
 
 #[allow(dead_code)]
 #[derive(Debug)]
-struct Reply {
+pub struct Reply {
     header: Header,
-    question: Question,
+    question: Option<Question>,
     answers: Vec<ResourceRecord>,
     authorities: Vec<ResourceRecord>,
     additional: Vec<ResourceRecord>,
@@ -259,11 +269,12 @@ impl Reply {
             // TODO: this should not be a panic
             Err(err) => return Err(format!("Failed to pack reply header bytes: {:?}", err)),
         };
-        eprintln!("reply_header {:?}", reply_header);
         retval.extend(reply_header);
 
         // need to add the question in here
-        retval.extend(self.question.to_bytes());
+        if let Some(question) = &self.question {
+            retval.extend(question.to_bytes());
+        }
 
         for answer in self.answers.clone() {
             let reply_bytes: Vec<u8> = answer.into();

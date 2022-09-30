@@ -88,7 +88,7 @@ mod tests {
 
         let mut reply = Reply {
             header,
-            question,
+            question: Some(question),
             answers,
             authorities: vec![],
             additional: vec![],
@@ -180,7 +180,7 @@ mod tests {
 
         let mut reply = Reply {
             header,
-            question,
+            question: Some(question),
             answers,
             authorities: vec![],
             additional: vec![],
@@ -248,8 +248,14 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(result.question.qclass, crate::enums::RecordClass::Internet);
-        assert_eq!(result.question.qname, "yaleman.org".as_bytes().to_vec());
+        assert_eq!(
+            result.question.as_ref().unwrap().qclass,
+            crate::enums::RecordClass::Internet
+        );
+        assert_eq!(
+            result.question.as_ref().unwrap().qname,
+            "yaleman.org".as_bytes().to_vec()
+        );
         // TODO: make sure *everything* is right here
     }
 }
