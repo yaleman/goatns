@@ -2,6 +2,8 @@
 conversion functions
 */
 
+// use std::net::Ipv6Addr;
+
 use packed_struct::prelude::*;
 
 #[derive(Debug, PackedStruct)]

@@ -152,11 +152,12 @@ impl From<&u16> for RecordType {
 
 impl RecordType {
     pub fn supported(self: RecordType) -> bool {
-        // match self {
-        //     RecordType::A => true,
-        //     _ => false
-        // }
-        matches!(self, RecordType::A)
+        #[allow(clippy::match_like_matches_macro)]
+        match self {
+            RecordType::A => true,
+            RecordType::AAAA => true,
+            _ => false,
+        }
     }
 }
 

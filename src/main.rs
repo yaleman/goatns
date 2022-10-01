@@ -17,7 +17,7 @@ then the 12th octet (0b00001100)
 use log::{debug, error, info, warn, LevelFilter};
 use packed_struct::prelude::*;
 use std::io;
-use std::net::SocketAddr;
+use std::net::{Ipv6Addr, SocketAddr};
 use std::str::from_utf8;
 use std::time::Duration;
 use tokio::net::UdpSocket;
@@ -33,6 +33,7 @@ mod packet_dumper;
 mod resourcerecord;
 mod tests;
 mod utils;
+mod zones;
 
 const HEADER_BYTES: usize = 12;
 const REPLY_TIMEOUT_MS: u64 = 200;
@@ -200,7 +201,56 @@ async fn parse_query(
                 return reply_builder(header.id, Rcode::NotImplemented);
             }
             // let answer_rdata = String::from("0.0.0.0");
-            let answer_rdata = ip_address::IPAddress::new(0, 0, 0, 0).pack().unwrap();
+            let answer_rdata: Vec<u8> = match question.qtype {
+                RecordType::A => {
+                    let data = ip_address::IPAddress::new(0, 0, 0, 0)
+                        .pack()
+                        .unwrap()
+                        .to_owned();
+                    data.to_vec()
+                }
+                RecordType::AAAA => {
+                    let rdata = "fe80:580a:2d::caf3:b33f";
+                    let data: Ipv6Addr = match rdata.parse() {
+                        Ok(value) => value,
+                        Err(error) => {
+                            error!("Failed to parse {}: {:?}", rdata, error);
+                            return reply_builder(header.id, Rcode::ServFail);
+                        }
+                    };
+                    data.octets().to_vec()
+                }
+                RecordType::NS => todo!(),
+                RecordType::MD => todo!(),
+                RecordType::MF => todo!(),
+                RecordType::CNAME => todo!(),
+                RecordType::SOA => todo!(),
+                RecordType::MB => todo!(),
+                RecordType::MG => todo!(),
+                RecordType::MR => todo!(),
+                RecordType::NULL => todo!(),
+                RecordType::WKS => todo!(),
+                RecordType::PTR => todo!(),
+                RecordType::HINFO => todo!(),
+                RecordType::MINFO => todo!(),
+                RecordType::MX => todo!(),
+                RecordType::TXT => todo!(),
+                RecordType::AXFR => todo!(),
+                RecordType::MAILB => todo!(),
+                RecordType::MAILA => todo!(),
+                RecordType::ALL => todo!(),
+                RecordType::InvalidType => todo!(),
+            };
+
+            let answers = vec![ResourceRecord {
+                name: question.qname.to_vec(),
+                record_type: question.qtype,
+                class: question.qclass,
+                ttl: 60, // TODO: set a TTL
+                rdlength: (answer_rdata.len() as u16),
+                rdata: answer_rdata.to_vec(),
+                compression: true,
+            }];
 
             // this is our reply - static until that bit's done
             Ok(Reply {
@@ -225,16 +275,8 @@ async fn parse_query(
                     nscount: 0,
                     arcount: 0,
                 },
-                question: Some(question.clone()),
-                answers: vec![ResourceRecord {
-                    name: question.qname,
-                    record_type: question.qtype,
-                    class: question.qclass,
-                    ttl: 60, // TODO: set a TTL
-                    rdlength: (answer_rdata.len() as u16),
-                    rdata: answer_rdata.to_vec(),
-                    compression: true,
-                }],
+                question: Some(question),
+                answers,
                 authorities: vec![],
                 additional: vec![],
             })
@@ -443,8 +485,15 @@ async fn main() -> io::Result<()> {
     femme::with_level(LevelFilter::Trace);
 
     let config: ConfigFile = get_config();
-
     let listen_addr = format!("{}:{}", config.address, config.port);
+
+    let _zones = match zones::load_zones() {
+        Ok(value) => value,
+        Err(error) => {
+            error!("{:?}", error);
+            return Ok(());
+        }
+    };
 
     info!("Starting UDP server on {}:{}", config.address, config.port);
     let bind_address = match listen_addr.parse::<SocketAddr>() {

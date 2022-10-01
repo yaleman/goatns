@@ -68,6 +68,25 @@ pub fn convert_u8s_to_u32_be(input: [u8; 4]) -> u32 {
     result
 }
 
+#[allow(dead_code)]
+pub fn convert_u8s_to_u16_be(input: [u8; 2]) -> u16 {
+    let mut result: u16 = 0;
+    result |= (input[1] as u16) << 8;
+    result |= input[0] as u16;
+
+    result
+}
+#[cfg(test)]
+mod test {
+    use super::convert_u8s_to_u16_be;
+
+    #[test]
+    fn test_convert_u8s_to_u16_be() {
+        let testval: [u8; 2] = [00, 00];
+        assert_eq!(convert_u8s_to_u16_be(testval), 0u16);
+    }
+}
+
 // #[test]
 // fn test_convert_i32_to_u8s_be() {
 //     let mut testval: i32 = 1;
