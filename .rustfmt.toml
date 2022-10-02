@@ -1,0 +1,8 @@
+# needs nightly
+# imports_granularity = "Module"
+
+# needs nightly
+# https://rust-lang.github.io/rustfmt/?version=v1.5.1&search=#reorder_impl_items
+# reorder_impl_items = true
+
+reorder_imports = true

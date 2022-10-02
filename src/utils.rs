@@ -1,7 +1,3 @@
-use config::{Config, File};
-use log::error;
-use serde::Deserialize;
-
 use crate::{Header, PacketType, Rcode, Reply};
 // use bit_vec::{self, BitVec};
 
@@ -57,7 +53,6 @@ pub fn convert_u32_to_u8s_be(integer: u32) -> [u8; 4] {
     ]
 }
 
-
 // #[test]
 // fn test_convert_i32_to_u8s_be() {
 //     let mut testval: i32 = 1;
@@ -65,7 +60,7 @@ pub fn convert_u32_to_u8s_be(integer: u32) -> [u8; 4] {
 //     testval = 256;
 //     assert_eq!(convert_i32_to_u8s_be(testval), [0, 0, 1, 0]);
 //     testval = 2_i32.pow(30);
-//     eprintln!("testval 2_i32 ^ 30 = {}", testval);
+//     debug!("testval 2_i32 ^ 30 = {}", testval);
 //     assert_eq!(convert_i32_to_u8s_be(testval), [64, 0, 0, 0]);
 //     testval = -32768;
 //     assert_eq!(convert_i32_to_u8s_be(testval), [255, 255, 128, 0]);
@@ -132,12 +127,12 @@ pub fn name_as_bytes(name: Vec<u8>, compress_target: Option<u16>) -> Vec<u8> {
                 };
                 current_position = 0;
                 // this should be the
-                // eprintln!(". - {:?} ({:?})", next_dot, name_bytes);
+                // debug!(". - {:?} ({:?})", next_dot, name_bytes);
                 result.push(next_dot as u8);
             } else {
                 // we are processing bytes
                 result.push(name_bytes[current_position]);
-                // eprintln!("{:?} {:?}", current_position, name_bytes.as_bytes()[current_position]);
+                // debug!("{:?} {:?}", current_position, name_bytes.as_bytes()[current_position]);
                 current_position += 1;
             }
             if current_position == name_bytes.len() {
@@ -151,57 +146,6 @@ pub fn name_as_bytes(name: Vec<u8>, compress_target: Option<u16>) -> Vec<u8> {
     // }
 
     result
-}
-
-#[derive(Deserialize, Debug, Eq, PartialEq, Copy, Clone)]
-pub struct ConfigFile<'a> {
-    pub address: &'a str,
-    pub port: u16,
-    pub capture_packets: bool,
-    pub log_level: &'a str,
-}
-
-impl Default for ConfigFile<'static> {
-    fn default() -> Self {
-        Self {
-            address: "0.0.0.0",
-            port: 15353,
-            capture_packets: false,
-            log_level: "DEBUG",
-        }
-    }
-}
-
-impl From<Config> for ConfigFile<'static> {
-    fn from(config: Config) -> Self {
-        let address = config.get("addr").unwrap_or(Self::default().address);
-        ConfigFile {
-            address,
-            port: config.get("port").unwrap_or_default(),
-            capture_packets: config.get("capture_packets").unwrap_or_default(),
-            log_level: config.get("log_level").unwrap_or_default(),
-        }
-    }
-}
-
-pub fn get_config() -> ConfigFile<'static> {
-    let config_file = String::from("~/.config/goatns.json");
-    let config_filename: String = shellexpand::tilde(&config_file).into_owned();
-
-    let builder =
-        Config::builder()
-            .add_source(File::new(&config_filename, config::FileFormat::Json));
-
-    match builder.build() {
-        Ok(config) => config.into(),
-        Err(error) => {
-            error!(
-                "Couldn't load config from {:?}: {:?}",
-                config_filename, error
-            );
-            ConfigFile::default()
-        }
-    }
 }
 
 /// Want a generic empty reply with an ID and an RCODE? Here's your function.

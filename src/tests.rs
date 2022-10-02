@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-
     use crate::ip_address::IPAddress;
     use crate::utils::name_as_bytes;
     use crate::{PacketType, Question, ResourceRecord};
+    use log::debug;
     use packed_struct::prelude::*;
 
     #[test]
@@ -75,7 +75,7 @@ mod tests {
             qclass: crate::RecordClass::Internet,
         };
         let question_length = question.to_bytes().len();
-        eprintln!("question byte length: {}", question_length);
+        debug!("question byte length: {}", question_length);
         let answers = vec![ResourceRecord {
             name: qname,
             record_type: crate::RecordType::A,
@@ -94,7 +94,7 @@ mod tests {
             additional: vec![],
         };
         let reply_bytes: Vec<u8> = reply.as_bytes().unwrap();
-        eprintln!("{:?}", reply_bytes);
+        debug!("{:?}", reply_bytes);
 
         let expected_bytes = [
             /* header - 12 bytes */
@@ -116,7 +116,7 @@ mod tests {
                 current_block = "Answer   ";
             }
             match expected_bytes.get(index) {
-                Some(expected_byte) => eprintln!(
+                Some(expected_byte) => debug!(
                     "{} \t {} us: {} ex: {} {}",
                     current_block,
                     index,
@@ -162,10 +162,10 @@ mod tests {
             qclass: crate::RecordClass::Internet,
         };
         let question_length = question.to_bytes().len();
-        eprintln!("question byte length: {}", question_length);
+        debug!("question byte length: {}", question_length);
 
         let rdata = IPAddress::new(0, 0, 0, 0).pack().unwrap();
-        // eprintln!("rdata: {:?}", rdata);
+        // debug!("rdata: {:?}", rdata);
         let rdlength: u16 = rdata.len() as u16;
 
         let answers = vec![crate::ResourceRecord {
@@ -186,7 +186,7 @@ mod tests {
             additional: vec![],
         };
         let reply_bytes: Vec<u8> = reply.as_bytes().unwrap();
-        eprintln!("{} bytes: {:?}", reply_bytes.len(), reply_bytes);
+        debug!("{} bytes: {:?}", reply_bytes.len(), reply_bytes);
 
         let expected_bytes = [
             /* header - 12 bytes */
@@ -198,8 +198,8 @@ mod tests {
             0x00, 0x00,
         ];
 
-        eprintln!("Our length: {}", reply_bytes.len());
-        eprintln!("Exp length: {}", expected_bytes.len());
+        debug!("Our length: {}", reply_bytes.len());
+        debug!("Exp length: {}", expected_bytes.len());
 
         let mut current_block: &str;
         for (index, byte) in reply_bytes.iter().enumerate() {
@@ -211,7 +211,7 @@ mod tests {
                 current_block = "Answer   ";
             }
             match expected_bytes.get(index) {
-                Some(expected_byte) => eprintln!(
+                Some(expected_byte) => debug!(
                     "{} \t {} us: {} ex: {} {}",
                     current_block,
                     index,
@@ -242,9 +242,7 @@ mod tests {
             buf[i] = *b as u8;
         }
 
-        let config = crate::utils::get_config();
-
-        let result = crate::parse_query(crate::enums::Protocol::Udp, input.len(), buf, config)
+        let result = crate::parse_query(crate::enums::Protocol::Udp, input.len(), buf, false)
             .await
             .unwrap();
 

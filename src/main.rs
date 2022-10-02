@@ -14,7 +14,7 @@ then the 12th octet (0b00001100)
 
 // all the types and codes and things - https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
 
-use log::{debug, error, info, warn, LevelFilter};
+use log::{debug, error, info, trace, warn, LevelFilter};
 use packed_struct::prelude::*;
 use std::io;
 use std::net::{Ipv6Addr, SocketAddr};
@@ -22,11 +22,12 @@ use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::time::timeout;
-use utils::{get_config, ConfigFile};
 
+use crate::config::{get_config, ConfigFile};
 use crate::enums::*;
 use crate::utils::*;
 
+mod config;
 mod enums;
 mod ip_address;
 mod packet_dumper;
@@ -83,51 +84,6 @@ pub struct Header {
     arcount: u16, // 80-95
 }
 
-// TODO: probably bin this, because moved to packed struct
-/// When you want to parse a request
-// impl From<[u8; 12]> for Header {
-//     fn from(packets: [u8; 12]) -> Header {
-//         let packet_bits = BitVec::from_bytes(&packets);
-
-//         let id = get_query_id(&packets);
-
-//         // ignored in a query
-//         let authoritative = false;
-//         let truncated = packet_bits.get(22).unwrap();
-//         let recursion_desired = packet_bits.get(23).unwrap();
-//         // ignored in a query
-//         let recursion_available = false;
-
-//         let qdcount = get_u16_from_packets(&packets, 4);
-//         // let opcode: OpCode = get_u8_from_bits(&packet_bits,17, 4).into();
-
-//         let opcode: OpCode = ((packets[2] & 0b011100) >> 2).into();
-
-//         Header {
-//             id,
-//             qr: packet_bits[16].into(),
-//             opcode,
-//             authoritative,
-//             truncated,
-//             recursion_desired,
-//             recursion_available,
-//             // should always be 0
-//             z: false,
-//             ad: false, // TODO: figure this out
-//             cd: false, // TODO: figure this out
-//             // ignored in a query
-//             rcode: Header::default().rcode,
-//             qdcount,
-//             // not used in a query
-//             ancount: 0,
-//             // not used in a query
-//             nscount: 0,
-//             // not used in a query
-//             arcount: 0,
-//         }
-//     }
-// }
-
 impl Default for Header {
     fn default() -> Self {
         Header {
@@ -155,9 +111,9 @@ async fn parse_query(
     _proto: Protocol,
     len: usize,
     buf: [u8; 4096],
-    config: ConfigFile<'static>,
+    capture_packets: bool,
 ) -> Result<Reply, String> {
-    if config.capture_packets {
+    if capture_packets {
         packet_dumper::dump_bytes(buf[0..len].into(), packet_dumper::DumpType::ClientRequest).await;
     }
     // we only want the first 12 bytes for the header
@@ -365,10 +321,10 @@ impl From<ResourceRecord> for Vec<u8> {
     fn from(record: ResourceRecord) -> Self {
         let mut retval: Vec<u8> = vec![];
 
-        eprintln!("{:?}", record);
+        debug!("{:?}", record);
         // we are compressing for a test
         let record_name_bytes = name_as_bytes(record.name, Some(HEADER_BYTES as u16));
-        eprintln!("name_as_bytes: {:?}", record_name_bytes);
+        debug!("name_as_bytes: {:?}", record_name_bytes);
         retval.extend(record_name_bytes);
         // type
         retval.extend(convert_u16_to_u8s_be(record.record_type as u16));
@@ -376,7 +332,7 @@ impl From<ResourceRecord> for Vec<u8> {
         retval.extend(convert_u16_to_u8s_be(record.class as u16));
         // reply ttl
         let ttl_bytes = convert_u32_to_u8s_be(record.ttl);
-        eprintln!("ttl_bytes: {:?}", ttl_bytes);
+        trace!("ttl_bytes: {:?}", ttl_bytes);
         retval.extend(ttl_bytes);
         // reply data length
         retval.extend(convert_u16_to_u8s_be(record.rdlength));
@@ -436,12 +392,12 @@ impl Question {
         let mut in_record_data: bool = false;
         // until we hit a null, read bytes to get the name. I'm sure this won't blow up at any point.
         for qchar in buf.iter().take_while(|b| b != &&0) {
-            // eprintln!("p: {}, np: {} {:?} {:?}", read_pointer, next_end, qchar, std::str::from_utf8(&[qchar.to_owned()]).unwrap());
+            // trace!("p: {}, np: {} {:?} {:?}", read_pointer, next_end, qchar, std::str::from_utf8(&[qchar.to_owned()]).unwrap());
             if read_pointer == next_end {
                 in_record_data = false;
                 next_end = read_pointer + qchar + 1;
                 if read_pointer != 0 {
-                    // eprintln!("adding .");
+                    // trace!("adding .");
                     qname.push(46);
                 }
             } else if in_record_data {
@@ -457,14 +413,14 @@ impl Question {
         let qtype: RecordType = match buf.get(read_pointer as usize) {
             Some(value) => value.into(),
             // TODO: better errors, also log this
-            None => return Err("Failed to parse qtype from header".to_string())
+            None => return Err("Failed to parse qtype from header".to_string()),
         };
         // next byte after the type is the the class
         // TODO: work out if I'm pulling the wrong thing here, the +2 is weird?
-        let qclass: RecordClass = match buf.get((read_pointer as usize) + 2){
+        let qclass: RecordClass = match buf.get((read_pointer as usize) + 2) {
             Some(value) => value.into(),
             // TODO: better errors, also log this
-            None => return Err("Failed to parse qclass from header".to_string())
+            None => return Err("Failed to parse qclass from header".to_string()),
         };
 
         Ok(Question {
@@ -482,20 +438,27 @@ impl Question {
         retval.extend(name_bytes);
         retval.extend(convert_u16_to_u8s_be(self.qtype as u16));
         retval.extend(convert_u16_to_u8s_be(self.qclass as u16));
-        eprintln!("Question: {:?}", retval);
+        debug!("Question: {:?}", retval);
         retval
     }
 }
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-
-
     let config: ConfigFile = get_config();
 
-    // femme::with_level(LevelFilter::Trace);
-    eprintln!("{:?}", config);
-    let log_level = LevelFilter::from_str(config.log_level).unwrap_or(LevelFilter::Debug);
+    let log_level = match LevelFilter::from_str(config.log_level.as_str()) {
+        Ok(value) => value,
+        Err(error) => {
+            eprintln!(
+                "Failed to parse log level {:?} - {:?}. Reverting to debug",
+                config.log_level.as_str(),
+                error
+            );
+
+            LevelFilter::Debug
+        }
+    };
     femme::with_level(log_level);
     let listen_addr = format!("{}:{}", config.address, config.port);
 
@@ -534,7 +497,7 @@ async fn main() -> io::Result<()> {
 
         let udp_result = match timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
-            parse_query(Protocol::Udp, len, udp_buffer, config),
+            parse_query(Protocol::Udp, len, udp_buffer, config.capture_packets),
         )
         .await
         {

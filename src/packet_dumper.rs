@@ -1,7 +1,7 @@
+use chrono::{DateTime, Utc};
+use log::debug;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-
-use chrono::{DateTime, Utc};
 
 pub enum DumpType {
     ClientRequest,
@@ -23,7 +23,7 @@ impl core::fmt::Display for DumpType {
 pub async fn dump_bytes(bytes: Vec<u8>, dump_type: DumpType) {
     let now: DateTime<Utc> = Utc::now();
 
-    eprintln!("bytes: {:?}", bytes);
+    debug!("bytes: {:?}", bytes);
     let filename = format!(
         "./captures/{}-{}.cap",
         dump_type,
@@ -35,7 +35,7 @@ pub async fn dump_bytes(bytes: Vec<u8>, dump_type: DumpType) {
     };
 
     match fh.write_all(&bytes).await {
-        Ok(_) => eprintln!("Successfully wrote packet to {:?}", &filename),
-        Err(error) => eprintln!("Failed to write to {:?}: {:?}", filename, error),
+        Ok(_) => debug!("Successfully wrote packet to {:?}", &filename),
+        Err(error) => debug!("Failed to write to {:?}: {:?}", filename, error),
     };
 }
