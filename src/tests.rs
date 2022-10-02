@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
     use crate::ip_address::IPAddress;
+    use crate::resourcerecord::RdataSOA;
     use crate::utils::name_as_bytes;
-    use crate::{PacketType, Question, ResourceRecord};
+    use crate::{PacketType, Question, ResourceRecord, HEADER_BYTES};
     use log::debug;
     use packed_struct::prelude::*;
 
@@ -47,8 +48,7 @@ mod tests {
     }
 
     #[tokio::test]
-    /// This won't work until DNS pointer compression is implemented
-    async fn test_build_iana_org_reply() {
+    async fn test_build_iana_org_a_reply() {
         use crate::{Header, Reply};
 
         let header = Header {
@@ -130,6 +130,115 @@ mod tests {
                 }
             }
             assert_eq!(byte, &expected_bytes[index]);
+        }
+        assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
+    }
+
+    #[tokio::test]
+    async fn test_cloudflare_soa_reply() {
+        use crate::{Header, Reply};
+/*
+
+;; Got answer:
+;; RESPONSE: 8928818000010001000000000a636c6f7564666c61726503636f6d0000060001c00c00060001000000ad0020036e7333c00c03646e73c00c7906ce18000027100000096000093a800000012c
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 35112
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;cloudflare.com.                IN      SOA
+;; ANSWER SECTION:
+cloudflare.com.         173     IN      SOA     ns3.cloudflare.com. dns.cloudflare.com. 2030489112 10000 2400 604800 300
+*/
+        let header = Header {
+            id: 35112,
+            qr: PacketType::Answer,
+            opcode: crate::OpCode::Query,
+            authoritative: false,
+            truncated: false,
+            recursion_desired: true,
+            recursion_available: true,
+            z: false,
+            ad: false,
+            cd: false,
+            rcode: crate::Rcode::NoError,
+            qdcount: 1,
+            ancount: 1,
+            arcount: 0,
+            nscount: 0,
+        };
+        let qname = "cloudflare.com".as_bytes().to_vec();
+        let question = Question {
+            qname: qname.clone(),
+            qtype: crate::RecordType::SOA,
+            qclass: crate::RecordClass::Internet,
+        };
+        let question_length = question.to_bytes().len();
+        debug!("question byte length: {}", question_length);
+
+        let rdata = RdataSOA{
+            mname: question.qname.clone(),
+            rname: "dns.cloudflare.com".as_bytes().to_vec(),
+            serial: 2030489112,
+            refresh: 10000,
+            retry: 2400,
+            expire: 604800,
+            minimum: 300,
+        };
+
+        let rdata = rdata.as_bytes();
+        let answers = vec![ResourceRecord {
+            name: qname,
+            record_type: crate::RecordType::SOA,
+            class: crate::RecordClass::Internet,
+            ttl: 173,
+            rdlength: rdata.len() as u16,
+            rdata: rdata,
+            compression: false,
+        }];
+
+        let mut reply = Reply {
+            header,
+            question: Some(question),
+            answers,
+            authorities: vec![],
+            additional: vec![],
+        };
+        let reply_bytes: Vec<u8> = reply.as_bytes().unwrap();
+        debug!("{:?}", reply_bytes);
+
+        let expected_bytes = [
+            /* header - 12 bytes */
+            0x89, 0x28, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+            /* question - 14 bytes */
+            0x0a, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x66, 0x6c, 0x61,
+            /* answer - 16 bytes */
+            0x72, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x00, 0x00, 0x06, 0x00, 0x01, 0xc0, 0x0c, 0x00, 0x06, 0x00, 0x01, 0x00, 0x00, 0x00, 0xad, 0x00, 0x20, 0x03, 0x6e, 0x73, 0x33, 0xc0, 0x0c, 0x03, 0x64, 0x6e, 0x73, 0xc0, 0x0c, 0x79, 0x06, 0xce, 0x18, 0x00, 0x00, 0x27, 0x10, 0x00, 0x00, 0x09, 0x60, 0x00, 0x09, 0x3a, 0x80, 0x00, 0x00, 0x01, 0x2c,
+        ];
+
+        let mut current_block: &str;
+        for (index, byte) in reply_bytes.iter().enumerate() {
+            if index < HEADER_BYTES {
+                current_block = "Header ";
+            } else if index < HEADER_BYTES+9 {
+                current_block = "Question ";
+            } else {
+                current_block = "Answer   ";
+            }
+            match expected_bytes.get(index) {
+                Some(expected_byte) => eprintln!(
+                    "{} \t {} us: {}\tex: {}\tchar: {}\t matched: {}",
+                    current_block,
+                    index,
+                    byte.clone(),
+                    expected_byte,
+                    std::str::from_utf8(&[byte.clone()]).unwrap_or("-"),
+                    (byte == expected_byte)
+                ),
+                None => {
+                    panic!("Our reply is longer!");
+                    // break;
+                }
+            }
+            // assert_eq!(byte, &expected_bytes[index]);
         }
         assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
     }

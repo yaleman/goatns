@@ -156,6 +156,7 @@ impl RecordType {
         match self {
             RecordType::A => true,
             RecordType::AAAA => true,
+            RecordType::SOA => true,
             _ => false,
         }
     }

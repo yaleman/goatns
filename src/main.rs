@@ -5,7 +5,7 @@
 
 // all the types and codes and things - https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
 
-use log::{debug, error, info, trace, warn, LevelFilter};
+use log::{debug, error, info, trace, LevelFilter};
 use packed_struct::prelude::*;
 use std::io;
 use std::net::{Ipv6Addr, SocketAddr};
@@ -17,6 +17,7 @@ use tokio::time::timeout;
 
 use crate::config::{get_config, ConfigFile};
 use crate::enums::*;
+use crate::resourcerecord::RdataSOA;
 use crate::utils::*;
 
 mod config;
@@ -116,9 +117,7 @@ async fn parse_query(
         Ok(value) => value,
         Err(error) => {
             // can't return a servfail if we can't unpack the header, they're probably doing something bad.
-            let errstr = format!("Failed to parse header: {:?}", error);
-            error!("{}", errstr);
-            return Err(errstr);
+            return Err(format!("Failed to parse header: {:?}", error));
         }
     };
     debug!("Buffer length: {}", len);
@@ -141,7 +140,7 @@ async fn parse_query(
 
             // yeet them when we get a request we can't handle
             if !question.qtype.supported() {
-                warn!(
+                debug!(
                     "Unsupported request: {} {:?}, returning NotImplemented",
                     from_utf8(&question.qname).unwrap_or("<unable to parse>"),
                     question.qtype,
@@ -172,7 +171,18 @@ async fn parse_query(
                 RecordType::MD => todo!(),
                 RecordType::MF => todo!(),
                 RecordType::CNAME => todo!(),
-                RecordType::SOA => todo!(),
+                RecordType::SOA => {
+                    let rdata = RdataSOA{
+                        mname: question.qname.clone(),
+                        rname: Default::default(),
+                        serial: 0,
+                        refresh: Default::default(),
+                        retry: Default::default(),
+                        expire: Default::default(),
+                        minimum: Default::default(),
+                    };
+                    rdata.as_bytes()
+                },
                 RecordType::MB => todo!(),
                 RecordType::MG => todo!(),
                 RecordType::MR => todo!(),
@@ -230,7 +240,7 @@ async fn parse_query(
             })
         }
         _ => {
-            // TODO: turn this into a proper packet response
+            // we don't have to respond to broken queries
             Err(String::from("Invalid OPCODE"))
         }
     }
