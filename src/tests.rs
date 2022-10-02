@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::ip_address::IPAddress;
-    use crate::utils::{convert_u8s_to_u32_be, name_as_bytes};
+    use crate::utils::name_as_bytes;
     use crate::{PacketType, Question, ResourceRecord};
     use packed_struct::prelude::*;
 
@@ -32,7 +32,7 @@ mod tests {
                 panic!("{:?}", error)
             }
         };
-        let result: u32 = convert_u8s_to_u32_be(output);
+        let result: u32 = u32::from_be_bytes(output);
         assert_eq!(result, 16843009);
 
         let iptest: IPAddress = IPAddress::new(123, 145, 31, 71);
@@ -42,7 +42,7 @@ mod tests {
                 panic!("{:?}", error)
             }
         };
-        let result: u32 = convert_u8s_to_u32_be(output);
+        let result: u32 = u32::from_be_bytes(output);
         assert_eq!(result, 2073108295);
     }
 

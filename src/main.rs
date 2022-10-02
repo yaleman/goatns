@@ -18,11 +18,11 @@ use log::{debug, error, info, warn, LevelFilter};
 use packed_struct::prelude::*;
 use std::io;
 use std::net::{Ipv6Addr, SocketAddr};
-use std::str::from_utf8;
+use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::time::timeout;
-use utils::{convert_u32_to_u8s_be, get_config, ConfigFile};
+use utils::{get_config, ConfigFile};
 
 use crate::enums::*;
 use crate::utils::*;
@@ -454,11 +454,18 @@ impl Question {
         }
         read_pointer += 2;
         // next byte after the query is the type
-        let qtype = &buf[(read_pointer as usize)];
-        let qtype: RecordType = qtype.into();
+        let qtype: RecordType = match buf.get(read_pointer as usize) {
+            Some(value) => value.into(),
+            // TODO: better errors, also log this
+            None => return Err("Failed to parse qtype from header".to_string())
+        };
         // next byte after the type is the the class
-        let qclass = &buf[(read_pointer as usize) + 2];
-        let qclass: RecordClass = qclass.into();
+        // TODO: work out if I'm pulling the wrong thing here, the +2 is weird?
+        let qclass: RecordClass = match buf.get((read_pointer as usize) + 2){
+            Some(value) => value.into(),
+            // TODO: better errors, also log this
+            None => return Err("Failed to parse qclass from header".to_string())
+        };
 
         Ok(Question {
             qname,
@@ -482,9 +489,14 @@ impl Question {
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    femme::with_level(LevelFilter::Trace);
+
 
     let config: ConfigFile = get_config();
+
+    // femme::with_level(LevelFilter::Trace);
+    eprintln!("{:?}", config);
+    let log_level = LevelFilter::from_str(config.log_level).unwrap_or(LevelFilter::Debug);
+    femme::with_level(log_level);
     let listen_addr = format!("{}:{}", config.address, config.port);
 
     let _zones = match zones::load_zones() {

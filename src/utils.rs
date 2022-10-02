@@ -57,35 +57,6 @@ pub fn convert_u32_to_u8s_be(integer: u32) -> [u8; 4] {
     ]
 }
 
-#[allow(dead_code)]
-pub fn convert_u8s_to_u32_be(input: [u8; 4]) -> u32 {
-    let mut result: u32 = 0;
-    result |= input[3] as u32;
-    result |= (input[2] as u32) << 8;
-    result |= (input[1] as u32) << 16;
-    result |= (input[0] as u32) << 24;
-
-    result
-}
-
-#[allow(dead_code)]
-pub fn convert_u8s_to_u16_be(input: [u8; 2]) -> u16 {
-    let mut result: u16 = 0;
-    result |= (input[1] as u16) << 8;
-    result |= input[0] as u16;
-
-    result
-}
-#[cfg(test)]
-mod test {
-    use super::convert_u8s_to_u16_be;
-
-    #[test]
-    fn test_convert_u8s_to_u16_be() {
-        let testval: [u8; 2] = [00, 00];
-        assert_eq!(convert_u8s_to_u16_be(testval), 0u16);
-    }
-}
 
 // #[test]
 // fn test_convert_i32_to_u8s_be() {
@@ -187,6 +158,7 @@ pub struct ConfigFile<'a> {
     pub address: &'a str,
     pub port: u16,
     pub capture_packets: bool,
+    pub log_level: &'a str,
 }
 
 impl Default for ConfigFile<'static> {
@@ -195,6 +167,7 @@ impl Default for ConfigFile<'static> {
             address: "0.0.0.0",
             port: 15353,
             capture_packets: false,
+            log_level: "DEBUG",
         }
     }
 }
@@ -206,6 +179,7 @@ impl From<Config> for ConfigFile<'static> {
             address,
             port: config.get("port").unwrap_or_default(),
             capture_packets: config.get("capture_packets").unwrap_or_default(),
+            log_level: config.get("log_level").unwrap_or_default(),
         }
     }
 }
@@ -215,7 +189,8 @@ pub fn get_config() -> ConfigFile<'static> {
     let config_filename: String = shellexpand::tilde(&config_file).into_owned();
 
     let builder =
-        Config::builder().add_source(File::new(&config_filename, config::FileFormat::Json));
+        Config::builder()
+            .add_source(File::new(&config_filename, config::FileFormat::Json));
 
     match builder.build() {
         Ok(config) => config.into(),
