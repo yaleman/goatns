@@ -1,16 +1,7 @@
-/*
-
-todo: compression
-
-ok so to point at the name in the question the answer just has to be [0xc0, 0x0c]
-
-ie compression (11000000)
-then the 12th octet (0b00001100)
-*/
-
 // TODO: SLIST? https://www.rfc-editor.org/rfc/rfc1034 something about state handling.
 // TODO: lowercase all question name fields
 // TODO: lowercase all reply name fields
+// TODO: clean ctrl-c handling or shutdown in general
 
 // all the types and codes and things - https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
 
@@ -21,6 +12,7 @@ use std::net::{Ipv6Addr, SocketAddr};
 use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::net::UdpSocket;
+
 use tokio::time::timeout;
 
 use crate::config::{get_config, ConfigFile};
@@ -331,7 +323,7 @@ impl From<ResourceRecord> for Vec<u8> {
         // class
         retval.extend(convert_u16_to_u8s_be(record.class as u16));
         // reply ttl
-        let ttl_bytes = convert_u32_to_u8s_be(record.ttl);
+        let ttl_bytes: [u8; 4] = convert_u32_to_u8s_be(record.ttl);
         trace!("ttl_bytes: {:?}", ttl_bytes);
         retval.extend(ttl_bytes);
         // reply data length
@@ -370,7 +362,7 @@ impl From<ResourceRecord> for Vec<u8> {
         //     RecordType::ALL => todo!(),
         //     RecordType::InvalidType => todo!(),
         // }
-        info!("ResourceRecord Bytes: {:?}", retval);
+        debug!("ResourceRecord Bytes: {:?}", retval);
         retval
     }
 }
@@ -383,7 +375,36 @@ pub struct Question {
     qclass: RecordClass,
 }
 
+#[cfg(test)]
+mod test {
+
+    use super::Question;
+
+    #[test]
+    fn test_normalize_name() {
+        let q = Question {
+            qname: String::from("HellO.world").as_bytes().to_vec(),
+            qtype: crate::enums::RecordType::A,
+            qclass: crate::enums::RecordClass::Internet,
+        };
+        assert_eq!(q.normalized_name(), String::from("hello.world"));
+        let q = Question {
+            qname: String::from("hello.world").as_bytes().to_vec(),
+            qtype: crate::enums::RecordType::A,
+            qclass: crate::enums::RecordClass::Internet,
+        };
+        assert_eq!(q.normalized_name(), String::from("hello.world"));
+    }
+}
+
 impl Question {
+    // TODO: remove this
+    #[allow(dead_code)]
+    fn normalized_name(self) -> String {
+        let result = from_utf8(&self.qname).unwrap();
+        result.to_string().to_lowercase()
+    }
+
     /// hand it the *actual* length of the buffer and the things, and get back a [Question]
     async fn from_packets(buf: &[u8]) -> Result<Self, String> {
         let mut qname: Vec<u8> = vec![];
