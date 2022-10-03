@@ -18,6 +18,6 @@ packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
 serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
 shellexpand = "2.1.2"
-tokio = { version = "1.21.1", features = ["full"] }
+tokio = { version = "1.21.2", features = ["full"] }
 tokio-stream = { version = "0.1.10", features = ["net"] }
 tokio-util = { version = "0.7.4", features = ["full"] }
