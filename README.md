@@ -31,3 +31,8 @@ Or if you want to fuzz the server and test that it doesn't blow up:
 ```shell
 ./dnsblast fuzz 127.0.0.1 50000 1500 15353
 ```
+
+## Running in Docker
+
+There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml file if that's your thing.
+

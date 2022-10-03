@@ -73,12 +73,11 @@ mod test {
 }
 
 pub fn load_zones() -> Result<Vec<FileZone>, String> {
-    let mut file = match File::open("testzones.json") {
+    let zone_filename = "testzones.json";
+    let mut file = match File::open(zone_filename) {
         Ok(value) => value,
         Err(error) => {
-            let emsg = format!("Failed to open file: {:?}", error);
-            error!("{}", emsg);
-            return Err(emsg);
+            return Err(format!("Failed to open zone file: {:?}", error));
         }
     };
 

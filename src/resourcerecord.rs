@@ -1,8 +1,8 @@
 use packed_struct::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::HEADER_BYTES;
 use crate::utils::name_as_bytes;
+use crate::HEADER_BYTES;
 
 #[allow(clippy::upper_case_acronyms)]
 #[allow(dead_code)]
@@ -36,8 +36,7 @@ mod test {
     }
 }
 
-
-#[derive(Serialize, Deserialize, Eq, PartialEq,PackedStruct)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, PackedStruct)]
 #[packed_struct(bit_numbering = "msb0", size_bytes = "22")]
 pub struct RdataSOAFields {
     // mname: Vec<u8>,
@@ -54,8 +53,8 @@ pub struct RdataSOAFields {
     minimum: u32,
 }
 
-impl From<RdataSOA> for RdataSOAFields {
-    fn from(source: RdataSOA) -> Self {
+impl From<&RdataSOA> for RdataSOAFields {
+    fn from(source: &RdataSOA) -> Self {
         RdataSOAFields {
             serial: source.serial,
             refresh: source.refresh,
@@ -79,7 +78,7 @@ pub struct RdataSOA {
 
 impl RdataSOA {
     #[allow(dead_code)]
-    pub fn as_bytes(self) -> Vec<u8>{
+    pub fn as_bytes(&self) -> Vec<u8> {
         let mut retval: Vec<u8> = vec![];
         retval.extend(name_as_bytes(self.mname.clone(), Some(HEADER_BYTES as u16)));
         retval.extend(name_as_bytes(self.rname.clone(), None));

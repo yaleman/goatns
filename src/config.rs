@@ -1,5 +1,6 @@
+use std::fmt::Display;
+
 use config::{Config, File};
-use log::error;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone)]
@@ -21,6 +22,15 @@ impl Default for ConfigFile {
     }
 }
 
+impl Display for ConfigFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "Listening address=\"{}:{}\" Capturing={} Log level={}",
+            self.address, self.port, self.capture_packets, self.log_level
+        ))
+    }
+}
+
 impl From<Config> for ConfigFile {
     fn from(config: Config) -> Self {
         ConfigFile {
@@ -33,21 +43,30 @@ impl From<Config> for ConfigFile {
 }
 
 pub fn get_config() -> ConfigFile {
-    let config_file = String::from("~/.config/goatns.json");
-    let config_filename: String = shellexpand::tilde(&config_file).into_owned();
+    for filepath in ["~/.config/goatns.json", "goatns.json"] {
+        let config_file = String::from(filepath);
+        let config_filename: String = shellexpand::tilde(&config_file).into_owned();
+        let config_filepath = std::path::Path::new(&config_filename);
+        match config_filepath.exists() {
+            false => {
+                eprintln!("Config file {} doesn't exist, skipping.", config_filename)
+            }
+            true => {
+                let builder = Config::builder()
+                    .add_source(File::new(&config_filename, config::FileFormat::Json))
+                    .add_source(config::Environment::with_prefix("goatns"));
 
-    let builder = Config::builder()
-        .add_source(File::new(&config_filename, config::FileFormat::Json))
-        .add_source(config::Environment::with_prefix("goatns"));
-
-    match builder.build() {
-        Ok(config) => config.into(),
-        Err(error) => {
-            error!(
-                "Couldn't load config from {:?}: {:?}",
-                config_filename, error
-            );
-            ConfigFile::default()
+                match builder.build() {
+                    Ok(config) => {
+                        println!("Successfully loaded config from: {}", config_filename);
+                        return config.into();
+                    }
+                    Err(error) => {
+                        eprintln!("Couldn't load config from {}: {:?}", config_filename, error);
+                    }
+                }
+            }
         }
     }
+    ConfigFile::default()
 }
