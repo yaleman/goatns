@@ -7,7 +7,7 @@ use tokio::time::timeout;
 
 use crate::config::ConfigFile;
 use crate::enums::Protocol;
-use crate::{parse_query, REPLY_TIMEOUT_MS};
+use crate::{parse_query, UDP_BUFFER_SIZE, REPLY_TIMEOUT_MS};
 
 pub async fn udp_server(bind_address: SocketAddr, config: ConfigFile) -> io::Result<()> {
     let udp_sock = match UdpSocket::bind(bind_address).await {
@@ -18,7 +18,7 @@ pub async fn udp_server(bind_address: SocketAddr, config: ConfigFile) -> io::Res
         }
     };
 
-    let mut udp_buffer = [0; 4096];
+    let mut udp_buffer = [0; UDP_BUFFER_SIZE];
     loop {
         let (len, addr) = match udp_sock.recv_from(&mut udp_buffer).await {
             Ok(value) => value,

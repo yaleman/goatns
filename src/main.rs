@@ -29,6 +29,8 @@ mod zones;
 
 const HEADER_BYTES: usize = 12;
 const REPLY_TIMEOUT_MS: u64 = 200;
+// https://dnsflagday.net/2020/#dns-flag-day-2020
+const UDP_BUFFER_SIZE: usize = 1232;
 
 /// https://www.rfc-editor.org/rfc/rfc1035 Section 4.1.1
 #[allow(dead_code)]
@@ -101,7 +103,7 @@ impl Default for Header {
 async fn parse_query(
     _proto: Protocol,
     len: usize,
-    buf: [u8; 4096],
+    buf: [u8; UDP_BUFFER_SIZE],
     capture_packets: bool,
 ) -> Result<Reply, String> {
     if capture_packets {

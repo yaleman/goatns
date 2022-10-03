@@ -342,13 +342,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_from_bytes() {
+        use crate::UDP_BUFFER_SIZE;
         let input = [
             0x9c, 0x58, 0x01, 0x20, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x79,
             0x61, 0x6c, 0x65, 0x6d, 0x61, 0x6e, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, 0x00,
             0x01,
         ];
 
-        let mut buf: [u8; 4096] = [0; 4096];
+        let mut buf: [u8; UDP_BUFFER_SIZE] = [0; UDP_BUFFER_SIZE];
         for (i, b) in input.iter().enumerate() {
             buf[i] = *b as u8;
         }
