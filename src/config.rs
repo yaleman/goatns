@@ -9,6 +9,7 @@ pub struct ConfigFile {
     pub port: u16,
     pub capture_packets: bool,
     pub log_level: String,
+    pub tcp_client_timeout: u16,
 }
 
 impl Default for ConfigFile {
@@ -18,6 +19,7 @@ impl Default for ConfigFile {
             port: 15353,
             capture_packets: false,
             log_level: "DEBUG".to_string(),
+            tcp_client_timeout: 15,
         }
     }
 }
@@ -38,6 +40,9 @@ impl From<Config> for ConfigFile {
             port: config.get("port").unwrap_or_default(),
             capture_packets: config.get("capture_packets").unwrap_or_default(),
             log_level: config.get("log_level").unwrap_or(Self::default().log_level),
+            tcp_client_timeout: config
+                .get("tcp_client_timeout")
+                .unwrap_or(Self::default().tcp_client_timeout),
         }
     }
 }

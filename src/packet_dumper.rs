@@ -4,14 +4,16 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
 pub enum DumpType {
-    ClientRequest,
+    ClientRequestTCP,
+    ClientRequestUDP,
     // Header
 }
 
 impl core::fmt::Display for DumpType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
-            DumpType::ClientRequest => f.write_str("client_request"),
+            DumpType::ClientRequestTCP => f.write_str("client_request_tcp"),
+            DumpType::ClientRequestUDP => f.write_str("client_request_udp"),
         }
     }
 }
@@ -31,11 +33,11 @@ pub async fn dump_bytes(bytes: Vec<u8>, dump_type: DumpType) {
     );
     let mut fh = match File::create(&filename).await {
         Ok(value) => value,
-        Err(error) => panic!("couldn't open {:?}: {:?}", filename, error),
+        Err(error) => panic!("couldn't open {} for writing: {:?}", filename, error),
     };
 
     match fh.write_all(&bytes).await {
-        Ok(_) => debug!("Successfully wrote packet to {:?}", &filename),
-        Err(error) => debug!("Failed to write to {:?}: {:?}", filename, error),
+        Ok(_) => debug!("Successfully wrote packet to {}", &filename),
+        Err(error) => debug!("Failed to write to {}: {:?}", filename, error),
     };
 }

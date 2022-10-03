@@ -13,7 +13,7 @@ use std::str::{from_utf8, FromStr};
 
 use crate::config::{get_config, ConfigFile};
 use crate::enums::*;
-use crate::resourcerecord::RdataSOA;
+use crate::rdata::*;
 use crate::utils::*;
 use tokio::time::sleep;
 
@@ -21,6 +21,7 @@ mod config;
 mod enums;
 mod ip_address;
 mod packet_dumper;
+mod rdata;
 mod resourcerecord;
 mod servers;
 mod tests;
@@ -34,7 +35,7 @@ const UDP_BUFFER_SIZE: usize = 1232;
 
 /// https://www.rfc-editor.org/rfc/rfc1035 Section 4.1.1
 #[allow(dead_code)]
-#[derive(Debug, PackedStruct)]
+#[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
 #[packed_struct(bit_numbering = "msb0", size_bytes = "12")]
 pub struct Header {
     /// The query ID
@@ -99,30 +100,15 @@ impl Default for Header {
     }
 }
 
-/// Query handler
-async fn parse_query(
-    _proto: Protocol,
-    len: usize,
-    buf: [u8; UDP_BUFFER_SIZE],
-    capture_packets: bool,
-) -> Result<Reply, String> {
-    if capture_packets {
-        packet_dumper::dump_bytes(buf[0..len].into(), packet_dumper::DumpType::ClientRequest).await;
+impl Header {
+    pub fn as_answer(self) -> Header {
+        let mut response = self;
+        response.qr = PacketType::Answer;
+        response
     }
-    // we only want the first 12 bytes for the header
-    let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
-    split_header.copy_from_slice(&buf[0..HEADER_BYTES]);
-    // unpack the header for great justice
-    let header = match Header::unpack(&split_header) {
-        Ok(value) => value,
-        Err(error) => {
-            // can't return a servfail if we can't unpack the header, they're probably doing something bad.
-            return Err(format!("Failed to parse header: {:?}", error));
-        }
-    };
-    debug!("Buffer length: {}", len);
-    debug!("Parsed header: {:?}", header);
+}
 
+async fn get_result(header: Header, len: usize, buf: &[u8]) -> Result<Reply, String> {
     match header.opcode {
         OpCode::Query => {
             let question = Question::from_packets(&buf[HEADER_BYTES..len]).await;
@@ -244,6 +230,67 @@ async fn parse_query(
             Err(String::from("Invalid OPCODE"))
         }
     }
+}
+
+/// Query handler
+async fn parse_udp_query(
+    _proto: Protocol,
+    len: usize,
+    buf: [u8; UDP_BUFFER_SIZE],
+    capture_packets: bool,
+) -> Result<Reply, String> {
+    if capture_packets {
+        packet_dumper::dump_bytes(
+            buf[0..len].into(),
+            packet_dumper::DumpType::ClientRequestUDP,
+        )
+        .await;
+    }
+    // we only want the first 12 bytes for the header
+    let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
+    split_header.copy_from_slice(&buf[0..HEADER_BYTES]);
+    // unpack the header for great justice
+    let header = match Header::unpack(&split_header) {
+        Ok(value) => value,
+        Err(error) => {
+            // can't return a servfail if we can't unpack the header, they're probably doing something bad.
+            return Err(format!("Failed to parse header: {:?}", error));
+        }
+    };
+    debug!("Buffer length: {}", len);
+    debug!("Parsed header: {:?}", header);
+
+    get_result(header, len, &buf).await
+}
+
+pub async fn parse_tcp_query(
+    _proto: Protocol,
+    len: usize,
+    buf: &[u8],
+    capture_packets: bool,
+) -> Result<Reply, String> {
+    if capture_packets {
+        packet_dumper::dump_bytes(
+            buf[0..len].into(),
+            packet_dumper::DumpType::ClientRequestTCP,
+        )
+        .await;
+    }
+    // we only want the first 12 bytes for the header
+    let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
+    split_header.copy_from_slice(&buf[0..HEADER_BYTES]);
+    // unpack the header for great justice
+    let header = match Header::unpack(&split_header) {
+        Ok(value) => value,
+        Err(error) => {
+            // can't return a servfail if we can't unpack the header, they're probably doing something bad.
+            return Err(format!("Failed to parse header: {:?}", error));
+        }
+    };
+    debug!("Buffer length: {}", len);
+    debug!("Parsed header: {:?}", header);
+
+    get_result(header, len, buf).await
 }
 
 #[allow(dead_code)]
@@ -512,9 +559,10 @@ async fn main() -> io::Result<()> {
     };
 
     let udpserver = tokio::spawn(servers::udp_server(bind_address, config.clone()));
-
+    let tcpserver = tokio::spawn(servers::tcp_server(bind_address, config.clone()));
+    // TcpListener::bind(listen_addr).await?;
     loop {
-        if udpserver.is_finished() {
+        if udpserver.is_finished() && tcpserver.is_finished() {
             return Ok(());
         }
         sleep(std::time::Duration::from_secs(1)).await;

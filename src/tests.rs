@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::ip_address::IPAddress;
-    use crate::resourcerecord::RdataSOA;
+    use crate::rdata::RdataSOA;
     use crate::utils::name_as_bytes;
     use crate::{PacketType, Question, ResourceRecord, HEADER_BYTES};
     use log::debug;
@@ -138,6 +138,14 @@ mod tests {
     async fn test_cloudflare_soa_reply() {
         use crate::{Header, Reply};
         /*
+        from: https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA
+
+        ;; Sending:
+        ;; QUERY: 8928010000010000000000000a636c6f7564666c61726503636f6d0000060001
+        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 35112
+        ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+        ;; QUESTION SECTION:
+        ;cloudflare.com.                IN      SOA
 
         ;; Got answer:
         ;; RESPONSE: 8928818000010001000000000a636c6f7564666c61726503636f6d0000060001c00c00060001000000ad0020036e7333c00c03646e73c00c7906ce18000027100000096000093a800000012c
@@ -147,7 +155,14 @@ mod tests {
         ;cloudflare.com.                IN      SOA
         ;; ANSWER SECTION:
         cloudflare.com.         173     IN      SOA     ns3.cloudflare.com. dns.cloudflare.com. 2030489112 10000 2400 604800 300
+
         */
+        let original_question: [u8; 32] = [
+            0x89, 0x28, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x63,
+            0x6c, 0x6f, 0x75, 0x64, 0x66, 0x6c, 0x61, 0x72, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x00,
+            0x00, 0x06, 0x00, 0x01,
+        ];
+
         let header = Header {
             id: 35112,
             qr: PacketType::Answer,
@@ -155,7 +170,7 @@ mod tests {
             authoritative: false,
             truncated: false,
             recursion_desired: true,
-            recursion_available: true,
+            recursion_available: false,
             z: false,
             ad: false,
             cd: false,
@@ -196,7 +211,7 @@ mod tests {
         }];
 
         let mut reply = Reply {
-            header,
+            header: header.clone(),
             question: Some(question),
             answers,
             authorities: vec![],
@@ -215,6 +230,11 @@ mod tests {
             0x0c, 0x03, 0x64, 0x6e, 0x73, 0xc0, 0x0c, 0x79, 0x06, 0xce, 0x18, 0x00, 0x00, 0x27,
             0x10, 0x00, 0x00, 0x09, 0x60, 0x00, 0x09, 0x3a, 0x80, 0x00, 0x00, 0x01, 0x2c,
         ];
+
+        // testing if I was parsing it right...
+        let their_header = Header::unpack_from_slice(&original_question[0..HEADER_BYTES]).unwrap();
+        assert_eq!(header, their_header.as_answer());
+        eprintln!("Parsed header matched!");
 
         let mut current_block: &str;
         for (index, byte) in reply_bytes.iter().enumerate() {
@@ -354,7 +374,7 @@ mod tests {
             buf[i] = *b as u8;
         }
 
-        let result = crate::parse_query(crate::enums::Protocol::Udp, input.len(), buf, false)
+        let result = crate::parse_udp_query(crate::enums::Protocol::Udp, input.len(), buf, false)
             .await
             .unwrap();
 

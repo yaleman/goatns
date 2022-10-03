@@ -191,11 +191,11 @@ impl From<&u8> for RecordClass {
 }
 
 pub enum Protocol {
-    // Tcp,
+    Tcp,
     Udp,
 }
 
-#[derive(Debug, PrimitiveEnum_u8, Clone, Copy)]
+#[derive(Debug, PrimitiveEnum_u8, Clone, Copy, Eq, PartialEq)]
 pub enum PacketType {
     Query = 0,
     Answer = 1,
