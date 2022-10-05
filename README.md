@@ -6,10 +6,9 @@ Currently designed to be authoritative.
 
 Though, "designed" is a stretch.
 
+## Configuration
 
-## Notes
-
-- [dnslib](https://github.com/paulc/dnslib/) has some good example data
+Look at `zones.json` and `goatns.json` for examples.
 
 ## Testing
 
@@ -36,3 +35,14 @@ Or if you want to fuzz the server and test that it doesn't blow up:
 
 There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml file if that's your thing.
 
+## Notes
+
+- [dnslib](https://github.com/paulc/dnslib/) has some good example data
+
+
+
+## TODO 
+
+- [ ] allow records with an `@` value for `name` which are apex records.
+  - [ ] maaaaybe support flattening of apex records?
+- [ ] record caching instead of loading everything into memory

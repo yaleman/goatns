@@ -150,6 +150,35 @@ impl From<&u16> for RecordType {
     }
 }
 
+impl From<&str> for RecordType {
+    fn from(input: &str) -> Self {
+        match input {
+            "A" => Self::A,
+            "NS" => Self::NS,
+            "MD" => Self::MD,
+            "MF" => Self::MF,
+            "CNAME" => Self::CNAME,
+            "SOA" => Self::SOA,
+            "MB" => Self::MB,
+            "MG" => Self::MG,
+            "MR" => Self::MR,
+            "NULL" => Self::NULL,
+            "WKS" => Self::WKS,
+            "PTR" => Self::PTR,
+            "HINFO" => Self::HINFO,
+            "MINFO" => Self::MINFO,
+            "MX" => Self::MX,
+            "TXT" => Self::TXT,
+            "AAAA" => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+            "AXFR" => Self::AXFR,
+            "MAILB" => Self::MAILB,
+            "MAILA" => Self::MAILA,
+            "ALL" => Self::ALL,
+            _ => Self::InvalidType,
+        }
+    }
+}
+
 impl RecordType {
     pub fn supported(self: RecordType) -> bool {
         #[allow(clippy::match_like_matches_macro)]
@@ -157,6 +186,7 @@ impl RecordType {
             RecordType::A => true,
             RecordType::AAAA => true,
             RecordType::SOA => true,
+            RecordType::TXT => true,
             _ => false,
         }
     }
@@ -188,11 +218,6 @@ impl From<&u8> for RecordClass {
             _ => Self::InvalidType,
         }
     }
-}
-
-pub enum Protocol {
-    Tcp,
-    Udp,
 }
 
 #[derive(Debug, PrimitiveEnum_u8, Clone, Copy, Eq, PartialEq)]

@@ -4,9 +4,19 @@
     "records" :
         [
             {
-                "name" : "a",
+                "name" : "test",
                 "rrtype" : "A",
                 "rdata" : "1.2.3.4"
+            },
+            {
+                "name" : "test",
+                "rrtype" : "A",
+                "rdata" : "12.2.3.4"
+            },
+            {
+                "name" : "@",
+                "rrtype" : "A",
+                "rdata" : "6.6.6.6"
             },
             {
                 "name" : "a",
@@ -22,6 +32,11 @@
                 "name" : "cafe",
                 "rrtype" : "AAAA",
                 "rdata" : "fe80:580a:2d::caf3:b33f"
+            },
+            {
+                "name" : "cafe",
+                "rrtype" : "TXT",
+                "rdata" : "Hello world"
             }
         ]
     }

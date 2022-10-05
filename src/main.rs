@@ -7,17 +7,21 @@
 
 use log::{debug, error, info, trace, LevelFilter};
 use packed_struct::prelude::*;
-use std::io;
-use std::net::{Ipv6Addr, SocketAddr};
-use std::str::{from_utf8, FromStr};
+use zones::ZoneRecord;
 
-use crate::config::{get_config, ConfigFile};
-use crate::enums::*;
-use crate::rdata::*;
-use crate::utils::*;
+use std::io;
+use std::net::SocketAddr;
+use std::str::{from_utf8, FromStr};
+use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 
+use crate::config::{get_config, ConfigFile};
+use crate::datastore::Command;
+use crate::enums::*;
+use crate::utils::*;
+
 mod config;
+mod datastore;
 mod enums;
 mod ip_address;
 mod packet_dumper;
@@ -28,6 +32,7 @@ mod tests;
 mod utils;
 mod zones;
 
+const MAX_IN_FLIGHT: usize = 128;
 const HEADER_BYTES: usize = 12;
 const REPLY_TIMEOUT_MS: u64 = 200;
 // https://dnsflagday.net/2020/#dns-flag-day-2020
@@ -108,7 +113,12 @@ impl Header {
     }
 }
 
-async fn get_result(header: Header, len: usize, buf: &[u8]) -> Result<Reply, String> {
+async fn get_result(
+    header: Header,
+    len: usize,
+    buf: &[u8],
+    datastore: mpsc::Sender<crate::datastore::Command>,
+) -> Result<Reply, String> {
     match header.opcode {
         OpCode::Query => {
             let question = Question::from_packets(&buf[HEADER_BYTES..len]).await;
@@ -133,68 +143,53 @@ async fn get_result(header: Header, len: usize, buf: &[u8]) -> Result<Reply, Str
                 );
                 return reply_builder(header.id, Rcode::NotImplemented);
             }
-            // let answer_rdata = String::from("0.0.0.0");
-            let answer_rdata: Vec<u8> = match question.qtype {
-                RecordType::A => {
-                    let data = ip_address::IPAddress::new(0, 0, 0, 0)
-                        .pack()
-                        .unwrap()
-                        .to_owned();
-                    data.to_vec()
-                }
-                RecordType::AAAA => {
-                    let rdata = "fe80:580a:2d::caf3:b33f";
-                    let data: Ipv6Addr = match rdata.parse() {
-                        Ok(value) => value,
-                        Err(error) => {
-                            error!("Failed to parse {}: {:?}", rdata, error);
-                            return reply_builder(header.id, Rcode::ServFail);
-                        }
-                    };
-                    data.octets().to_vec()
-                }
-                RecordType::NS => todo!(),
-                RecordType::MD => todo!(),
-                RecordType::MF => todo!(),
-                RecordType::CNAME => todo!(),
-                RecordType::SOA => {
-                    let rdata = RdataSOA {
-                        mname: question.qname.clone(),
-                        rname: Default::default(),
-                        serial: 0,
-                        refresh: Default::default(),
-                        retry: Default::default(),
-                        expire: Default::default(),
-                        minimum: Default::default(),
-                    };
-                    rdata.as_bytes()
-                }
-                RecordType::MB => todo!(),
-                RecordType::MG => todo!(),
-                RecordType::MR => todo!(),
-                RecordType::NULL => todo!(),
-                RecordType::WKS => todo!(),
-                RecordType::PTR => todo!(),
-                RecordType::HINFO => todo!(),
-                RecordType::MINFO => todo!(),
-                RecordType::MX => todo!(),
-                RecordType::TXT => todo!(),
-                RecordType::AXFR => todo!(),
-                RecordType::MAILB => todo!(),
-                RecordType::MAILA => todo!(),
-                RecordType::ALL => todo!(),
-                RecordType::InvalidType => todo!(),
+
+            let mut name = question.qname.clone();
+            name.reverse();
+
+            let (tx_oneshot, rx_oneshot) = oneshot::channel();
+            let ds_req: Command = Command::Get {
+                name,
+                rtype: question.qtype,
+                resp: tx_oneshot,
             };
 
-            let answers = vec![ResourceRecord {
-                name: question.qname.to_vec(),
-                record_type: question.qtype,
-                class: question.qclass,
-                ttl: 60, // TODO: set a TTL
-                rdlength: (answer_rdata.len() as u16),
-                rdata: answer_rdata.to_vec(),
-                compression: true,
-            }];
+            // here we talk to the datastore to pull the result
+            match datastore.send(ds_req).await {
+                Ok(_) => info!("Sent a request to the datastore!"),
+                // TODO: handle this properly
+                Err(error) => error!("Error sending to datastore: {:?}", error),
+            };
+
+            let record: ZoneRecord = match rx_oneshot.await {
+                Ok(value) => {
+                    debug!("DS Response: {:?}", value);
+                    match value {
+                        Some(zr) => zr,
+                        None => return reply_nxdomain(header.id),
+                    }
+                }
+                Err(error) => {
+                    error!("Failed to get response from datastore: {:?}", error);
+                    return reply_builder(header.id, Rcode::ServFail);
+                }
+            };
+
+            let mut answers: Vec<ResourceRecord> = vec![];
+
+            for record in record.typerecords {
+                for answer in record.rdata {
+                    answers.push(ResourceRecord {
+                        name: question.qname.to_vec(),
+                        record_type: question.qtype,
+                        class: question.qclass,
+                        ttl: 60, // TODO: set a TTL
+                        rdlength: (answer.len() as u16),
+                        rdata: answer,
+                        compression: true,
+                    });
+                }
+            }
 
             // this is our reply - static until that bit's done
             Ok(Reply {
@@ -212,10 +207,9 @@ async fn get_result(header: Header, len: usize, buf: &[u8]) -> Result<Reply, Str
                     // records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer
                     // was insecure or not validated. This bit is set by default.
                     cd: false, // TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
-                    // rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
                     rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
                     qdcount: 1,
-                    ancount: 1, // TODO: work out how many we'll return
+                    ancount: answers.len() as u16, // TODO: work out how many we'll return
                     nscount: 0,
                     arcount: 0,
                 },
@@ -234,7 +228,7 @@ async fn get_result(header: Header, len: usize, buf: &[u8]) -> Result<Reply, Str
 
 /// Query handler
 async fn parse_udp_query(
-    _proto: Protocol,
+    datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
     len: usize,
     buf: [u8; UDP_BUFFER_SIZE],
     capture_packets: bool,
@@ -259,12 +253,11 @@ async fn parse_udp_query(
     };
     debug!("Buffer length: {}", len);
     debug!("Parsed header: {:?}", header);
-
-    get_result(header, len, &buf).await
+    get_result(header, len, &buf, datastore).await
 }
 
 pub async fn parse_tcp_query(
-    _proto: Protocol,
+    datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
     len: usize,
     buf: &[u8],
     capture_packets: bool,
@@ -289,8 +282,7 @@ pub async fn parse_tcp_query(
     };
     debug!("Buffer length: {}", len);
     debug!("Parsed header: {:?}", header);
-
-    get_result(header, len, buf).await
+    get_result(header, len, buf, datastore).await
 }
 
 #[allow(dead_code)]
@@ -541,15 +533,6 @@ async fn main() -> io::Result<()> {
     info!("Configuration: {}", config);
     let listen_addr = format!("{}:{}", config.address, config.port);
 
-    let _zones = match zones::load_zones() {
-        Ok(value) => value,
-        Err(error) => {
-            error!("{}", error);
-            vec![]
-        }
-    };
-
-    info!("Starting UDP server on {}:{}", config.address, config.port);
     let bind_address = match listen_addr.parse::<SocketAddr>() {
         Ok(value) => value,
         Err(error) => {
@@ -558,11 +541,24 @@ async fn main() -> io::Result<()> {
         }
     };
 
-    let udpserver = tokio::spawn(servers::udp_server(bind_address, config.clone()));
-    let tcpserver = tokio::spawn(servers::tcp_server(bind_address, config.clone()));
+    let tx: mpsc::Sender<crate::datastore::Command>;
+    let rx: mpsc::Receiver<crate::datastore::Command>;
+    (tx, rx) = mpsc::channel(MAX_IN_FLIGHT);
+
+    let datastore_manager = tokio::spawn(datastore::manager(rx));
+    let udpserver = tokio::spawn(servers::udp_server(
+        bind_address,
+        config.clone(),
+        tx.clone(),
+    ));
+    let tcpserver = tokio::spawn(servers::tcp_server(
+        bind_address,
+        config.clone(),
+        tx.clone(),
+    ));
     // TcpListener::bind(listen_addr).await?;
     loop {
-        if udpserver.is_finished() && tcpserver.is_finished() {
+        if udpserver.is_finished() && tcpserver.is_finished() && datastore_manager.is_finished() {
             return Ok(());
         }
         sleep(std::time::Duration::from_secs(1)).await;

@@ -1,19 +1,25 @@
-// use crate::{Header, get_result};
 use log::*;
 use std::net::SocketAddr;
 use std::str::from_utf8;
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
 use tokio::net::{TcpListener, UdpSocket};
+use tokio::sync::mpsc;
 use tokio::time::timeout;
 // use packed_struct::PackedStruct;
 use crate::config::ConfigFile;
-use crate::enums::Protocol;
 use crate::{parse_udp_query, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
-pub async fn udp_server(bind_address: SocketAddr, config: ConfigFile) -> io::Result<()> {
+pub async fn udp_server(
+    bind_address: SocketAddr,
+    config: ConfigFile,
+    datastore: mpsc::Sender<crate::datastore::Command>,
+) -> io::Result<()> {
     let udp_sock = match UdpSocket::bind(bind_address).await {
-        Ok(value) => value,
+        Ok(value) => {
+            info!("Started UDP listener on {}:{}", config.address, config.port);
+            value
+        }
         Err(error) => {
             error!("Failed to start UDP listener: {:?}", error);
             return Ok(());
@@ -21,6 +27,7 @@ pub async fn udp_server(bind_address: SocketAddr, config: ConfigFile) -> io::Res
     };
 
     let mut udp_buffer = [0; UDP_BUFFER_SIZE];
+
     loop {
         let (len, addr) = match udp_sock.recv_from(&mut udp_buffer).await {
             Ok(value) => value,
@@ -30,7 +37,7 @@ pub async fn udp_server(bind_address: SocketAddr, config: ConfigFile) -> io::Res
 
         let udp_result = match timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
-            parse_udp_query(Protocol::Udp, len, udp_buffer, config.capture_packets),
+            parse_udp_query(datastore.clone(), len, udp_buffer, config.capture_packets),
         )
         .await
         {
@@ -71,11 +78,16 @@ pub async fn udp_server(bind_address: SocketAddr, config: ConfigFile) -> io::Res
 /// main handler for the TCP side of things
 ///
 /// Ref https://www.rfc-editor.org/rfc/rfc7766
-pub async fn tcp_server(bind_address: SocketAddr, config: ConfigFile) -> io::Result<()> {
+
+pub async fn tcp_server(
+    bind_address: SocketAddr,
+    config: ConfigFile,
+    tx: mpsc::Sender<crate::datastore::Command>,
+) -> io::Result<()> {
     // TODO: add a configurable idle timeout for the TCP server
     let tcpserver = match TcpListener::bind(bind_address).await {
         Ok(value) => {
-            info!("Started TCP Listener on {}", bind_address);
+            info!("Started TCP listener on {}", bind_address);
             value
         }
         Err(error) => {
@@ -87,7 +99,7 @@ pub async fn tcp_server(bind_address: SocketAddr, config: ConfigFile) -> io::Res
     loop {
         let (mut stream, addr) = match tcpserver.accept().await {
             Ok(value) => value,
-            Err(error) => panic!("{:?}", error),
+            Err(error) => panic!("Couldn't get data from TcpStrream: {:?}", error),
         };
         debug!("TCP connection from {:?}", addr);
 
@@ -107,7 +119,7 @@ pub async fn tcp_server(bind_address: SocketAddr, config: ConfigFile) -> io::Res
         let buf = &buf[0..len];
         let result = match timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
-            crate::parse_tcp_query(Protocol::Tcp, len, buf, config.capture_packets),
+            crate::parse_tcp_query(tx.clone(), len, buf, config.capture_packets),
         )
         .await
         {

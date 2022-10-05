@@ -164,3 +164,21 @@ pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, String> {
         additional: vec![],
     })
 }
+
+/// Want a generic empty reply with an ID and an RCODE? Here's your function.
+pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
+    let header = Header {
+        id,
+        qr: PacketType::Answer,
+        rcode: Rcode::NameError,
+        ancount: 0,
+        ..Default::default()
+    };
+    Ok(Reply {
+        header,
+        question: None,
+        answers: vec![],
+        authorities: vec![],
+        additional: vec![],
+    })
+}

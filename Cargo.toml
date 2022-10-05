@@ -15,6 +15,7 @@ femme = "2.2.1"
 json5 = "0.4.1"
 log = "0.4.17"
 packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
+patricia_tree = "0.3.2"
 serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
 shellexpand = "2.1.2"
