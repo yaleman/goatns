@@ -150,6 +150,13 @@ impl From<&u16> for RecordType {
     }
 }
 
+impl From<String> for RecordType {
+    fn from(input: String) -> Self {
+        let input: RecordType = input.as_str().into();
+        input
+    }
+}
+
 impl From<&str> for RecordType {
     fn from(input: &str) -> Self {
         match input {
@@ -233,4 +240,11 @@ impl From<bool> for PacketType {
             true => Self::Answer,
         }
     }
+}
+
+#[allow(dead_code)]
+pub enum RRType {
+    A {address: u32},
+    AAAA {address: u128},
+    TXT {data: String},
 }

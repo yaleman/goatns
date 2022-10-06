@@ -117,7 +117,7 @@ pub fn load_zones() -> Result<PatriciaMap<ZoneRecord>, String> {
     let mut tree = empty_zones();
     for zone in jsonstruct {
         for record in zone.records {
-            let rrtype: RecordType = record.rrtype.as_str().into();
+            let rrtype: RecordType = record.rrtype.clone().into();
             // handle the various types and put them into the thing nicer
             let rdata: Vec<u8> = match rrtype {
                 RecordType::A => rdata::RdataA::from(record.rdata).address.to_vec(),
