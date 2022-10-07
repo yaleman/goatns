@@ -436,9 +436,7 @@ impl Display for Question {
         };
         f.write_fmt(format_args!(
             "QNAME={} QTYPE={:?} QCLASS={}",
-            qname,
-            self.qtype,
-            self.qclass,
+            qname, self.qtype, self.qclass,
         ))
     }
 }
@@ -474,7 +472,6 @@ impl Question {
             Err(error) => {
                 //
                 panic!("Failed to normalize {:?}: {:?}", &self.qname, error)
-
             }
         };
         result.to_lowercase()
