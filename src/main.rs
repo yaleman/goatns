@@ -466,11 +466,18 @@ mod test {
 }
 
 impl Question {
-    // TODO: remove this
-    #[allow(dead_code)]
+    #[cfg(test)]
+    // TODO: normalized_name should be used when sending [Question]s to the datastore
     fn normalized_name(self) -> String {
-        let result = from_utf8(&self.qname).unwrap();
-        result.to_string().to_lowercase()
+        let result = match from_utf8(&self.qname) {
+            Ok(value) => value,
+            Err(error) => {
+                //
+                panic!("Failed to normalize {:?}: {:?}", &self.qname, error)
+
+            }
+        };
+        result.to_lowercase()
     }
 
     /// hand it the *actual* length of the buffer and the things, and get back a [Question]

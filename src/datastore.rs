@@ -42,7 +42,7 @@ pub async fn manager(mut rx: mpsc::Receiver<crate::datastore::Command>) -> Resul
             Command::Get { name, rtype, resp } => {
                 debug!(
                     "searching for name={:?} rtype={:?}",
-                    from_utf8(&name).unwrap(),
+                    from_utf8(&name).unwrap_or("-"),
                     rtype
                 );
 
