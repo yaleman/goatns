@@ -157,7 +157,7 @@ async fn get_result(
 
             // here we talk to the datastore to pull the result
             match datastore.send(ds_req).await {
-                Ok(_) => info!("Sent a request to the datastore!"),
+                Ok(_) => debug!("Sent a request to the datastore!"),
                 // TODO: handle this properly
                 Err(error) => error!("Error sending to datastore: {:?}", error),
             };
@@ -428,9 +428,15 @@ impl Debug for Question {
 
 impl Display for Question {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let qname = match from_utf8(&self.qname) {
+            Ok(value) => value.to_string(),
+            Err(_) => {
+                format!("{:?}", self.qname)
+            }
+        };
         f.write_fmt(format_args!(
             "QNAME={} QTYPE={:?} QCLASS={}",
-            from_utf8(&self.qname).unwrap(),
+            qname,
             self.qtype,
             self.qclass,
         ))

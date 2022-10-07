@@ -43,6 +43,7 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 
 ## TODO 
 
-- [ ] allow records with an `@` value for `name` which are apex records.
+- [x] allow records with an `@` value for `name` which are apex records.
   - [ ] maaaaybe support flattening of apex records?
 - [ ] record caching instead of loading everything into memory
+- [ ] TTL handling from the records
