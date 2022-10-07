@@ -38,6 +38,7 @@ pub async fn manager(mut rx: mpsc::Receiver<crate::datastore::Command>) -> Resul
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
+            // TODO: at some point we should be checking that if the zonerecord has a TTL of None, then it should be pulling from the SOA
             Command::Get { name, rtype, resp } => {
                 debug!(
                     "searching for name={:?} rtype={:?}",
