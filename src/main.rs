@@ -145,6 +145,7 @@ async fn get_result(
                 return reply_builder(header.id, Rcode::NotImplemented);
             }
 
+            // build the request to the datastore to make the query
             let mut name = question.qname.clone();
             name.reverse();
 
