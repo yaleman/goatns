@@ -106,14 +106,21 @@ use crate::zones::FileZoneRecord;
 pub enum InternalResourceRecord {
     A {
         address: u32,
+        ttl: Option<u32>,
     }, // 1 a host address
     NS {
         nsdname: DomainName,
+        ttl: Option<u32>,
     }, // 2 an authoritative name server
-    MD {}, // 3 a mail destination (Obsolete - use MX)
-    MF {}, // 4 a mail forwarder (Obsolete - use MX)
+    MD {
+        ttl: Option<u32>,
+    }, // 3 a mail destination (Obsolete - use MX)
+    MF {
+        ttl: Option<u32>,
+    }, // 4 a mail forwarder (Obsolete - use MX)
     CNAME {
         cname: DomainName,
+        ttl: Option<u32>,
     }, // 5 the canonical name for an alias
     SOA {
         serial: u32,
@@ -121,32 +128,57 @@ pub enum InternalResourceRecord {
         retry: u32,
         expire: u32,
         minimum: u32,
+        // this doesn't get a TTL, since that's an expire?
     }, // 6 marks the start of a zone of authority
-    MB {}, // 7 a mailbox domain name (EXPERIMENTAL)
-    MG {}, // 8 a mail group member (EXPERIMENTAL)
-    MR {}, // 9 a mail rename domain name (EXPERIMENTAL)
-    NULL {}, // 10 a null RR (EXPERIMENTAL)
-    WKS {}, // 11 a well known service description
+    MB {
+        ttl: Option<u32>,
+    }, // 7 a mailbox domain name (EXPERIMENTAL)
+    MG {
+        ttl: Option<u32>,
+    }, // 8 a mail group member (EXPERIMENTAL)
+    MR {
+        ttl: Option<u32>,
+    }, // 9 a mail rename domain name (EXPERIMENTAL)
+    NULL {
+        ttl: Option<u32>,
+    }, // 10 a null RR (EXPERIMENTAL)
+    WKS {
+        ttl: Option<u32>,
+    }, // 11 a well known service description
     PTR {
         ptrdname: DomainName,
+        ttl: Option<u32>,
     }, // 12 a domain name pointer
-    HINFO {}, // 13 host information
-    MINFO {}, // 14 mailbox or mail list information
+    HINFO {
+        ttl: Option<u32>,
+    }, // 13 host information
+    MINFO {
+        ttl: Option<u32>,
+    }, // 14 mailbox or mail list information
     MX {
         preference: u16,
         exchange: DomainName,
+        ttl: Option<u32>,
     }, // 15 mail exchange
     TXT {
         txtdata: Vec<u8>,
+        ttl: Option<u32>,
     }, // 16 text strings
     AAAA {
         address: u128,
+        ttl: Option<u32>,
     }, // 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
-    AXFR {}, // 252 A request for a transfer of an entire zone
+    AXFR {
+        ttl: Option<u32>,
+    }, // 252 A request for a transfer of an entire zone
 
-    MAILB {}, // 253 A request for mailbox-related records (MB, MG or MR)
+    MAILB {
+        ttl: Option<u32>,
+    }, // 253 A request for mailbox-related records (MB, MG or MR)
 
-    MAILA {}, // 254 A request for mail agent RRs (Obsolete - see MX)
+    MAILA {
+        ttl: Option<u32>,
+    }, // 254 A request for mail agent RRs (Obsolete - see MX)
 
     ALL {}, // 255 A request for all records (*)
     InvalidType,
@@ -177,7 +209,10 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                         0u32
                     }
                 };
-                InternalResourceRecord::A { address }
+                InternalResourceRecord::A {
+                    address,
+                    ttl: record.ttl,
+                }
             }
             "AAAA" => {
                 let address = match from_utf8(&record.rdata) {
@@ -205,7 +240,10 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                     }
                 };
 
-                InternalResourceRecord::AAAA { address }
+                InternalResourceRecord::AAAA {
+                    address,
+                    ttl: record.ttl,
+                }
             }
             _ => InternalResourceRecord::InvalidType,
         }
@@ -215,28 +253,32 @@ impl From<FileZoneRecord> for InternalResourceRecord {
 impl PartialEq<RecordType> for InternalResourceRecord {
     fn eq(&self, other: &RecordType) -> bool {
         match self {
-            InternalResourceRecord::A { address: _ } => other == &RecordType::A,
-            InternalResourceRecord::AAAA { address: _ } => other == &RecordType::AAAA,
+            InternalResourceRecord::A { address: _, ttl: _ } => other == &RecordType::A,
+            InternalResourceRecord::AAAA { address: _, ttl: _ } => other == &RecordType::AAAA,
             InternalResourceRecord::ALL {} => other == &RecordType::ALL,
-            InternalResourceRecord::AXFR {} => other == &RecordType::AXFR,
-            InternalResourceRecord::CNAME { cname: _ } => other == &RecordType::CNAME,
-            InternalResourceRecord::HINFO {} => other == &RecordType::HINFO,
+            InternalResourceRecord::AXFR { ttl: _ } => other == &RecordType::AXFR,
+            InternalResourceRecord::CNAME { cname: _, ttl: _ } => other == &RecordType::CNAME,
+            InternalResourceRecord::HINFO { ttl: _ } => other == &RecordType::HINFO,
             InternalResourceRecord::InvalidType => other == &RecordType::InvalidType,
-            InternalResourceRecord::MAILA {} => other == &RecordType::MAILA,
-            InternalResourceRecord::MAILB {} => other == &RecordType::MAILB,
-            InternalResourceRecord::MB {} => other == &RecordType::MB,
-            InternalResourceRecord::MD {} => other == &RecordType::MD,
-            InternalResourceRecord::MF {} => other == &RecordType::MF,
-            InternalResourceRecord::MG {} => other == &RecordType::MG,
-            InternalResourceRecord::MINFO {} => other == &RecordType::MINFO,
-            InternalResourceRecord::MR {} => other == &RecordType::MR,
+            InternalResourceRecord::MAILA { ttl: _ } => other == &RecordType::MAILA,
+            InternalResourceRecord::MAILB { ttl: _ } => other == &RecordType::MAILB,
+            InternalResourceRecord::MB { ttl: _ } => other == &RecordType::MB,
+            InternalResourceRecord::MD { ttl: _ } => other == &RecordType::MD,
+            InternalResourceRecord::MF { ttl: _ } => other == &RecordType::MF,
+            InternalResourceRecord::MG { ttl: _ } => other == &RecordType::MG,
+            InternalResourceRecord::MINFO { ttl: _ } => other == &RecordType::MINFO,
+            InternalResourceRecord::MR { ttl: _ } => other == &RecordType::MR,
             InternalResourceRecord::MX {
                 preference: _,
                 exchange: _,
+                ttl: _,
             } => other == &RecordType::MX,
-            InternalResourceRecord::NS { nsdname: _ } => other == &RecordType::NS,
-            InternalResourceRecord::NULL {} => other == &RecordType::NULL,
-            InternalResourceRecord::PTR { ptrdname: _ } => other == &RecordType::PTR,
+            InternalResourceRecord::NS { nsdname: _, ttl: _ } => other == &RecordType::NS,
+            InternalResourceRecord::NULL { ttl: _ } => other == &RecordType::NULL,
+            InternalResourceRecord::PTR {
+                ptrdname: _,
+                ttl: _,
+            } => other == &RecordType::PTR,
             InternalResourceRecord::SOA {
                 serial: _,
                 refresh: _,
@@ -244,8 +286,8 @@ impl PartialEq<RecordType> for InternalResourceRecord {
                 expire: _,
                 minimum: _,
             } => other == &RecordType::SOA,
-            InternalResourceRecord::TXT { txtdata: _ } => other == &RecordType::TXT,
-            InternalResourceRecord::WKS {} => other == &RecordType::WKS,
+            InternalResourceRecord::TXT { txtdata: _, ttl: _ } => other == &RecordType::TXT,
+            InternalResourceRecord::WKS { ttl: _ } => other == &RecordType::WKS,
         }
     }
 }
@@ -253,8 +295,8 @@ impl PartialEq<RecordType> for InternalResourceRecord {
 impl InternalResourceRecord {
     pub fn as_bytes(self: InternalResourceRecord) -> Vec<u8> {
         match self {
-            InternalResourceRecord::A { address } => address.to_be_bytes().to_vec(),
-            InternalResourceRecord::AAAA { address } => address.to_be_bytes().to_vec(),
+            InternalResourceRecord::A { address, ttl: _ } => address.to_be_bytes().to_vec(),
+            InternalResourceRecord::AAAA { address, ttl: _ } => address.to_be_bytes().to_vec(),
             // ResourceRecord::NS { nsdname } => todo!(),
             // ResourceRecord::MD {  } => todo!(),
             // ResourceRecord::MF {  } => todo!(),
@@ -297,11 +339,17 @@ mod tests {
     #[test]
     fn test_eq_resourcerecord() {
         assert_eq!(
-            resourcerecord::InternalResourceRecord::A { address: 12345 },
+            resourcerecord::InternalResourceRecord::A {
+                address: 12345,
+                ttl: None
+            },
             RecordType::A
         );
         assert_eq!(
-            resourcerecord::InternalResourceRecord::AAAA { address: 12345 },
+            resourcerecord::InternalResourceRecord::AAAA {
+                address: 12345,
+                ttl: None
+            },
             RecordType::AAAA
         );
     }
@@ -315,6 +363,7 @@ mod tests {
             rdata: String::from("1234:5678:cafe:beef:ca75:0:4b9:e94d")
                 .as_bytes()
                 .to_vec(),
+            ttl: Some(160),
         };
         debug!("fzr: {:?}", fzr);
         let converted = Ipv6Addr::from_str(&from_utf8(&fzr.rdata).unwrap()).unwrap();

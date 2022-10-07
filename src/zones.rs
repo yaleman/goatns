@@ -56,6 +56,7 @@ pub struct FileZoneRecord {
     pub rrtype: String,
     #[serde(with = "serde_bytes")]
     pub rdata: Vec<u8>,
+    pub ttl: Option<u32>,
 }
 
 // #[derive(Debug, PartialEq, Eq, Clone)]
