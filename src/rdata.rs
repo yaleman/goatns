@@ -1,4 +1,4 @@
-use crate::utils::{convert_u16_to_u8s_be, name_as_bytes};
+use crate::utils::name_as_bytes;
 use crate::HEADER_BYTES;
 /// RData field types
 use log::error;
@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::net::{AddrParseError, Ipv6Addr};
 use std::str::FromStr;
 
-struct DomainName {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DomainName {
     name: String,
 }
 
@@ -53,23 +54,23 @@ impl From<Vec<u8>> for RdataA {
 /// An AAAA Resource Record's RDATA is always 128 bits
 pub struct RdataAAAA {
     #[packed_field(bits = "0..=15", endian = "msb")]
-    pub rdata: [u8; 16],
+    pub address: [u8; 16],
 }
 
 impl From<Vec<u8>> for RdataAAAA {
     fn from(src: Vec<u8>) -> Self {
-        let rdata = std::str::from_utf8(&src).unwrap();
-        let ipaddr: Result<Ipv6Addr, AddrParseError> = rdata.parse();
+        let address = std::str::from_utf8(&src).unwrap();
+        let ipaddr: Result<Ipv6Addr, AddrParseError> = address.parse();
         let data = match ipaddr {
             Ok(value) => value.octets().to_vec(),
             Err(error) => {
-                error!("Failed to parse {} to ipv6: {:?}", rdata, error);
+                error!("Failed to parse {} to ipv6: {:?}", address, error);
                 vec![]
             }
         };
-        let mut rdata: [u8; 16] = [0; 16];
-        rdata.copy_from_slice(&data[0..16]);
-        Self { rdata }
+        let mut address: [u8; 16] = [0; 16];
+        address.copy_from_slice(&data[0..16]);
+        Self { address }
     }
 }
 
@@ -168,7 +169,7 @@ pub struct RdataMX {
 impl RdataMX {
     pub fn as_bytes(&self) -> Vec<u8> {
         let mut result: Vec<u8> = vec![];
-        result.extend(convert_u16_to_u8s_be(self.preference));
+        result.extend(self.preference.to_be_bytes());
         // TODO: support compresion in MX exchange fields
         result.extend(self.exchange.as_bytes(None));
         result

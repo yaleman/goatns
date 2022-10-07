@@ -1,81 +1,5 @@
 use crate::{Header, PacketType, Rcode, Reply};
-// use bit_vec::{self, BitVec};
-
-/// gets a u16 based on the bit start point
-// pub fn get_u16_from_packets(packets: &[u8], start_point: usize) -> u16 {
-//     let mut result_bytes: [u8; 2] = [0, 0];
-//     let end_point: usize = start_point + 2;
-//     result_bytes.copy_from_slice(&packets[start_point..end_point]);
-//     u16::from_be_bytes(result_bytes)
-// }
-// gets a u8 based on the bit start point
-// pub fn get_u8_from_bits(bits: &BitVec, start_point: usize, bit_count: usize) -> u8 {
-//     let mut output: u8 = 0;
-//     for index in start_point..start_point + bit_count {
-//         output = output << <u8>::from(bits.get(index).unwrap());
-//         println!("{} {}", bits.get(index).unwrap(), output);
-//     }
-//     output
-// }
-
-#[test]
-fn test_convert_u16_to_u8s_be() {
-    let testval: u16 = 1;
-    assert_eq!(convert_u16_to_u8s_be(testval), [0, 1]);
-    let testval: u16 = 256;
-    assert_eq!(convert_u16_to_u8s_be(testval), [1, 0]);
-    let testval: u16 = 65535;
-    assert_eq!(convert_u16_to_u8s_be(testval), [255, 255]);
-}
-
-pub fn convert_u16_to_u8s_be(integer: u16) -> [u8; 2] {
-    [(integer >> 8) as u8, integer as u8]
-}
-
-#[test]
-fn test_convert_u32_to_u8s_be() {
-    let testval: u32 = 1;
-    assert_eq!(convert_u32_to_u8s_be(testval), [0, 0, 0, 1]);
-    let testval: u32 = 256;
-    assert_eq!(convert_u32_to_u8s_be(testval), [0, 0, 1, 0]);
-    let testval: u32 = 2_u32.pow(31);
-    assert_eq!(convert_u32_to_u8s_be(testval), [128, 0, 0, 0]);
-    // most significant bit test
-    assert_eq!(0b10101010, 170);
-}
-// we might find a use for this yet
-pub fn convert_u32_to_u8s_be(integer: u32) -> [u8; 4] {
-    [
-        (integer >> 24) as u8,
-        (integer >> 16) as u8,
-        (integer >> 8) as u8,
-        integer as u8,
-    ]
-}
-
-// #[test]
-// fn test_convert_i32_to_u8s_be() {
-//     let mut testval: i32 = 1;
-//     assert_eq!(convert_i32_to_u8s_be(testval), [0, 0, 0, 1]);
-//     testval = 256;
-//     assert_eq!(convert_i32_to_u8s_be(testval), [0, 0, 1, 0]);
-//     testval = 2_i32.pow(30);
-//     debug!("testval 2_i32 ^ 30 = {}", testval);
-//     assert_eq!(convert_i32_to_u8s_be(testval), [64, 0, 0, 0]);
-//     testval = -32768;
-//     assert_eq!(convert_i32_to_u8s_be(testval), [255, 255, 128, 0]);
-
-//     // random test of most significant bit things
-//     assert_eq!(0b10101010, 170);
-// }
-// pub fn convert_i32_to_u8s_be(integer: i32) -> [u8; 4] {
-//     [
-//         (integer >> 24) as u8,
-//         (integer >> 16) as u8,
-//         (integer >> 8) as u8,
-//         integer as u8,
-//     ]
-// }
+use log::debug;
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
     for (index, curr_byte) in search.iter().enumerate() {
@@ -99,7 +23,7 @@ pub fn name_as_bytes(name: Vec<u8>, compress_target: Option<u16>) -> Vec<u8> {
         // we need the first two bits to be 1, to mark it as compressed
         // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
         let result: u16 = 0b1100000000000000 | target as u16;
-        return convert_u16_to_u8s_be(result).to_vec();
+        return result.to_be_bytes().to_vec();
     }
 
     let mut result: Vec<u8> = vec![];
@@ -181,4 +105,21 @@ pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
         authorities: vec![],
         additional: vec![],
     })
+}
+
+/// dumps the bytes out as if you were using some kind of fancy packet-dumper
+pub fn hexdump(bytes: Vec<u8>) {
+    for byte in bytes.chunks(2) {
+        match byte.len() {
+            2 => {
+                debug!(
+                    "{:02x} {:02x} {:#010b} {:#010b} {:3} {:3}",
+                    byte[0], byte[1], byte[0], byte[1], byte[0], byte[1],
+                );
+            }
+            _ => {
+                debug!("{:02x}    {:#010b}    {:3}", byte[0], byte[0], byte[0],);
+            }
+        }
+    }
 }

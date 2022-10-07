@@ -1,13 +1,16 @@
-use crate::enums::RecordType;
-use crate::rdata;
+// use crate::enums::RecordType;
+use crate::resourcerecord::InternalResourceRecord;
+// use crate::{rdata};
 /// zone info
 ///
 ///
 use log::{debug, error};
 use patricia_tree::PatriciaMap;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
+use std::str::from_utf8;
 
 /// A DNS Zone in a JSON file
 ///
@@ -49,36 +52,47 @@ pub fn rname_default() -> String {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[allow(dead_code)]
 pub struct FileZoneRecord {
-    name: String,
-    rrtype: String,
+    pub name: String,
+    pub rrtype: String,
     #[serde(with = "serde_bytes")]
-    rdata: Vec<u8>,
+    pub rdata: Vec<u8>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ZoneRecordType {
-    pub rrtype: RecordType,
-    pub rdata: Vec<Vec<u8>>,
-}
+// #[derive(Debug, PartialEq, Eq, Clone)]
+// pub struct ZoneRecordType {
+//     pub rrtype: RecordType,
+//     pub rdata: Vec<Vec<u8>>,
+// }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ZoneRecord {
     // the full name including the zone
     pub name: Vec<u8>,
-    pub typerecords: Vec<ZoneRecordType>,
+    pub typerecords: Vec<InternalResourceRecord>,
 }
 
-impl From<FileZoneRecord> for ZoneRecord {
-    fn from(fzr: FileZoneRecord) -> Self {
-        ZoneRecord {
-            name: fzr.name.as_bytes().to_vec(),
-            typerecords: vec![ZoneRecordType {
-                rrtype: fzr.rrtype.as_str().into(),
-                rdata: vec![fzr.rdata],
-            }],
-        }
+impl Display for ZoneRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "Name: {:?} Name Bytes: {:?} Records: {:?}",
+            from_utf8(&self.name),
+            &self.name,
+            self.typerecords
+        ))
     }
 }
+
+// impl From<FileZoneRecord> for ZoneRecord {
+//     fn from(fzr: FileZoneRecord) -> Self {
+//         ZoneRecord {
+//             name: fzr.name.as_bytes().to_vec(),
+//             typerecords: vec![ZoneRecordType {
+//                 rrtype: fzr.rrtype.as_str().into(),
+//                 rdata: vec![fzr.rdata],
+//             }],
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod test {
@@ -93,6 +107,7 @@ pub fn empty_zones() -> PatriciaMap<ZoneRecord> {
     tree
 }
 
+/// Load the data from a JSON file on disk
 pub fn load_zones() -> Result<PatriciaMap<ZoneRecord>, String> {
     let zone_filename = "zones.json";
     let mut file = match File::open(zone_filename) {
@@ -117,53 +132,26 @@ pub fn load_zones() -> Result<PatriciaMap<ZoneRecord>, String> {
     let mut tree = empty_zones();
     for zone in jsonstruct {
         for record in zone.records {
-            let rrtype: RecordType = record.rrtype.clone().into();
-            // handle the various types and put them into the thing nicer
-            let rdata: Vec<u8> = match rrtype {
-                RecordType::A => rdata::RdataA::from(record.rdata).address.to_vec(),
-                RecordType::NS => todo!(),
-                RecordType::MD => todo!(),
-                RecordType::MF => todo!(),
-                RecordType::CNAME => todo!(),
-                RecordType::SOA => todo!(),
-                RecordType::MB => todo!(),
-                RecordType::MG => todo!(),
-                RecordType::MR => todo!(),
-                RecordType::NULL => todo!(),
-                RecordType::WKS => todo!(),
-                RecordType::PTR => todo!(),
-                RecordType::HINFO => todo!(),
-                RecordType::MINFO => todo!(),
-                RecordType::MX => todo!(),
-                RecordType::TXT => record.rdata,
-                RecordType::AAAA => rdata::RdataAAAA::from(record.rdata).rdata.to_vec(),
-                RecordType::AXFR => todo!(),
-                RecordType::MAILB => todo!(),
-                RecordType::MAILA => todo!(),
-                RecordType::ALL => todo!(),
-                // if this comes back, woo!
-                RecordType::InvalidType => vec![],
-            };
+            eprintln!("fzr: {:?}", record);
+            let record_data: InternalResourceRecord = record.clone().into();
 
             // mush the record name and the zone name together
 
             let mut name: Vec<u8>;
-            if record.name == *"@" {
+            let record_name = record.clone().name;
+            if record_name == *"@" {
                 name = zone.name.as_bytes().to_vec()
             } else {
-                name = format!("{}.{}", record.name, zone.name).as_bytes().to_vec()
+                name = format!("{}.{}", record.clone().name, zone.name)
+                    .as_bytes()
+                    .to_vec()
             };
             // I spin you right round baby, right round...
             name.reverse();
 
-            let zonerecordtype = ZoneRecordType {
-                rrtype: record.rrtype.as_str().into(),
-                rdata: vec![rdata],
-            };
-
             if tree.contains_key(&name) {
                 let existing_value = tree.get_mut(&name).unwrap();
-                existing_value.typerecords.push(zonerecordtype);
+                existing_value.typerecords.push(record_data);
                 let toinsert = existing_value.clone();
                 tree.insert(name, toinsert);
             } else {
@@ -171,7 +159,7 @@ pub fn load_zones() -> Result<PatriciaMap<ZoneRecord>, String> {
                     &name,
                     ZoneRecord {
                         name: name.clone(),
-                        typerecords: vec![zonerecordtype],
+                        typerecords: vec![record_data],
                     },
                 );
             }
