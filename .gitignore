@@ -1,5 +1,9 @@
 .DS_Store
 docs/book
 /target/
+# packets
 captures/
+pcaps/
+# flamegraph stuff
 out.stacks
+flamegraph.svg
