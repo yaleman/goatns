@@ -46,8 +46,7 @@ pub async fn manager(mut rx: mpsc::Receiver<crate::datastore::Command>) -> Resul
                     rtype
                 );
 
-                // Turn the &ZoneRecord into a ZoneRecord
-                let result: Option<ZoneRecord> = match zones.get(name).cloned() {
+                let result: Option<ZoneRecord> = match zones.get(name.to_ascii_lowercase()).cloned() {
                     Some(value) => {
                         let mut zr = value.clone();
                         // check if the type we want is in there, and only return the matching records

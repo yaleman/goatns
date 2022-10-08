@@ -389,6 +389,7 @@ impl From<ResourceRecord> for Vec<u8> {
         // rdata
         retval.extend(record.rdata);
 
+        #[cfg(debug)]
         for byte in retval.chunks(2) {
             debug!(
                 "{:02x} {:02x} {:#010b} {:#010b} {:3} {:3}",
@@ -399,7 +400,7 @@ impl From<ResourceRecord> for Vec<u8> {
     }
 }
 
-// TODO: can this be a packed struct for parsing? the qname is a padded string, so it doesn't have a set length
+// This'd be really nice to be a packed struct
 #[derive(Clone, PartialEq, Eq)]
 pub struct Question {
     qname: Vec<u8>,
@@ -443,9 +444,7 @@ impl Display for Question {
 
 #[cfg(test)]
 mod test {
-
     use super::Question;
-
     #[test]
     fn test_normalize_name() {
         let q = Question {
