@@ -430,8 +430,8 @@ pub struct Question {
 
 impl Debug for Question {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Question\n")?;
         for byte in self.to_bytes().chunks(2) {
-            f.write_str("Question\n")?;
             if byte.len() == 2 {
                 f.write_str(&format!(
                     "\n{:04x} {:04x} {:#010b} {:#010b} {:3} {:3}",
