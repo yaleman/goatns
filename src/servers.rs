@@ -1,6 +1,6 @@
 use log::*;
 use std::net::SocketAddr;
-use std::str::from_utf8;
+use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
 use tokio::net::{TcpListener, UdpSocket};
@@ -8,7 +8,29 @@ use tokio::sync::mpsc;
 use tokio::time::timeout;
 // use packed_struct::PackedStruct;
 use crate::config::ConfigFile;
+use crate::enums::RecordClass;
+use crate::Reply;
 use crate::{parse_udp_query, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
+
+lazy_static! {
+    static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").unwrap();
+}
+
+async fn check_for_shutdown(r: &Reply, addr: &SocketAddr) -> Result<(), ()> {
+    // when you get a CHAOS from localhost with "shutdown" break dat loop
+    if let Some(q) = &r.question {
+        if q.qclass == RecordClass::Chaos {
+            if let Ok(qname) = from_utf8(&q.qname) {
+                // TODO: this needs some kind of password or auth, because UDP is weird. Probably should only support this on TCP. But we don't do TCP properly yet so ... yolo? Or just .. not do this on UDP!
+                if (qname == "shutdown") & (addr.ip() == *LOCALHOST) {
+                    info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
+                    return Ok(());
+                }
+            }
+        }
+    };
+    Err(())
+}
 
 pub async fn udp_server(
     bind_address: SocketAddr,
@@ -51,6 +73,10 @@ pub async fn udp_server(
         match udp_result {
             Ok(mut r) => {
                 debug!("Result: {:?}", r);
+
+                if check_for_shutdown(&r, &addr).await.is_ok() {
+                    return Ok(());
+                };
 
                 let reply_bytes: Vec<u8> = match r.as_bytes() {
                     Ok(value) => value,
@@ -133,6 +159,12 @@ pub async fn tcp_server(
         match result {
             Ok(mut r) => {
                 debug!("Result: {:?}", r);
+
+                // when you get a CHAOS from localhost with "shutdown" break dat loop
+                if check_for_shutdown(&r, &addr).await.is_ok() {
+                    return Ok(());
+                }
+
                 let reply_bytes: Vec<u8> = match r.as_bytes() {
                     Ok(value) => value,
                     Err(error) => {

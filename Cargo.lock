@@ -312,6 +312,7 @@ dependencies = [
  "config",
  "femme",
  "json5",
+ "lazy_static",
  "log",
  "packed_struct",
  "patricia_tree",

@@ -13,6 +13,7 @@ chrono = "0.4.22"
 config = { version = "0.13", features = ["json"] }
 femme = "2.2.1"
 json5 = "0.4.1"
+lazy_static = "1.4.0"
 log = "0.4.17"
 packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
 patricia_tree = "0.3.2"

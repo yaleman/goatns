@@ -5,6 +5,9 @@
 
 // all the types and codes and things - https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
 
+#[macro_use]
+extern crate lazy_static;
+
 use log::{debug, error, info, trace, LevelFilter};
 use packed_struct::prelude::*;
 use zones::ZoneRecord;
@@ -143,6 +146,22 @@ async fn get_result(
                     question.qtype,
                 );
                 return reply_builder(header.id, Rcode::NotImplemented);
+            }
+
+            // Check for CHAOS commands
+            if question.qclass == RecordClass::Chaos {
+                if &question.normalized_name().unwrap() == "shutdown" {
+                    log::warn!("Got shutdown!");
+                    return Ok(Reply {
+                        header,
+                        question: Some(question),
+                        answers: vec![],
+                        authorities: vec![],
+                        additional: vec![],
+                    });
+                } else {
+                    log::error!("Chaos {:?}", question.normalized_name());
+                }
             }
 
             // build the request to the datastore to make the query
@@ -454,28 +473,28 @@ mod test {
             qtype: crate::enums::RecordType::A,
             qclass: crate::enums::RecordClass::Internet,
         };
-        assert_eq!(q.normalized_name(), String::from("hello.world"));
+        assert_eq!(q.normalized_name().unwrap(), String::from("hello.world"));
         let q = Question {
             qname: String::from("hello.world").as_bytes().to_vec(),
             qtype: crate::enums::RecordType::A,
             qclass: crate::enums::RecordClass::Internet,
         };
-        assert_eq!(q.normalized_name(), String::from("hello.world"));
+        assert_eq!(q.normalized_name().unwrap(), String::from("hello.world"));
     }
 }
 
 impl Question {
-    #[cfg(test)]
-    // TODO: normalized_name should be used when sending [Question]s to the datastore
-    fn normalized_name(self) -> String {
-        let result = match from_utf8(&self.qname) {
-            Ok(value) => value,
+    fn normalized_name(&self) -> Result<String, String> {
+        match from_utf8(&self.qname) {
+            Ok(value) => Ok(value.to_lowercase()),
             Err(error) => {
-                //
-                panic!("Failed to normalize {:?}: {:?}", &self.qname, error)
+                // TODO: this probably shouldn't be a panic
+                Err(format!(
+                    "Failed to normalize {:?}: {:?}",
+                    &self.qname, error
+                ))
             }
-        };
-        result.to_lowercase()
+        }
     }
 
     /// hand it the *actual* length of the buffer and the things, and get back a [Question]
@@ -580,9 +599,9 @@ async fn main() -> io::Result<()> {
         config.clone(),
         tx.clone(),
     ));
-    // TcpListener::bind(listen_addr).await?;
     loop {
-        if udpserver.is_finished() && tcpserver.is_finished() && datastore_manager.is_finished() {
+        // if any of the servers bail, the server does too.
+        if udpserver.is_finished() || tcpserver.is_finished() || datastore_manager.is_finished() {
             return Ok(());
         }
         sleep(std::time::Duration::from_secs(1)).await;
