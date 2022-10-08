@@ -244,6 +244,9 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                     address,
                     ttl: record.ttl,
                 }
+            },
+            "TXT" => {
+                InternalResourceRecord::TXT { txtdata: record.rdata, ttl: record.ttl }
             }
             _ => InternalResourceRecord::InvalidType,
         }
@@ -297,26 +300,34 @@ impl InternalResourceRecord {
         match self {
             InternalResourceRecord::A { address, ttl: _ } => address.to_be_bytes().to_vec(),
             InternalResourceRecord::AAAA { address, ttl: _ } => address.to_be_bytes().to_vec(),
-            // ResourceRecord::NS { nsdname } => todo!(),
-            // ResourceRecord::MD {  } => todo!(),
-            // ResourceRecord::MF {  } => todo!(),
-            // ResourceRecord::CNAME { cname } => todo!(),
-            // ResourceRecord::SOA { serial, refresh, retry, expire, minimum } => todo!(),
-            // ResourceRecord::MB {  } => todo!(),
-            // ResourceRecord::MG {  } => todo!(),
-            // ResourceRecord::MR {  } => todo!(),
-            // ResourceRecord::NULL {  } => todo!(),
-            // ResourceRecord::WKS {  } => todo!(),
-            // ResourceRecord::PTR { ptrdname } => todo!(),
-            // ResourceRecord::HINFO {  } => todo!(),
-            // ResourceRecord::MINFO {  } => todo!(),
-            // ResourceRecord::MX { preference, exchange } => todo!(),
-            // ResourceRecord::TXT { txtdata } => todo!(),
-            // ResourceRecord::AXFR {  } => todo!(),
-            // ResourceRecord::MAILB {  } => todo!(),
-            // ResourceRecord::MAILA {  } => todo!(),
-            // ResourceRecord::ALL {  } => todo!(),
-            // ResourceRecord::InvalidType => todo!(),
+            InternalResourceRecord::TXT { txtdata, ttl: _ } => {
+                // <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
+                let mut res = vec![txtdata.len() as u8];
+                res.extend(txtdata);
+                if res.len() > 256 {
+                    res.resize(256, 0);
+                }
+                res
+            },
+            // InternalResourceRecord::NS { nsdname } => todo!(),
+            // InternalResourceRecord::MD {  } => todo!(),
+            // InternalResourceRecord::MF {  } => todo!(),
+            // InternalResourceRecord::CNAME { cname } => todo!(),
+            // InternalResourceRecord::SOA { serial, refresh, retry, expire, minimum } => todo!(),
+            // InternalResourceRecord::MB {  } => todo!(),
+            // InternalResourceRecord::MG {  } => todo!(),
+            // InternalResourceRecord::MR {  } => todo!(),
+            // InternalResourceRecord::NULL {  } => todo!(),
+            // InternalResourceRecord::WKS {  } => todo!(),
+            // InternalResourceRecord::PTR { ptrdname } => todo!(),
+            // InternalResourceRecord::HINFO {  } => todo!(),
+            // InternalResourceRecord::MINFO {  } => todo!(),
+            // InternalResourceRecord::MX { preference, exchange } => todo!(),
+            // InternalResourceRecord::AXFR {  } => todo!(),
+            // InternalResourceRecord::MAILB {  } => todo!(),
+            // InternalResourceRecord::MAILA {  } => todo!(),
+            // InternalResourceRecord::ALL {  } => todo!(),
+            // InternalResourceRecord::InvalidType => todo!(),
             _ => vec![],
         }
     }
