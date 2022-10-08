@@ -1,4 +1,8 @@
+use std::fmt::Display;
+
 use packed_struct::prelude::*;
+
+use crate::resourcerecord::InternalResourceRecord;
 
 #[derive(Debug, Eq, PartialEq, PrimitiveEnum_u8, Copy, Clone)]
 /// A four bit field that specifies kind of query in this message.
@@ -186,6 +190,48 @@ impl From<&str> for RecordType {
     }
 }
 
+impl From<InternalResourceRecord> for RecordType {
+    fn from(input: InternalResourceRecord) -> Self {
+        match input {
+            InternalResourceRecord::A { address: _, ttl: _ } => RecordType::A,
+            InternalResourceRecord::NS { nsdname: _, ttl: _ } => RecordType::NS,
+            InternalResourceRecord::MD { ttl: _ } => RecordType::MD,
+            InternalResourceRecord::MF { ttl: _ } => RecordType::MF,
+            InternalResourceRecord::CNAME { cname: _, ttl: _ } => RecordType::CNAME,
+            InternalResourceRecord::SOA {
+                serial: _,
+                refresh: _,
+                retry: _,
+                expire: _,
+                minimum: _,
+            } => RecordType::SOA,
+            InternalResourceRecord::MB { ttl: _ } => RecordType::MB,
+            InternalResourceRecord::MG { ttl: _ } => RecordType::MG,
+            InternalResourceRecord::MR { ttl: _ } => RecordType::MR,
+            InternalResourceRecord::NULL { ttl: _ } => RecordType::NULL,
+            InternalResourceRecord::WKS { ttl: _ } => RecordType::WKS,
+            InternalResourceRecord::PTR {
+                ptrdname: _,
+                ttl: _,
+            } => RecordType::PTR,
+            InternalResourceRecord::HINFO { ttl: _ } => RecordType::HINFO,
+            InternalResourceRecord::MINFO { ttl: _ } => RecordType::MINFO,
+            InternalResourceRecord::MX {
+                preference: _,
+                exchange: _,
+                ttl: _,
+            } => RecordType::MX,
+            InternalResourceRecord::TXT { txtdata: _, ttl: _ } => RecordType::TXT,
+            InternalResourceRecord::AAAA { address: _, ttl: _ } => RecordType::AAAA,
+            InternalResourceRecord::AXFR { ttl: _ } => RecordType::AXFR,
+            InternalResourceRecord::MAILB { ttl: _ } => RecordType::MAILB,
+            InternalResourceRecord::MAILA { ttl: _ } => RecordType::MAILA,
+            InternalResourceRecord::ALL {} => RecordType::ALL,
+            InternalResourceRecord::InvalidType => RecordType::InvalidType,
+        }
+    }
+}
+
 impl RecordType {
     pub fn supported(self: RecordType) -> bool {
         #[allow(clippy::match_like_matches_macro)]
@@ -215,6 +261,21 @@ pub enum RecordClass {
     InvalidType = 0,
 }
 
+impl Display for RecordClass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "{}",
+            match self {
+                RecordClass::Internet => "IN",
+                RecordClass::CsNet => "CS",
+                RecordClass::Chaos => "CHAOS",
+                RecordClass::Hesiod => "HESIOD",
+                RecordClass::InvalidType => "Invalid",
+            }
+        ))
+    }
+}
+
 impl From<&u8> for RecordClass {
     fn from(input: &u8) -> Self {
         match input {
@@ -240,11 +301,4 @@ impl From<bool> for PacketType {
             true => Self::Answer,
         }
     }
-}
-
-#[allow(dead_code)]
-pub enum RRType {
-    A {address: u32},
-    AAAA {address: u128},
-    TXT {data: String},
 }

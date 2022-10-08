@@ -1,7 +1,8 @@
 use std::str::from_utf8;
 
 use crate::enums::RecordType;
-use crate::zones::{empty_zones, load_zones, ZoneRecord, ZoneRecordType};
+use crate::resourcerecord;
+use crate::zones::{empty_zones, load_zones, ZoneRecord};
 use log::{debug, error};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -17,14 +18,15 @@ pub enum Command {
         rtype: RecordType,
         resp: Responder<Option<ZoneRecord>>,
     },
+    // TODO: create a setter when we're ready to accept updates
     // Set {
     //     name: Vec<u8>,
     //     rtype: RecordType,
     // }
 }
 
-// let mut rx: mpsc::Receiver<crate::datastore::Command>;
 #[allow(dead_code)]
+/// Manages the datastore, waits for signals from the servers and responds with data
 pub async fn manager(mut rx: mpsc::Receiver<crate::datastore::Command>) -> Result<(), String> {
     let zones = match load_zones() {
         Ok(value) => value,
@@ -36,22 +38,22 @@ pub async fn manager(mut rx: mpsc::Receiver<crate::datastore::Command>) -> Resul
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
+            // TODO: at some point we should be checking that if the zonerecord has a TTL of None, then it should be pulling from the SOA
             Command::Get { name, rtype, resp } => {
                 debug!(
                     "searching for name={:?} rtype={:?}",
-                    from_utf8(&name).unwrap(),
+                    from_utf8(&name).unwrap_or("-"),
                     rtype
                 );
 
-                // Turn the &ZoneRecord into a ZoneRecord
-                let result: Option<ZoneRecord> = match zones.get(name).cloned() {
+                let result: Option<ZoneRecord> = match zones.get(name.to_ascii_lowercase()).cloned() {
                     Some(value) => {
                         let mut zr = value.clone();
                         // check if the type we want is in there, and only return the matching records
-                        let res: Vec<ZoneRecordType> = value
+                        let res: Vec<resourcerecord::InternalResourceRecord> = value
                             .typerecords
                             .into_iter()
-                            .filter(|r| r.rrtype == rtype)
+                            .filter(|r| r == &rtype)
                             .collect();
                         if res.is_empty() {
                             None
@@ -63,9 +65,8 @@ pub async fn manager(mut rx: mpsc::Receiver<crate::datastore::Command>) -> Resul
                     None => None,
                 };
 
-                match resp.send(result) {
-                    Ok(_) => debug!("sent response"),
-                    Err(error) => debug!("error sending response: {:?}", error),
+                if let Err(error) = resp.send(result) {
+                    debug!("error sending response from data store: {:?}", error)
                 };
             }
         }

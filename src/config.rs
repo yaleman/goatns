@@ -5,10 +5,14 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct ConfigFile {
+    /// Listen address, default is 0.0.0.0
     pub address: String,
+    /// Listen on this port, default is 15353
     pub port: u16,
     pub capture_packets: bool,
+    /// Default is "DEBUG"
     pub log_level: String,
+    /// How long until we drop client connections
     pub tcp_client_timeout: u16,
 }
 

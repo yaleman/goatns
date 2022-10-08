@@ -9,6 +9,7 @@ use log::{debug, error, info, trace, LevelFilter};
 use packed_struct::prelude::*;
 use zones::ZoneRecord;
 
+use std::fmt::{Debug, Display};
 use std::io;
 use std::net::SocketAddr;
 use std::str::{from_utf8, FromStr};
@@ -124,7 +125,7 @@ async fn get_result(
             let question = Question::from_packets(&buf[HEADER_BYTES..len]).await;
             let question = match question {
                 Ok(value) => {
-                    debug!("Parsed question: {:?}", value);
+                    debug!("Parsed question: {}", value);
                     value
                 }
                 Err(error) => {
@@ -156,19 +157,22 @@ async fn get_result(
 
             // here we talk to the datastore to pull the result
             match datastore.send(ds_req).await {
-                Ok(_) => info!("Sent a request to the datastore!"),
+                Ok(_) => debug!("Sent a request to the datastore!"),
                 // TODO: handle this properly
                 Err(error) => error!("Error sending to datastore: {:?}", error),
             };
 
             let record: ZoneRecord = match rx_oneshot.await {
-                Ok(value) => {
-                    debug!("DS Response: {:?}", value);
-                    match value {
-                        Some(zr) => zr,
-                        None => return reply_nxdomain(header.id),
+                Ok(value) => match value {
+                    Some(zr) => {
+                        debug!("DS Response: {}", zr);
+                        zr
                     }
-                }
+                    None => {
+                        debug!("No response from datastore");
+                        return reply_nxdomain(header.id);
+                    }
+                },
                 Err(error) => {
                     error!("Failed to get response from datastore: {:?}", error);
                     return reply_builder(header.id, Rcode::ServFail);
@@ -178,17 +182,21 @@ async fn get_result(
             let mut answers: Vec<ResourceRecord> = vec![];
 
             for record in record.typerecords {
-                for answer in record.rdata {
-                    answers.push(ResourceRecord {
-                        name: question.qname.to_vec(),
-                        record_type: question.qtype,
-                        class: question.qclass,
-                        ttl: 60, // TODO: set a TTL
-                        rdlength: (answer.len() as u16),
-                        rdata: answer,
-                        compression: true,
-                    });
-                }
+                let record_type: RecordType = record.clone().into();
+                debug!("Record Type: {:?}", record_type);
+                let answer = record.as_bytes();
+
+                // TODO: handle the records here
+                answers.push(ResourceRecord {
+                    name: question.qname.to_vec(),
+                    record_type,
+                    class: question.qclass,
+                    ttl: 60u32, // TODO: set a TTL
+                    rdlength: (answer.len() as u16),
+                    rdata: answer,
+                    compression: true,
+                });
+                // }
             }
 
             // this is our reply - static until that bit's done
@@ -363,72 +371,81 @@ impl From<ResourceRecord> for Vec<u8> {
         let mut retval: Vec<u8> = vec![];
 
         debug!("{:?}", record);
+
         // we are compressing for a test
         let record_name_bytes = name_as_bytes(record.name, Some(HEADER_BYTES as u16));
-        debug!("name_as_bytes: {:?}", record_name_bytes);
+        // debug!("name_as_bytes: {:?}", record_name_bytes);
         retval.extend(record_name_bytes);
         // type
-        retval.extend(convert_u16_to_u8s_be(record.record_type as u16));
+        retval.extend((record.record_type as u16).to_be_bytes());
         // class
-        retval.extend(convert_u16_to_u8s_be(record.class as u16));
+        retval.extend((record.class as u16).to_be_bytes());
         // reply ttl
-        let ttl_bytes: [u8; 4] = convert_u32_to_u8s_be(record.ttl);
+        let ttl_bytes: [u8; 4] = record.ttl.to_be_bytes();
         trace!("ttl_bytes: {:?}", ttl_bytes);
         retval.extend(ttl_bytes);
         // reply data length
-        retval.extend(convert_u16_to_u8s_be(record.rdlength));
+        retval.extend(record.rdlength.to_be_bytes());
         // rdata
         retval.extend(record.rdata);
-        // match record.record_type {
-        //     RecordType::A => {
-        //         let ip_to_int = crate::ip_address::IPAddress::new(1, 2, 3, 4)
-        //             .pack()
-        //             .unwrap();
-        //         // rdata length
-        //         retval.extend([0, 4]); // TODO: this is a hack to just yolo a 32 bit address in
-        //                                // ip address
-        //         retval.extend(ip_to_int);
-        //     }
-        //     RecordType::NS => todo!(),
-        //     RecordType::MD => todo!(),
-        //     RecordType::MF => todo!(),
-        //     RecordType::CNAME => todo!(),
-        //     RecordType::SOA => todo!(),
-        //     RecordType::MB => todo!(),
-        //     RecordType::MG => todo!(),
-        //     RecordType::MR => todo!(),
-        //     RecordType::NULL => todo!(),
-        //     RecordType::WKS => todo!(),
-        //     RecordType::PTR => todo!(),
-        //     RecordType::HINFO => todo!(),
-        //     RecordType::MINFO => todo!(),
-        //     RecordType::MX => todo!(),
-        //     RecordType::TXT => todo!(),
-        //     RecordType::AAAA => todo!(),
-        //     RecordType::AXFR => todo!(),
-        //     RecordType::MAILB => todo!(),
-        //     RecordType::MAILA => todo!(),
-        //     RecordType::ALL => todo!(),
-        //     RecordType::InvalidType => todo!(),
-        // }
-        debug!("ResourceRecord Bytes: {:?}", retval);
+
+        #[cfg(debug)]
+        for byte in retval.chunks(2) {
+            debug!(
+                "{:02x} {:02x} {:#010b} {:#010b} {:3} {:3}",
+                byte[0], byte[1], byte[0], byte[1], byte[0], byte[1],
+            );
+        }
         retval
     }
 }
 
-// TODO: can this be a packed struct for parsing? the qname is a padded string, so it doesn't have a set length
-#[derive(Debug, Clone, PartialEq, Eq)]
+// This'd be really nice to be a packed struct
+#[derive(Clone, PartialEq, Eq)]
 pub struct Question {
     qname: Vec<u8>,
     qtype: RecordType,
     qclass: RecordClass,
 }
 
+impl Debug for Question {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for byte in self.to_bytes().chunks(2) {
+            f.write_str("Question\n")?;
+            if byte.len() == 2 {
+                f.write_str(&format!(
+                    "\n{:04x} {:04x} {:#010b} {:#010b} {:3} {:3}",
+                    byte[0], byte[1], byte[0], byte[1], byte[0], byte[1],
+                ))?;
+            } else {
+                f.write_str(&format!(
+                    "\n{:04x}      {:#010b}            {:3}",
+                    byte[0], byte[0], byte[0],
+                ))?;
+            }
+        }
+        f.write_fmt(format_args!(""))
+    }
+}
+
+impl Display for Question {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let qname = match from_utf8(&self.qname) {
+            Ok(value) => value.to_string(),
+            Err(_) => {
+                format!("{:?}", self.qname)
+            }
+        };
+        f.write_fmt(format_args!(
+            "QNAME={} QTYPE={:?} QCLASS={}",
+            qname, self.qtype, self.qclass,
+        ))
+    }
+}
+
 #[cfg(test)]
 mod test {
-
     use super::Question;
-
     #[test]
     fn test_normalize_name() {
         let q = Question {
@@ -447,11 +464,17 @@ mod test {
 }
 
 impl Question {
-    // TODO: remove this
-    #[allow(dead_code)]
+    #[cfg(test)]
+    // TODO: normalized_name should be used when sending [Question]s to the datastore
     fn normalized_name(self) -> String {
-        let result = from_utf8(&self.qname).unwrap();
-        result.to_string().to_lowercase()
+        let result = match from_utf8(&self.qname) {
+            Ok(value) => value,
+            Err(error) => {
+                //
+                panic!("Failed to normalize {:?}: {:?}", &self.qname, error)
+            }
+        };
+        result.to_lowercase()
     }
 
     /// hand it the *actual* length of the buffer and the things, and get back a [Question]
@@ -506,9 +529,9 @@ impl Question {
 
         let name_bytes = name_as_bytes(self.qname.clone(), None);
         retval.extend(name_bytes);
-        retval.extend(convert_u16_to_u8s_be(self.qtype as u16));
-        retval.extend(convert_u16_to_u8s_be(self.qclass as u16));
-        debug!("Question: {:?}", retval);
+        retval.extend((self.qtype as u16).to_be_bytes());
+        retval.extend((self.qclass as u16).to_be_bytes());
+        // debug!("Question Bytes: {:?}", retval);
         retval
     }
 }
