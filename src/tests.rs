@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::ip_address::IPAddress;
+    use std::net::Ipv4Addr;
+
     use crate::utils::name_as_bytes;
     use crate::{PacketType, Question};
     // , ResourceRecord
     use log::debug;
-    use packed_struct::prelude::*;
 
     #[test]
     fn test_resourcerecord_name_to_bytes() {
@@ -24,32 +24,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_ipaddress() {
-        let iptest: IPAddress = IPAddress::new(1, 1, 1, 1);
-        let output: [u8; 4] = match iptest.pack() {
-            Ok(value) => value,
-            Err(error) => {
-                panic!("{:?}", error)
-            }
-        };
-        let result: u32 = u32::from_be_bytes(output);
-        assert_eq!(result, 16843009);
-
-        let iptest: IPAddress = IPAddress::new(123, 145, 31, 71);
-        let output: [u8; 4] = match iptest.pack() {
-            Ok(value) => value,
-            Err(error) => {
-                panic!("{:?}", error)
-            }
-        };
-        let result: u32 = u32::from_be_bytes(output);
-        assert_eq!(result, 2073108295);
-    }
-
     // #[tokio::test]
     // async fn test_build_iana_org_a_reply() {
     //     use crate::{Header, Reply};
+    //     use crate::resourcerecord::InternalResourceRecord;
 
     //     let header = Header {
     //         id: 41840,
@@ -76,7 +54,7 @@ mod tests {
     //     };
     //     let question_length = question.to_bytes().len();
     //     debug!("question byte length: {}", question_length);
-    //     let answers = vec![ResourceRecord {
+    //     let answers = vec![InternalResourceRecord {
     //         name: qname,
     //         record_type: crate::RecordType::A,
     //         class: crate::RecordClass::Internet,
@@ -295,8 +273,9 @@ mod tests {
         let question_length = question.to_bytes().len();
         debug!("question byte length: {}", question_length);
 
-        let rdata = IPAddress::new(0, 0, 0, 0).pack().unwrap();
-        // debug!("rdata: {:?}", rdata);
+        // let rdata = IpAddr::try_from("0.0.0.0");
+        let rdata: Ipv4Addr = "0.0.0.0".parse().unwrap();
+        let rdata = rdata.octets();
         let rdlength: u16 = rdata.len() as u16;
 
         let answers = vec![crate::ResourceRecord {

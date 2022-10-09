@@ -1,6 +1,8 @@
 use crate::enums::RecordType;
 use crate::utils;
 use log::*;
+use std::env::consts;
+
 use std::str::{from_utf8, FromStr};
 // use packed_struct::*;
 use crate::rdata::DomainName;
@@ -100,6 +102,26 @@ use crate::zones::FileZoneRecord;
 //     }
 // }
 
+/// <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct DNSCharString {
+    pub data: Vec<u8>,
+}
+
+impl From<&str> for DNSCharString {
+    fn from(input: &str) -> Self {
+        DNSCharString { data: input.into() }
+    }
+}
+
+impl From<DNSCharString> for Vec<u8> {
+    fn from(input: DNSCharString) -> Vec<u8> {
+        let mut data: Vec<u8> = vec![input.data.len() as u8];
+        data.extend(input.data);
+        data
+    }
+}
+
 #[allow(dead_code)]
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -150,6 +172,8 @@ pub enum InternalResourceRecord {
         ttl: Option<u32>,
     }, // 12 a domain name pointer
     HINFO {
+        cpu: Option<DNSCharString>,
+        os: Option<DNSCharString>,
         ttl: Option<u32>,
     }, // 13 host information
     MINFO {
@@ -161,7 +185,7 @@ pub enum InternalResourceRecord {
         ttl: Option<u32>,
     }, // 15 mail exchange
     TXT {
-        txtdata: Vec<u8>,
+        txtdata: DNSCharString,
         ttl: Option<u32>,
     }, // 16 text strings
     AAAA {
@@ -244,10 +268,11 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                     address,
                     ttl: record.ttl,
                 }
-            },
-            "TXT" => {
-                InternalResourceRecord::TXT { txtdata: record.rdata, ttl: record.ttl }
             }
+            "TXT" => InternalResourceRecord::TXT {
+                txtdata: DNSCharString { data: record.rdata },
+                ttl: record.ttl,
+            },
             _ => InternalResourceRecord::InvalidType,
         }
     }
@@ -261,7 +286,11 @@ impl PartialEq<RecordType> for InternalResourceRecord {
             InternalResourceRecord::ALL {} => other == &RecordType::ALL,
             InternalResourceRecord::AXFR { ttl: _ } => other == &RecordType::AXFR,
             InternalResourceRecord::CNAME { cname: _, ttl: _ } => other == &RecordType::CNAME,
-            InternalResourceRecord::HINFO { ttl: _ } => other == &RecordType::HINFO,
+            InternalResourceRecord::HINFO {
+                cpu: _,
+                os: _,
+                ttl: _,
+            } => other == &RecordType::HINFO,
             InternalResourceRecord::InvalidType => other == &RecordType::InvalidType,
             InternalResourceRecord::MAILA { ttl: _ } => other == &RecordType::MAILA,
             InternalResourceRecord::MAILB { ttl: _ } => other == &RecordType::MAILB,
@@ -302,13 +331,10 @@ impl InternalResourceRecord {
             InternalResourceRecord::AAAA { address, ttl: _ } => address.to_be_bytes().to_vec(),
             InternalResourceRecord::TXT { txtdata, ttl: _ } => {
                 // <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
-                let mut res = vec![txtdata.len() as u8];
-                res.extend(txtdata);
-                if res.len() > 256 {
-                    res.resize(256, 0);
-                }
+                let mut res: Vec<u8> = txtdata.into();
+                res.truncate(256);
                 res
-            },
+            }
             // InternalResourceRecord::NS { nsdname } => todo!(),
             // InternalResourceRecord::MD {  } => todo!(),
             // InternalResourceRecord::MF {  } => todo!(),
@@ -320,7 +346,32 @@ impl InternalResourceRecord {
             // InternalResourceRecord::NULL {  } => todo!(),
             // InternalResourceRecord::WKS {  } => todo!(),
             // InternalResourceRecord::PTR { ptrdname } => todo!(),
-            // InternalResourceRecord::HINFO {  } => todo!(),
+            InternalResourceRecord::HINFO { cpu, os, ttl: _ } => {
+                let mut hinfo_bytes: Vec<u8> = vec![];
+
+                match cpu {
+                    Some(value) => {
+                        let bytes: Vec<u8> = value.into();
+                        hinfo_bytes.extend(bytes);
+                    }
+                    None => {
+                        hinfo_bytes.extend([consts::ARCH.len() as u8]);
+                        hinfo_bytes.extend(consts::ARCH.as_bytes());
+                    }
+                };
+
+                match os {
+                    Some(value) => {
+                        let bytes: Vec<u8> = value.into();
+                        hinfo_bytes.extend(bytes);
+                    }
+                    None => {
+                        hinfo_bytes.extend([consts::OS.len() as u8]);
+                        hinfo_bytes.extend(consts::OS.as_bytes());
+                    }
+                };
+                hinfo_bytes
+            }
             // InternalResourceRecord::MINFO {  } => todo!(),
             // InternalResourceRecord::MX { preference, exchange } => todo!(),
             // InternalResourceRecord::AXFR {  } => todo!(),
@@ -345,19 +396,20 @@ mod tests {
     use log::debug;
 
     use crate::enums::RecordType;
-    use crate::resourcerecord;
     use crate::zones::FileZoneRecord;
+
+    use super::{DNSCharString, InternalResourceRecord};
     #[test]
     fn test_eq_resourcerecord() {
         assert_eq!(
-            resourcerecord::InternalResourceRecord::A {
+            InternalResourceRecord::A {
                 address: 12345,
                 ttl: None
             },
             RecordType::A
         );
         assert_eq!(
-            resourcerecord::InternalResourceRecord::AAAA {
+            InternalResourceRecord::AAAA {
                 address: 12345,
                 ttl: None
             },
@@ -367,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_resourcerecord_from_ipv6_string() {
-        femme::with_level(log::LevelFilter::Debug);
+        // femme::with_level(log::LevelFilter::Debug);
         let fzr = FileZoneRecord {
             name: "test".to_string(),
             rrtype: "AAAA".to_string(),
@@ -379,7 +431,7 @@ mod tests {
         debug!("fzr: {:?}", fzr);
         let converted = Ipv6Addr::from_str(&from_utf8(&fzr.rdata).unwrap()).unwrap();
         debug!("conversion: {:?}", converted);
-        let rr: resourcerecord::InternalResourceRecord = fzr.into();
+        let rr: InternalResourceRecord = fzr.into();
 
         debug!("fzr->rr = {:?}", rr);
         assert_eq!(rr, RecordType::AAAA);
@@ -387,5 +439,23 @@ mod tests {
             rr.as_bytes(),
             [18, 52, 86, 120, 202, 254, 190, 239, 202, 117, 0, 0, 4, 185, 233, 77].to_vec()
         );
+    }
+    #[test]
+    fn test_dnscharstring() {
+        let test: DNSCharString = "hello world".into();
+        let testbytes: Vec<u8> = test.into();
+        assert_eq!(testbytes[0], 11);
+    }
+
+    #[test]
+    fn resourcerecord_txt() {
+        let foo = InternalResourceRecord::TXT {
+            txtdata: DNSCharString::from("Hello world"),
+            ttl: None,
+        };
+        if let InternalResourceRecord::TXT { txtdata, ttl: _ } = foo {
+            let foo_bytes: Vec<u8> = txtdata.into();
+            assert_eq!(foo_bytes[0], 11);
+        };
     }
 }

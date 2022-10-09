@@ -1,10 +1,7 @@
-// use crate::enums::RecordType;
+use crate::config::ConfigFile;
 use crate::resourcerecord::InternalResourceRecord;
-// use crate::{rdata};
-/// zone info
-///
-///
-use log::{debug, error};
+use crate::utils::name_reversed;
+use log::{debug, error, info};
 use patricia_tree::PatriciaMap;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -109,7 +106,7 @@ pub fn empty_zones() -> PatriciaMap<ZoneRecord> {
 }
 
 /// Load the data from a JSON file on disk
-pub fn load_zones() -> Result<PatriciaMap<ZoneRecord>, String> {
+pub fn load_zones(config: ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String> {
     let zone_filename = "zones.json";
     let mut file = match File::open(zone_filename) {
         Ok(value) => value,
@@ -131,24 +128,31 @@ pub fn load_zones() -> Result<PatriciaMap<ZoneRecord>, String> {
     debug!("{:?}", jsonstruct);
 
     let mut tree = empty_zones();
+    if config.enable_hinfo {
+        info!("Enabling HINFO response on hinfo.goat");
+        let hinfo_name = name_reversed("hinfo.goat");
+        tree.insert(
+            hinfo_name.clone(),
+            ZoneRecord {
+                name: hinfo_name,
+                typerecords: vec![InternalResourceRecord::HINFO {
+                    cpu: None,
+                    os: None,
+                    ttl: Some(1),
+                }],
+            },
+        );
+    };
     for zone in jsonstruct {
         for record in zone.records {
             eprintln!("fzr: {:?}", record);
             let record_data: InternalResourceRecord = record.clone().into();
 
             // mush the record name and the zone name together
-
-            let mut name: Vec<u8>;
-            let record_name = record.clone().name;
-            if record_name == *"@" {
-                name = zone.name.as_bytes().to_vec()
-            } else {
-                name = format!("{}.{}", record.clone().name, zone.name)
-                    .as_bytes()
-                    .to_vec()
+            let name = match record.name.as_str() {
+                "@" => name_reversed(&zone.name),
+                _ => name_reversed(&format!("{}.{}", record.clone().name, zone.name)),
             };
-            // I spin you right round baby, right round...
-            name.reverse();
 
             if tree.contains_key(&name) {
                 let existing_value = tree.get_mut(&name).unwrap();

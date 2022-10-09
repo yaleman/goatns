@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::net::IpAddr;
 
 use config::{Config, File};
 use serde::Deserialize;
@@ -14,6 +15,10 @@ pub struct ConfigFile {
     pub log_level: String,
     /// How long until we drop client connections
     pub tcp_client_timeout: u16,
+    /// Enable a HINFO record at hinfo.goat
+    pub enable_hinfo: bool,
+    /// A list of allowed IPs to send a shutdown record from
+    pub shutdown_ip_allow_list: Vec<IpAddr>,
 }
 
 impl Default for ConfigFile {
@@ -24,6 +29,8 @@ impl Default for ConfigFile {
             capture_packets: false,
             log_level: "DEBUG".to_string(),
             tcp_client_timeout: 15,
+            enable_hinfo: false,
+            shutdown_ip_allow_list: vec![],
         }
     }
 }
@@ -44,6 +51,12 @@ impl From<Config> for ConfigFile {
             port: config.get("port").unwrap_or_default(),
             capture_packets: config.get("capture_packets").unwrap_or_default(),
             log_level: config.get("log_level").unwrap_or(Self::default().log_level),
+            enable_hinfo: config
+                .get("enable_hinfo")
+                .unwrap_or(Self::default().enable_hinfo),
+            shutdown_ip_allow_list: config
+                .get("shutdown_ip_allow_list")
+                .unwrap_or(Self::default().shutdown_ip_allow_list),
             tcp_client_timeout: config
                 .get("tcp_client_timeout")
                 .unwrap_or(Self::default().tcp_client_timeout),

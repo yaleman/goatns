@@ -214,7 +214,11 @@ impl From<InternalResourceRecord> for RecordType {
                 ptrdname: _,
                 ttl: _,
             } => RecordType::PTR,
-            InternalResourceRecord::HINFO { ttl: _ } => RecordType::HINFO,
+            InternalResourceRecord::HINFO {
+                cpu: _,
+                os: _,
+                ttl: _,
+            } => RecordType::HINFO,
             InternalResourceRecord::MINFO { ttl: _ } => RecordType::MINFO,
             InternalResourceRecord::MX {
                 preference: _,
@@ -238,6 +242,7 @@ impl RecordType {
         match self {
             RecordType::A => true,
             RecordType::AAAA => true,
+            RecordType::HINFO => true,
             RecordType::SOA => true,
             RecordType::TXT => true,
             _ => false,

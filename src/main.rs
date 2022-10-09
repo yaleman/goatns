@@ -27,7 +27,6 @@ use crate::utils::*;
 mod config;
 mod datastore;
 mod enums;
-mod ip_address;
 mod packet_dumper;
 mod rdata;
 mod resourcerecord;
@@ -151,7 +150,7 @@ async fn get_result(
             // Check for CHAOS commands
             if question.qclass == RecordClass::Chaos {
                 if &question.normalized_name().unwrap() == "shutdown" {
-                    log::warn!("Got shutdown!");
+                    log::debug!("Got CHAOS shutdown!");
                     return Ok(Reply {
                         header,
                         question: Some(question),
@@ -405,7 +404,9 @@ impl From<ResourceRecord> for Vec<u8> {
         trace!("ttl_bytes: {:?}", ttl_bytes);
         retval.extend(ttl_bytes);
         // reply data length
-        retval.extend(record.rdlength.to_be_bytes());
+        let rdlength = (record.rdata.len() as u16).to_be_bytes();
+        retval.extend(rdlength);
+        // retval.extend(record.rdlength.to_be_bytes());
         // rdata
         retval.extend(record.rdata);
 
@@ -588,7 +589,7 @@ async fn main() -> io::Result<()> {
     let rx: mpsc::Receiver<crate::datastore::Command>;
     (tx, rx) = mpsc::channel(MAX_IN_FLIGHT);
 
-    let datastore_manager = tokio::spawn(datastore::manager(rx));
+    let datastore_manager = tokio::spawn(datastore::manager(rx, config.clone()));
     let udpserver = tokio::spawn(servers::udp_server(
         bind_address,
         config.clone(),
@@ -599,6 +600,7 @@ async fn main() -> io::Result<()> {
         config.clone(),
         tx.clone(),
     ));
+
     loop {
         // if any of the servers bail, the server does too.
         if udpserver.is_finished() || tcpserver.is_finished() || datastore_manager.is_finished() {

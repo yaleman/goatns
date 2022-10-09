@@ -123,3 +123,23 @@ pub fn hexdump(bytes: Vec<u8>) {
         }
     }
 }
+
+/// pass this a string and get the reversed version in a Vec<u8>
+pub fn name_reversed(name: &str) -> Vec<u8> {
+    let mut response = name.as_bytes().to_vec();
+    response.reverse();
+    response
+}
+
+#[cfg(test)]
+mod test_name_reversed {
+    use super::name_reversed;
+    #[test]
+    fn testit() {
+        let foo = "hello world";
+        let bar = name_reversed(foo);
+        assert_eq!(bar.len(), 11);
+        assert_eq!(bar[0], 'd' as u8);
+        assert_eq!(bar[10], 'h' as u8);
+    }
+}

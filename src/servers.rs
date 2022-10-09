@@ -16,15 +16,17 @@ lazy_static! {
     static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").unwrap();
 }
 
-async fn check_for_shutdown(r: &Reply, addr: &SocketAddr) -> Result<(), ()> {
+async fn check_for_shutdown(r: &Reply, addr: &SocketAddr, config: &ConfigFile) -> Result<(), ()> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
     if let Some(q) = &r.question {
         if q.qclass == RecordClass::Chaos {
             if let Ok(qname) = from_utf8(&q.qname) {
                 // TODO: this needs some kind of password or auth, because UDP is weird. Probably should only support this on TCP. But we don't do TCP properly yet so ... yolo? Or just .. not do this on UDP!
-                if (qname == "shutdown") & (addr.ip() == *LOCALHOST) {
+                if (qname == "shutdown") & (config.shutdown_ip_allow_list.contains(&addr.ip())) {
                     info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
                     return Ok(());
+                } else {
+                    log::warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip());
                 }
             }
         }
@@ -74,7 +76,7 @@ pub async fn udp_server(
             Ok(mut r) => {
                 debug!("Result: {:?}", r);
 
-                if check_for_shutdown(&r, &addr).await.is_ok() {
+                if check_for_shutdown(&r, &addr, &config).await.is_ok() {
                     return Ok(());
                 };
 
@@ -161,7 +163,7 @@ pub async fn tcp_server(
                 debug!("Result: {:?}", r);
 
                 // when you get a CHAOS from localhost with "shutdown" break dat loop
-                if check_for_shutdown(&r, &addr).await.is_ok() {
+                if check_for_shutdown(&r, &addr, &config).await.is_ok() {
                     return Ok(());
                 }
 
