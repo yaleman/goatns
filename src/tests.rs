@@ -276,16 +276,16 @@ mod tests {
         // let rdata = IpAddr::try_from("0.0.0.0");
         let rdata: Ipv4Addr = "0.0.0.0".parse().unwrap();
         let rdata = rdata.octets();
-        let rdlength: u16 = rdata.len() as u16;
+        // let rdlength: u16 = rdata.len() as u16;
 
         let answers = vec![crate::ResourceRecord {
             name: vec![0xc0, 0x0c],
             record_type: crate::RecordType::A,
             class: crate::RecordClass::Internet,
             ttl: 2,
-            rdlength,
+            // rdlength,
             rdata: rdata.into(),
-            compression: true,
+            // compression: true,
         }];
 
         let mut reply = Reply {

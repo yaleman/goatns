@@ -42,7 +42,6 @@ const REPLY_TIMEOUT_MS: u64 = 200;
 const UDP_BUFFER_SIZE: usize = 1232;
 
 /// <https://www.rfc-editor.org/rfc/rfc1035> Section 4.1.1
-#[allow(dead_code)]
 #[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
 #[packed_struct(bit_numbering = "msb0", size_bytes = "12")]
 pub struct Header {
@@ -212,9 +211,9 @@ async fn get_result(
                     record_type,
                     class: question.qclass,
                     ttl: 60u32, // TODO: set a TTL
-                    rdlength: (answer.len() as u16),
+                    // rdlength: (answer.len() as u16),
                     rdata: answer,
-                    compression: true,
+                    // compression: true,
                 });
                 // }
             }
@@ -371,12 +370,10 @@ impl Reply {
 /// records is specified in the corresponding count field in the header.
 ///
 /// <https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.3>
-#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct ResourceRecord {
     // NAME            a domain name to which this resource record pertains.
     name: Vec<u8>,
-
     // TYPE            two octets containing one of the RR type codes.  This
     // field specifies the meaning of the data in the RDATA field.
     record_type: RecordType,
@@ -389,14 +386,14 @@ pub struct ResourceRecord {
     // transaction in progress, and should not be cached.
     ttl: u32,
     // RDLENGTH        an unsigned 16 bit integer that specifies the length in octets of the RDATA field.
-    rdlength: u16, // TODO this probably doesn't need to be set, since it can come off the length of rdata
+    // rdlength: u16, // TODO this probably doesn't need to be set, since it can come off the length of rdata
 
     // TODO: this probably shouldn't be a string, but it is!
     // RDATA           a variable length string of octets that describes the resource.
     // The format of this information varies according to the TYPE and CLASS of the resource record.
     // For example, the if the TYPE is A and the CLASS is IN, the RDATA field is a 4 octet ARPA Internet address.
     rdata: Vec<u8>,
-    compression: bool,
+    // compression: bool,
 }
 impl ResourceRecord {}
 
