@@ -28,7 +28,6 @@ pub mod config;
 pub mod datastore;
 pub mod enums;
 pub mod packet_dumper;
-pub mod rdata;
 pub mod resourcerecord;
 pub mod servers;
 mod tests;

@@ -12,7 +12,6 @@ use std::str::from_utf8;
 /// A DNS Zone in a JSON file
 ///
 #[derive(Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-#[allow(dead_code)]
 #[serde(rename(serialize = "UPPERCASE"))]
 pub struct FileZone {
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
@@ -47,7 +46,6 @@ pub fn rname_default() -> String {
 
 /// A DNS Record from the JSON file
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[allow(dead_code)]
 pub struct FileZoneRecord {
     pub name: String,
     pub rrtype: String,
@@ -174,6 +172,7 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
 }
 
 #[allow(dead_code)]
+// TODO: this should be the end of the tree, so we can cover wildcards
 struct ZoneTreeLeaf {
     wildcards: Vec<ZoneRecord>,
 }

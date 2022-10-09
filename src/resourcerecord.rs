@@ -1,12 +1,26 @@
 use crate::enums::RecordType;
 use crate::utils;
+use crate::utils::name_as_bytes;
 use log::*;
 use std::env::consts;
 
 use std::str::{from_utf8, FromStr};
 // use packed_struct::*;
-use crate::rdata::DomainName;
+
 use crate::zones::FileZoneRecord;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DomainName {
+    name: String,
+}
+
+impl DomainName {
+    /// Push the DomainName through the name_as_bytes function
+    // TODO:
+    pub fn as_bytes(&self, compress_target: Option<u16>) -> Vec<u8> {
+        name_as_bytes(self.name.as_bytes().to_vec(), compress_target)
+    }
+}
 
 // impl From<&u8> for ResourceRecord {
 //     fn from(input: &u8) -> Self {
@@ -122,7 +136,6 @@ impl From<DNSCharString> for Vec<u8> {
     }
 }
 
-#[allow(dead_code)]
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InternalResourceRecord {
