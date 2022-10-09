@@ -76,9 +76,10 @@ pub async fn udp_server(
             Ok(mut r) => {
                 debug!("Result: {:?}", r);
 
-                if check_for_shutdown(&r, &addr, &config).await.is_ok() {
-                    return Ok(());
-                };
+                // yeah not sure this is something we really want on the UDP side, since you can trick the server with UDP things
+                // if check_for_shutdown(&r, &addr, &config).await.is_ok() {
+                //     return Ok(());
+                // };
 
                 let reply_bytes: Vec<u8> = match r.as_bytes() {
                     Ok(value) => {
@@ -141,35 +142,58 @@ pub async fn tcp_server(
         debug!("TCP connection from {:?}", addr);
 
         let (mut reader, writer) = stream.split();
+        // TODO: this is a hilariously risky unwrap
+        let msg_length: usize = reader.read_u16().await.unwrap().into();
+        debug!("msg_length={msg_length}");
+        // let mut buf: Vec<u8> = Vec::with_capacity(msg_length.into());
         let mut buf: Vec<u8> = vec![];
-        let len = match reader.read_to_end(&mut buf).await {
-            Ok(size) => size,
-            Err(error) => {
-                error!("Failed to read from TCP Stream: {:?}", error);
-                return Ok(());
+
+        while buf.len() < msg_length {
+            let len = match reader.read_buf(&mut buf).await {
+                Ok(size) => size,
+                Err(error) => {
+                    error!("Failed to read from TCP Stream: {:?}", error);
+                    return Ok(());
+                }
+            };
+            if len > 0 {
+                debug!("Read {:?} bytes from TCP stream", len);
             }
-        };
-        debug!("Read {:?} bytes from TCP stream", len);
-        for b in buf.clone() {
-            debug!("{:?}\t'{}'", &b, from_utf8(&[b]).unwrap_or("."));
         }
-        let buf = &buf[0..len];
+
+        crate::utils::hexdump(buf.clone());
+        // the first two bytes of a tcp query is the message length
+        // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
+
+        // check the message is long enough
+        if buf.len() < msg_length {
+            warn!(
+                "Message length too short {}, wanted {}",
+                buf.len(),
+                msg_length + 2
+            );
+        } else {
+            info!("TCP Message length ftw!");
+        }
+
+        // skip the TCP length header because rad
+        let buf = &buf[0..msg_length];
         let result = match timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
-            crate::parse_tcp_query(tx.clone(), len, buf, config.capture_packets),
+            crate::parse_tcp_query(tx.clone(), msg_length, buf, config.capture_packets),
         )
         .await
         {
             Ok(reply) => reply,
             Err(_) => {
-                error!("Did not receive response from parse_query within 10 ms");
+                error!("Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms");
                 continue;
             }
         };
 
         match result {
             Ok(mut r) => {
-                debug!("Result: {:?}", r);
+                debug!("TCP Result: {r:?}");
 
                 // when you get a CHAOS from localhost with "shutdown" break dat loop
                 if check_for_shutdown(&r, &addr, &config).await.is_ok() {
@@ -184,15 +208,27 @@ pub async fn tcp_server(
                     }
                 };
                 debug!("reply_bytes: {:?}", reply_bytes);
-                // let len = match writer.send_to(&reply_bytes as &[u8], addr).await {
-                let len = match writer.try_write(&reply_bytes as &[u8]) {
+
+                let reply_bytes = &reply_bytes as &[u8];
+                // send the outgoing message length
+                let response_length: u16 = reply_bytes.len() as u16;
+                let len = match writer.try_write(&response_length.to_be_bytes()) {
                     Ok(value) => value,
                     Err(err) => {
                         error!("Failed to send data back to {:?}: {:?}", addr, err);
                         return Ok(());
                     }
                 };
-                // let len = sock.send_to(r.answer.as_bytes(), addr).await?;
+                debug!("{:?} bytes sent", len);
+
+                // send the data
+                let len = match writer.try_write(reply_bytes) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        error!("Failed to send data back to {:?}: {:?}", addr, err);
+                        return Ok(());
+                    }
+                };
                 debug!("{:?} bytes sent", len);
             }
             Err(error) => error!("Error: {}", error),

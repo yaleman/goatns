@@ -1,3 +1,5 @@
+use std::str::from_utf8;
+
 use crate::{Header, PacketType, Rcode, Reply};
 use log::debug;
 
@@ -110,15 +112,27 @@ pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
 /// dumps the bytes out as if you were using some kind of fancy packet-dumper
 pub fn hexdump(bytes: Vec<u8>) {
     for byte in bytes.chunks(2) {
+        let byte0_alpha = match byte[0].is_ascii_alphanumeric() {
+            true => from_utf8(byte[0..1].into()).unwrap(),
+            false => " ",
+        };
         match byte.len() {
             2 => {
+                let byte1_alpha = match byte[1].is_ascii_alphanumeric() {
+                    true => from_utf8(byte[1..2].into()).unwrap(),
+                    false => " ",
+                };
+
                 debug!(
-                    "{:02x} {:02x} {:#010b} {:#010b} {:3} {:3}",
+                    "{:02x} {:02x} {:#010b} {:#010b} {:3} {:3} {byte0_alpha} {byte1_alpha}",
                     byte[0], byte[1], byte[0], byte[1], byte[0], byte[1],
                 );
             }
             _ => {
-                debug!("{:02x}    {:#010b}    {:3}", byte[0], byte[0], byte[0],);
+                debug!(
+                    "{:02x}    {:#010b}    {:3} {byte0_alpha}",
+                    byte[0], byte[0], byte[0],
+                );
             }
         }
     }

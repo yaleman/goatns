@@ -122,12 +122,13 @@ async fn get_result(
     buf: &[u8],
     datastore: mpsc::Sender<crate::datastore::Command>,
 ) -> Result<Reply, String> {
+    log::debug!("called get_result(header={header}, len={len})");
     match header.opcode {
         OpCode::Query => {
             let question = Question::from_packets(&buf[HEADER_BYTES..len]).await;
             let question = match question {
                 Ok(value) => {
-                    debug!("Parsed question: {}", value);
+                    debug!("Parsed question: {:?}", value);
                     value
                 }
                 Err(error) => {
@@ -436,32 +437,32 @@ impl From<&ResourceRecord> for Vec<u8> {
 }
 
 // This'd be really nice to be a packed struct
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Question {
     qname: Vec<u8>,
     qtype: RecordType,
     qclass: RecordClass,
 }
 
-impl Debug for Question {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("Question\n")?;
-        for byte in self.to_bytes().chunks(2) {
-            if byte.len() == 2 {
-                f.write_str(&format!(
-                    "\n{:04x} {:04x} {:#010b} {:#010b} {:3} {:3}",
-                    byte[0], byte[1], byte[0], byte[1], byte[0], byte[1],
-                ))?;
-            } else {
-                f.write_str(&format!(
-                    "\n{:04x}      {:#010b}            {:3}",
-                    byte[0], byte[0], byte[0],
-                ))?;
-            }
-        }
-        f.write_fmt(format_args!(""))
-    }
-}
+// impl Debug for Question {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         f.write_str("Question\n")?;
+//         for byte in self.to_bytes().chunks(2) {
+//             if byte.len() == 2 {
+//                 f.write_str(&format!(
+//                     "\n{:04x} {:04x} {:#010b} {:#010b} {:3} {:3}",
+//                     byte[0], byte[1], byte[0], byte[1], byte[0], byte[1],
+//                 ))?;
+//             } else {
+//                 f.write_str(&format!(
+//                     "\n{:04x}      {:#010b}            {:3}",
+//                     byte[0], byte[0], byte[0],
+//                 ))?;
+//             }
+//         }
+//         f.write_fmt(format_args!(""))
+//     }
+// }
 
 impl Display for Question {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
