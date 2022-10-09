@@ -10,7 +10,6 @@ use std::io::Read;
 use std::str::from_utf8;
 
 /// A DNS Zone in a JSON file
-///
 #[derive(Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename(serialize = "UPPERCASE"))]
 pub struct FileZone {
