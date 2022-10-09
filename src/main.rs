@@ -1,9 +1,9 @@
-// TODO: SLIST? https://www.rfc-editor.org/rfc/rfc1034 something about state handling.
+// TODO: SLIST? <https://www.rfc-editor.org/rfc/rfc1034> something about state handling.
 // TODO: lowercase all question name fields
 // TODO: lowercase all reply name fields
 // TODO: clean ctrl-c handling or shutdown in general
 
-// all the types and codes and things - https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
+// all the types and codes and things - <https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4>
 
 #[macro_use]
 extern crate lazy_static;
@@ -24,24 +24,24 @@ use crate::datastore::Command;
 use crate::enums::*;
 use crate::utils::*;
 
-mod config;
-mod datastore;
-mod enums;
-mod packet_dumper;
-mod rdata;
-mod resourcerecord;
-mod servers;
+pub mod config;
+pub mod datastore;
+pub mod enums;
+pub mod packet_dumper;
+pub mod rdata;
+pub mod resourcerecord;
+pub mod servers;
 mod tests;
-mod utils;
-mod zones;
+pub mod utils;
+pub mod zones;
 
 const MAX_IN_FLIGHT: usize = 128;
 const HEADER_BYTES: usize = 12;
 const REPLY_TIMEOUT_MS: u64 = 200;
-// https://dnsflagday.net/2020/#dns-flag-day-2020
+// <https://dnsflagday.net/2020/#dns-flag-day-2020>
 const UDP_BUFFER_SIZE: usize = 1232;
 
-/// https://www.rfc-editor.org/rfc/rfc1035 Section 4.1.1
+/// <https://www.rfc-editor.org/rfc/rfc1035> Section 4.1.1
 #[allow(dead_code)]
 #[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
 #[packed_struct(bit_numbering = "msb0", size_bytes = "12")]
@@ -253,36 +253,6 @@ async fn get_result(
     }
 }
 
-/// Query handler
-async fn parse_udp_query(
-    datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
-    len: usize,
-    buf: [u8; UDP_BUFFER_SIZE],
-    capture_packets: bool,
-) -> Result<Reply, String> {
-    if capture_packets {
-        packet_dumper::dump_bytes(
-            buf[0..len].into(),
-            packet_dumper::DumpType::ClientRequestUDP,
-        )
-        .await;
-    }
-    // we only want the first 12 bytes for the header
-    let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
-    split_header.copy_from_slice(&buf[0..HEADER_BYTES]);
-    // unpack the header for great justice
-    let header = match Header::unpack(&split_header) {
-        Ok(value) => value,
-        Err(error) => {
-            // can't return a servfail if we can't unpack the header, they're probably doing something bad.
-            return Err(format!("Failed to parse header: {:?}", error));
-        }
-    };
-    debug!("Buffer length: {}", len);
-    debug!("Parsed header: {:?}", header);
-    get_result(header, len, &buf, datastore).await
-}
-
 pub async fn parse_tcp_query(
     datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
     len: usize,
@@ -312,7 +282,36 @@ pub async fn parse_tcp_query(
     get_result(header, len, buf, datastore).await
 }
 
-#[allow(dead_code)]
+/// UDP Query handler
+async fn parse_udp_query(
+    datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
+    len: usize,
+    buf: [u8; UDP_BUFFER_SIZE],
+    capture_packets: bool,
+) -> Result<Reply, String> {
+    if capture_packets {
+        packet_dumper::dump_bytes(
+            buf[0..len].into(),
+            packet_dumper::DumpType::ClientRequestUDP,
+        )
+        .await;
+    }
+    // we only want the first 12 bytes for the header
+    let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
+    split_header.copy_from_slice(&buf[0..HEADER_BYTES]);
+    // unpack the header for great justice
+    let header = match Header::unpack(&split_header) {
+        Ok(value) => value,
+        Err(error) => {
+            // can't return a servfail if we can't unpack the header, they're probably doing something bad.
+            return Err(format!("Failed to parse header: {:?}", error));
+        }
+    };
+    debug!("Buffer length: {}", len);
+    debug!("Parsed header: {:?}", header);
+    get_result(header, len, &buf, datastore).await
+}
+
 #[derive(Debug)]
 pub struct Reply {
     header: Header,
@@ -342,12 +341,27 @@ impl Reply {
             retval.extend(question.to_bytes());
         }
 
-        for answer in self.answers.clone() {
+        for answer in &self.answers {
             let reply_bytes: Vec<u8> = answer.into();
             retval.extend(reply_bytes);
         }
 
+        for authority in &self.authorities {
+            debug!("Authority: {:?}", authority);
+        }
+
+        for additional in &self.additional {
+            debug!("Authority: {:?}", additional);
+        }
+
         Ok(retval)
+    }
+
+    /// checks to see if it's over the max length set in [UDP_BUFFER_SIZE] and set the truncated flag if it is
+    pub fn set_truncated(self) -> Self {
+        let mut header = self.header;
+        header.truncated = true;
+        Self { header, ..self }
     }
 }
 
@@ -355,7 +369,7 @@ impl Reply {
 /// format: a variable number of resource records, where the number of
 /// records is specified in the corresponding count field in the header.
 ///
-/// https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.3
+/// <https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.3>
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct ResourceRecord {
@@ -385,14 +399,14 @@ pub struct ResourceRecord {
 }
 impl ResourceRecord {}
 
-impl From<ResourceRecord> for Vec<u8> {
-    fn from(record: ResourceRecord) -> Self {
+impl From<&ResourceRecord> for Vec<u8> {
+    fn from(record: &ResourceRecord) -> Self {
         let mut retval: Vec<u8> = vec![];
 
         debug!("{:?}", record);
 
         // we are compressing for a test
-        let record_name_bytes = name_as_bytes(record.name, Some(HEADER_BYTES as u16));
+        let record_name_bytes = name_as_bytes(record.name.to_vec(), Some(HEADER_BYTES as u16));
         // debug!("name_as_bytes: {:?}", record_name_bytes);
         retval.extend(record_name_bytes);
         // type
@@ -408,7 +422,7 @@ impl From<ResourceRecord> for Vec<u8> {
         retval.extend(rdlength);
         // retval.extend(record.rdlength.to_be_bytes());
         // rdata
-        retval.extend(record.rdata);
+        retval.extend(record.rdata.to_vec());
 
         #[cfg(debug)]
         for byte in retval.chunks(2) {

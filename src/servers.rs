@@ -81,12 +81,21 @@ pub async fn udp_server(
                 };
 
                 let reply_bytes: Vec<u8> = match r.as_bytes() {
-                    Ok(value) => value,
+                    Ok(value) => {
+                        // Check if it's too long and set truncate flag if so, it's safe to unwrap since we've already gone
+                        if value.len() > UDP_BUFFER_SIZE {
+                            r = r.set_truncated();
+                            r.as_bytes().unwrap_or(value)
+                        } else {
+                            value
+                        }
+                    }
                     Err(error) => {
                         error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
                         continue;
                     }
                 };
+
                 debug!("reply_bytes: {:?}", reply_bytes);
                 let len = match udp_sock.send_to(&reply_bytes as &[u8], addr).await {
                     Ok(value) => value,
@@ -105,7 +114,7 @@ pub async fn udp_server(
 
 /// main handler for the TCP side of things
 ///
-/// Ref https://www.rfc-editor.org/rfc/rfc7766
+/// Ref <https://www.rfc-editor.org/rfc/rfc7766>
 
 pub async fn tcp_server(
     bind_address: SocketAddr,

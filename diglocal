@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Runs dig against the local goatns instance
+
+#shellcheck disable=SC2068
+dig -p 15353 @localhost $@
