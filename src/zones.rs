@@ -106,7 +106,7 @@ pub fn empty_zones() -> PatriciaMap<ZoneRecord> {
 }
 
 /// Load the data from a JSON file on disk
-pub fn load_zones(config: ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String> {
+pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String> {
     let zone_filename = "zones.json";
     let mut file = match File::open(zone_filename) {
         Ok(value) => value,

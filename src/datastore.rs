@@ -25,12 +25,12 @@ pub enum Command {
     // }
 }
 
-/// Manages the datastore, waits for signals from the servers and responds with data
+/// Manages the datastore, waits for signals from the server instances and responds with data
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
     config: ConfigFile,
 ) -> Result<(), String> {
-    let zones = match load_zones(config) {
+    let zones = match load_zones(&config) {
         Ok(value) => value,
         Err(error) => {
             error!("{}", error);
@@ -61,7 +61,7 @@ pub async fn manager(
                         if res.is_empty() {
                             None
                         } else {
-                            zr.typerecords = res.to_owned();
+                            zr.typerecords = res;
                             Some(zr)
                         }
                     }
