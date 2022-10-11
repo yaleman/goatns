@@ -86,12 +86,15 @@ pub enum RecordType {
     MX = 15,    // 15 mail exchange
     TXT = 16,   // 16 text strings
     AAAA = 28,  // 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+
+    /// NAPTR <https://www.rfc-editor.org/rfc/rfc2915>
+    NAPTR = 35,
     AXFR = 252, // 252 A request for a transfer of an entire zone
 
     MAILB = 253, // 253 A request for mailbox-related records (MB, MG or MR)
 
-    MAILA = 254, // 254 A request for mail agent RRs (Obsolete - see MX)
-
+    /// A request for mail agent RRs (Obsolete - see MX)
+    // MAILA = 254,
     ALL = 255, // 255 A request for all records (*)
     InvalidType,
 }
@@ -115,10 +118,11 @@ impl From<&u8> for RecordType {
             14 => Self::MINFO,
             15 => Self::MX,
             16 => Self::TXT,
-            28 => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+            28 => Self::AAAA,  // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+            35 => Self::NAPTR, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
             252 => Self::AXFR,
             253 => Self::MAILB,
-            254 => Self::MAILA,
+            // 254 => Self::MAILA,
             255 => Self::ALL,
             _ => Self::InvalidType,
         }
@@ -145,9 +149,10 @@ impl From<&u16> for RecordType {
             15 => Self::MX,
             16 => Self::TXT,
             28 => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+            35 => Self::NAPTR,
             252 => Self::AXFR,
             253 => Self::MAILB,
-            254 => Self::MAILA,
+            // 254 => Self::MAILA,
             255 => Self::ALL,
             _ => Self::InvalidType,
         }
@@ -181,9 +186,10 @@ impl From<&str> for RecordType {
             "MX" => Self::MX,
             "TXT" => Self::TXT,
             "AAAA" => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+            "NAPTR" => Self::NAPTR,
             "AXFR" => Self::AXFR,
             "MAILB" => Self::MAILB,
-            "MAILA" => Self::MAILA,
+            // "MAILA" => Self::MAILA,
             "ALL" => Self::ALL,
             _ => Self::InvalidType,
         }
@@ -199,6 +205,9 @@ impl From<InternalResourceRecord> for RecordType {
             InternalResourceRecord::MF { ttl: _ } => RecordType::MF,
             InternalResourceRecord::CNAME { cname: _, ttl: _ } => RecordType::CNAME,
             InternalResourceRecord::SOA {
+                zone: _,
+                mname: _,
+                rname: _,
                 serial: _,
                 refresh: _,
                 retry: _,
@@ -229,7 +238,15 @@ impl From<InternalResourceRecord> for RecordType {
             InternalResourceRecord::AAAA { address: _, ttl: _ } => RecordType::AAAA,
             InternalResourceRecord::AXFR { ttl: _ } => RecordType::AXFR,
             InternalResourceRecord::MAILB { ttl: _ } => RecordType::MAILB,
-            InternalResourceRecord::MAILA { ttl: _ } => RecordType::MAILA,
+
+            InternalResourceRecord::NAPTR {
+                flags: _,
+                preference: _,
+                domain: _,
+                order: _,
+                ttl: _,
+            } => RecordType::NAPTR,
+            // InternalResourceRecord::MAILA { ttl: _ } => RecordType::MAILA,
             InternalResourceRecord::ALL {} => RecordType::ALL,
             InternalResourceRecord::InvalidType => RecordType::InvalidType,
         }

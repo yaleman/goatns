@@ -10,24 +10,23 @@ extern crate lazy_static;
 
 use log::{debug, error, info, trace, LevelFilter};
 use packed_struct::prelude::*;
-use zones::ZoneRecord;
-
 use std::fmt::{Debug, Display};
 use std::io;
 use std::net::SocketAddr;
 use std::str::{from_utf8, FromStr};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 use tokio::time::sleep;
 
 use crate::config::{get_config, ConfigFile};
-use crate::datastore::Command;
 use crate::enums::*;
+use crate::reply::Reply;
 use crate::utils::*;
 
 pub mod config;
 pub mod datastore;
 pub mod enums;
 pub mod packet_dumper;
+pub mod reply;
 pub mod resourcerecord;
 pub mod servers;
 mod tests;
@@ -114,256 +113,6 @@ impl Header {
     }
 }
 
-async fn get_result(
-    header: Header,
-    len: usize,
-    buf: &[u8],
-    datastore: mpsc::Sender<crate::datastore::Command>,
-) -> Result<Reply, String> {
-    log::debug!("called get_result(header={header}, len={len})");
-    match header.opcode {
-        OpCode::Query => {
-            let question = Question::from_packets(&buf[HEADER_BYTES..len]).await;
-            let question = match question {
-                Ok(value) => {
-                    debug!("Parsed question: {:?}", value);
-                    value
-                }
-                Err(error) => {
-                    // TODO: this should return a SERVFAIL
-                    error!("Failed to parse question: {} id={}", error, header.id);
-                    return reply_builder(header.id, Rcode::ServFail);
-                }
-            };
-
-            // yeet them when we get a request we can't handle
-            if !question.qtype.supported() {
-                debug!(
-                    "Unsupported request: {} {:?}, returning NotImplemented",
-                    from_utf8(&question.qname).unwrap_or("<unable to parse>"),
-                    question.qtype,
-                );
-                return reply_builder(header.id, Rcode::NotImplemented);
-            }
-
-            // Check for CHAOS commands
-            if question.qclass == RecordClass::Chaos {
-                if &question.normalized_name().unwrap() == "shutdown" {
-                    log::debug!("Got CHAOS shutdown!");
-                    return Ok(Reply {
-                        header,
-                        question: Some(question),
-                        answers: vec![],
-                        authorities: vec![],
-                        additional: vec![],
-                    });
-                } else {
-                    log::error!("Chaos {:?}", question.normalized_name());
-                }
-            }
-
-            // build the request to the datastore to make the query
-            let mut name = question.qname.clone();
-            name.reverse();
-
-            let (tx_oneshot, rx_oneshot) = oneshot::channel();
-            let ds_req: Command = Command::Get {
-                name,
-                rtype: question.qtype,
-                resp: tx_oneshot,
-            };
-
-            // here we talk to the datastore to pull the result
-            match datastore.send(ds_req).await {
-                Ok(_) => debug!("Sent a request to the datastore!"),
-                // TODO: handle this properly
-                Err(error) => error!("Error sending to datastore: {:?}", error),
-            };
-
-            let record: ZoneRecord = match rx_oneshot.await {
-                Ok(value) => match value {
-                    Some(zr) => {
-                        debug!("DS Response: {}", zr);
-                        zr
-                    }
-                    None => {
-                        debug!("No response from datastore");
-                        return reply_nxdomain(header.id);
-                    }
-                },
-                Err(error) => {
-                    error!("Failed to get response from datastore: {:?}", error);
-                    return reply_builder(header.id, Rcode::ServFail);
-                }
-            };
-
-            let mut answers: Vec<ResourceRecord> = vec![];
-
-            for record in record.typerecords {
-                let record_type: RecordType = record.clone().into();
-                debug!("Record Type: {:?}", record_type);
-                let answer = record.as_bytes();
-
-                // TODO: handle the records here
-                answers.push(ResourceRecord {
-                    name: question.qname.to_vec(),
-                    record_type,
-                    class: question.qclass,
-                    ttl: 60u32, // TODO: set a TTL
-                    // rdlength: (answer.len() as u16),
-                    rdata: answer,
-                    // compression: true,
-                });
-                // }
-            }
-
-            // this is our reply - static until that bit's done
-            Ok(Reply {
-                header: Header {
-                    id: header.id,
-                    qr: PacketType::Answer,
-                    opcode: header.opcode,
-                    authoritative: false, // TODO: are we authoritative
-                    truncated: false,     // TODO: work out if it's truncated (ie, UDP)
-                    recursion_desired: header.recursion_desired,
-                    recursion_available: header.recursion_desired, // TODO: work this out
-                    z: false,
-                    ad: true, // TODO: decide how the ad flag should be set -  "authentic data" - This requests the server to return whether all of the answer and
-                    // authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all
-                    // records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer
-                    // was insecure or not validated. This bit is set by default.
-                    cd: false, // TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
-                    rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
-                    qdcount: 1,
-                    ancount: answers.len() as u16, // TODO: work out how many we'll return
-                    nscount: 0,
-                    arcount: 0,
-                },
-                question: Some(question),
-                answers,
-                authorities: vec![],
-                additional: vec![],
-            })
-        }
-        _ => {
-            // we don't have to respond to broken queries
-            Err(String::from("Invalid OPCODE"))
-        }
-    }
-}
-
-pub async fn parse_tcp_query(
-    datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
-    len: usize,
-    buf: &[u8],
-    capture_packets: bool,
-) -> Result<Reply, String> {
-    if capture_packets {
-        packet_dumper::dump_bytes(
-            buf[0..len].into(),
-            packet_dumper::DumpType::ClientRequestTCP,
-        )
-        .await;
-    }
-    // we only want the first 12 bytes for the header
-    let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
-    split_header.copy_from_slice(&buf[0..HEADER_BYTES]);
-    // unpack the header for great justice
-    let header = match Header::unpack(&split_header) {
-        Ok(value) => value,
-        Err(error) => {
-            // can't return a servfail if we can't unpack the header, they're probably doing something bad.
-            return Err(format!("Failed to parse header: {:?}", error));
-        }
-    };
-    debug!("Buffer length: {}", len);
-    debug!("Parsed header: {:?}", header);
-    get_result(header, len, buf, datastore).await
-}
-
-/// UDP Query handler
-async fn parse_udp_query(
-    datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
-    len: usize,
-    buf: [u8; UDP_BUFFER_SIZE],
-    capture_packets: bool,
-) -> Result<Reply, String> {
-    if capture_packets {
-        packet_dumper::dump_bytes(
-            buf[0..len].into(),
-            packet_dumper::DumpType::ClientRequestUDP,
-        )
-        .await;
-    }
-    // we only want the first 12 bytes for the header
-    let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
-    split_header.copy_from_slice(&buf[0..HEADER_BYTES]);
-    // unpack the header for great justice
-    let header = match Header::unpack(&split_header) {
-        Ok(value) => value,
-        Err(error) => {
-            // can't return a servfail if we can't unpack the header, they're probably doing something bad.
-            return Err(format!("Failed to parse header: {:?}", error));
-        }
-    };
-    debug!("Buffer length: {}", len);
-    debug!("Parsed header: {:?}", header);
-    get_result(header, len, &buf, datastore).await
-}
-
-#[derive(Debug)]
-pub struct Reply {
-    header: Header,
-    question: Option<Question>,
-    answers: Vec<ResourceRecord>,
-    authorities: Vec<ResourceRecord>,
-    additional: Vec<ResourceRecord>,
-}
-
-impl Reply {
-    /// This is used to turn into a series of bytes to yeet back to the client, needs to take a mutable self because the answers record length goes into the header
-    fn as_bytes(&mut self) -> Result<Vec<u8>, String> {
-        let mut retval: Vec<u8> = vec![];
-
-        self.header.ancount = self.answers.len() as u16;
-
-        // use the packed_struct to build the bytes
-        let reply_header = match self.header.pack() {
-            Ok(value) => value,
-            // TODO: this should not be a panic
-            Err(err) => return Err(format!("Failed to pack reply header bytes: {:?}", err)),
-        };
-        retval.extend(reply_header);
-
-        // need to add the question in here
-        if let Some(question) = &self.question {
-            retval.extend(question.to_bytes());
-        }
-
-        for answer in &self.answers {
-            let reply_bytes: Vec<u8> = answer.into();
-            retval.extend(reply_bytes);
-        }
-
-        for authority in &self.authorities {
-            debug!("Authority: {:?}", authority);
-        }
-
-        for additional in &self.additional {
-            debug!("Authority: {:?}", additional);
-        }
-
-        Ok(retval)
-    }
-
-    /// checks to see if it's over the max length set in [UDP_BUFFER_SIZE] and set the truncated flag if it is
-    pub fn set_truncated(self) -> Self {
-        let mut header = self.header;
-        header.truncated = true;
-        Self { header, ..self }
-    }
-}
-
 /// The answer, authority, and additional sections all share the same
 /// format: a variable number of resource records, where the number of
 /// records is specified in the corresponding count field in the header.
@@ -402,8 +151,8 @@ impl From<&ResourceRecord> for Vec<u8> {
 
         debug!("{:?}", record);
 
-        // we are compressing for a test
-        let record_name_bytes = name_as_bytes(record.name.to_vec(), Some(HEADER_BYTES as u16));
+        let record_name_bytes =
+            name_as_bytes(record.name.to_vec(), Some(HEADER_BYTES as u16), None);
         // debug!("name_as_bytes: {:?}", record_name_bytes);
         retval.extend(record_name_bytes);
         // type
@@ -559,7 +308,7 @@ impl Question {
     fn to_bytes(&self) -> Vec<u8> {
         let mut retval: Vec<u8> = vec![];
 
-        let name_bytes = name_as_bytes(self.qname.clone(), None);
+        let name_bytes = name_as_bytes(self.qname.clone(), None, None);
         retval.extend(name_bytes);
         retval.extend((self.qtype as u16).to_be_bytes());
         retval.extend((self.qclass as u16).to_be_bytes());

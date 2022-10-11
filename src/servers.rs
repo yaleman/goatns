@@ -1,21 +1,28 @@
 use log::*;
+use packed_struct::prelude::*;
 use std::net::SocketAddr;
 use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
 use tokio::net::{TcpListener, UdpSocket};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
-// use packed_struct::PackedStruct;
+
 use crate::config::ConfigFile;
-use crate::enums::RecordClass;
-use crate::Reply;
-use crate::{parse_udp_query, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
+use crate::datastore::Command;
+use crate::enums::{PacketType, Rcode, RecordClass, RecordType};
+use crate::reply::Reply;
+use crate::utils::*;
+use crate::zones::ZoneRecord;
+use crate::{
+    Header, OpCode, Question, ResourceRecord, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE,
+};
 
 lazy_static! {
     static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").unwrap();
 }
 
+/// this handles a shutdown CHAOS request
 async fn check_for_shutdown(r: &Reply, addr: &SocketAddr, config: &ConfigFile) -> Result<(), ()> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
     if let Some(q) = &r.question {
@@ -55,13 +62,17 @@ pub async fn udp_server(
     loop {
         let (len, addr) = match udp_sock.recv_from(&mut udp_buffer).await {
             Ok(value) => value,
-            Err(error) => panic!("{:?}", error),
+            Err(error) => {
+                error!("Error accepting connection via UDP: {:?}", error);
+                continue;
+            }
         };
+
         debug!("{:?} bytes received from {:?}", len, addr);
 
         let udp_result = match timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
-            parse_udp_query(datastore.clone(), len, udp_buffer, config.capture_packets),
+            parse_query(datastore.clone(), len, &udp_buffer, config.capture_packets),
         )
         .await
         {
@@ -81,12 +92,13 @@ pub async fn udp_server(
                 //     return Ok(());
                 // };
 
-                let reply_bytes: Vec<u8> = match r.as_bytes() {
+                let reply_bytes: Vec<u8> = match r.as_bytes().await {
                     Ok(value) => {
                         // Check if it's too long and set truncate flag if so, it's safe to unwrap since we've already gone
                         if value.len() > UDP_BUFFER_SIZE {
                             r = r.set_truncated();
-                            r.as_bytes().unwrap_or(value)
+                            let r = r.as_bytes().await;
+                            r.unwrap_or(value)
                         } else {
                             value
                         }
@@ -180,7 +192,7 @@ pub async fn tcp_server(
         let buf = &buf[0..msg_length];
         let result = match timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
-            crate::parse_tcp_query(tx.clone(), msg_length, buf, config.capture_packets),
+            parse_query(tx.clone(), msg_length, buf, config.capture_packets),
         )
         .await
         {
@@ -200,7 +212,7 @@ pub async fn tcp_server(
                     return Ok(());
                 }
 
-                let reply_bytes: Vec<u8> = match r.as_bytes() {
+                let reply_bytes: Vec<u8> = match r.as_bytes().await {
                     Ok(value) => value,
                     Err(error) => {
                         error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
@@ -234,4 +246,170 @@ pub async fn tcp_server(
             Err(error) => error!("Error: {}", error),
         }
     }
+}
+
+/// Parses the rest of the packets once we have stripped the header off.
+pub async fn parse_query(
+    datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
+    len: usize,
+    buf: &[u8],
+    capture_packets: bool,
+) -> Result<Reply, String> {
+    if capture_packets {
+        crate::packet_dumper::dump_bytes(
+            buf[0..len].into(),
+            crate::packet_dumper::DumpType::ClientRequest,
+        )
+        .await;
+    }
+    // we only want the first 12 bytes for the header
+    let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
+    split_header.copy_from_slice(&buf[0..HEADER_BYTES]);
+    // unpack the header for great justice
+    let header = match crate::Header::unpack(&split_header) {
+        Ok(value) => value,
+        Err(error) => {
+            // can't return a servfail if we can't unpack the header, they're probably doing something bad.
+            return Err(format!("Failed to parse header: {:?}", error));
+        }
+    };
+    debug!("Buffer length: {}", len);
+    debug!("Parsed header: {:?}", header);
+    get_result(header, len, buf, datastore).await
+}
+
+/// The generic handler for the packets once they've been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y'know?
+async fn get_result(
+    header: Header,
+    len: usize,
+    buf: &[u8],
+    datastore: mpsc::Sender<crate::datastore::Command>,
+) -> Result<Reply, String> {
+    log::debug!("called get_result(header={header}, len={len})");
+
+    // if we get something other than a query, yeah nah.
+    if header.opcode != OpCode::Query {
+        return Err(format!("Invalid OPCODE, got {:?}", header.opcode));
+    };
+
+    let question = match Question::from_packets(&buf[HEADER_BYTES..len]).await {
+        Ok(value) => {
+            debug!("Parsed question: {:?}", value);
+            value
+        }
+        Err(error) => {
+            // TODO: this should return a SERVFAIL
+            error!("Failed to parse question: {} id={}", error, header.id);
+            return reply_builder(header.id, Rcode::ServFail);
+        }
+    };
+
+    // yeet them when we get a request we can't handle
+    if !question.qtype.supported() {
+        debug!(
+            "Unsupported request: {} {:?}, returning NotImplemented",
+            from_utf8(&question.qname).unwrap_or("<unable to parse>"),
+            question.qtype,
+        );
+        return reply_builder(header.id, Rcode::NotImplemented);
+    }
+
+    // Check for CHAOS commands
+    if question.qclass == RecordClass::Chaos {
+        if &question.normalized_name().unwrap() == "shutdown" {
+            log::debug!("Got CHAOS shutdown!");
+            return Ok(Reply {
+                header,
+                question: Some(question),
+                answers: vec![],
+                authorities: vec![],
+                additional: vec![],
+            });
+        } else {
+            log::error!("Chaos {:?}", question.normalized_name());
+        }
+    }
+
+    // build the request to the datastore to make the query
+    let mut name = question.qname.clone();
+    name.reverse();
+
+    let (tx_oneshot, rx_oneshot) = oneshot::channel();
+    let ds_req: Command = Command::Get {
+        name,
+        rtype: question.qtype,
+        resp: tx_oneshot,
+    };
+
+    // here we talk to the datastore to pull the result
+    match datastore.send(ds_req).await {
+        Ok(_) => debug!("Sent a request to the datastore!"),
+        // TODO: handle this properly
+        Err(error) => error!("Error sending to datastore: {:?}", error),
+    };
+
+    let record: ZoneRecord = match rx_oneshot.await {
+        Ok(value) => match value {
+            Some(zr) => {
+                debug!("DS Response: {}", zr);
+                zr
+            }
+            None => {
+                debug!("No response from datastore");
+                return reply_nxdomain(header.id);
+            }
+        },
+        Err(error) => {
+            error!("Failed to get response from datastore: {:?}", error);
+            return reply_builder(header.id, Rcode::ServFail);
+        }
+    };
+
+    let mut answers: Vec<ResourceRecord> = vec![];
+
+    for record in record.typerecords {
+        let record_type: RecordType = record.clone().into();
+        debug!("Record Type: {:?}", record_type);
+        let answer = record.as_bytes();
+
+        // TODO: handle the records here
+        answers.push(ResourceRecord {
+            name: question.qname.to_vec(),
+            record_type,
+            class: question.qclass,
+            ttl: 60u32, // TODO: set a TTL
+            // rdlength: (answer.len() as u16),
+            rdata: answer,
+            // compression: true,
+        });
+        // }
+    }
+
+    // this is our reply - static until that bit's done
+    Ok(Reply {
+        header: Header {
+            id: header.id,
+            qr: PacketType::Answer,
+            opcode: header.opcode,
+            authoritative: false, // TODO: are we authoritative
+            truncated: false,     // TODO: work out if it's truncated (ie, UDP)
+            recursion_desired: header.recursion_desired,
+            recursion_available: header.recursion_desired, // TODO: work this out
+            z: false,
+            ad: true, // TODO: decide how the ad flag should be set -  "authentic data" - This requests the server to return whether all of the answer and
+            // authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all
+            // records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer
+            // was insecure or not validated. This bit is set by default.
+            cd: false, // TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
+            rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
+            qdcount: 1,
+            ancount: answers.len() as u16, // TODO: work out how many we'll return
+            nscount: 0,
+            arcount: 0,
+        },
+        question: Some(question),
+        answers,
+        authorities: vec![],
+        additional: vec![],
+    })
 }

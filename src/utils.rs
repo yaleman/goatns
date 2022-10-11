@@ -1,7 +1,6 @@
-use std::str::from_utf8;
-
 use crate::{Header, PacketType, Rcode, Reply};
 use log::debug;
+use std::str::from_utf8;
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
     for (index, curr_byte) in search.iter().enumerate() {
@@ -20,13 +19,31 @@ pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
 ///
 /// compress_target is the index of the octet in the response to point the response at
 /// which should typically be the qname in the question bytes
-pub fn name_as_bytes(name: Vec<u8>, compress_target: Option<u16>) -> Vec<u8> {
-    if let Some(target) = compress_target {
-        // we need the first two bits to be 1, to mark it as compressed
-        // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
-        let result: u16 = 0b1100000000000000 | target as u16;
-        return result.to_be_bytes().to_vec();
-    }
+pub fn name_as_bytes(
+    name: Vec<u8>,
+    compress_target: Option<u16>,
+    compress_reference: Option<&Vec<u8>>,
+) -> Vec<u8> {
+    eprintln!("################################");
+    match from_utf8(&name) {
+        Ok(nstr) => eprintln!("name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
+        Err(_) =>  eprintln!("name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
+    };
+    // if let Some(comp_ref) = compress_reference {
+    //     let comp_ref_name = comp_ref.name.as_bytes().to_vec();
+    //     if name == name_as_bytes(comp_ref_name.clone(), None, None) {
+    //         eprintln!("we can just yeet back the thing!");
+    //         if let Some(target) = compress_target {
+    //             let result: u16 = 0b1100000000000000 | target as u16;
+    //             return result.to_be_bytes().to_vec();
+    //             // we need the first two bits to be 1, to mark it as compressed
+    //             // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
+
+    //         }
+    //     } else {
+    //         eprintln!("{name:?} != {:?}", name_as_bytes(comp_ref_name, None, None))
+    //     }
+    // }
 
     let mut result: Vec<u8> = vec![];
     // if somehow it's a weird bare domain then we don't have to do much it
@@ -66,11 +83,45 @@ pub fn name_as_bytes(name: Vec<u8>, compress_target: Option<u16>) -> Vec<u8> {
             }
         }
     }
-    // make sure we have a trailing null
-    // if !name.ends_with('.') {
-    result.push(0);
-    // }
 
+    // make sure we have a trailing null
+    result.push(0);
+
+    if let (None, None) = (compress_reference, compress_target) {
+        eprintln!("no targets, returning!");
+        return result;
+    };
+
+    eprintln!("We did the conversion bit and got {:?}", result);
+    if let Some(ct) = compress_reference {
+        eprintln!("you gave me {ct:?} as a compression reference");
+        if &result == ct {
+            eprintln!("The thing we're converting is the same as the compression reference!");
+            // return a pointer to the target_byte (probably the name in the header)
+            if let Some(target) = compress_target {
+                let result: u16 = 0b1100000000000000 | target as u16;
+                return result.to_be_bytes().to_vec();
+            } else {
+                panic!("you didn't give us a target, dude!")
+            }
+        }
+        if result.ends_with(ct) {
+            eprintln!("the name ends with the target! woo!");
+            // Ok, we've gotten this far. We need to slice off the "front" of the string and return that.
+            result.truncate(result.len() - ct.len());
+            eprintln!("The result is trimmed and now {:?}", from_utf8(&result));
+            // then we need to return the pointer to the tail
+            if let Some(target) = compress_target {
+                let pointer_bytes: u16 = 0b1100000000000000 | target as u16;
+                result.extend(pointer_bytes.to_be_bytes());
+            } else {
+                panic!("no compression target and we totally could have compressed this.")
+            }
+
+            eprintln!("The result is trimmed and now {:?}", &result);
+        }
+    }
+    eprintln!("Final result {result:?}");
     result
 }
 

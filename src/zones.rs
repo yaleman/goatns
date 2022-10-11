@@ -16,7 +16,6 @@ pub struct FileZone {
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
     #[serde(rename(serialize = "MNAME"))]
     pub name: String,
-
     // RNAME A <domain-name> which specifies the mailbox of the person responsible for this zone.
     #[serde(rename(serialize = "RNAME"), default = "rname_default")]
     pub rname: String,

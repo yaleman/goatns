@@ -1,24 +1,59 @@
 use crate::enums::RecordType;
-use crate::utils;
 use crate::utils::name_as_bytes;
+use crate::{utils, HEADER_BYTES};
 use log::*;
 use std::env::consts;
 
 use std::str::{from_utf8, FromStr};
+use std::string::FromUtf8Error;
 // use packed_struct::*;
 
 use crate::zones::FileZoneRecord;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DomainName {
-    name: String,
+    pub name: String,
 }
 
 impl DomainName {
     /// Push the DomainName through the name_as_bytes function
     // TODO:
-    pub fn as_bytes(&self, compress_target: Option<u16>) -> Vec<u8> {
-        name_as_bytes(self.name.as_bytes().to_vec(), compress_target)
+    pub fn as_bytes(
+        &self,
+        compress_target: Option<u16>,
+        compress_reference: Option<&Vec<u8>>,
+    ) -> Vec<u8> {
+        name_as_bytes(
+            self.name.as_bytes().to_vec(),
+            compress_target,
+            compress_reference,
+        )
+    }
+}
+
+impl From<&str> for DomainName {
+    fn from(input: &str) -> Self {
+        DomainName {
+            name: String::from(input),
+        }
+    }
+}
+
+impl TryFrom<&Vec<u8>> for DomainName {
+    fn try_from(input: &Vec<u8>) -> Result<Self, FromUtf8Error> {
+        match String::from_utf8(input.to_owned()) {
+            Ok(value) => Ok(DomainName { name: value }),
+            Err(error) => Err(error),
+        }
+    }
+
+    type Error = FromUtf8Error;
+}
+
+/// Turn this into the domain-name value
+impl From<&DomainName> for Vec<u8> {
+    fn from(dn: &DomainName) -> Self {
+        name_as_bytes(dn.name.as_bytes().to_vec(), None, None)
     }
 }
 
@@ -143,6 +178,51 @@ pub enum InternalResourceRecord {
         address: u32,
         ttl: Option<u32>,
     }, // 1 a host address
+    NAPTR {
+        ttl: Option<u32>,
+        ///     Domain - The domain name to which this resource record refers.  This is the 'key' for this entry in the rule database.  This value will either be the first well known key (<something>.uri.arpa for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements [1].
+        domain: DomainName,
+        // A 16-bit unsigned integer specifying the order in which the NAPTR records MUST be processed to ensure the correct ordering of rules.  Low numbers are processed before high numbers, and once a NAPTR is found whose rule "matches" the target, the client MUST NOT consider any NAPTRs with a higher value for order (except as noted below for the Flags field).
+        order: u16,
+
+        /* A 16-bit unsigned integer that specifies the order in which NAPTR
+        records with equal "order" values SHOULD be processed, low
+        numbers being processed before high numbers.  This is similar to
+        the preference field in an MX record, and is used so domain
+        administrators can direct clients towards more capable hosts or
+        lighter weight protocols.  A client MAY look at records with
+        higher preference values if it has a good reason to do so such as
+        not understanding the preferred protocol or service.
+
+        The important difference between Order and Preference is that
+        once a match is found the client MUST NOT consider records with a
+        different Order but they MAY process records with the same Order
+        but different Preferences.  I.e., Preference is used to give weight
+        to rules that are considered the same from an authority
+        standpoint but not from a simple load balancing standpoint.*/
+        preference: u16,
+
+        // A <character-string> containing flags to control aspects of the
+        // rewriting and interpretation of the fields in the record.  Flags
+        // are single characters from the set [A-Z0-9].  The case of the
+        // alphabetic characters is not significant.
+
+        // At this time only four flags, "S", "A", "U", and "P", are
+        // defined.  The "S", "A" and "U" flags denote a terminal lookup.
+        // This means that this NAPTR record is the last one and that the
+        // flag determines what the next stage should be.  The "S" flag
+        // means that the next lookup should be for SRV records [4].  See
+        // Section 5 for additional information on how NAPTR uses the SRV
+        // record type.  "A" means that the next lookup should be for either
+        // an A, AAAA, or A6 record.  The "U" flag means that the next step
+        // is not a DNS lookup but that the output of the Regexp field is an
+        // URI that adheres to the 'absoluteURI' production found in the
+        // ABNF of RFC 2396 [9].  Since there may be applications that use
+        // NAPTR to also lookup aspects of URIs, implementors should be
+        // aware that this may cause loop conditions and should act
+        // accordingly.
+        flags: String,
+    },
     NS {
         nsdname: DomainName,
         ttl: Option<u32>,
@@ -158,6 +238,12 @@ pub enum InternalResourceRecord {
         ttl: Option<u32>,
     }, // 5 the canonical name for an alias
     SOA {
+        // The zone that this SOA record is for - eg hello.goat or example.com
+        zone: DomainName,
+        /// The <domain-name> of the name server that was the original or primary source of data for this zone.
+        mname: DomainName,
+        /// A <domain-name> which specifies the mailbox of the person responsible for this zone. eg: `dns.example.com` is actually `dns@example.com`
+        rname: DomainName,
         serial: u32,
         refresh: u32,
         retry: u32,
@@ -213,10 +299,9 @@ pub enum InternalResourceRecord {
         ttl: Option<u32>,
     }, // 253 A request for mailbox-related records (MB, MG or MR)
 
-    MAILA {
-        ttl: Option<u32>,
-    }, // 254 A request for mail agent RRs (Obsolete - see MX)
-
+    // MAILA {
+    //     ttl: Option<u32>,
+    // }, // 254 A request for mail agent RRs (Obsolete - see MX)
     ALL {}, // 255 A request for all records (*)
     InvalidType,
 }
@@ -305,8 +390,15 @@ impl PartialEq<RecordType> for InternalResourceRecord {
                 ttl: _,
             } => other == &RecordType::HINFO,
             InternalResourceRecord::InvalidType => other == &RecordType::InvalidType,
-            InternalResourceRecord::MAILA { ttl: _ } => other == &RecordType::MAILA,
+            // InternalResourceRecord::MAILA { ttl: _ } => other == &RecordType::MAILA,
             InternalResourceRecord::MAILB { ttl: _ } => other == &RecordType::MAILB,
+            InternalResourceRecord::NAPTR {
+                flags: _,
+                preference: _,
+                domain: _,
+                order: _,
+                ttl: _,
+            } => other == &RecordType::NAPTR,
             InternalResourceRecord::MB { ttl: _ } => other == &RecordType::MB,
             InternalResourceRecord::MD { ttl: _ } => other == &RecordType::MD,
             InternalResourceRecord::MF { ttl: _ } => other == &RecordType::MF,
@@ -325,6 +417,9 @@ impl PartialEq<RecordType> for InternalResourceRecord {
                 ttl: _,
             } => other == &RecordType::PTR,
             InternalResourceRecord::SOA {
+                zone: _,
+                mname: _,
+                rname: _,
                 serial: _,
                 refresh: _,
                 retry: _,
@@ -352,7 +447,29 @@ impl InternalResourceRecord {
             // InternalResourceRecord::MD {  } => todo!(),
             // InternalResourceRecord::MF {  } => todo!(),
             // InternalResourceRecord::CNAME { cname } => todo!(),
-            // InternalResourceRecord::SOA { serial, refresh, retry, expire, minimum } => todo!(),
+            InternalResourceRecord::SOA {
+                zone,
+                mname,
+                rname,
+                serial,
+                refresh,
+                retry,
+                expire,
+                minimum,
+            } => {
+                // TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
+                let zone_as_bytes = zone.as_bytes(Some(HEADER_BYTES as u16), None);
+                let mut res: Vec<u8> =
+                    mname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes));
+                // TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
+                res.extend(rname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes)));
+                res.extend(serial.to_be_bytes());
+                res.extend(refresh.to_be_bytes());
+                res.extend(retry.to_be_bytes());
+                res.extend(expire.to_be_bytes());
+                res.extend(minimum.to_be_bytes());
+                res
+            }
             // InternalResourceRecord::MB {  } => todo!(),
             // InternalResourceRecord::MG {  } => todo!(),
             // InternalResourceRecord::MR {  } => todo!(),
@@ -392,7 +509,7 @@ impl InternalResourceRecord {
             // InternalResourceRecord::MAILA {  } => todo!(),
             // InternalResourceRecord::ALL {  } => todo!(),
             // InternalResourceRecord::InvalidType => todo!(),
-            _ => vec![],
+            _ => unimplemented!(),
         }
     }
 

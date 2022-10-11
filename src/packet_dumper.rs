@@ -4,16 +4,14 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
 pub enum DumpType {
-    ClientRequestTCP,
-    ClientRequestUDP,
+    ClientRequest,
     // Header
 }
 
 impl core::fmt::Display for DumpType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
-            DumpType::ClientRequestTCP => f.write_str("client_request_tcp"),
-            DumpType::ClientRequestUDP => f.write_str("client_request_udp"),
+            DumpType::ClientRequest => f.write_str("client_request"),
         }
     }
 }
