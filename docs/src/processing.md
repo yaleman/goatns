@@ -1,15 +1,14 @@
 # Processing Packets
 
-```mermaid
-graph TD;
-    tcpport[TCP Port]-->tcpserver[tcp_server];
-    tcpserver-->parse_tcp_query1;
-    
-    udpport[UDP Port]-->udpserver[udp_server];
-    udpserver-->parse_udp_query1;
+UDP Flow
 
-    parse_udp_query1-->datastore;
-    parse_tcp_query1-->datastore;
-    datastore-->parse_udp_query2;
-    datastore-->parse_tcp_query2;
+```mermaid
+sequenceDiagram
+    participant udpport as UDP Port
+    participant udpserver as udp_server
+    participant parsequery as parse_query
+    udpport->>udpserver: Connect on port 15353
+    udpserver->>parsequery: Parse all the bytes into a Result Object
+    parsequery->>udpserver: Return Result
+    
 ```

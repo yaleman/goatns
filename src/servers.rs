@@ -331,12 +331,10 @@ async fn get_result(
     }
 
     // build the request to the datastore to make the query
-    let mut name = question.qname.clone();
-    name.reverse();
 
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
     let ds_req: Command = Command::Get {
-        name,
+        name: question.qname.clone(),
         rtype: question.qtype,
         resp: tx_oneshot,
     };

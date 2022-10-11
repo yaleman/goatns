@@ -191,9 +191,7 @@ pub fn hexdump(bytes: Vec<u8>) {
 
 /// pass this a string and get the reversed version in a Vec<u8>
 pub fn name_reversed(name: &str) -> Vec<u8> {
-    let mut response = name.as_bytes().to_vec();
-    response.reverse();
-    response
+    name.as_bytes().to_vec()
 }
 
 #[cfg(test)]
