@@ -214,7 +214,7 @@ mod tests {
             Header::unpack_from_slice(&original_question[0..HEADER_BYTES]).unwrap();
         their_header.ancount = 1;
         assert_eq!(header, their_header.as_answer());
-        eprintln!("Parsed header matched!");
+        log::trace!("Parsed header matched!");
 
         let mut current_block: &str;
         for (index, byte) in reply_bytes.iter().enumerate() {
@@ -239,7 +239,7 @@ mod tests {
                         true => std::str::from_utf8(&b).unwrap_or("-"),
                         false => " ",
                     };
-                    eprintln!(
+                    log::trace!(
                         "{current_block} \t {index} us: {}\t{:#010b}\tex: {expected_byte}\t{expected_byte:#010b} \tchars: {} {}\t matched: {}",
                         byte.clone(),
                         byte.clone(),
@@ -326,8 +326,8 @@ mod tests {
             0x00, 0x00,
         ];
 
-        eprintln!("Our length: {}", reply_bytes.len());
-        eprintln!("Exp length: {}", expected_bytes.len());
+        log::trace!("Our length: {}", reply_bytes.len());
+        log::trace!("Exp length: {}", expected_bytes.len());
 
         let mut current_block: &str;
         for (index, byte) in reply_bytes.iter().enumerate() {
@@ -339,7 +339,7 @@ mod tests {
                 current_block = "Answer   ";
             }
             match expected_bytes.get(index) {
-                Some(expected_byte) => eprintln!(
+                Some(expected_byte) => error!(
                     "{} \t {} us: {} ex: {} {}",
                     current_block,
                     index,

@@ -161,7 +161,6 @@ impl From<&ResourceRecord> for Vec<u8> {
 
         let record_name_bytes =
             name_as_bytes(record.name.to_vec(), Some(HEADER_BYTES as u16), None);
-        // debug!("name_as_bytes: {:?}", record_name_bytes);
         retval.extend(record_name_bytes);
         // type
         retval.extend((record.record_type as u16).to_be_bytes());

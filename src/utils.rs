@@ -1,5 +1,5 @@
 use crate::{Header, PacketType, Rcode, Reply};
-use log::debug;
+use log::{debug, trace};
 use std::str::from_utf8;
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
@@ -38,11 +38,11 @@ fn seven_dot_three_conversion(name: &[u8]) -> Vec<u8> {
             // debug!(". - {:?} ({:?})", next_dot, name_bytes);
             if next_dot != 0 {
                 result.push(next_dot as u8);
-                // eprintln!("pushing next_dot {}", next_dot as u8);
+                trace!("pushing next_dot {}", next_dot as u8);
             }
         } else {
             // we are processing bytes
-            // eprintln!("pushing {}", name_bytes[current_position]);
+            trace!("pushing {}", name_bytes[current_position]);
             result.push(name_bytes[current_position]);
             // debug!("{:?} {:?}", current_position, name_bytes.as_bytes()[current_position]);
             current_position += 1;
@@ -76,19 +76,19 @@ pub fn name_as_bytes(
     compress_target: Option<u16>,
     compress_reference: Option<&Vec<u8>>,
 ) -> Vec<u8> {
-    eprintln!("################################");
+    trace!("################################");
     match from_utf8(&name) {
-        Ok(nstr) => eprintln!("name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
-        Err(_) =>  eprintln!("name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
+        Ok(nstr) => trace!("name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
+        Err(_) =>  trace!("name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
     };
 
     // if we're given a compression target and no reference just compress it and return
     if let (Some(target), None) = (compress_target, compress_reference) {
-        debug!("we got a compress target ({target}) but no reference we're just going to compress");
+        trace!("we got a compress target ({target}) but no reference we're just going to compress");
         // we need the first two bits to be 1, to mark it as compressed
         // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
         let result: Vec<u8> = (0b1100000000000000 | target as u16).to_be_bytes().into();
-        debug!("result of name_as_bytes {result:?}");
+        trace!("result of name_as_bytes {result:?}");
         return result;
     };
 
@@ -104,16 +104,16 @@ pub fn name_as_bytes(
     result = seven_dot_three_conversion(&name);
 
     if compress_target.is_none() {
-        eprintln!("no compression target, adding the trailing null and returning!");
+        trace!("no compression target, adding the trailing null and returning!");
         result.push(0);
         return result;
     };
 
     if let Some(ct) = compress_reference {
-        eprintln!("you gave me {ct:?} as a compression reference");
+        trace!("you gave me {ct:?} as a compression reference");
 
         if &name == ct {
-            eprintln!("The thing we're converting is the same as the compression reference!");
+            trace!("The thing we're converting is the same as the compression reference!");
             // return a pointer to the target_byte (probably the name in the header)
             if let Some(target) = compress_target {
                 let result: u16 = 0b1100000000000000 | target as u16;
@@ -123,30 +123,31 @@ pub fn name_as_bytes(
             }
         }
         if name.ends_with(ct) {
-            eprintln!("the name ends with the target! woo!");
+            trace!("the name ends with the target! woo!");
             // Ok, we've gotten this far. We need to slice off the "front" of the string and return that.
             result = name.clone();
             result.truncate(name.len() - ct.len());
-            eprintln!("The result is trimmed and now {:?}", from_utf8(&result));
+            trace!("The result is trimmed and now {:?}", from_utf8(&result));
 
             // do the 7.3 conversion
             result = seven_dot_three_conversion(&result);
-            eprintln!("7.3converted: {:?}", from_utf8(&result));
+            trace!("7.3converted: {:?}", from_utf8(&result));
 
             // then we need to return the pointer to the tail
             if let Some(target) = compress_target {
                 let pointer_bytes: u16 = 0b1100000000000000 | target as u16;
                 result.extend(pointer_bytes.to_be_bytes());
             } else {
-                panic!("no compression target and we totally could have compressed this.")
+                #[cfg(debug)]
+                panic!("No compression target and we totally could have compressed this.")
             }
 
-            eprintln!("The result is trimmed and now {:?}", result);
+            trace!("The result is trimmed and now {:?}", result);
         } else {
-            eprintln!("no trimming :(")
+            trace!("no trimming :(")
         }
     }
-    eprintln!("Final result {result:?}");
+    trace!("Final result {result:?}");
     result
 }
 
@@ -217,6 +218,7 @@ pub fn hexdump(bytes: Vec<u8>) {
 #[cfg(test)]
 mod tests {
 
+    use log::trace;
     use super::name_as_bytes;
     use std::str::from_utf8;
 
@@ -247,8 +249,8 @@ mod tests {
 
         let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 12];
 
-        eprintln!("{:?}", from_utf8(&example_com));
-        eprintln!("{:?}", from_utf8(&test_input));
+        trace!("{:?}", from_utf8(&example_com));
+        trace!("{:?}", from_utf8(&test_input));
 
         let result = name_as_bytes(test_input, Some(12), Some(&example_com));
 

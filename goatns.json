@@ -1,7 +1,7 @@
 {
 	"addr" : "0.0.0.0",
 	"port" : 15353,
-	"log_level" : "DEBUG",
+	"log_level" : "ERROR",
 	"capture_packets" :false,
 	"enable_hinfo" : true,
 	"shutdown_ip_allow_list" : [

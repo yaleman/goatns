@@ -12,7 +12,7 @@ mod tests {
         let mut res = match goat {
             Ok(child) => child,
             Err(error) => {
-                eprintln!("Failed to start: {error:?}");
+                log::trace!("Failed to start: {error:?}");
                 return Err(error);
             }
         };
@@ -30,7 +30,7 @@ mod tests {
         // let mut resolver = Resolver::from_system_conf().unwrap();
 
         // Lookup the IP addresses associated with a name.
-        eprintln!(
+        log::trace!(
             "{:?}",
             resolver.lookup("hello.goat", trust_dns_resolver::proto::rr::RecordType::A)
         );

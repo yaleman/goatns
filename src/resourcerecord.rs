@@ -251,24 +251,14 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                 }
             }
             "AAAA" => {
-                // let address = match from_utf8(record.rdata) {
-                //     Ok(value) => value,
-                //     Err(error) => {
-                //         eprintln!(
-                //             "Failed to parse {:?} to string in A record: {:?}",
-                //             record.rdata, error
-                //         );
-                //         return InternalResourceRecord::InvalidType;
-                //     }
-                // };
                 let address: u128 = match std::net::Ipv6Addr::from_str(&record.rdata) {
                     Ok(value) => {
                         let res: u128 = value.into();
-                        eprintln!("Encoding {:?} as {:?}", value, res);
+                        debug!("Encoding {:?} as {:?}", value, res);
                         res
                     }
                     Err(error) => {
-                        eprintln!(
+                        error!(
                             "Failed to parse {:?} into an IPv6 address: {:?}",
                             record.rdata, error
                         );
@@ -482,12 +472,12 @@ mod tests {
             rdata: String::from("1234:5678:cafe:beef:ca75:0:4b9:e94d"),
             ttl: 160u32,
         };
-        debug!("fzr: {:?}", fzr);
+        debug!("fzr: {fzr}");
         let converted = Ipv6Addr::from_str(&fzr.rdata).unwrap();
         debug!("conversion: {:?}", converted);
         let rr: InternalResourceRecord = fzr.into();
 
-        debug!("fzr->rr = {:?}", rr);
+        debug!("fzr->rr = {rr:?}");
         assert_eq!(rr, RecordType::AAAA);
         assert_eq!(
             rr.as_bytes(&vec![]),
