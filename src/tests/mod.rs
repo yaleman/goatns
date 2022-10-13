@@ -339,7 +339,7 @@ mod tests {
                 current_block = "Answer   ";
             }
             match expected_bytes.get(index) {
-                Some(expected_byte) => error!(
+                Some(expected_byte) => log::error!(
                     "{} \t {} us: {} ex: {} {}",
                     current_block,
                     index,
