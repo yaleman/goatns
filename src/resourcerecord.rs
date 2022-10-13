@@ -24,7 +24,7 @@ impl DomainName {
         compress_reference: Option<&Vec<u8>>,
     ) -> Vec<u8> {
         name_as_bytes(
-            self.name.as_bytes().to_vec(),
+            self.name.to_owned().into_bytes(),
             compress_target,
             compress_reference,
         )
@@ -221,6 +221,7 @@ pub enum InternalResourceRecord {
 }
 
 impl From<FileZoneRecord> for InternalResourceRecord {
+    // TODO: This should be a try_into because we're parsing text
     /// This is where we convert from the JSON blob in the file to an internal representation of the data.
     fn from(record: FileZoneRecord) -> Self {
         match record.rrtype.as_str() {
@@ -254,7 +255,7 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                 let address: u128 = match std::net::Ipv6Addr::from_str(&record.rdata) {
                     Ok(value) => {
                         let res: u128 = value.into();
-                        debug!("Encoding {:?} as {:?}", value, res);
+                        trace!("Encoding {:?} as {:?}", value, res);
                         res
                     }
                     Err(error) => {
@@ -273,14 +274,36 @@ impl From<FileZoneRecord> for InternalResourceRecord {
             }
             "TXT" => InternalResourceRecord::TXT {
                 txtdata: DNSCharString {
-                    data: record.rdata.as_bytes().to_vec(),
+                    data: record.rdata.into_bytes(),
                 },
+                ttl: record.ttl,
+            },
+            "PTR" => InternalResourceRecord::PTR {
+                ptrdname: DomainName::from(record.rdata),
                 ttl: record.ttl,
             },
             "NS" => InternalResourceRecord::NS {
                 nsdname: DomainName::from(record.rdata),
                 ttl: record.ttl,
             },
+            "MX" => {
+                let split_bit: Vec<&str> = record.rdata.split(' ').collect();
+                if split_bit.len() != 2 {
+                    error!("ugh?")
+                };
+                let pref = match u16::from_str(split_bit[0]) {
+                    Ok(value) => value,
+                    Err(error) => {
+                        panic!("Failed to parse {} into number: {:?}", split_bit[0], error)
+                    }
+                };
+                eprintln!("got pref {}, now {pref}", split_bit[0]);
+                InternalResourceRecord::MX {
+                    preference: pref,
+                    exchange: DomainName::from(split_bit[1]),
+                    ttl: record.ttl,
+                }
+            }
             _ => InternalResourceRecord::InvalidType,
         }
     }
@@ -359,9 +382,7 @@ impl InternalResourceRecord {
                 res.truncate(256);
                 res
             }
-            InternalResourceRecord::NS { nsdname, ttl: _ } => {
-                nsdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
-            }
+
             // InternalResourceRecord::MD {  } => todo!(),
             // InternalResourceRecord::MF {  } => todo!(),
             // InternalResourceRecord::CNAME { cname } => todo!(),
@@ -393,7 +414,12 @@ impl InternalResourceRecord {
             // InternalResourceRecord::MR {  } => todo!(),
             // InternalResourceRecord::NULL {  } => todo!(),
             // InternalResourceRecord::WKS {  } => todo!(),
-            // InternalResourceRecord::PTR { ptrdname } => todo!(),
+            InternalResourceRecord::NS { nsdname, ttl: _ } => {
+                nsdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
+            }
+            InternalResourceRecord::PTR { ptrdname, ttl: _ } => {
+                ptrdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
+            }
             InternalResourceRecord::HINFO { cpu, os, ttl: _ } => {
                 let mut hinfo_bytes: Vec<u8> = vec![];
 
@@ -419,7 +445,12 @@ impl InternalResourceRecord {
                 hinfo_bytes
             }
             // InternalResourceRecord::MINFO {  } => todo!(),
-            // InternalResourceRecord::MX { preference, exchange } => todo!(),
+            InternalResourceRecord::MX { preference, exchange , ttl: _} => {
+                let mut mx_bytes: Vec<u8> = preference.to_be_bytes().into();
+                mx_bytes.extend(exchange.as_bytes(Some(HEADER_BYTES as u16), Some(question)));
+                mx_bytes
+            }
+            ,
             // InternalResourceRecord::AXFR {  } => todo!(),
             // InternalResourceRecord::MAILB {  } => todo!(),
             // InternalResourceRecord::MAILA {  } => todo!(),

@@ -131,31 +131,7 @@ impl From<&u8> for RecordType {
 
 impl From<&u16> for RecordType {
     fn from(input: &u16) -> Self {
-        match input {
-            1 => Self::A,
-            2 => Self::NS,
-            3 => Self::MD,
-            4 => Self::MF,
-            5 => Self::CNAME,
-            6 => Self::SOA,
-            7 => Self::MB,
-            8 => Self::MG,
-            9 => Self::MR,
-            10 => Self::NULL,
-            11 => Self::WKS,
-            12 => Self::PTR,
-            13 => Self::HINFO,
-            14 => Self::MINFO,
-            15 => Self::MX,
-            16 => Self::TXT,
-            28 => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
-            35 => Self::NAPTR,
-            252 => Self::AXFR,
-            253 => Self::MAILB,
-            // 254 => Self::MAILA,
-            255 => Self::ALL,
-            _ => Self::InvalidType,
-        }
+        RecordType::from(&(*input as u8))
     }
 }
 
@@ -260,6 +236,8 @@ impl RecordType {
             RecordType::A => true,
             RecordType::AAAA => true,
             RecordType::HINFO => true,
+            RecordType::MX => true,
+            RecordType::PTR => true,
             RecordType::SOA => true,
             RecordType::TXT => true,
             RecordType::NS => true,

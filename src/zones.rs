@@ -57,7 +57,10 @@ fn default_record_name() -> String {
 
 impl Display for FileZoneRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("FileZoneRecord {{ name: {} rrtype: {}, rdata: {}, ttl: {} }}", self.name, self.rrtype, self.rdata, self.ttl))
+        f.write_fmt(format_args!(
+            "FileZoneRecord {{ name: {} rrtype: {}, rdata: {}, ttl: {} }}",
+            self.name, self.rrtype, self.rdata, self.ttl
+        ))
     }
 }
 
@@ -145,7 +148,7 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
         tree.insert(
             hinfo_name.clone(),
             ZoneRecord {
-                name: hinfo_name.as_bytes().to_vec(),
+                name: hinfo_name.into_bytes(),
                 typerecords: vec![InternalResourceRecord::HINFO {
                     cpu: None,
                     os: None,
@@ -198,7 +201,7 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
                 tree.insert(
                     &name,
                     ZoneRecord {
-                        name: name.clone().as_bytes().to_vec(),
+                        name: name.clone().into_bytes(),
                         typerecords: vec![record_data],
                     },
                 );

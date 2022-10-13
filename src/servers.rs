@@ -278,7 +278,7 @@ async fn get_result(
     buf: &[u8],
     datastore: mpsc::Sender<crate::datastore::Command>,
 ) -> Result<Reply, String> {
-    log::debug!("called get_result(header={header}, len={len})");
+    log::trace!("called get_result(header={header}, len={len})");
 
     // if we get something other than a query, yeah nah.
     if header.opcode != OpCode::Query {
@@ -334,7 +334,7 @@ async fn get_result(
 
     // here we talk to the datastore to pull the result
     match datastore.send(ds_req).await {
-        Ok(_) => debug!("Sent a request to the datastore!"),
+        Ok(_) => trace!("Sent a request to the datastore!"),
         // TODO: handle this properly
         Err(error) => error!("Error sending to datastore: {:?}", error),
     };

@@ -15,6 +15,22 @@
                 "ttl" : 3600
             },
             {
+                "rrtype" : "MX",
+                "ttl" : 60,
+                "rdata" : "10 mx.hello.goat"
+            },
+            {
+                "rrtype" : "MX",
+                "ttl" : 60,
+                "rdata" : "150 mx2.hello.goat"
+            },
+            {
+                "name" : "fooptr",
+                "rrtype" : "PTR",
+                "rdata" : "ns1.hello.goat",
+                "ttl" : 3600
+            },
+            {
                 "rrtype" : "NS",
                 "rdata" : "ns2.hello.goat",
                 "ttl" : 300

@@ -237,13 +237,13 @@ mod test {
     #[test]
     fn test_normalize_name() {
         let q = Question {
-            qname: String::from("HellO.world").as_bytes().to_vec(),
+            qname: String::from("HellO.world").into_bytes(),
             qtype: crate::enums::RecordType::A,
             qclass: crate::enums::RecordClass::Internet,
         };
         assert_eq!(q.normalized_name().unwrap(), String::from("hello.world"));
         let q = Question {
-            qname: String::from("hello.world").as_bytes().to_vec(),
+            qname: String::from("hello.world").into_bytes(),
             qtype: crate::enums::RecordType::A,
             qclass: crate::enums::RecordClass::Internet,
         };

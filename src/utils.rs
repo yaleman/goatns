@@ -146,6 +146,7 @@ pub fn name_as_bytes(
         } else {
             trace!("no trimming :(")
         }
+        // TODO: try and find a sub-slice to make test_name_bytes_with_tail_compression pass
     }
     trace!("Final result {result:?}");
     result
@@ -218,8 +219,8 @@ pub fn hexdump(bytes: Vec<u8>) {
 #[cfg(test)]
 mod tests {
 
-    use log::trace;
     use super::name_as_bytes;
+    use log::trace;
     use std::str::from_utf8;
 
     #[test]
@@ -240,14 +241,25 @@ mod tests {
 
     #[test]
     pub fn test_name_bytes_with_compression() {
-        // 7example3com0
-        // let example_com: Vec<u8> = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
         let example_com = "example.com".as_bytes().to_vec();
         let test_input = "lol.example.com".as_bytes().to_vec();
 
-        // let test_input: Vec<u8> = vec![3, 108, 111, 108, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
-
         let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 12];
+
+        trace!("{:?}", from_utf8(&example_com));
+        trace!("{:?}", from_utf8(&test_input));
+
+        let result = name_as_bytes(test_input, Some(12), Some(&example_com));
+
+        assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    pub fn test_name_bytes_with_tail_compression() {
+        let example_com = "ns1.example.com".as_bytes().to_vec();
+        let test_input = "lol.example.com".as_bytes().to_vec();
+
+        let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 15];
 
         trace!("{:?}", from_utf8(&example_com));
         trace!("{:?}", from_utf8(&test_input));
