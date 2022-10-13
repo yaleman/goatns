@@ -1,3 +1,5 @@
+mod e2e_test;
+
 #[cfg(test)]
 mod tests {
     use crate::resourcerecord::InternalResourceRecord;
