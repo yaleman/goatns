@@ -1,10 +1,10 @@
 use crate::enums::RecordType;
-use crate::utils::name_as_bytes;
-use crate::{utils, HEADER_BYTES};
+use crate::utils::{hexdump, name_as_bytes};
+use crate::HEADER_BYTES;
 use log::*;
 use std::env::consts;
 
-use std::str::{from_utf8, FromStr};
+use std::str::FromStr;
 use std::string::FromUtf8Error;
 // use packed_struct::*;
 
@@ -33,9 +33,17 @@ impl DomainName {
 
 impl From<&str> for DomainName {
     fn from(input: &str) -> Self {
-        DomainName {
-            name: String::from(input),
-        }
+        let name = match input.contains('@') {
+            false => String::from(input),
+            true => input.replace('@', "."),
+        };
+        DomainName { name }
+    }
+}
+
+impl From<String> for DomainName {
+    fn from(name: String) -> Self {
+        DomainName { name }
     }
 }
 
@@ -56,100 +64,6 @@ impl From<&DomainName> for Vec<u8> {
         name_as_bytes(dn.name.as_bytes().to_vec(), None, None)
     }
 }
-
-// impl From<&u8> for ResourceRecord {
-//     fn from(input: &u8) -> Self {
-//         match input {
-//             1 => Self::A,
-//             2 => Self::NS,
-//             3 => Self::MD,
-//             4 => Self::MF,
-//             5 => Self::CNAME,
-//             6 => Self::SOA,
-//             7 => Self::MB,
-//             8 => Self::MG,
-//             9 => Self::MR,
-//             10 => Self::NULL,
-//             11 => Self::WKS,
-//             12 => Self::PTR,
-//             13 => Self::HINFO,
-//             14 => Self::MINFO,
-//             15 => Self::MX,
-//             16 => Self::TXT,
-//             28 => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
-//             252 => Self::AXFR,
-//             253 => Self::MAILB,
-//             254 => Self::MAILA,
-//             255 => Self::ALL,
-//             _ => Self::InvalidType,
-//         }
-//     }
-// }
-
-// impl From<&u16> for ResourceRecord {
-//     fn from(input: &u16) -> Self {
-//         match input {
-//             1 => Self::A,
-//             2 => Self::NS,
-//             3 => Self::MD,
-//             4 => Self::MF,
-//             5 => Self::CNAME,
-//             6 => Self::SOA,
-//             7 => Self::MB,
-//             8 => Self::MG,
-//             9 => Self::MR,
-//             10 => Self::NULL,
-//             11 => Self::WKS,
-//             12 => Self::PTR,
-//             13 => Self::HINFO,
-//             14 => Self::MINFO,
-//             15 => Self::MX,
-//             16 => Self::TXT,
-//             28 => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
-//             252 => Self::AXFR,
-//             253 => Self::MAILB,
-//             254 => Self::MAILA,
-//             255 => Self::ALL,
-//             _ => Self::InvalidType,
-//         }
-//     }
-// }
-
-// impl From<String> for ResourceRecord {
-//     fn from(input: String) -> Self {
-//         let input: ResourceRecord = input.as_str().into();
-//         input
-//     }
-// }
-
-// impl From<&str> for ResourceRecord {
-//     fn from(input: &str) -> Self {
-//         match input {
-//             "A" => Self::A,
-//             "NS" => Self::NS,
-//             "MD" => Self::MD,
-//             "MF" => Self::MF,
-//             "CNAME" => Self::CNAME,
-//             "SOA" => Self::SOA,
-//             "MB" => Self::MB,
-//             "MG" => Self::MG,
-//             "MR" => Self::MR,
-//             "NULL" => Self::NULL,
-//             "WKS" => Self::WKS,
-//             "PTR" => Self::PTR,
-//             "HINFO" => Self::HINFO,
-//             "MINFO" => Self::MINFO,
-//             "MX" => Self::MX,
-//             "TXT" => Self::TXT,
-//             "AAAA" => Self::AAAA,
-//             "AXFR" => Self::AXFR,
-//             "MAILB" => Self::MAILB,
-//             "MAILA" => Self::MAILA,
-//             "ALL" => Self::ALL,
-//             _ => Self::InvalidType,
-//         }
-//     }
-// }
 
 /// <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -176,10 +90,10 @@ impl From<DNSCharString> for Vec<u8> {
 pub enum InternalResourceRecord {
     A {
         address: u32,
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 1 a host address
     NAPTR {
-        ttl: Option<u32>,
+        ttl: u32,
         ///     Domain - The domain name to which this resource record refers.  This is the 'key' for this entry in the rule database.  This value will either be the first well known key (<something>.uri.arpa for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements [1].
         domain: DomainName,
         // A 16-bit unsigned integer specifying the order in which the NAPTR records MUST be processed to ensure the correct ordering of rules.  Low numbers are processed before high numbers, and once a NAPTR is found whose rule "matches" the target, the client MUST NOT consider any NAPTRs with a higher value for order (except as noted below for the Flags field).
@@ -225,17 +139,17 @@ pub enum InternalResourceRecord {
     },
     NS {
         nsdname: DomainName,
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 2 an authoritative name server
     MD {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 3 a mail destination (Obsolete - use MX)
     MF {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 4 a mail forwarder (Obsolete - use MX)
     CNAME {
         cname: DomainName,
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 5 the canonical name for an alias
     SOA {
         // The zone that this SOA record is for - eg hello.goat or example.com
@@ -252,55 +166,55 @@ pub enum InternalResourceRecord {
         // this doesn't get a TTL, since that's an expire?
     }, // 6 marks the start of a zone of authority
     MB {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 7 a mailbox domain name (EXPERIMENTAL)
     MG {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 8 a mail group member (EXPERIMENTAL)
     MR {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 9 a mail rename domain name (EXPERIMENTAL)
     NULL {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 10 a null RR (EXPERIMENTAL)
     WKS {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 11 a well known service description
     PTR {
         ptrdname: DomainName,
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 12 a domain name pointer
     HINFO {
         cpu: Option<DNSCharString>,
         os: Option<DNSCharString>,
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 13 host information
     MINFO {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 14 mailbox or mail list information
     MX {
         preference: u16,
         exchange: DomainName,
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 15 mail exchange
     TXT {
         txtdata: DNSCharString,
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 16 text strings
     AAAA {
         address: u128,
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
     AXFR {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 252 A request for a transfer of an entire zone
 
     MAILB {
-        ttl: Option<u32>,
+        ttl: u32,
     }, // 253 A request for mailbox-related records (MB, MG or MR)
 
     // MAILA {
-    //     ttl: Option<u32>,
+    //     ttl: u32,
     // }, // 254 A request for mail agent RRs (Obsolete - see MX)
     ALL {}, // 255 A request for all records (*)
     InvalidType,
@@ -311,17 +225,17 @@ impl From<FileZoneRecord> for InternalResourceRecord {
     fn from(record: FileZoneRecord) -> Self {
         match record.rrtype.as_str() {
             "A" => {
-                let address = match from_utf8(&record.rdata) {
-                    Ok(value) => value,
-                    Err(error) => {
-                        error!(
-                            "Failed to parse {:?} to string in A record: {:?}",
-                            record.rdata, error
-                        );
-                        return InternalResourceRecord::InvalidType;
-                    }
-                };
-                let address: u32 = match std::net::Ipv4Addr::from_str(address) {
+                // let address = match from_utf8(&record.rdata) {
+                //     Ok(value) => value,
+                //     Err(error) => {
+                //         error!(
+                //             "Failed to parse {:?} to string in A record: {:?}",
+                //             record.rdata, error
+                //         );
+                //         return InternalResourceRecord::InvalidType;
+                //     }
+                // };
+                let address: u32 = match std::net::Ipv4Addr::from_str(&record.rdata) {
                     Ok(value) => value.into(),
                     Err(error) => {
                         error!(
@@ -337,17 +251,17 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                 }
             }
             "AAAA" => {
-                let address = match from_utf8(&record.rdata) {
-                    Ok(value) => value,
-                    Err(error) => {
-                        eprintln!(
-                            "Failed to parse {:?} to string in A record: {:?}",
-                            record.rdata, error
-                        );
-                        return InternalResourceRecord::InvalidType;
-                    }
-                };
-                let address: u128 = match std::net::Ipv6Addr::from_str(address) {
+                // let address = match from_utf8(record.rdata) {
+                //     Ok(value) => value,
+                //     Err(error) => {
+                //         eprintln!(
+                //             "Failed to parse {:?} to string in A record: {:?}",
+                //             record.rdata, error
+                //         );
+                //         return InternalResourceRecord::InvalidType;
+                //     }
+                // };
+                let address: u128 = match std::net::Ipv6Addr::from_str(&record.rdata) {
                     Ok(value) => {
                         let res: u128 = value.into();
                         eprintln!("Encoding {:?} as {:?}", value, res);
@@ -368,7 +282,13 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                 }
             }
             "TXT" => InternalResourceRecord::TXT {
-                txtdata: DNSCharString { data: record.rdata },
+                txtdata: DNSCharString {
+                    data: record.rdata.as_bytes().to_vec(),
+                },
+                ttl: record.ttl,
+            },
+            "NS" => InternalResourceRecord::NS {
+                nsdname: DomainName::from(record.rdata),
                 ttl: record.ttl,
             },
             _ => InternalResourceRecord::InvalidType,
@@ -432,18 +352,26 @@ impl PartialEq<RecordType> for InternalResourceRecord {
     }
 }
 
+// impl From<&InternalResourceRecord> for Vec<u8> {
+//     fn from(record: &InternalResourceRecord) -> Self {
+//         record.to_owned().as_bytes()
+//     }
+// }
+
 impl InternalResourceRecord {
-    pub fn as_bytes(self: InternalResourceRecord) -> Vec<u8> {
+    pub fn as_bytes(self: &InternalResourceRecord, question: &Vec<u8>) -> Vec<u8> {
         match self {
             InternalResourceRecord::A { address, ttl: _ } => address.to_be_bytes().to_vec(),
             InternalResourceRecord::AAAA { address, ttl: _ } => address.to_be_bytes().to_vec(),
             InternalResourceRecord::TXT { txtdata, ttl: _ } => {
                 // <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
-                let mut res: Vec<u8> = txtdata.into();
+                let mut res: Vec<u8> = txtdata.data.clone();
                 res.truncate(256);
                 res
             }
-            // InternalResourceRecord::NS { nsdname } => todo!(),
+            InternalResourceRecord::NS { nsdname, ttl: _ } => {
+                nsdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
+            }
             // InternalResourceRecord::MD {  } => todo!(),
             // InternalResourceRecord::MF {  } => todo!(),
             // InternalResourceRecord::CNAME { cname } => todo!(),
@@ -458,7 +386,7 @@ impl InternalResourceRecord {
                 minimum,
             } => {
                 // TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
-                let zone_as_bytes = zone.as_bytes(Some(HEADER_BYTES as u16), None);
+                let zone_as_bytes = zone.name.as_bytes().to_vec();
                 let mut res: Vec<u8> =
                     mname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes));
                 // TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
@@ -481,8 +409,7 @@ impl InternalResourceRecord {
 
                 match cpu {
                     Some(value) => {
-                        let bytes: Vec<u8> = value.into();
-                        hinfo_bytes.extend(bytes);
+                        hinfo_bytes.extend(&value.data);
                     }
                     None => {
                         hinfo_bytes.extend([consts::ARCH.len() as u8]);
@@ -492,8 +419,7 @@ impl InternalResourceRecord {
 
                 match os {
                     Some(value) => {
-                        let bytes: Vec<u8> = value.into();
-                        hinfo_bytes.extend(bytes);
+                        hinfo_bytes.extend(&value.data);
                     }
                     None => {
                         hinfo_bytes.extend([consts::OS.len() as u8]);
@@ -514,14 +440,14 @@ impl InternalResourceRecord {
     }
 
     pub fn hexdump(self) {
-        utils::hexdump(self.as_bytes());
+        hexdump(self.as_bytes(&vec![]));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::net::Ipv6Addr;
-    use std::str::{from_utf8, FromStr};
+    use std::str::FromStr;
 
     use log::debug;
 
@@ -534,14 +460,14 @@ mod tests {
         assert_eq!(
             InternalResourceRecord::A {
                 address: 12345,
-                ttl: None
+                ttl: 1
             },
             RecordType::A
         );
         assert_eq!(
             InternalResourceRecord::AAAA {
                 address: 12345,
-                ttl: None
+                ttl: 1
             },
             RecordType::AAAA
         );
@@ -553,20 +479,18 @@ mod tests {
         let fzr = FileZoneRecord {
             name: "test".to_string(),
             rrtype: "AAAA".to_string(),
-            rdata: String::from("1234:5678:cafe:beef:ca75:0:4b9:e94d")
-                .as_bytes()
-                .to_vec(),
-            ttl: Some(160),
+            rdata: String::from("1234:5678:cafe:beef:ca75:0:4b9:e94d"),
+            ttl: 160u32,
         };
         debug!("fzr: {:?}", fzr);
-        let converted = Ipv6Addr::from_str(&from_utf8(&fzr.rdata).unwrap()).unwrap();
+        let converted = Ipv6Addr::from_str(&fzr.rdata).unwrap();
         debug!("conversion: {:?}", converted);
         let rr: InternalResourceRecord = fzr.into();
 
         debug!("fzr->rr = {:?}", rr);
         assert_eq!(rr, RecordType::AAAA);
         assert_eq!(
-            rr.as_bytes(),
+            rr.as_bytes(&vec![]),
             [18, 52, 86, 120, 202, 254, 190, 239, 202, 117, 0, 0, 4, 185, 233, 77].to_vec()
         );
     }
@@ -581,7 +505,7 @@ mod tests {
     fn resourcerecord_txt() {
         let foo = InternalResourceRecord::TXT {
             txtdata: DNSCharString::from("Hello world"),
-            ttl: None,
+            ttl: 1,
         };
         if let InternalResourceRecord::TXT { txtdata, ttl: _ } = foo {
             let foo_bytes: Vec<u8> = txtdata.into();

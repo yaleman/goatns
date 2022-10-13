@@ -1,3 +1,4 @@
+use crate::resourcerecord::InternalResourceRecord;
 use crate::ResourceRecord;
 use crate::{Header, Question};
 use log::debug;
@@ -7,7 +8,7 @@ use packed_struct::prelude::*;
 pub struct Reply {
     pub header: Header,
     pub question: Option<Question>,
-    pub answers: Vec<ResourceRecord>,
+    pub answers: Vec<InternalResourceRecord>,
     pub authorities: Vec<ResourceRecord>,
     pub additional: Vec<ResourceRecord>,
 }
@@ -31,11 +32,62 @@ impl Reply {
         // need to add the question in here
         if let Some(question) = &self.question {
             retval.extend(question.to_bytes());
-        }
 
-        for answer in &self.answers {
-            let reply_bytes: Vec<u8> = answer.into();
-            retval.extend(reply_bytes);
+            for answer in &self.answers {
+                let ttl: &u32 = match answer {
+                    InternalResourceRecord::A { address: _, ttl } => ttl,
+                    InternalResourceRecord::NAPTR {
+                        ttl,
+                        domain: _,
+                        order: _,
+                        preference: _,
+                        flags: _,
+                    } => ttl,
+                    InternalResourceRecord::NS { nsdname: _, ttl } => ttl,
+                    InternalResourceRecord::MD { ttl } => ttl,
+                    InternalResourceRecord::MF { ttl } => ttl,
+                    InternalResourceRecord::CNAME { cname: _, ttl } => ttl,
+                    InternalResourceRecord::SOA {
+                        zone: _,
+                        mname: _,
+                        rname: _,
+                        serial: _,
+                        refresh: _,
+                        retry: _,
+                        expire: _,
+                        minimum,
+                    } => minimum,
+                    InternalResourceRecord::MB { ttl } => ttl,
+                    InternalResourceRecord::MG { ttl } => ttl,
+                    InternalResourceRecord::MR { ttl } => ttl,
+                    InternalResourceRecord::NULL { ttl } => ttl,
+                    InternalResourceRecord::WKS { ttl } => ttl,
+                    InternalResourceRecord::PTR { ptrdname: _, ttl } => ttl,
+                    InternalResourceRecord::HINFO { cpu: _, os: _, ttl } => ttl,
+                    InternalResourceRecord::MINFO { ttl } => ttl,
+                    InternalResourceRecord::MX {
+                        preference: _,
+                        exchange: _,
+                        ttl,
+                    } => ttl,
+                    InternalResourceRecord::TXT { txtdata: _, ttl } => ttl,
+                    InternalResourceRecord::AAAA { address: _, ttl } => ttl,
+                    InternalResourceRecord::AXFR { ttl } => ttl,
+                    InternalResourceRecord::MAILB { ttl } => ttl,
+                    InternalResourceRecord::ALL {} => &1u32,
+                    InternalResourceRecord::InvalidType => &1u32,
+                };
+
+                let answer_record = ResourceRecord {
+                    name: question.qname.clone(),
+                    record_type: answer.to_owned().into(),
+                    class: question.qclass,
+                    ttl: *ttl,
+                    rdata: answer.as_bytes(&question.qname),
+                };
+                let reply_bytes: Vec<u8> = answer_record.into();
+                retval.extend(reply_bytes);
+            }
         }
 
         for authority in &self.authorities {

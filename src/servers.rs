@@ -10,13 +10,11 @@ use tokio::time::timeout;
 
 use crate::config::ConfigFile;
 use crate::datastore::Command;
-use crate::enums::{PacketType, Rcode, RecordClass, RecordType};
+use crate::enums::{PacketType, Rcode, RecordClass};
 use crate::reply::Reply;
 use crate::utils::*;
 use crate::zones::ZoneRecord;
-use crate::{
-    Header, OpCode, Question, ResourceRecord, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE,
-};
+use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
 lazy_static! {
     static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").unwrap();
@@ -86,11 +84,6 @@ pub async fn udp_server(
         match udp_result {
             Ok(mut r) => {
                 debug!("Result: {:?}", r);
-
-                // yeah not sure this is something we really want on the UDP side, since you can trick the server with UDP things
-                // if check_for_shutdown(&r, &addr, &config).await.is_ok() {
-                //     return Ok(());
-                // };
 
                 let reply_bytes: Vec<u8> = match r.as_bytes().await {
                     Ok(value) => {
@@ -363,25 +356,25 @@ async fn get_result(
         }
     };
 
-    let mut answers: Vec<ResourceRecord> = vec![];
+    // let mut answers: Vec<ResourceRecord> = vec![];
 
-    for record in record.typerecords {
-        let record_type: RecordType = record.clone().into();
-        debug!("Record Type: {:?}", record_type);
-        let answer = record.as_bytes();
+    // for record in record.typerecords {
+    //     let record_type: RecordType = record.clone().into();
+    //     debug!("Record Type: {:?}", record_type);
+    //     let answer = record.as_bytes();
 
-        // TODO: handle the records here
-        answers.push(ResourceRecord {
-            name: question.qname.to_vec(),
-            record_type,
-            class: question.qclass,
-            ttl: 60u32, // TODO: set a TTL
-            // rdlength: (answer.len() as u16),
-            rdata: answer,
-            // compression: true,
-        });
-        // }
-    }
+    //     // TODO: handle the records here
+    //     answers.push(ResourceRecord {
+    //         name: question.qname.to_vec(),
+    //         record_type,
+    //         class: question.qclass,
+    //         ttl: 60u32, // TODO: set a TTL
+    //         // rdlength: (answer.len() as u16),
+    //         rdata: answer,
+    //         // compression: true,
+    //     });
+    //     // }
+    // }
 
     // this is our reply - static until that bit's done
     Ok(Reply {
@@ -401,12 +394,12 @@ async fn get_result(
             cd: false, // TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
             rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
             qdcount: 1,
-            ancount: answers.len() as u16, // TODO: work out how many we'll return
+            ancount: record.typerecords.len() as u16, // TODO: work out how many we'll return
             nscount: 0,
             arcount: 0,
         },
         question: Some(question),
-        answers,
+        answers: record.typerecords,
         authorities: vec![],
         additional: vec![],
     })

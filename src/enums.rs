@@ -262,6 +262,7 @@ impl RecordType {
             RecordType::HINFO => true,
             RecordType::SOA => true,
             RecordType::TXT => true,
+            RecordType::NS => true,
             _ => false,
         }
     }

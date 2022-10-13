@@ -19,6 +19,8 @@ pub struct ConfigFile {
     pub enable_hinfo: bool,
     /// A list of allowed IPs to send a shutdown record from
     pub shutdown_ip_allow_list: Vec<IpAddr>,
+    /// The location for the zone sqlite file
+    pub sqlite_path: String,
 }
 
 impl Default for ConfigFile {
@@ -31,6 +33,7 @@ impl Default for ConfigFile {
             tcp_client_timeout: 15,
             enable_hinfo: false,
             shutdown_ip_allow_list: vec![],
+            sqlite_path: String::from("~/.cache/goatns.sqlite"),
         }
     }
 }
@@ -60,6 +63,9 @@ impl From<Config> for ConfigFile {
             tcp_client_timeout: config
                 .get("tcp_client_timeout")
                 .unwrap_or(Self::default().tcp_client_timeout),
+            sqlite_path: config
+                .get("sqlite_path")
+                .unwrap_or(Self::default().sqlite_path),
         }
     }
 }

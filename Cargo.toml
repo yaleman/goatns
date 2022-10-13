@@ -11,6 +11,7 @@ bit-vec = "0.6.3"
 bytes = "1.2.1"
 chrono = "0.4.22"
 config = { version = "0.13", features = ["json"] }
+diesel = { version = "2.0.2", default-features = false, features=["sqlite", "serde_json"] }
 femme = "2.2.1"
 json5 = "0.4.1"
 lazy_static = "1.4.0"
@@ -19,6 +20,8 @@ packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
 patricia_tree = "0.3.2"
 serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
+serde_derive = "1.0.145"
+serde_json = "1.0.86"
 shellexpand = "2.1.2"
 tokio = { version = "1.21.2", features = ["full"] }
 tokio-stream = { version = "0.1.10", features = ["net"] }

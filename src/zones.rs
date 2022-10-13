@@ -1,6 +1,5 @@
 use crate::config::ConfigFile;
-use crate::resourcerecord::InternalResourceRecord;
-use crate::utils::name_reversed;
+use crate::resourcerecord::{DomainName, InternalResourceRecord};
 use log::{debug, error, info};
 use patricia_tree::PatriciaMap;
 use serde::{Deserialize, Serialize};
@@ -45,33 +44,43 @@ pub fn rname_default() -> String {
 /// A DNS Record from the JSON file
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct FileZoneRecord {
+    #[serde(default = "default_record_name")]
     pub name: String,
     pub rrtype: String,
-    #[serde(with = "serde_bytes")]
-    pub rdata: Vec<u8>,
-    pub ttl: Option<u32>,
+    // #[serde(with = "serde_bytes")]
+    pub rdata: String,
+    pub ttl: u32,
 }
-
-// #[derive(Debug, PartialEq, Eq, Clone)]
-// pub struct ZoneRecordType {
-//     pub rrtype: RecordType,
-//     pub rdata: Vec<Vec<u8>>,
-// }
+fn default_record_name() -> String {
+    String::from("@")
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ZoneRecord {
     // the full name including the zone
     pub name: Vec<u8>,
     pub typerecords: Vec<InternalResourceRecord>,
+    // pub rname: String,
+    // pub serial: u32,
+    // pub refresh: u32,
+    // pub retry: u32,
+    // pub expire: u32,
+    // pub minimum_ttl: u32,
 }
 
 impl Display for ZoneRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "Name: {:?} Name Bytes: {:?} Records: {:?}",
+            "Name: {:?} Name Bytes: {:?} Records: {:?}", //, Rname: {} Serial: {} Refresh: {} Retry: {} Expire: {} Minimum TTL: {}
             from_utf8(&self.name),
             &self.name,
-            self.typerecords
+            self.typerecords,
+            // self.rname,
+            // self.serial,
+            // self.refresh,
+            // self.retry,
+            // self.expire,
+            // self.minimum_ttl,
         ))
     }
 }
@@ -126,28 +135,52 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
     let mut tree = empty_zones();
     if config.enable_hinfo {
         info!("Enabling HINFO response on hinfo.goat");
-        let hinfo_name = name_reversed("hinfo.goat");
+        let hinfo_name = String::from("hinfo.goat");
         tree.insert(
             hinfo_name.clone(),
             ZoneRecord {
-                name: hinfo_name,
+                name: hinfo_name.as_bytes().to_vec(),
                 typerecords: vec![InternalResourceRecord::HINFO {
                     cpu: None,
                     os: None,
-                    ttl: Some(1),
+                    ttl: 1,
                 }],
             },
         );
     };
+
     for zone in jsonstruct {
+        // here we add the SOA
+        let soa = InternalResourceRecord::SOA {
+            mname: DomainName::from("server.lol"), // TODO: get our hostname, or configure it in the config
+            zone: DomainName::from(zone.name.as_str()),
+            rname: DomainName::from(zone.rname.as_str()),
+            serial: zone.serial,
+            refresh: zone.refresh,
+            retry: zone.retry,
+            expire: zone.expire,
+            minimum: zone.minimum,
+        };
+        debug!("{soa:?}");
+        tree.insert(
+            &zone.name,
+            ZoneRecord {
+                name: zone.name.as_bytes().to_vec(),
+                typerecords: vec![soa],
+            },
+        );
+
         for record in zone.records {
-            eprintln!("fzr: {:?}", record);
+            debug!("fzr: {:?}", record);
             let record_data: InternalResourceRecord = record.clone().into();
 
             // mush the record name and the zone name together
             let name = match record.name.as_str() {
-                "@" => name_reversed(&zone.name),
-                _ => name_reversed(&format!("{}.{}", record.clone().name, zone.name)),
+                "@" => zone.name.clone(),
+                _ => {
+                    let res = format!("{}.{}", record.clone().name, zone.name);
+                    res
+                }
             };
 
             if tree.contains_key(&name) {
@@ -159,7 +192,7 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
                 tree.insert(
                     &name,
                     ZoneRecord {
-                        name: name.clone(),
+                        name: name.clone().as_bytes().to_vec(),
                         typerecords: vec![record_data],
                     },
                 );

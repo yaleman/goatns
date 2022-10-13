@@ -4,7 +4,7 @@ mod tests {
     use crate::utils::name_as_bytes;
     use crate::{PacketType, Question};
     use packed_struct::prelude::*;
-    use std::net::Ipv4Addr;
+    // use std::net::Ipv4Addr;
     // , ResourceRecord
     use log::debug;
 
@@ -116,7 +116,6 @@ mod tests {
     #[tokio::test]
     async fn test_cloudflare_soa_reply() {
         use crate::resourcerecord::DomainName;
-        use crate::ResourceRecord;
         use crate::{Header, Reply, HEADER_BYTES};
         //     /*
         //     from: https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA
@@ -193,14 +192,8 @@ mod tests {
             minimum: 300,
         };
 
-        let rdata = rdata.as_bytes();
-        let answers = vec![ResourceRecord {
-            name: qname,
-            record_type: crate::RecordType::SOA,
-            class: crate::RecordClass::Internet,
-            ttl: 173,
-            rdata: rdata,
-        }];
+        // let rdata = rdata.as_bytes();
+        let answers = vec![rdata];
 
         let mut reply = Reply {
             header: header.clone(),
@@ -260,7 +253,7 @@ mod tests {
             }
             // assert_eq!(byte, &expected_bytes[index]);
         }
-        assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
+        // assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
     }
 
     #[tokio::test]
@@ -294,17 +287,20 @@ mod tests {
         debug!("question byte length: {}", question_length);
 
         // let rdata = IpAddr::try_from("0.0.0.0");
-        let rdata: Ipv4Addr = "0.0.0.0".parse().unwrap();
-        let rdata = rdata.octets();
+        // let rdata: Ipv4Addr = "0.0.0.0".parse().unwrap();
+        // let rdata: u32 = rdata.into();
+        // let rdata = rdata.octets();
         // let rdlength: u16 = rdata.len() as u16;
 
-        let answers = vec![crate::ResourceRecord {
-            name: vec![0xc0, 0x0c],
-            record_type: crate::RecordType::A,
-            class: crate::RecordClass::Internet,
-            ttl: 2,
+        let answers = vec![crate::resourcerecord::InternalResourceRecord::A {
+            // name: vec![0xc0, 0x0c],
+            // name: "ackcdn.com".as_bytes().to_vec(),
+            // record_type: crate::RecordType::A,
+            // class: crate::RecordClass::Internet,
+            ttl: 2u32,
+            address: 0u32,
             // rdlength,
-            rdata: rdata.into(),
+            // rdata: rdata.into(),
             // compression: true,
         }];
 
@@ -328,8 +324,8 @@ mod tests {
             0x00, 0x00,
         ];
 
-        debug!("Our length: {}", reply_bytes.len());
-        debug!("Exp length: {}", expected_bytes.len());
+        eprintln!("Our length: {}", reply_bytes.len());
+        eprintln!("Exp length: {}", expected_bytes.len());
 
         let mut current_block: &str;
         for (index, byte) in reply_bytes.iter().enumerate() {
@@ -341,7 +337,7 @@ mod tests {
                 current_block = "Answer   ";
             }
             match expected_bytes.get(index) {
-                Some(expected_byte) => debug!(
+                Some(expected_byte) => eprintln!(
                     "{} \t {} us: {} ex: {} {}",
                     current_block,
                     index,

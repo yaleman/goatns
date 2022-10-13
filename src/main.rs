@@ -5,6 +5,7 @@
 
 // all the types and codes and things - <https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4>
 
+extern crate diesel;
 #[macro_use]
 extern crate lazy_static;
 
@@ -24,6 +25,7 @@ use crate::utils::*;
 
 pub mod config;
 pub mod datastore;
+pub mod db;
 pub mod enums;
 pub mod packet_dumper;
 pub mod reply;
@@ -144,6 +146,12 @@ pub struct ResourceRecord {
     // compression: bool,
 }
 impl ResourceRecord {}
+
+impl From<ResourceRecord> for Vec<u8> {
+    fn from(record: ResourceRecord) -> Self {
+        Vec::<u8>::from(&record)
+    }
+}
 
 impl From<&ResourceRecord> for Vec<u8> {
     fn from(record: &ResourceRecord) -> Self {
