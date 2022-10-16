@@ -9,7 +9,7 @@ COPY src /goatns/src
 COPY Cargo* /goatns/
 
 WORKDIR /goatns
-RUN cargo build --release
+RUN cargo build --release -j2
 RUN chmod +x /goatns/target/release/goatns
 
 # # ======================
