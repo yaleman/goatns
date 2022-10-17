@@ -1,4 +1,4 @@
-use crate::{Header, PacketType, Rcode, Reply};
+use crate::{Header, PacketType, Rcode, Reply, HEADER_BYTES};
 use log::{debug, trace};
 use std::str::from_utf8;
 
@@ -18,7 +18,12 @@ fn seven_dot_three_conversion(name: &[u8]) -> Vec<u8> {
     // TODO: reimplement this with slices and stuff
     let mut next_dot: usize = match vec_find(46, name) {
         Some(value) => value,
-        None => return result,
+        None => {
+            // if there's no dots, then just push a length on the front and include the data. then bail
+            result.push(name.len() as u8);
+            result.extend(name);
+            return result;
+        }
     };
     let mut name_bytes: Vec<u8> = name.to_vec();
     let mut keep_looping = true;
@@ -144,8 +149,35 @@ pub fn name_as_bytes(
 
             trace!("The result is trimmed and now {:?}", result);
         } else {
-            trace!("no trimming :(")
+            eprintln!("trying to find a sub-part of {ct:?} in {name:?}");
+            let ct_vec = ct.to_owned();
+            let mut tail_index: usize = 0;
+            for (i, _) in ct_vec.iter().enumerate() {
+                let tail = &ct_vec[i..ct_vec.len()];
+                if name.ends_with(tail) {
+                    eprintln!("{i:?}");
+                    eprintln!("{:?}", tail);
+                    // eprintln!("{}", name.ends_with(tail));
+                    tail_index = i;
+                    break;
+                }
+            }
+            eprintln!("tail_index: {tail_index}");
+            // if we get to here and the tail_index is 0 then we haven't set it - because we'd have caught the whole thing in the ends_with matcher earlier.
+            if tail_index != 0 {
+                debug!("Found a tail-match: {tail_index}");
+                // slice the tail off the name
+                let mut name_copy = name.to_vec();
+                name_copy.truncate(tail_index);
+                eprintln!("sliced name down to {name_copy:?}");
+                // put the pointer on there
+                result = seven_dot_three_conversion(&name_copy);
+                eprintln!("converted result to {result:?}");
+                let pointer: u16 = 0b1100000000000000 | (HEADER_BYTES + tail_index) as u16;
+                result.extend(pointer.to_be_bytes());
+            }
         }
+
         // TODO: try and find a sub-slice to make test_name_bytes_with_tail_compression pass
     }
     trace!("Final result {result:?}");
