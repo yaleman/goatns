@@ -1,4 +1,6 @@
 use crate::{Header, PacketType, Rcode, Reply, HEADER_BYTES};
+// use clap::{arg, command, value_parser, ArgAction, ArgMatches, Command};
+use clap::{arg, command, value_parser, ArgMatches};
 use log::{debug, trace};
 use std::str::from_utf8;
 
@@ -57,6 +59,20 @@ fn seven_dot_three_conversion(name: &[u8]) -> Vec<u8> {
         }
     }
     result
+}
+
+/// If you have a `name` and a `target` and want to see if you can find a chunk of the `target` that the `name` ends with, this is your function!
+pub fn find_tail_match(name: &[u8], target: &Vec<u8>) -> usize {
+    let mut tail_index: usize = 0;
+    for (i, _) in target.iter().enumerate() {
+        let tail = &target[i..target.len()];
+        if name.ends_with(tail) {
+            trace!("Found a tail at index {i}");
+            tail_index = i;
+            break;
+        }
+    }
+    tail_index
 }
 
 /*
@@ -149,30 +165,21 @@ pub fn name_as_bytes(
 
             trace!("The result is trimmed and now {:?}", result);
         } else {
-            eprintln!("trying to find a sub-part of {ct:?} in {name:?}");
-            let ct_vec = ct.to_owned();
-            let mut tail_index: usize = 0;
-            for (i, _) in ct_vec.iter().enumerate() {
-                let tail = &ct_vec[i..ct_vec.len()];
-                if name.ends_with(tail) {
-                    eprintln!("{i:?}");
-                    eprintln!("{:?}", tail);
-                    // eprintln!("{}", name.ends_with(tail));
-                    tail_index = i;
-                    break;
-                }
-            }
-            eprintln!("tail_index: {tail_index}");
+            // dropped into tail-finding mode where we're looking for a sub-string of the parent to target a compression pointer
+            trace!("trying to find a sub-part of {ct:?} in {name:?}");
+
+            let tail_index = find_tail_match(&name, ct);
+            trace!("tail_index: {tail_index}");
             // if we get to here and the tail_index is 0 then we haven't set it - because we'd have caught the whole thing in the ends_with matcher earlier.
             if tail_index != 0 {
-                debug!("Found a tail-match: {tail_index}");
+                trace!("Found a tail-match: {tail_index}");
                 // slice the tail off the name
                 let mut name_copy = name.to_vec();
                 name_copy.truncate(tail_index);
-                eprintln!("sliced name down to {name_copy:?}");
+                trace!("sliced name down to {name_copy:?}");
                 // put the pointer on there
                 result = seven_dot_three_conversion(&name_copy);
-                eprintln!("converted result to {result:?}");
+                trace!("converted result to {result:?}");
                 let pointer: u16 = 0b1100000000000000 | (HEADER_BYTES + tail_index) as u16;
                 result.extend(pointer.to_be_bytes());
             }
@@ -251,9 +258,23 @@ pub fn hexdump(bytes: Vec<u8>) {
 #[cfg(test)]
 mod tests {
 
-    use super::name_as_bytes;
+    use super::{find_tail_match, name_as_bytes};
     use log::trace;
     use std::str::from_utf8;
+
+    #[test]
+    pub fn test_find_tail_match() {
+        let name = "foo.example.com".as_bytes().to_vec();
+        let target = "zot.example.com".as_bytes().to_vec();
+        let result = find_tail_match(&name, &target);
+
+        assert_eq!(result, 3);
+        let name = "foo.yeanah.xyz".as_bytes().to_vec();
+        let target = "zot.example.com".as_bytes().to_vec();
+        let result = find_tail_match(&name, &target);
+
+        assert_eq!(result, 0)
+    }
 
     #[test]
     pub fn test_name_bytes_simple_compress() {
@@ -300,4 +321,26 @@ mod tests {
 
         assert_eq!(result, expected_result);
     }
+}
+
+pub fn clap_parser() -> ArgMatches {
+    command!() // requires `cargo` feature
+        // .arg(arg!([name] "Optional name to operate on"))
+        .arg(
+            arg!(
+                -c --config <FILE> "Sets a custom config file"
+            )
+            // We don't have syntax yet for optional options, so manually calling `required`
+            .required(false)
+            .value_parser(value_parser!(String)),
+        )
+        // .arg(arg!(
+        //     -d --debug ... "Turn debugging information on"
+        // ))
+        // .subcommand(
+        //     Command::new("test")
+        //         .about("does testing things")
+        //         .arg(arg!(-l --list "lists test values").action(ArgAction::SetTrue)),
+        // )
+        .get_matches()
 }

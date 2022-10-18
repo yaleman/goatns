@@ -1,0 +1,11 @@
+{
+	"addr" : "127.0.0.1",
+	"port" : 15353,
+	"log_level" : "DEBUG",
+	"capture_packets" :false,
+	"enable_hinfo" : true,
+	"shutdown_ip_allow_list" : [
+		"127.0.0.1"
+	],
+	"zone_file" : "./examples/test_config/zones.json"
+}

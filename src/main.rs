@@ -326,7 +326,8 @@ impl Question {
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    let config: ConfigFile = get_config();
+    let clap_results = clap_parser();
+    let config: ConfigFile = get_config(clap_results.get_one::<String>("config"));
 
     let log_level = match LevelFilter::from_str(config.log_level.as_str()) {
         Ok(value) => value,

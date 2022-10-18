@@ -21,6 +21,8 @@ pub struct ConfigFile {
     pub shutdown_ip_allow_list: Vec<IpAddr>,
     /// The location for the zone sqlite file
     pub sqlite_path: String,
+    /// Where the JSON zone file is
+    pub zone_file: String,
 }
 
 impl Default for ConfigFile {
@@ -34,6 +36,7 @@ impl Default for ConfigFile {
             enable_hinfo: false,
             shutdown_ip_allow_list: vec![],
             sqlite_path: String::from("~/.cache/goatns.sqlite"),
+            zone_file: String::from("zones.json"),
         }
     }
 }
@@ -66,14 +69,24 @@ impl From<Config> for ConfigFile {
             sqlite_path: config
                 .get("sqlite_path")
                 .unwrap_or(Self::default().sqlite_path),
+            zone_file: config
+                .get("sqlite_path")
+                .unwrap_or(Self::default().zone_file),
         }
     }
 }
 
-pub fn get_config() -> ConfigFile {
-    for filepath in ["~/.config/goatns.json", "goatns.json"] {
-        let config_file = String::from(filepath);
-        let config_filename: String = shellexpand::tilde(&config_file).into_owned();
+pub fn get_config(config_path: Option<&String>) -> ConfigFile {
+    let file_locations = match config_path {
+        Some(value) => vec![value.to_owned()],
+        None => vec![
+            "~/.config/goatns.json".to_string(),
+            "goatns.json".to_string(),
+        ],
+    };
+
+    for filepath in file_locations {
+        let config_filename: String = shellexpand::tilde(&filepath).into_owned();
         let config_filepath = std::path::Path::new(&config_filename);
         match config_filepath.exists() {
             false => {
