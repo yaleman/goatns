@@ -7,3 +7,4 @@ pcaps/
 # flamegraph stuff
 out.stacks
 flamegraph.svg
+vendor
