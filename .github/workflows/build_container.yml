@@ -30,6 +30,7 @@ jobs:
 
       - name: stop Buildkit being annoying
         run: |
+          mkdir -p /etc/buildkit/
           echo '[worker.oci]' > /etc/buildkit/buildkitd.toml
           echo 'max-parallelism = 1' >> /etc/buildkit/buildkitd.toml
       - name: Builder
