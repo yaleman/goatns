@@ -16,7 +16,7 @@ RUN chmod +x /goatns/target/release/goatns
 
 # # ======================
 # https://github.com/GoogleContainerTools/distroless/blob/main/examples/rust/Dockerfile
-FROM gcr.io/distroless/cc
+FROM gcr.io/distroless/cc as goatns
 COPY --from=builder /goatns/target/release/goatns /
 ENV GOATNS_LOG_LEVEL=INFO
 
