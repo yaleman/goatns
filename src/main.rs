@@ -272,13 +272,13 @@ impl Question {
         let mut next_end = 0;
         let mut in_record_data: bool = false;
         // until we hit a null, read bytes to get the name. I'm sure this won't blow up at any point.
-        for qchar in buf.iter().take_while(|b| b != &&0) {
-            // trace!("p: {}, np: {} {:?} {:?}", read_pointer, next_end, qchar, std::str::from_utf8(&[qchar.to_owned()]).unwrap());
+        for qchar in buf.iter().take_while(|b| b != && 0) {
+            // TODO: refactor this... it's not *great*
             if read_pointer == next_end {
                 in_record_data = false;
                 next_end = read_pointer + qchar + 1;
                 if read_pointer != 0 {
-                    // trace!("adding .");
+                    trace!("adding .");
                     qname.push(46);
                 }
             } else if in_record_data {
