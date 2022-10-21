@@ -30,9 +30,9 @@ jobs:
 
       - name: stop Buildkit being annoying
         run: |
-          mkdir -p /etc/buildkit/
-          echo '[worker.oci]' > /etc/buildkit/buildkitd.toml
-          echo 'max-parallelism = 1' >> /etc/buildkit/buildkitd.toml
+          mkdir -p ~/.config/buildkit/
+          echo '[worker.oci]' > ~/.config/buildkit//buildkitd.toml
+          echo 'max-parallelism = 1' >> ~/.config/buildkit//buildkitd.toml
       - name: Builder
         uses: docker/build-push-action@v3
         with:
