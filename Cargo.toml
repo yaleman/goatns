@@ -23,7 +23,7 @@ patricia_tree = "0.3.2"
 serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
 serde_derive = "1.0.145"
-serde_json = "1.0.86"
+serde_json = "1.0.87"
 shellexpand = "2.1.2"
 tokio = { version = "1.21.2", features = ["full"] }
 tokio-stream = { version = "0.1.11", features = ["net"] }
