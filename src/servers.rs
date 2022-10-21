@@ -89,8 +89,10 @@ pub async fn udp_server(
                     Ok(value) => {
                         // Check if it's too long and set truncate flag if so, it's safe to unwrap since we've already gone
                         if value.len() > UDP_BUFFER_SIZE {
-                            r = r.set_truncated();
-                            let r = r.as_bytes().await;
+                            let mut response_bytes = value.to_vec();
+                            response_bytes.truncate(UDP_BUFFER_SIZE);
+                            r = r.check_set_truncated().await;
+                            let r = r.as_bytes_udp().await;
                             r.unwrap_or(value)
                         } else {
                             value

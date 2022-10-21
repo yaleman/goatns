@@ -1,10 +1,10 @@
 use crate::resourcerecord::InternalResourceRecord;
-use crate::ResourceRecord;
+use crate::{ResourceRecord, UDP_BUFFER_SIZE};
 use crate::{Header, Question};
 use log::debug;
 use packed_struct::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Reply {
     pub header: Header,
     pub question: Option<Question>,
@@ -101,10 +101,27 @@ impl Reply {
         Ok(retval)
     }
 
-    /// checks to see if it's over the max length set in [UDP_BUFFER_SIZE] and set the truncated flag if it is
-    pub fn set_truncated(self) -> Self {
-        let mut header = self.header;
-        header.truncated = true;
-        Self { header, ..self }
+    /// because sometimes you need to trunc that junk
+    pub async fn as_bytes_udp(&mut self) -> Result<Vec<u8>, String> {
+        let mut result = self.as_bytes().await?;
+        if result.len() > UDP_BUFFER_SIZE {
+            result.truncate(UDP_BUFFER_SIZE);
+        };
+        Ok(result)
     }
+
+
+    /// checks to see if it's over the max length set in [UDP_BUFFER_SIZE] and set the truncated flag if it is
+    pub async fn check_set_truncated(&mut self) -> Self {
+        if let Ok(ret_bytes) = self.as_bytes().await {
+            if ret_bytes.len() > UDP_BUFFER_SIZE {
+
+                let mut header = self.header.clone();
+                header.truncated = true;
+                return Self { header, ..self.clone() }
+            }
+        }
+        self.clone().to_owned()
+    }
+
 }

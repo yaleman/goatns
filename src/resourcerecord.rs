@@ -85,6 +85,19 @@ impl From<DNSCharString> for Vec<u8> {
     }
 }
 
+impl DNSCharString {
+    /// Returns the bytes for a packet, ie - the length and then the string (truncated to 255 bytes)
+    fn as_bytes(&self) -> Vec<u8> {
+        let mut res: Vec<u8> = vec![self.data.len() as u8];
+        res.extend(&self.data);
+        // <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
+        res.truncate(257);
+
+        // TODO: I wonder if we can automagically split this and return it as individual records? it'd have to happen up the stack.
+        res
+    }
+}
+
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InternalResourceRecord {
@@ -377,10 +390,7 @@ impl InternalResourceRecord {
             InternalResourceRecord::A { address, ttl: _ } => address.to_be_bytes().to_vec(),
             InternalResourceRecord::AAAA { address, ttl: _ } => address.to_be_bytes().to_vec(),
             InternalResourceRecord::TXT { txtdata, ttl: _ } => {
-                // <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
-                let mut res: Vec<u8> = txtdata.data.clone();
-                res.truncate(256);
-                res
+                txtdata.as_bytes()
             }
 
             // InternalResourceRecord::MD {  } => todo!(),
@@ -422,10 +432,9 @@ impl InternalResourceRecord {
             }
             InternalResourceRecord::HINFO { cpu, os, ttl: _ } => {
                 let mut hinfo_bytes: Vec<u8> = vec![];
-
                 match cpu {
                     Some(value) => {
-                        hinfo_bytes.extend(&value.data);
+                        hinfo_bytes.extend(&value.as_bytes());
                     }
                     None => {
                         hinfo_bytes.extend([consts::ARCH.len() as u8]);
@@ -435,7 +444,7 @@ impl InternalResourceRecord {
 
                 match os {
                     Some(value) => {
-                        hinfo_bytes.extend(&value.data);
+                        hinfo_bytes.extend(&value.as_bytes());
                     }
                     None => {
                         hinfo_bytes.extend([consts::OS.len() as u8]);

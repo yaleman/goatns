@@ -6,6 +6,7 @@ mod tests {
     use crate::utils::name_as_bytes;
     use crate::{PacketType, Question};
     use packed_struct::prelude::*;
+
     // use std::net::Ipv4Addr;
     // , ResourceRecord
     use log::debug;
@@ -26,6 +27,17 @@ mod tests {
             [6, 99, 104, 101, 101, 115, 101, 0]
         );
     }
+
+    // use std::process::Termination;
+
+    // #[bench]
+    // fn bench_resourcerecord_short_name_to_bytes(b: &mut Bencher) -> impl Termination {
+    //     let rdata = "cheese".as_bytes().to_vec();
+    //     assert_eq!(
+    //         name_as_bytes(rdata, None, None),
+    //         [6, 99, 104, 101, 101, 115, 101, 0]
+    //     );
+    // }
 
     // #[tokio::test]
     // async fn test_build_iana_org_a_reply() {
