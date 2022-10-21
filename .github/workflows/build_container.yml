@@ -2,10 +2,11 @@
 name: Build Container
 
 "on":
-  pull_request:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+  # pull_request:
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   build_container:
