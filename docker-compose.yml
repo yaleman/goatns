@@ -1,12 +1,12 @@
-# ---
-# version: "3.9"
-# services:
-#   goatns:
-#     image: ghcr.io/yaleman/goatns:latest
-#     build:
-#       dockerfile: Dockerfile-goatns
-#       context: .
-#     init: true
-#     ports:
-#       - "15353:15353/udp"
-#       - "15353:15353/tcp"
+---
+version: "3.9"
+services:
+  goatns:
+    image: ghcr.io/yaleman/goatns:latest
+    build:
+      dockerfile: Dockerfile-goatns
+      context: .
+    init: true
+    ports:
+      - "15353:15353/udp"
+      - "15353:15353/tcp"
