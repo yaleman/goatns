@@ -33,7 +33,7 @@ jobs:
         run: |
           mkdir -p ~/.docker/buildx/
           echo '[worker.oci]' > ~/.docker/buildx/buildkitd.default.toml
-          echo 'max-parallelism = 1' >> ~/.docker/buildx/buildkitd.default.toml
+          echo '  max-parallelism = 1' >> ~/.docker/buildx/buildkitd.default.toml
       - name: Builder
         uses: docker/build-push-action@v3
         with:
