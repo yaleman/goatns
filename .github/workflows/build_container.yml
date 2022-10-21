@@ -29,7 +29,6 @@ jobs:
           buildkitd-flags: --debug
 
       - name: Build builder
-        id: docker_build_push
         uses: docker/build-push-action@v3
         with:
           target: builder
@@ -41,7 +40,6 @@ jobs:
           # cache-from: type=gha
           # cache-to: type=gha,mode=max
       - name: Build and push container
-        id: docker_build_push
         uses: docker/build-push-action@v3
         with:
           target: goatns
