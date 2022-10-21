@@ -1,12 +1,24 @@
 #[cfg(test)]
 mod tests {
     use log::info;
+    use std::env;
     use std::net::*;
     use trust_dns_resolver::config::*;
     use trust_dns_resolver::Resolver;
 
+    fn in_github_actions() -> bool {
+        env::var("GITHUB_ACTIONS").is_ok()
+    }
+
+
     #[test]
     fn test_full_run() -> Result<(), std::io::Error> {
+
+        if in_github_actions() {
+            eprintln!("Skipping this test because it won't work in GHA");
+            return Ok(())
+        }
+
         // TODO: add a test config and zone file here
         let goat = std::process::Command::new("cargo").args(["run"]).spawn();
         let mut res = match goat {
