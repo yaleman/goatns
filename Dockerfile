@@ -6,6 +6,7 @@ FROM rust:latest AS builder
 
 RUN mkdir /goatns
 COPY src /goatns/src
+COPY benches /goatns/benches
 COPY Cargo* /goatns/
 
 WORKDIR /goatns
