@@ -3,15 +3,17 @@ FROM rust:latest AS builder
 # RUN apt-get update
 # RUN apt-get install -y dumb-init
 # RUN apt-get clean
-
+RUN rustup default nightly
+# ENV RUST_LOG=DEBUG
+# ENV CARGO_UNSTABLE_SPARSE_REGISTRY=true
 RUN mkdir /goatns
 COPY src /goatns/src
 COPY benches /goatns/benches
 COPY Cargo* /goatns/
 
 WORKDIR /goatns
-RUN cargo fetch
-RUN cargo build --release --bin goatns
+# RUN cargo fetch -Z sparse-registry
+RUN cargo build --release --bin goatns -Z sparse-registry
 RUN chmod +x /goatns/target/release/goatns
 
 
