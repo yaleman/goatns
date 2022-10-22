@@ -7,7 +7,6 @@ use crate::zones::{empty_zones, load_zones, ZoneRecord};
 use log::{debug, error};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
-
 type Responder<T> = oneshot::Sender<T>;
 
 #[derive(Debug)]
@@ -25,6 +24,43 @@ pub enum Command {
     // }
 }
 
+fn handle_get_command(
+    zone_get: Option<&ZoneRecord>,
+    name: Vec<u8>,
+    rtype: RecordType,
+    resp: oneshot::Sender<Option<ZoneRecord>>,
+) {
+    debug!(
+        "searching for name={:?} rtype={:?}",
+        from_utf8(&name).unwrap_or("-"),
+        rtype
+    );
+
+    let result: Option<ZoneRecord> = match zone_get.cloned() {
+        Some(value) => {
+            // check if the type we want is in there, and only return the matching records
+            let res: Vec<InternalResourceRecord> = value
+                .to_owned()
+                .typerecords
+                .into_iter()
+                .filter(|r| r == &rtype)
+                .collect();
+            if res.is_empty() {
+                None
+            } else {
+                let mut zr = value;
+                zr.typerecords = res;
+                Some(zr)
+            }
+        }
+        None => None,
+    };
+
+    if let Err(error) = resp.send(result) {
+        debug!("error sending response from data store: {:?}", error)
+    };
+}
+
 /// Manages the datastore, waits for signals from the server instances and responds with data
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
@@ -40,37 +76,9 @@ pub async fn manager(
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
-            // TODO: at some point we should be checking that if the zonerecord has a TTL of None, then it should be pulling from the SOA
+            // TODO: at some point we should be checking that if the zonerecord has a TTL of None, then it should be pulling from the SOA/zone
             Command::Get { name, rtype, resp } => {
-                debug!(
-                    "searching for name={:?} rtype={:?}",
-                    from_utf8(&name).unwrap_or("-"),
-                    rtype
-                );
-
-                let result: Option<ZoneRecord> = match zones.get(name.to_ascii_lowercase()).cloned()
-                {
-                    Some(value) => {
-                        let mut zr = value.clone();
-                        // check if the type we want is in there, and only return the matching records
-                        let res: Vec<InternalResourceRecord> = value
-                            .typerecords
-                            .into_iter()
-                            .filter(|r| r == &rtype)
-                            .collect();
-                        if res.is_empty() {
-                            None
-                        } else {
-                            zr.typerecords = res;
-                            Some(zr)
-                        }
-                    }
-                    None => None,
-                };
-
-                if let Err(error) = resp.send(result) {
-                    debug!("error sending response from data store: {:?}", error)
-                };
+                handle_get_command(zones.get(name.to_ascii_lowercase()), name, rtype, resp);
             }
         }
     }

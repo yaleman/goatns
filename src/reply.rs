@@ -1,7 +1,7 @@
 use crate::resourcerecord::InternalResourceRecord;
-use crate::{ResourceRecord, UDP_BUFFER_SIZE};
 use crate::{Header, Question};
-use log::debug;
+use crate::{ResourceRecord, UDP_BUFFER_SIZE};
+use log::*;
 use packed_struct::prelude::*;
 
 #[derive(Debug, Clone)]
@@ -15,25 +15,24 @@ pub struct Reply {
 
 impl Reply {
     /// This is used to turn into a series of bytes to yeet back to the client, needs to take a mutable self because the answers record length goes into the header
-    pub async fn as_bytes(&mut self) -> Result<Vec<u8>, String> {
-        // TODO it feels like a bug to edit the reply as we're outputting it as bytes?
+    pub async fn as_bytes(&self) -> Result<Vec<u8>, String> {
         let mut retval: Vec<u8> = vec![];
 
-        self.header.ancount = self.answers.len() as u16;
-
+        // so we can set the headers
+        let mut final_reply = self.clone();
+        final_reply.header.ancount = final_reply.answers.len() as u16;
         // use the packed_struct to build the bytes
-        let reply_header = match self.header.pack() {
+        let reply_header = match final_reply.header.pack() {
             Ok(value) => value,
-            // TODO: this should not be a panic
             Err(err) => return Err(format!("Failed to pack reply header bytes: {:?}", err)),
         };
         retval.extend(reply_header);
 
         // need to add the question in here
-        if let Some(question) = &self.question {
+        if let Some(question) = &final_reply.question {
             retval.extend(question.to_bytes());
 
-            for answer in &self.answers {
+            for answer in &final_reply.answers {
                 let ttl: &u32 = match answer {
                     InternalResourceRecord::A { address: _, ttl } => ttl,
                     InternalResourceRecord::NAPTR {
@@ -90,19 +89,25 @@ impl Reply {
             }
         }
 
-        for authority in &self.authorities {
-            debug!("Authority: {:?}", authority);
+        for authority in &final_reply.authorities {
+            error!(
+                "Should be handling authority rr's in reply: {:?}",
+                authority
+            );
         }
 
-        for additional in &self.additional {
-            debug!("Authority: {:?}", additional);
+        for additional in &final_reply.additional {
+            error!(
+                "Should be handling additional rr's in reply: {:?}",
+                additional
+            );
         }
 
         Ok(retval)
     }
 
     /// because sometimes you need to trunc that junk
-    pub async fn as_bytes_udp(&mut self) -> Result<Vec<u8>, String> {
+    pub async fn as_bytes_udp(& self) -> Result<Vec<u8>, String> {
         let mut result = self.as_bytes().await?;
         if result.len() > UDP_BUFFER_SIZE {
             result.truncate(UDP_BUFFER_SIZE);
@@ -110,18 +115,18 @@ impl Reply {
         Ok(result)
     }
 
-
     /// checks to see if it's over the max length set in [UDP_BUFFER_SIZE] and set the truncated flag if it is
-    pub async fn check_set_truncated(&mut self) -> Self {
+    pub async fn check_set_truncated(&self) -> Reply {
         if let Ok(ret_bytes) = self.as_bytes().await {
             if ret_bytes.len() > UDP_BUFFER_SIZE {
-
                 let mut header = self.header.clone();
                 header.truncated = true;
-                return Self { header, ..self.clone() }
+                return Self {
+                    header,
+                    ..self.clone()
+                };
             }
         }
-        self.clone().to_owned()
+        self.clone()
     }
-
 }

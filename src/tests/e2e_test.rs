@@ -10,13 +10,11 @@ mod tests {
         env::var("GITHUB_ACTIONS").is_ok()
     }
 
-
     #[test]
     fn test_full_run() -> Result<(), std::io::Error> {
-
         if in_github_actions() {
             eprintln!("Skipping this test because it won't work in GHA");
-            return Ok(())
+            return Ok(());
         }
 
         // TODO: add a test config and zone file here

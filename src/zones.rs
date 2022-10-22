@@ -181,7 +181,6 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
 
         for record in zone.records {
             debug!("fzr: {:?}", record);
-            let record_data: InternalResourceRecord = record.clone().into();
 
             // mush the record name and the zone name together
             let name = match record.name.as_str() {
@@ -190,6 +189,11 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
                     let res = format!("{}.{}", record.clone().name, zone.name);
                     res
                 }
+            };
+
+            let record_data: InternalResourceRecord = match record.try_into() {
+                Ok(value) => value,
+                Err(error) => return Err(error),
             };
 
             if tree.contains_key(&name) {

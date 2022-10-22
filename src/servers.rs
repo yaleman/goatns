@@ -199,7 +199,7 @@ pub async fn tcp_server(
         };
 
         match result {
-            Ok(mut r) => {
+            Ok(r) => {
                 debug!("TCP Result: {r:?}");
 
                 // when you get a CHAOS from localhost with "shutdown" break dat loop

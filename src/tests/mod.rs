@@ -318,7 +318,7 @@ mod tests {
             // compression: true,
         }];
 
-        let mut reply = Reply {
+        let reply = Reply {
             header,
             question: Some(question),
             answers,

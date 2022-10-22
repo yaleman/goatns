@@ -233,10 +233,10 @@ pub enum InternalResourceRecord {
     InvalidType,
 }
 
-impl From<FileZoneRecord> for InternalResourceRecord {
+impl TryFrom<FileZoneRecord> for InternalResourceRecord {
     // TODO: This should be a try_into because we're parsing text
     /// This is where we convert from the JSON blob in the file to an internal representation of the data.
-    fn from(record: FileZoneRecord) -> Self {
+    fn try_from(record: FileZoneRecord) -> Result<Self, String> {
         match record.rrtype.as_str() {
             "A" => {
                 // let address = match from_utf8(&record.rdata) {
@@ -259,10 +259,10 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                         0u32
                     }
                 };
-                InternalResourceRecord::A {
+                Ok(InternalResourceRecord::A {
                     address,
                     ttl: record.ttl,
-                }
+                })
             }
             "AAAA" => {
                 let address: u128 = match std::net::Ipv6Addr::from_str(&record.rdata) {
@@ -272,54 +272,61 @@ impl From<FileZoneRecord> for InternalResourceRecord {
                         res
                     }
                     Err(error) => {
-                        error!(
+                        return Err(format!(
                             "Failed to parse {:?} into an IPv6 address: {:?}",
                             record.rdata, error
-                        );
-                        return InternalResourceRecord::InvalidType;
+                        ));
                     }
                 };
 
-                InternalResourceRecord::AAAA {
+                Ok(InternalResourceRecord::AAAA {
                     address,
                     ttl: record.ttl,
-                }
+                })
             }
-            "TXT" => InternalResourceRecord::TXT {
+            "TXT" => Ok(InternalResourceRecord::TXT {
                 txtdata: DNSCharString {
                     data: record.rdata.into_bytes(),
                 },
                 ttl: record.ttl,
-            },
-            "PTR" => InternalResourceRecord::PTR {
+            }),
+            "PTR" => Ok(InternalResourceRecord::PTR {
                 ptrdname: DomainName::from(record.rdata),
                 ttl: record.ttl,
-            },
-            "NS" => InternalResourceRecord::NS {
+            }),
+            "NS" => Ok(InternalResourceRecord::NS {
                 nsdname: DomainName::from(record.rdata),
                 ttl: record.ttl,
-            },
+            }),
             "MX" => {
                 let split_bit: Vec<&str> = record.rdata.split(' ').collect();
                 if split_bit.len() != 2 {
-                    error!("ugh?")
+                    return Err(format!(
+                        "While trying to parse MX record, got '{:?}' which is wrong.",
+                        split_bit
+                    ));
                 };
                 let pref = match u16::from_str(split_bit[0]) {
                     Ok(value) => value,
                     Err(error) => {
-                        panic!("Failed to parse {} into number: {:?}", split_bit[0], error)
+                        return Err(format!(
+                            "Failed to parse {} into number: {:?}",
+                            split_bit[0], error
+                        ))
                     }
                 };
-                eprintln!("got pref {}, now {pref}", split_bit[0]);
-                InternalResourceRecord::MX {
+                trace!("got pref {}, now {pref}", split_bit[0]);
+                Ok(InternalResourceRecord::MX {
                     preference: pref,
                     exchange: DomainName::from(split_bit[1]),
                     ttl: record.ttl,
-                }
+                })
             }
-            _ => InternalResourceRecord::InvalidType,
+            _ => Err("Invalid type specified!".to_string()),
         }
     }
+
+    type Error = String;
 }
 
 impl PartialEq<RecordType> for InternalResourceRecord {
@@ -515,7 +522,10 @@ mod tests {
         debug!("fzr: {fzr}");
         let converted = Ipv6Addr::from_str(&fzr.rdata).unwrap();
         debug!("conversion: {:?}", converted);
-        let rr: InternalResourceRecord = fzr.into();
+        let rr: InternalResourceRecord = match fzr.try_into() {
+            Ok(value) => value,
+            Err(error) => panic!("Failed to get resource record: {:?}", error),
+        };
 
         debug!("fzr->rr = {rr:?}");
         assert_eq!(rr, RecordType::AAAA);
