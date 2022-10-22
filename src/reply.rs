@@ -107,7 +107,7 @@ impl Reply {
     }
 
     /// because sometimes you need to trunc that junk
-    pub async fn as_bytes_udp(& self) -> Result<Vec<u8>, String> {
+    pub async fn as_bytes_udp(&self) -> Result<Vec<u8>, String> {
         let mut result = self.as_bytes().await?;
         if result.len() > UDP_BUFFER_SIZE {
             result.truncate(UDP_BUFFER_SIZE);

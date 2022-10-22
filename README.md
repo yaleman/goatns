@@ -47,7 +47,7 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 - [ ] message length enforcement and testing (RFC 1035 2.3.4. Size limits)
   - [ ] labels          63 octets or less
   - [ ] names           255 octets or less
-  - [ ] TTL             positive values of a signed 32 bit number.
+  - [x] TTL             positive values of a signed 32 bit number.
   - [ ] UDP messages    512 octets or less ? I think this got extended?
 - [x] partial compression based on things
 - [x] TTL handling from the records

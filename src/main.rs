@@ -297,12 +297,13 @@ impl Question {
             None => return Err("Failed to parse qtype from header".to_string()),
         };
         // next byte after the type is the the class
-        // TODO: work out if I'm pulling the wrong thing here, the +2 is weird?
         let qclass: RecordClass = match buf.get((read_pointer as usize) + 2) {
             Some(value) => value.into(),
             // TODO: better errors, also log this
             None => return Err("Failed to parse qclass from header".to_string()),
         };
+
+        // TODO: check that the name length isn't over 255 bytes
 
         Ok(Question {
             qname,
