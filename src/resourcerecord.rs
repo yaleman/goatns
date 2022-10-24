@@ -2,6 +2,8 @@ use crate::enums::RecordType;
 use crate::utils::{hexdump, name_as_bytes};
 use crate::HEADER_BYTES;
 use log::*;
+use regex::Regex;
+
 use std::env::consts;
 
 use std::str::FromStr;
@@ -9,6 +11,10 @@ use std::string::FromUtf8Error;
 // use packed_struct::*;
 
 use crate::zones::FileZoneRecord;
+
+lazy_static! {
+    static ref CAA_TAG_VALIDATOR: Regex = Regex::new(r"[a-zA-Z0-9]").unwrap();
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DomainName {
@@ -101,10 +107,20 @@ impl DNSCharString {
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InternalResourceRecord {
+    /// A single host address
     A {
         address: u32,
         ttl: u32,
-    }, // 1 a host address
+    },
+    // [RFC8659](https://www.rfc-editor.org/rfc/rfc8659) - CAA Record
+    CAA {
+        flag: u8,
+        /// Tags MAY contain ASCII characters "a" through "z", "A" through "Z", and the numbers 0 through 9. Tags MUST NOT contain any other characters. Matching of tags is case insensitive.
+        tag: DNSCharString,
+        /// A sequence of octets representing the Property Value. Property Values are encoded as binary values and MAY employ sub‑formats.
+        value: Vec<u8>,
+        ttl: u32,
+    },
     NAPTR {
         ttl: u32,
         ///     Domain - The domain name to which this resource record refers.  This is the 'key' for this entry in the rule database.  This value will either be the first well known key (<something>.uri.arpa for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements.
@@ -339,6 +355,40 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                     ttl: record.ttl,
                 })
             }
+            "CAA" => {
+                let split_bit: Vec<&str> = record.rdata.split(' ').collect();
+                if split_bit.len() < 3 {
+                    return Err(format!(
+                        "While trying to parse CAA record, got '{:?}' which is wrong.",
+                        split_bit
+                    ));
+                };
+                let flag = match u8::from_str(split_bit[0]) {
+                    Ok(value) => value,
+                    Err(error) => {
+                        return Err(format!(
+                            "Failed to parse {} into number: {:?}",
+                            split_bit[0], error
+                        ))
+                    }
+                };
+                let tag = DNSCharString::from(split_bit[1]);
+                // validate that the tag is valid.
+                if !CAA_TAG_VALIDATOR.is_match(split_bit[1]) {
+                    return Err(format!(
+                        "Invalid tag value {:?} for {}",
+                        split_bit[1], record.name
+                    ));
+                };
+                // take the rest of the data as the thing.
+                let value = split_bit[2..].to_vec().join(" ").as_bytes().to_vec();
+                Ok(InternalResourceRecord::CAA {
+                    flag,
+                    tag,
+                    value,
+                    ttl: record.ttl,
+                })
+            }
             _ => Err("Invalid type specified!".to_string()),
         }
     }
@@ -349,73 +399,39 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
 impl PartialEq<RecordType> for InternalResourceRecord {
     fn eq(&self, other: &RecordType) -> bool {
         match self {
-            InternalResourceRecord::A { address: _, ttl: _ } => other == &RecordType::A,
-            InternalResourceRecord::AAAA { address: _, ttl: _ } => other == &RecordType::AAAA,
-            InternalResourceRecord::ALL {} => other == &RecordType::ALL,
-            InternalResourceRecord::AXFR { ttl: _ } => other == &RecordType::AXFR,
-            InternalResourceRecord::CNAME { cname: _, ttl: _ } => other == &RecordType::CNAME,
-            InternalResourceRecord::HINFO {
-                cpu: _,
-                os: _,
-                ttl: _,
-            } => other == &RecordType::HINFO,
+            InternalResourceRecord::A { .. } => other == &RecordType::A,
+            InternalResourceRecord::AAAA { .. } => other == &RecordType::AAAA,
+            InternalResourceRecord::ALL { .. } => other == &RecordType::ALL,
+            InternalResourceRecord::AXFR { .. } => other == &RecordType::AXFR,
+            InternalResourceRecord::CAA { .. } => other == &RecordType::CAA,
+            InternalResourceRecord::CNAME { .. } => other == &RecordType::CNAME,
+            InternalResourceRecord::HINFO { .. } => other == &RecordType::HINFO,
             InternalResourceRecord::InvalidType => other == &RecordType::InvalidType,
-            // InternalResourceRecord::MAILA { ttl: _ } => other == &RecordType::MAILA,
-            InternalResourceRecord::MAILB { ttl: _ } => other == &RecordType::MAILB,
-            InternalResourceRecord::NAPTR {
-                flags: _,
-                preference: _,
-                domain: _,
-                order: _,
-                ttl: _,
-            } => other == &RecordType::NAPTR,
-            InternalResourceRecord::MB { ttl: _ } => other == &RecordType::MB,
-            InternalResourceRecord::MD { ttl: _ } => other == &RecordType::MD,
-            InternalResourceRecord::MF { ttl: _ } => other == &RecordType::MF,
-            InternalResourceRecord::MG { ttl: _ } => other == &RecordType::MG,
-            InternalResourceRecord::MINFO { ttl: _ } => other == &RecordType::MINFO,
-            InternalResourceRecord::MR { ttl: _ } => other == &RecordType::MR,
-            InternalResourceRecord::MX {
-                preference: _,
-                exchange: _,
-                ttl: _,
-            } => other == &RecordType::MX,
-            InternalResourceRecord::NS { nsdname: _, ttl: _ } => other == &RecordType::NS,
-            InternalResourceRecord::NULL { ttl: _ } => other == &RecordType::NULL,
-            InternalResourceRecord::PTR {
-                ptrdname: _,
-                ttl: _,
-            } => other == &RecordType::PTR,
-            InternalResourceRecord::SOA {
-                zone: _,
-                mname: _,
-                rname: _,
-                serial: _,
-                refresh: _,
-                retry: _,
-                expire: _,
-                minimum: _,
-            } => other == &RecordType::SOA,
-            InternalResourceRecord::TXT { txtdata: _, ttl: _ } => other == &RecordType::TXT,
-            InternalResourceRecord::WKS { ttl: _ } => other == &RecordType::WKS,
+            InternalResourceRecord::MAILB { .. } => other == &RecordType::MAILB,
+            InternalResourceRecord::MB { .. } => other == &RecordType::MB,
+            InternalResourceRecord::MD { .. } => other == &RecordType::MD,
+            InternalResourceRecord::MF { .. } => other == &RecordType::MF,
+            InternalResourceRecord::MG { .. } => other == &RecordType::MG,
+            InternalResourceRecord::MINFO { .. } => other == &RecordType::MINFO,
+            InternalResourceRecord::MR { .. } => other == &RecordType::MR,
+            InternalResourceRecord::MX { .. } => other == &RecordType::MX,
+            InternalResourceRecord::NAPTR { .. } => other == &RecordType::NAPTR,
+            InternalResourceRecord::NS { .. } => other == &RecordType::NS,
+            InternalResourceRecord::NULL { .. } => other == &RecordType::NULL,
+            InternalResourceRecord::PTR { .. } => other == &RecordType::PTR,
+            InternalResourceRecord::SOA { .. } => other == &RecordType::SOA,
+            InternalResourceRecord::TXT { .. } => other == &RecordType::TXT,
+            InternalResourceRecord::WKS { .. } => other == &RecordType::WKS,
         }
     }
 }
-
-// impl From<&InternalResourceRecord> for Vec<u8> {
-//     fn from(record: &InternalResourceRecord) -> Self {
-//         record.to_owned().as_bytes()
-//     }
-// }
 
 impl InternalResourceRecord {
     pub fn as_bytes(self: &InternalResourceRecord, question: &Vec<u8>) -> Vec<u8> {
         match self {
             InternalResourceRecord::A { address, ttl: _ } => address.to_be_bytes().to_vec(),
             InternalResourceRecord::AAAA { address, ttl: _ } => address.to_be_bytes().to_vec(),
-            InternalResourceRecord::TXT { txtdata, ttl: _ } => {
-                txtdata.as_bytes()
-            }
+            InternalResourceRecord::TXT { txtdata, ttl: _ } => txtdata.as_bytes(),
 
             // InternalResourceRecord::MD {  } => todo!(),
             // InternalResourceRecord::MF {  } => todo!(),
@@ -478,18 +494,60 @@ impl InternalResourceRecord {
                 hinfo_bytes
             }
             // InternalResourceRecord::MINFO {  } => todo!(),
-            InternalResourceRecord::MX { preference, exchange , ttl: _} => {
+            InternalResourceRecord::MX {
+                preference,
+                exchange,
+                ttl: _,
+            } => {
                 let mut mx_bytes: Vec<u8> = preference.to_be_bytes().into();
                 mx_bytes.extend(exchange.as_bytes(Some(HEADER_BYTES as u16), Some(question)));
                 mx_bytes
             }
-            ,
-            // InternalResourceRecord::AXFR {  } => todo!(),
-            // InternalResourceRecord::MAILB {  } => todo!(),
-            // InternalResourceRecord::MAILA {  } => todo!(),
-            // InternalResourceRecord::ALL {  } => todo!(),
-            // InternalResourceRecord::InvalidType => todo!(),
-            _ => unimplemented!(),
+            InternalResourceRecord::AXFR { ttl: _ } => todo!(),
+            InternalResourceRecord::MAILB { ttl: _ } => todo!(),
+            InternalResourceRecord::ALL {} => todo!(),
+            InternalResourceRecord::InvalidType => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::CAA {
+                flag,
+                tag,
+                value,
+                ttl,
+            } => {
+                let mut result: Vec<u8> = vec![*flag];
+                // add the tag
+                result.extend(tag.as_bytes());
+                // add the value
+                result.extend(value);
+
+                result
+            }
+            #[allow(unused_variables)]
+            InternalResourceRecord::NAPTR {
+                ttl,
+                domain,
+                order,
+                preference,
+                flags,
+            } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::MD { ttl } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::MF { ttl } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::CNAME { cname, ttl } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::MB { ttl } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::MG { ttl } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::MR { ttl } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::NULL { ttl } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::WKS { ttl } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::MINFO { ttl } => todo!(),
         }
     }
 

@@ -75,6 +75,12 @@ impl Reply {
                     InternalResourceRecord::MAILB { ttl } => ttl,
                     InternalResourceRecord::ALL {} => &1u32,
                     InternalResourceRecord::InvalidType => &1u32,
+                    InternalResourceRecord::CAA {
+                        flag: _,
+                        tag: _,
+                        value: _,
+                        ttl,
+                    } => ttl,
                 };
 
                 let answer_record = ResourceRecord {
