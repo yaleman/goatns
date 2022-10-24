@@ -53,5 +53,6 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
   - [x] TTL handling from the records
   - [ ] TODO: SLIST? <https://www.rfc-editor.org/rfc/rfc1034> something about state handling.
   - [x] lowercase all question name fields - done in the datastore query
-  - [ ] lowercase all reply name fields
-  // TODO: clean ctrl-c handling or shutdown in general
+  - [x] lowercase all reply name fields
+  - [ ] at some point we should be checking that if the zonerecord has a TTL of None, then it should be pulling from the SOA/zone
+  - [ ] cleaner ctrl-c handling or shutdown in general

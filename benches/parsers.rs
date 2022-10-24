@@ -8,7 +8,6 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("name_as_bytes", |b| {
         b.iter(|| get_question_qname(black_box(&input)))
     });
-
 }
 
 // fn bench_get_question_qname(rdata: Vec<u8>) {

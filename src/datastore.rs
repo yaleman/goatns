@@ -76,7 +76,6 @@ pub async fn manager(
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
-            // TODO: at some point we should be checking that if the zonerecord has a TTL of None, then it should be pulling from the SOA/zone
             Command::Get { name, rtype, resp } => {
                 handle_get_command(zones.get(name.to_ascii_lowercase()), name, rtype, resp);
             }

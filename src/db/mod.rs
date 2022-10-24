@@ -1,3 +1,4 @@
+// https://diesel.rs/guides/getting-started
 use crate::config::ConfigFile;
 use diesel::prelude::*;
 
@@ -9,8 +10,6 @@ pub mod schema;
 use schema::zones;
 
 fn establish_connection(config: &ConfigFile) -> SqliteConnection {
-    // let database_url = env::var("DATABASE_URL")
-    // .expect("DATABASE_URL must be set");
     SqliteConnection::establish(&config.sqlite_path)
         .unwrap_or_else(|_| panic!("Error connecting to {}", config.sqlite_path))
 }
