@@ -39,6 +39,19 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 
 - [dnslib](https://github.com/paulc/dnslib/) has some good example data
 
+## Supported record types
+
+- [x] A
+- [x] AAAA
+- [ ] CNAME
+- [x] HINFO
+- [x] MX
+- [x] NS
+- [x] PTR
+- [x] SOA
+- [x] TXT
+- [x] CAA
+
 ## TODO 
 
   - [x] allow records with an `@` value for `name` which are apex records.

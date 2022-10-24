@@ -8,15 +8,14 @@ use crate::resourcerecord::InternalResourceRecord;
 /// A four bit field that specifies kind of query in this message.
 /// This value is set by the originator of a query and copied into the response.
 pub enum OpCode {
+    /// A standard query (QUERY)
     Query = 0,
-    // 0               a standard query (QUERY)
     // IQuery = 1, an inverse query (IQUERY) - obsolete in https://www.rfc-editor.org/rfc/rfc3425
+    /// Server status request (STATUS)
     Status = 2,
-    // 2               a server status request (STATUS)
+    /// 3-15            reserved for future use
     Reserved = 15,
-    // 3-15            reserved for future use
 }
-
 impl From<u8> for OpCode {
     fn from(input: u8) -> Self {
         match input {
@@ -43,28 +42,21 @@ impl From<OpCode> for i32 {
 #[derive(PrimitiveEnum_u8, Clone, Copy, Debug, Eq, PartialEq)]
 /// Response code, things like NOERROR, FORMATERROR, SERVFAIL etc.
 pub enum Rcode {
-    NoError = 0,        // 0 - No error condition
-    FormatError = 1,    // 1 - Format error - The name server was unable to interpret the query.
-    ServFail = 2, // 2 - Server failure - The name server was unable to process this query due to a problem with the name server.
-    NameError = 3, // 3 - Name Error - Meaningful only for responses from an authoritative name server, this code signifies that the domain name referenced in the query does not exist.
-    NotImplemented = 4, // 4 - Not Implemented - The name server does not support the requested kind of query.
-    Refused = 5, // 5 - Refused - The name server refuses to perform the specified operation for policy reasons.  For example, a name server may not wish to provide the information to the particular requester, or a name server may not wish to perform a particular operation (e.g., zone transfers
-                 // Reserved,
-                 // 6-15 - Reserved for future use
+    // No error condition
+    NoError = 0,
+    // Format error - The name server was unable to interpret the query.
+    FormatError = 1,
+    // Server failure - The name server was unable to process this query due to a problem with the name server.
+    ServFail = 2,
+    /// Name Error - Meaningful only for responses from an authoritative name server, this code signifies that the domain name referenced in the query does not exist.
+    NameError = 3,
+    /// Not Implemented - The name server does not support the requested kind of query.
+    NotImplemented = 4,
+    /// Refused - The name server refuses to perform the specified operation for policy reasons.  For example, a name server may not wish to provide the information to the particular requester, or a name server may not wish to perform a particular operation (e.g., zone transfers
+    Refused = 5,
+    // Reserved,
+    // 6..15 - Reserved for future use
 }
-
-// impl From<Rcode> for u8 {
-//     fn from(val: Rcode) -> u8 {
-//         match val {
-//             Rcode::NoError => 0,
-//             Rcode::FormatError => 1,
-//             Rcode::ServFail => 2,
-//             Rcode::NameError => 3,
-//             Rcode::NotImplemented => 4,
-//             Rcode::Refused => 5,
-//         }
-//     }
-// }
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -84,23 +76,27 @@ pub enum RecordType {
     HINFO = 13, // 13 host information
     MINFO = 14, // 14 mailbox or mail list information
     MX = 15,    // 15 mail exchange
-    TXT = 16,   // 16 text strings
-    AAAA = 28,  // 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+    /// 16 text strings
+    TXT = 16,
+    /// 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+    AAAA = 28,
 
     /// NAPTR <https://www.rfc-editor.org/rfc/rfc2915>
     NAPTR = 35,
-    AXFR = 252, // 252 A request for a transfer of an entire zone
+    /// 252 A request for a transfer of an entire zone
+    AXFR = 252,
+    /// 253 A request for mailbox-related records (MB, MG or MR)
+    MAILB = 253,
 
-    MAILB = 253, // 253 A request for mailbox-related records (MB, MG or MR)
-
-    /// A request for mail agent RRs (Obsolete - see MX)
-    // MAILA = 254,
-    ALL = 255, // 255 A request for all records (*)
+    /// 255 A request for all records (*)
+    ALL = 255,
+    /// Certification Authority Restriction - <https://www.rfc-editor.org/rfc/rfc6844.txt>
+    CAA = 257,
     InvalidType,
 }
 
-impl From<&u8> for RecordType {
-    fn from(input: &u8) -> Self {
+impl From<&u16> for RecordType {
+    fn from(input: &u16) -> Self {
         match input {
             1 => Self::A,
             2 => Self::NS,
@@ -122,16 +118,10 @@ impl From<&u8> for RecordType {
             35 => Self::NAPTR, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
             252 => Self::AXFR,
             253 => Self::MAILB,
-            // 254 => Self::MAILA,
             255 => Self::ALL,
+            257 => Self::CAA,
             _ => Self::InvalidType,
         }
-    }
-}
-
-impl From<&u16> for RecordType {
-    fn from(input: &u16) -> Self {
-        RecordType::from(&(*input as u8))
     }
 }
 
@@ -165,7 +155,6 @@ impl From<&str> for RecordType {
             "NAPTR" => Self::NAPTR,
             "AXFR" => Self::AXFR,
             "MAILB" => Self::MAILB,
-            // "MAILA" => Self::MAILA,
             "ALL" => Self::ALL,
             _ => Self::InvalidType,
         }
@@ -225,6 +214,12 @@ impl From<InternalResourceRecord> for RecordType {
             // InternalResourceRecord::MAILA { ttl: _ } => RecordType::MAILA,
             InternalResourceRecord::ALL {} => RecordType::ALL,
             InternalResourceRecord::InvalidType => RecordType::InvalidType,
+            InternalResourceRecord::CAA {
+                flag: _,
+                tag: _,
+                value: _,
+                ttl: _,
+            } => RecordType::CAA,
         }
     }
 }
@@ -235,6 +230,7 @@ impl RecordType {
         match self {
             RecordType::A => true,
             RecordType::AAAA => true,
+            RecordType::CAA => true,
             RecordType::HINFO => true,
             RecordType::MX => true,
             RecordType::PTR => true,
@@ -250,13 +246,13 @@ impl RecordType {
 /// 3.2.4. CLASS values
 /// CLASS fields appear in resource records.
 pub enum RecordClass {
-    // IN              1 the Internet
+    /// IN - 1 the Internet
     Internet = 1,
-    // CS              2 the CSNET class (Obsolete - used only for examples in some obsolete RFCs)
+    /// CS - 2 the CSNET class (Obsolete - used only for examples in some obsolete RFCs)
     CsNet = 2,
-    // CH              3 the CHAOS class
+    /// CH              3 the CHAOS class
     Chaos = 3,
-    // HS              4 Hesiod [Dyer 87]
+    /// HS              4 Hesiod [Dyer 87]
     Hesiod = 4,
 
     InvalidType = 0,
@@ -277,8 +273,8 @@ impl Display for RecordClass {
     }
 }
 
-impl From<&u8> for RecordClass {
-    fn from(input: &u8) -> Self {
+impl From<&u16> for RecordClass {
+    fn from(input: &u16) -> Self {
         match input {
             1 => Self::Internet,
             2 => Self::CsNet,

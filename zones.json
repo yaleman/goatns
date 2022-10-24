@@ -10,6 +10,16 @@
     "records" :
         [
             {
+                "rrtype" : "CAA",
+                "ttl" : 1,
+                "rdata" : "0 issue ca.example.net; account=230123"
+            },
+            {
+                "rrtype" : "CAA",
+                "ttl" : 1,
+                "rdata" : "128 tbs Unknown"
+            },
+            {
                 "name" : "foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890",
                 "rrtype" : "TXT",
                 "rdata" : "1",

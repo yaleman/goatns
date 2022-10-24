@@ -285,21 +285,27 @@ impl Question {
         let qname = get_question_qname(buf)?;
 
         // skip past the end of the question
-        let read_pointer = qname.len() + 3;
+        let read_pointer = qname.len() + 2;
 
-        let qtype: RecordType = match buf.get(read_pointer as usize) {
-            Some(value) => value.into(),
-            // TODO: better errors, also log this
-            None => return Err("Failed to parse qtype from header".to_string()),
-        };
-        // next byte after the type is the the class
-        let qclass: RecordClass = match buf.get((read_pointer as usize) + 2) {
-            Some(value) => value.into(),
-            // TODO: better errors, also log this
-            None => return Err("Failed to parse qclass from header".to_string()),
-        };
+        let mut qtype_bytes: [u8; 2] = [0; 2];
+        if buf[read_pointer..read_pointer + 2].len() != 2 {
+            return Err(
+                "Couldn't get two bytes when I asked for it from the header for the QTYPE"
+                    .to_string(),
+            );
+        }
+        qtype_bytes.copy_from_slice(&buf[read_pointer..read_pointer + 2]);
+        let qtype = RecordType::from(&u16::from_be_bytes(qtype_bytes));
 
-        // TODO: check that the name length isn't over 255 bytes
+        let mut qclass_bytes: [u8; 2] = [0; 2];
+        if buf[read_pointer + 2..read_pointer + 4].len() != 2 {
+            return Err(
+                "Couldn't get two bytes when I asked for it from the header for the QCLASS"
+                    .to_string(),
+            );
+        }
+        qclass_bytes.copy_from_slice(&buf[read_pointer + 2..read_pointer + 4]);
+        let qclass: RecordClass = RecordClass::from(&u16::from_be_bytes(qclass_bytes));
 
         Ok(Question {
             qname,
