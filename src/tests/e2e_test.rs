@@ -18,7 +18,14 @@ mod tests {
         }
 
         // TODO: add a test config and zone file here
-        let goat = std::process::Command::new("cargo").args(["run"]).spawn();
+        let goat = std::process::Command::new("cargo")
+            .args([
+                "run",
+                "--",
+                "--config",
+                "./examples/test_config/goatns-test.json",
+            ])
+            .spawn();
         let mut res = match goat {
             Ok(child) => child,
             Err(error) => {
@@ -31,7 +38,7 @@ mod tests {
         let localhost: std::net::IpAddr = "127.0.0.1".parse().unwrap();
         let mut config = ResolverConfig::new();
         config.add_name_server(NameServerConfig::new(
-            SocketAddr::new(localhost, 15353),
+            SocketAddr::new(localhost, 25353),
             Protocol::Udp,
         ));
         let resolver = Resolver::new(config, ResolverOpts::default()).unwrap();
@@ -40,11 +47,17 @@ mod tests {
         // let mut resolver = Resolver::from_system_conf().unwrap();
 
         // Lookup the IP addresses associated with a name.
-        log::trace!(
-            "{:?}",
-            resolver.lookup("hello.goat", trust_dns_resolver::proto::rr::RecordType::A)
-        );
-        let response = resolver.lookup_ip("hello.goat").unwrap();
+        // log::trace!(
+        //     "{:?}",
+        //     resolver.lookup("hello.goat", trust_dns_resolver::proto::rr::RecordType::A)
+        // );
+        let response = match resolver.lookup_ip("hello.goat") {
+            Ok(value) => value,
+            Err(error) => {
+                res.kill()?;
+                panic!("Error resolving hello.goat A {error:?}");
+            }
+        };
 
         // There can be many addresses associated with the name,
         //  this can return IPv4 and/or IPv6 addresses
@@ -59,6 +72,7 @@ mod tests {
                 ))
             );
         }
+
         // clean up
         info!("Killing goatns");
         res.kill()?;

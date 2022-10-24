@@ -358,26 +358,6 @@ async fn get_result(
         }
     };
 
-    // let mut answers: Vec<ResourceRecord> = vec![];
-
-    // for record in record.typerecords {
-    //     let record_type: RecordType = record.clone().into();
-    //     debug!("Record Type: {:?}", record_type);
-    //     let answer = record.as_bytes();
-
-    //     // TODO: handle the records here
-    //     answers.push(ResourceRecord {
-    //         name: question.qname.to_vec(),
-    //         record_type,
-    //         class: question.qclass,
-    //         ttl: 60u32, // TODO: set a TTL
-    //         // rdlength: (answer.len() as u16),
-    //         rdata: answer,
-    //         // compression: true,
-    //     });
-    //     // }
-    // }
-
     // this is our reply - static until that bit's done
     Ok(Reply {
         header: Header {

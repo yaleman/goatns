@@ -15,11 +15,8 @@ impl core::fmt::Display for DumpType {
         }
     }
 }
-// ,
-//         }
-//     }
-// }
 
+/// Dumps the bytes of a given vector to a templated packet
 pub async fn dump_bytes(bytes: Vec<u8>, dump_type: DumpType) {
     let now: DateTime<Utc> = Utc::now();
 

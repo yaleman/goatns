@@ -1,4 +1,5 @@
-use crate::{Header, PacketType, Rcode, Reply, HEADER_BYTES};
+use crate::reply::Reply;
+use crate::{Header, PacketType, Rcode, HEADER_BYTES};
 // use clap::{arg, command, value_parser, ArgAction, ArgMatches, Command};
 use clap::{arg, command, value_parser, ArgMatches};
 use log::{debug, trace};
@@ -255,72 +256,63 @@ pub fn hexdump(bytes: Vec<u8>) {
     }
 }
 
-#[cfg(test)]
-mod tests {
+#[test]
+pub fn test_find_tail_match() {
+    let name = "foo.example.com".as_bytes().to_vec();
+    let target = "zot.example.com".as_bytes().to_vec();
+    let result = find_tail_match(&name, &target);
 
-    use super::{find_tail_match, name_as_bytes};
-    use log::trace;
-    use std::str::from_utf8;
+    assert_eq!(result, 3);
+    let name = "foo.yeanah.xyz".as_bytes().to_vec();
+    let target = "zot.example.com".as_bytes().to_vec();
+    let result = find_tail_match(&name, &target);
 
-    #[test]
-    pub fn test_find_tail_match() {
-        let name = "foo.example.com".as_bytes().to_vec();
-        let target = "zot.example.com".as_bytes().to_vec();
-        let result = find_tail_match(&name, &target);
+    assert_eq!(result, 0)
+}
 
-        assert_eq!(result, 3);
-        let name = "foo.yeanah.xyz".as_bytes().to_vec();
-        let target = "zot.example.com".as_bytes().to_vec();
-        let result = find_tail_match(&name, &target);
+#[test]
+pub fn test_name_bytes_simple_compress() {
+    let expected_result: Vec<u8> = vec![192, 12];
 
-        assert_eq!(result, 0)
-    }
+    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), Some(12), None);
+    assert_eq!(expected_result, test_result);
+}
+#[test]
+pub fn test_name_bytes_no_compress() {
+    let expected_result: Vec<u8> = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
 
-    #[test]
-    pub fn test_name_bytes_simple_compress() {
-        let expected_result: Vec<u8> = vec![192, 12];
+    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), None, None);
+    assert_eq!(expected_result, test_result);
+}
 
-        let test_result = name_as_bytes("example.com".as_bytes().to_vec(), Some(12), None);
-        assert_eq!(expected_result, test_result);
-    }
-    #[test]
-    pub fn test_name_bytes_no_compress() {
-        let expected_result: Vec<u8> =
-            vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
+#[test]
+pub fn test_name_bytes_with_compression() {
+    let example_com = "example.com".as_bytes().to_vec();
+    let test_input = "lol.example.com".as_bytes().to_vec();
 
-        let test_result = name_as_bytes("example.com".as_bytes().to_vec(), None, None);
-        assert_eq!(expected_result, test_result);
-    }
+    let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 12];
 
-    #[test]
-    pub fn test_name_bytes_with_compression() {
-        let example_com = "example.com".as_bytes().to_vec();
-        let test_input = "lol.example.com".as_bytes().to_vec();
+    trace!("{:?}", from_utf8(&example_com));
+    trace!("{:?}", from_utf8(&test_input));
 
-        let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 12];
+    let result = name_as_bytes(test_input, Some(12), Some(&example_com));
 
-        trace!("{:?}", from_utf8(&example_com));
-        trace!("{:?}", from_utf8(&test_input));
+    assert_eq!(result, expected_result);
+}
 
-        let result = name_as_bytes(test_input, Some(12), Some(&example_com));
+#[test]
+pub fn test_name_bytes_with_tail_compression() {
+    let example_com = "ns1.example.com".as_bytes().to_vec();
+    let test_input = "lol.example.com".as_bytes().to_vec();
 
-        assert_eq!(result, expected_result);
-    }
+    let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 15];
 
-    #[test]
-    pub fn test_name_bytes_with_tail_compression() {
-        let example_com = "ns1.example.com".as_bytes().to_vec();
-        let test_input = "lol.example.com".as_bytes().to_vec();
+    trace!("{:?}", from_utf8(&example_com));
+    trace!("{:?}", from_utf8(&test_input));
 
-        let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 15];
+    let result = name_as_bytes(test_input, Some(12), Some(&example_com));
 
-        trace!("{:?}", from_utf8(&example_com));
-        trace!("{:?}", from_utf8(&test_input));
-
-        let result = name_as_bytes(test_input, Some(12), Some(&example_com));
-
-        assert_eq!(result, expected_result);
-    }
+    assert_eq!(result, expected_result);
 }
 
 pub fn clap_parser() -> ArgMatches {

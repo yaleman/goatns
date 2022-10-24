@@ -1,6 +1,6 @@
 {
 	"addr" : "127.0.0.1",
-	"port" : 15353,
+	"port" : 25353,
 	"log_level" : "DEBUG",
 	"capture_packets" :false,
 	"enable_hinfo" : true,

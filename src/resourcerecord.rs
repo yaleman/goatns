@@ -86,7 +86,7 @@ impl From<DNSCharString> for Vec<u8> {
 }
 
 impl DNSCharString {
-    /// Returns the bytes for a packet, ie - the length and then the string (truncated to 255 bytes)
+    /// Returns the bytes for a packet, ie - the length and then the string (automagically truncated to 255 bytes)
     fn as_bytes(&self) -> Vec<u8> {
         let mut res: Vec<u8> = vec![self.data.len() as u8];
         res.extend(&self.data);
@@ -233,22 +233,39 @@ pub enum InternalResourceRecord {
     InvalidType,
 }
 
+/// tests to ensure that no label in the name is longer than 63 octets (bytes)
+pub fn check_long_labels(testval: &str) -> bool {
+    return testval.split('.').into_iter().any(|x| x.len() > 63);
+}
+
+#[test]
+fn test_check_long_labels() {
+    assert_eq!(false, check_long_labels(&"hello.".to_string()));
+    assert_eq!(false, check_long_labels(&"hello.world".to_string()));
+    assert_eq!(
+        true,
+        check_long_labels(
+            &"foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+                .to_string()
+        )
+    );
+}
+
 impl TryFrom<FileZoneRecord> for InternalResourceRecord {
     // TODO: This should be a try_into because we're parsing text
     /// This is where we convert from the JSON blob in the file to an internal representation of the data.
     fn try_from(record: FileZoneRecord) -> Result<Self, String> {
+        if check_long_labels(&record.name) {
+            return Err(format!("At least one label is of length over 63 in name {}! I'm refusing to serve this record.", record.name));
+        };
+
+        if record.name.len() > 255 {
+            return Err(format!("The length of name ({}) is over 255 octets! ({}) I'm refusing to serve this record.", record.name,
+            record.name.len()));
+        };
+
         match record.rrtype.as_str() {
             "A" => {
-                // let address = match from_utf8(&record.rdata) {
-                //     Ok(value) => value,
-                //     Err(error) => {
-                //         error!(
-                //             "Failed to parse {:?} to string in A record: {:?}",
-                //             record.rdata, error
-                //         );
-                //         return InternalResourceRecord::InvalidType;
-                //     }
-                // };
                 let address: u32 = match std::net::Ipv4Addr::from_str(&record.rdata) {
                     Ok(value) => value.into(),
                     Err(error) => {

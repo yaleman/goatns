@@ -1,17 +1,19 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion}; // ,Bencher
 
-fn fibonacci(n: u64) -> u64 {
-    match n {
-        0 => 1,
-        1 => 1,
-        n => fibonacci(n - 1) + fibonacci(n - 2),
-    }
-}
-#[allow(dead_code)]
-fn datastore_bench() {}
+// use std::process::Termination;
+use goatns::utils::name_as_bytes;
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
+    c.bench_function("name as bytes", |b| {
+        b.iter(|| bench_resourcerecord_short_name_to_bytes(black_box("cheese".as_bytes().to_vec())))
+    });
+}
+
+fn bench_resourcerecord_short_name_to_bytes(rdata: Vec<u8>) {
+    assert_eq!(
+        name_as_bytes(rdata, None, None),
+        [6, 99, 104, 101, 101, 115, 101, 0]
+    );
 }
 
 criterion_group!(benches, criterion_benchmark);

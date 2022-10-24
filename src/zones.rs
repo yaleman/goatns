@@ -94,26 +94,6 @@ impl Display for ZoneRecord {
     }
 }
 
-// impl From<FileZoneRecord> for ZoneRecord {
-//     fn from(fzr: FileZoneRecord) -> Self {
-//         ZoneRecord {
-//             name: fzr.name.as_bytes().to_vec(),
-//             typerecords: vec![ZoneRecordType {
-//                 rrtype: fzr.rrtype.as_str().into(),
-//                 rdata: vec![fzr.rdata],
-//             }],
-//         }
-//     }
-// }
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn test_foo() {
-        assert_eq!(1, 1);
-    }
-}
-
 pub fn empty_zones() -> PatriciaMap<ZoneRecord> {
     let tree: PatriciaMap<ZoneRecord> = PatriciaMap::new();
     tree
@@ -193,7 +173,10 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
 
             let record_data: InternalResourceRecord = match record.try_into() {
                 Ok(value) => value,
-                Err(error) => return Err(error),
+                Err(error) => {
+                    eprintln!("Error loading record: {error:?}");
+                    continue;
+                }
             };
 
             if tree.contains_key(&name) {

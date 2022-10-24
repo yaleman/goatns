@@ -41,13 +41,17 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 
 ## TODO 
 
-- [x] allow records with an `@` value for `name` which are apex records.
-  - [ ] maaaaybe support flattening of apex records?
-- [ ] record caching instead of loading everything into memory
-- [ ] message length enforcement and testing (RFC 1035 2.3.4. Size limits)
-  - [ ] labels          63 octets or less
-  - [ ] names           255 octets or less
-  - [x] TTL             positive values of a signed 32 bit number.
-  - [ ] UDP messages    512 octets or less ? I think this got extended?
-- [x] partial compression based on things
-- [x] TTL handling from the records
+  - [x] allow records with an `@` value for `name` which are apex records.
+    - [ ] maaaaybe support flattening of apex records?
+  - [ ] record caching instead of loading everything into memory
+  - [ ] message length enforcement and testing ([RFC 1035](https://www.rfc-editor.org/rfc/rfc1035#section-2.3.4) 2.3.4. Size limits)
+    - [x] labels          63 octets or less
+    - [x] names           255 octets or less
+    - [x] TTL             positive values of a signed 32 bit number.
+    - [x] UDP messages    512 octets or less ? I think this got extended?
+  - [x] partial compression based on things
+  - [x] TTL handling from the records
+  - [ ] TODO: SLIST? <https://www.rfc-editor.org/rfc/rfc1034> something about state handling.
+  - [x] lowercase all question name fields - done in the datastore query
+  - [ ] lowercase all reply name fields
+  // TODO: clean ctrl-c handling or shutdown in general

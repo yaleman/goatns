@@ -76,13 +76,18 @@ impl From<Config> for ConfigFile {
     }
 }
 
+lazy_static! {
+    static ref CONFIG_LOCATIONS: Vec<&'static str> =
+        ["~/.config/goatns.json", "./goatns.json",].to_vec();
+}
+
+/// Loads the configuration from a given file or from some default locations.
+///
+/// The default locations are `~/.config/goatns.json` and `./goatns.json`.
 pub fn get_config(config_path: Option<&String>) -> ConfigFile {
     let file_locations = match config_path {
         Some(value) => vec![value.to_owned()],
-        None => vec![
-            "~/.config/goatns.json".to_string(),
-            "goatns.json".to_string(),
-        ],
+        None => CONFIG_LOCATIONS.iter().map(|x| x.to_string()).collect(),
     };
 
     for filepath in file_locations {

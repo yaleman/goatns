@@ -2,13 +2,13 @@ mod e2e_test;
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use crate::resourcerecord::InternalResourceRecord;
     use crate::utils::name_as_bytes;
     use crate::{PacketType, Question};
     use packed_struct::prelude::*;
 
-    // use std::net::Ipv4Addr;
-    // , ResourceRecord
     use log::debug;
 
     #[test]
@@ -28,109 +28,92 @@ mod tests {
         );
     }
 
-    // use std::process::Termination;
+    #[tokio::test]
+    async fn test_build_iana_org_a_reply() {
+        use crate::reply::Reply;
+        use crate::resourcerecord::InternalResourceRecord;
+        use crate::Header;
 
-    // #[bench]
-    // fn bench_resourcerecord_short_name_to_bytes(b: &mut Bencher) -> impl Termination {
-    //     let rdata = "cheese".as_bytes().to_vec();
-    //     assert_eq!(
-    //         name_as_bytes(rdata, None, None),
-    //         [6, 99, 104, 101, 101, 115, 101, 0]
-    //     );
-    // }
-
-    // #[tokio::test]
-    // async fn test_build_iana_org_a_reply() {
-    //     use crate::{Header, Reply};
-    //     use crate::resourcerecord::InternalResourceRecord;
-
-    //     let header = Header {
-    //         id: 41840,
-    //         qr: PacketType::Answer,
-    //         opcode: crate::OpCode::Query,
-    //         authoritative: false,
-    //         truncated: false,
-    //         recursion_desired: true,
-    //         recursion_available: true,
-    //         z: false,
-    //         ad: false,
-    //         cd: false,
-    //         rcode: crate::Rcode::NoError,
-    //         qdcount: 1,
-    //         ancount: 1,
-    //         arcount: 0,
-    //         nscount: 0,
-    //     };
-    //     let qname = "iana.org".as_bytes().to_vec();
-    //     let question = Question {
-    //         qname: qname.clone(),
-    //         qtype: crate::RecordType::A,
-    //         qclass: crate::RecordClass::Internet,
-    //     };
-    //     let question_length = question.to_bytes().len();
-    //     debug!("question byte length: {}", question_length);
-    //     let answers = vec![InternalResourceRecord {
-    //         name: qname,
-    //         record_type: crate::RecordType::A,
-    //         class: crate::RecordClass::Internet,
-    //         ttl: 350,
-    //         rdlength: 4,
-    //         rdata: IPAddress::new(192, 0, 43, 8).pack().unwrap().into(),
-    //         compression: true,
-    //     }];
-
-    //     let mut reply = Reply {
-    //         header,
-    //         question: Some(question),
-    //         answers,
-    //         authorities: vec![],
-    //         additional: vec![],
-    //     };
-    //     let reply_bytes: Vec<u8> = reply.as_bytes().unwrap();
-    //     debug!("{:?}", reply_bytes);
-
-    //     let expected_bytes = [
-    //         /* header - 12 bytes */
-    //         0xa3, 0x70, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-    //         /* question - 14 bytes */
-    //         0x04, 0x69, 0x61, 0x6e, 0x61, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, 0x00, 0x01,
-    //         /* answer - 16 bytes */
-    //         0xc0, 0x0c, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x01, 0x5e, 0x00, 0x04, 0xc0, 0x00,
-    //         0x2b, 0x08,
-    //     ];
-
-    //     let mut current_block: &str;
-    //     for (index, byte) in reply_bytes.iter().enumerate() {
-    //         if index < 12 {
-    //             current_block = "Header ";
-    //         } else if index < 26 {
-    //             current_block = "Question ";
-    //         } else {
-    //             current_block = "Answer   ";
-    //         }
-    //         match expected_bytes.get(index) {
-    //             Some(expected_byte) => debug!(
-    //                 "{} \t {} us: {} ex: {} {}",
-    //                 current_block,
-    //                 index,
-    //                 byte,
-    //                 expected_byte,
-    //                 (byte == expected_byte)
-    //             ),
-    //             None => {
-    //                 panic!("Our reply is longer!");
-    //                 // break;
-    //             }
-    //         }
-    //         assert_eq!(byte, &expected_bytes[index]);
-    //     }
-    //     assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
-    // }
-
+        let header = Header {
+            id: 41840,
+            qr: PacketType::Answer,
+            opcode: crate::OpCode::Query,
+            authoritative: false,
+            truncated: false,
+            recursion_desired: true,
+            recursion_available: true,
+            z: false,
+            ad: false,
+            cd: false,
+            rcode: crate::Rcode::NoError,
+            qdcount: 1,
+            ancount: 1,
+            arcount: 0,
+            nscount: 0,
+        };
+        let qname = "iana.org".as_bytes().to_vec();
+        let question = Question {
+            qname: qname.clone(),
+            qtype: crate::RecordType::A,
+            qclass: crate::RecordClass::Internet,
+        };
+        let question_length = question.to_bytes().len();
+        debug!("question byte length: {}", question_length);
+        let address = std::net::Ipv4Addr::from_str("192.0.43.8").unwrap();
+        let answers = vec![InternalResourceRecord::A {
+            ttl: 350,
+            address: address.into(),
+        }];
+        let reply = Reply {
+            header,
+            question: Some(question),
+            answers,
+            authorities: vec![],
+            additional: vec![],
+        };
+        let reply_bytes: Vec<u8> = reply.as_bytes().await.unwrap();
+        debug!("{:?}", reply_bytes);
+        let expected_bytes = [
+            /* header - 12 bytes */
+            0xa3, 0x70, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+            /* question - 14 bytes */
+            0x04, 0x69, 0x61, 0x6e, 0x61, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, 0x00, 0x01,
+            /* answer - 16 bytes */
+            0xc0, 0x0c, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x01, 0x5e, 0x00, 0x04, 0xc0, 0x00,
+            0x2b, 0x08,
+        ];
+        let mut current_block: &str;
+        for (index, byte) in reply_bytes.iter().enumerate() {
+            if index < 12 {
+                current_block = "Header ";
+            } else if index < 26 {
+                current_block = "Question ";
+            } else {
+                current_block = "Answer   ";
+            }
+            match expected_bytes.get(index) {
+                Some(expected_byte) => debug!(
+                    "{} \t {} us: {} ex: {} {}",
+                    current_block,
+                    index,
+                    byte,
+                    expected_byte,
+                    (byte == expected_byte)
+                ),
+                None => {
+                    panic!("Our reply is longer!");
+                    // break;
+                }
+            }
+            assert_eq!(byte, &expected_bytes[index]);
+        }
+        assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
+    }
     #[tokio::test]
     async fn test_cloudflare_soa_reply() {
+        use crate::reply::Reply;
         use crate::resourcerecord::DomainName;
-        use crate::{Header, Reply, HEADER_BYTES};
+        use crate::{Header, HEADER_BYTES};
         //     /*
         //     from: https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA
 
@@ -272,7 +255,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_build_ackcdn_allzeros() {
-        use crate::{Header, Reply};
+        use crate::reply::Reply;
+        use crate::Header;
 
         let header = Header {
             id: 0x3DE1,
