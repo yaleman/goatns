@@ -43,7 +43,7 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 
 - [x] A
 - [x] AAAA
-- [ ] CNAME
+- [x] CNAME
 - [x] HINFO
 - [x] MX
 - [x] NS

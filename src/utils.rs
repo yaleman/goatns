@@ -16,6 +16,7 @@ pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
 
 /// does the conversion from "example.com" to "7example3com" BUT DOES NOT DO THE TRAILING NULL BECAUSE REASONS
 fn seven_dot_three_conversion(name: &[u8]) -> Vec<u8> {
+    trace!("7.3 conversion for {name:?} {:?}", from_utf8(name));
     let mut result: Vec<u8> = vec![];
 
     // TODO: reimplement this with slices and stuff
@@ -64,13 +65,26 @@ fn seven_dot_three_conversion(name: &[u8]) -> Vec<u8> {
 
 /// If you have a `name` and a `target` and want to see if you can find a chunk of the `target` that the `name` ends with, this is your function!
 pub fn find_tail_match(name: &[u8], target: &Vec<u8>) -> usize {
+    // #[cfg(debug)]
+    // {
+    let name_str = format!("{name:?}");
+    let target_str = format!("{target:?}");
+    let longest = match name_str.len() > target_str.len() {
+        true => name_str.len(),
+        false => target_str.len(),
+    };
+    trace!("find_tail_match(\n  name={name_str:>longest$}, \ntarget={target_str:>longest$}\n)",);
+    // }
     let mut tail_index: usize = 0;
     for (i, _) in target.iter().enumerate() {
-        let tail = &target[i..target.len()];
+        trace!("Tail index={i}");
+        let tail = &target[i..];
         if name.ends_with(tail) {
             trace!("Found a tail at index {i}");
             tail_index = i;
             break;
+        } else {
+            trace!("Didn't match: name / target \n{name:?}\n{:?}", &target[i..]);
         }
     }
     tail_index
@@ -101,7 +115,7 @@ pub fn name_as_bytes(
     trace!("################################");
     match from_utf8(&name) {
         Ok(nstr) => trace!("name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
-        Err(_) =>  trace!("name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
+        Err(_) =>  trace!("failed to utf-8 name name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
     };
 
     // if we're given a compression target and no reference just compress it and return
@@ -122,7 +136,6 @@ pub fn name_as_bytes(
         result.push(0); // null pad the name
         return result;
     }
-
     result = seven_dot_three_conversion(&name);
 
     if compress_target.is_none() {
@@ -176,12 +189,14 @@ pub fn name_as_bytes(
                 trace!("Found a tail-match: {tail_index}");
                 // slice the tail off the name
                 let mut name_copy = name.to_vec();
-                name_copy.truncate(tail_index);
+                // the amount of the tail that matched to the name, ie abc, bc = 2, aab, bbb = 1
+                let matched_length = ct.len() - tail_index;
+                name_copy.truncate(name.len() - matched_length);
                 trace!("sliced name down to {name_copy:?}");
                 // put the pointer on there
                 result = seven_dot_three_conversion(&name_copy);
                 trace!("converted result to {result:?}");
-                let pointer: u16 = 0b1100000000000000 | (HEADER_BYTES + tail_index) as u16;
+                let pointer: u16 = 0b1100000000000000 | (HEADER_BYTES + tail_index + 1) as u16;
                 result.extend(pointer.to_be_bytes());
             }
         }
@@ -305,7 +320,7 @@ pub fn test_name_bytes_with_tail_compression() {
     let example_com = "ns1.example.com".as_bytes().to_vec();
     let test_input = "lol.example.com".as_bytes().to_vec();
 
-    let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 15];
+    let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 16];
 
     trace!("{:?}", from_utf8(&example_com));
     trace!("{:?}", from_utf8(&test_input));
