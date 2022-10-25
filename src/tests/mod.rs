@@ -27,6 +27,15 @@ mod tests {
             [6, 99, 104, 101, 101, 115, 101, 0]
         );
     }
+    #[test]
+    fn test_name_as_bytes() {
+        let rdata = "cheese.hello.world".as_bytes().to_vec();
+        let compress_ref = "zing.hello.world".as_bytes().to_vec();
+        assert_eq!(
+            name_as_bytes(rdata, Some(12u16), Some(&compress_ref)),
+            [6, 99, 104, 101, 101, 115, 101, 192, 17]
+        );
+    }
 
     #[tokio::test]
     async fn test_build_iana_org_a_reply() {

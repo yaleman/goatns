@@ -317,6 +317,10 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                     ttl: record.ttl,
                 })
             }
+            "CNAME" => Ok(InternalResourceRecord::CNAME {
+                cname: DomainName::from(record.rdata),
+                ttl: record.ttl,
+            }),
             "TXT" => Ok(InternalResourceRecord::TXT {
                 txtdata: DNSCharString {
                     data: record.rdata.into_bytes(),
@@ -435,7 +439,10 @@ impl InternalResourceRecord {
 
             // InternalResourceRecord::MD {  } => todo!(),
             // InternalResourceRecord::MF {  } => todo!(),
-            // InternalResourceRecord::CNAME { cname } => todo!(),
+            InternalResourceRecord::CNAME { cname, .. } => {
+                trace!("turning CNAME {cname:?} into bytes");
+                cname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
+            }
             InternalResourceRecord::SOA {
                 zone,
                 mname,
@@ -534,8 +541,6 @@ impl InternalResourceRecord {
             InternalResourceRecord::MD { ttl } => todo!(),
             #[allow(unused_variables)]
             InternalResourceRecord::MF { ttl } => todo!(),
-            #[allow(unused_variables)]
-            InternalResourceRecord::CNAME { cname, ttl } => todo!(),
             #[allow(unused_variables)]
             InternalResourceRecord::MB { ttl } => todo!(),
             #[allow(unused_variables)]
