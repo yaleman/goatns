@@ -1,16 +1,15 @@
 use crate::enums::RecordType;
-use crate::utils::{hexdump, name_as_bytes};
-use crate::HEADER_BYTES;
-use log::*;
-use regex::Regex;
-
-use std::env::consts;
-
-use std::str::FromStr;
-use std::string::FromUtf8Error;
-// use packed_struct::*;
-
+use crate::utils::{dms_to_u32, hexdump, name_as_bytes};
 use crate::zones::FileZoneRecord;
+use crate::HEADER_BYTES;
+
+use log::*;
+use num_traits::Num;
+use packed_struct::prelude::*;
+use regex::Regex;
+use std::env::consts;
+use std::str::{from_utf8, FromStr};
+use std::string::FromUtf8Error;
 
 lazy_static! {
     static ref CAA_TAG_VALIDATOR: Regex = Regex::new(r"[a-zA-Z0-9]").unwrap();
@@ -69,6 +68,29 @@ impl From<&DomainName> for Vec<u8> {
     fn from(dn: &DomainName) -> Self {
         name_as_bytes(dn.name.as_bytes().to_vec(), None, None)
     }
+}
+
+#[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
+#[packed_struct(bit_numbering = "msb0", size_bytes = "16")]
+pub struct LocRecord {
+    #[packed_field(bits = "0..8", endian = "msb")]
+    pub version: u8,
+    // #[packed_field(bits = "9..13", endian = "msb")]
+    // pub size_higher: u8,
+    // #[packed_field(bits = "13..16", endian = "msb")]
+    // pub size_lower: u8,
+    #[packed_field(bits = "9..16", endian = "msb")]
+    pub size: u8,
+    #[packed_field(bits = "16..24", endian = "msb")]
+    pub horiz_pre: u8,
+    #[packed_field(bits = "24..32", endian = "msb")]
+    pub vert_pre: u8,
+    #[packed_field(bits = "32..64", endian = "msb")]
+    pub latitude: u32,
+    #[packed_field(bits = "64..96", endian = "msb")]
+    pub longitude: u32,
+    #[packed_field(bits = "96..128", endian = "msb")]
+    pub altitude: i32,
 }
 
 /// <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
@@ -194,6 +216,17 @@ pub enum InternalResourceRecord {
         minimum: u32,
         // this doesn't get a TTL, since that's an expire?
     }, // 6 marks the start of a zone of authority
+    LOC {
+        ttl: u32,
+        /// Version number of the representation.  This must be zero. Implementations are required to check this field and make no assumptions about the format of unrecognized versions.
+        version: u8,
+        size: u8,
+        horiz_pre: u8,
+        vert_pre: u8,
+        latitude: u32,
+        longitude: u32,
+        altitude: i32,
+    },
     MB {
         ttl: u32,
     }, // 7 a mailbox domain name (EXPERIMENTAL)
@@ -393,6 +426,24 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                     ttl: record.ttl,
                 })
             }
+            "LOC" => {
+                let res: FileLocRecord = match FileLocRecord::try_from(record.rdata.as_str()) {
+                    Ok(value) => value,
+                    Err(err) => return Err(err),
+                };
+                let lr: LocRecord = res.into();
+                Ok(InternalResourceRecord::LOC {
+                    ttl: record.ttl,
+                    version: lr.version,
+                    size: lr.size,
+                    horiz_pre: lr.horiz_pre,
+                    vert_pre: lr.vert_pre,
+                    latitude: lr.latitude,
+                    longitude: lr.longitude,
+                    altitude: lr.altitude,
+                })
+                // Err("LOC not finished!".to_string())
+            }
             _ => Err("Invalid type specified!".to_string()),
         }
     }
@@ -412,6 +463,7 @@ impl PartialEq<RecordType> for InternalResourceRecord {
             InternalResourceRecord::HINFO { .. } => other == &RecordType::HINFO,
             InternalResourceRecord::InvalidType => other == &RecordType::InvalidType,
             InternalResourceRecord::MAILB { .. } => other == &RecordType::MAILB,
+            InternalResourceRecord::LOC { .. } => other == &RecordType::LOC,
             InternalResourceRecord::MB { .. } => other == &RecordType::MB,
             InternalResourceRecord::MD { .. } => other == &RecordType::MD,
             InternalResourceRecord::MF { .. } => other == &RecordType::MF,
@@ -439,6 +491,36 @@ impl InternalResourceRecord {
 
             // InternalResourceRecord::MD {  } => todo!(),
             // InternalResourceRecord::MF {  } => todo!(),
+            #[allow(unused_variables)]
+            InternalResourceRecord::LOC {
+                ttl,
+                version,
+                size,
+                horiz_pre,
+                vert_pre,
+                latitude,
+                longitude,
+                altitude,
+            } => {
+                error!("LOC {:?} - TTL={ttl}", from_utf8(question));
+                let record = LocRecord {
+                    version: *version,
+                    size: *size,
+                    horiz_pre: *horiz_pre,
+                    vert_pre: *vert_pre,
+                    latitude: *latitude,
+                    longitude: *longitude,
+                    altitude: *altitude,
+                }
+                .pack_to_vec();
+                match record {
+                    Ok(value) => value,
+                    Err(error) => {
+                        error!("Failed to pack this: {self:?}");
+                        vec![]
+                    }
+                }
+            }
             InternalResourceRecord::CNAME { cname, .. } => {
                 trace!("turning CNAME {cname:?} into bytes");
                 cname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
@@ -631,5 +713,174 @@ mod tests {
             let foo_bytes: Vec<u8> = txtdata.into();
             assert_eq!(foo_bytes[0], 11);
         };
+    }
+}
+
+lazy_static! {
+    static ref LOC_REGEX: Regex = Regex::new(
+        r"^(?P<d1>\d+)(?:[ ](?P<m1>\d+)(?:[ ](?P<s1>\d+(?:[.]\d+)?))?)?[ ](?P<lat_dir>[NS])[ ](?P<d2>\d+)(?:[ ](?P<m2>\d+)(?:[ ](?P<s2>\d+(?:[.]\d+)?))?)?[ ](?P<lon_dir>[EW])[ ](?P<alt>-?\d+(?:[.]\d+)?)m(?:[ ](?P<siz>\d+(?:[.]\d+)?)m(?:[ ](?P<hp>\d+(?:[.]\d+)?)m(?:[ ](?P<vp>\d+(?:[.]\d+)?)m)?)?)?",
+    ).unwrap();
+
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+/// This represents a LOC record in a zone file
+pub struct FileLocRecord {
+    pub d1: u8,
+    pub d2: u8,
+    pub m1: u8,
+    pub m2: u8,
+    pub s1: f32,
+    pub s2: f32,
+    pub lat_dir: String,
+    pub lon_dir: String,
+    pub alt: i32,
+    pub size: u32,
+    pub hp: String,
+    pub vp: String,
+}
+
+impl TryFrom<&str> for FileLocRecord {
+    type Error = String;
+
+    fn try_from(input_string: &str) -> Result<FileLocRecord, String> {
+        let result = match LOC_REGEX.captures(input_string) {
+            Some(value) => value,
+            None => {
+                return Err("Failed to match input to expected format!".to_string());
+            }
+        };
+        eprintln!("{result:?}");
+
+        let d1: u8 = match result.name("d1") {
+            Some(value) => match value.as_str().parse::<u8>() {
+                Ok(value) => value,
+                Err(err) => {
+                    error!("Failed to parse d1: {err:?}");
+                    0
+                }
+            },
+            None => 0,
+        };
+        let d2: u8 = match result.name("d2") {
+            Some(value) => match value.as_str().parse::<u8>() {
+                Ok(value) => value,
+                Err(err) => {
+                    error!("Failed to parse d2: {err:?}");
+                    0
+                }
+            },
+            None => 0,
+        };
+
+        let m1: u8 = match result.name("m1") {
+            Some(value) => match value.as_str().parse::<u8>() {
+                Ok(value) => value,
+                Err(err) => {
+                    error!("Failed to parse m1: {err:?}");
+                    0
+                }
+            },
+            None => 0,
+        };
+        let m2: u8 = match result.name("m2") {
+            Some(value) => match value.as_str().parse::<u8>() {
+                Ok(value) => value,
+                Err(err) => {
+                    error!("Failed to parse m2: {err:?}");
+                    0
+                }
+            },
+            None => 0,
+        };
+        let s1: f32 = match result.name("s1") {
+            Some(value) => match f32::from_str_radix(value.as_str(), 10) {
+                Ok(value) => value,
+                Err(err) => {
+                    error!("Failed to parse s1: {err:?}");
+                    0.0
+                }
+            },
+            None => 0f32,
+        };
+        let s2: f32 = match result.name("s2") {
+            Some(value) => match f32::from_str_radix(value.as_str(), 10) {
+                Ok(value) => value,
+                Err(err) => {
+                    error!("Failed to parse s2: {err:?}");
+                    0.0
+                }
+            },
+            None => 0f32,
+        };
+        let lat_dir: String = match result.name("lat_dir") {
+            Some(value) => value.as_str().into(),
+            None => {
+                return Err("Couldn't match lat_dir in this string!".to_string());
+            }
+        };
+
+        let lon_dir: String = match result.name("lon_dir") {
+            Some(value) => value.as_str().into(),
+            None => {
+                return Err("Couldn't match lon_dir in this string!".to_string());
+            }
+        };
+
+        let alt: String = match result.name("alt") {
+            Some(value) => value.as_str().into(),
+            None => todo!(),
+        };
+        let size: u32 = match result.name("size") {
+            Some(value) => value.as_str().parse::<u32>().unwrap(),
+            // u32::from_str_radix(value.as_str(), 10).unwrap(),
+            None => 1,
+        };
+        let hp: String = match result.name("hp") {
+            Some(value) => value.as_str().into(),
+            None => "10000".to_string(),
+        };
+        let vp: String = match result.name("vp") {
+            Some(value) => value.as_str().into(),
+            None => "10".to_string(),
+        };
+        Ok(FileLocRecord {
+            d1,
+            d2,
+            m1,
+            m2,
+            s1,
+            s2,
+            lat_dir,
+            lon_dir,
+            alt: alt.as_str().parse::<i32>().unwrap_or(-1),
+            size,
+            hp,
+            vp,
+        })
+    }
+}
+
+impl From<FileLocRecord> for LocRecord {
+    fn from(input: FileLocRecord) -> Self {
+        // TODO: fix these conversions
+        let horiz_pre = 3u8;
+        let vert_pre = 3u8;
+        let altitude = 3i32;
+        let size = 3u8;
+
+        // if they're North or East, they're "positive"
+        let lat_dir_positive = input.lat_dir == *"N";
+        let lon_dir_positive = input.lon_dir == *"E";
+        LocRecord {
+            version: 0, // because that's the only version!
+            horiz_pre,
+            vert_pre,
+            latitude: dms_to_u32(input.d1, input.m1, input.s1, lat_dir_positive),
+            longitude: dms_to_u32(input.d2, input.m2, input.s2, lon_dir_positive),
+            altitude,
+            size,
+        }
     }
 }

@@ -36,6 +36,7 @@ impl Reply {
                 let ttl: &u32 = match answer {
                     InternalResourceRecord::A { ttl, .. } => ttl,
                     InternalResourceRecord::NAPTR { ttl, .. } => ttl,
+                    InternalResourceRecord::LOC { ttl, .. } => ttl,
                     InternalResourceRecord::NS { ttl, .. } => ttl,
                     InternalResourceRecord::MD { ttl } => ttl,
                     InternalResourceRecord::MF { ttl } => ttl,

@@ -351,3 +351,18 @@ pub fn clap_parser() -> ArgMatches {
         // )
         .get_matches()
 }
+
+/// turn a degrees/minutes/seconds format into unsigned 32-bit integer matching the format
+/// required for a DNS LOC record
+///
+pub fn dms_to_u32(deg: u8, min: u8, sec: f32, positive: bool) -> u32 {
+    let secsfrac = sec % 1f32;
+
+    let dms_multiplied: u32 = (((((deg as u32 * 60) + min as u32) * 60) + sec as u32) * 1000)
+        + (secsfrac * 1000.0) as u32;
+
+    match positive {
+        true => 2u32.pow(31) + dms_multiplied,
+        false => 2u32.pow(31) - dms_multiplied,
+    }
+}

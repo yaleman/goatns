@@ -624,6 +624,7 @@ dependencies = [
  "json5",
  "lazy_static",
  "log",
+ "num-traits",
  "packed_struct",
  "patricia_tree",
  "regex",

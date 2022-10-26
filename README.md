@@ -35,9 +35,6 @@ Or if you want to fuzz the server and test that it doesn't blow up:
 
 There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml file if that's your thing.
 
-## Notes
-
-- [dnslib](https://github.com/paulc/dnslib/) has some good example data
 
 ## Supported record types
 

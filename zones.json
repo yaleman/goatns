@@ -10,6 +10,42 @@
     "records" :
         [
             {
+                "rrtype" : "LOC",
+                "ttl" : 1,
+                "name" : "pizza",
+                "rdata" : "27 28 26.916 S 153 7 30.813 E 8m 10m 100m 10m"
+            },
+            {
+                "rrtype" : "LOC",
+                "ttl" : 1,
+                "name" : "cambridge",
+                "rdata" : "42 21 54 N 71 06 18 W -24m 30m"
+            },
+            {
+                "rrtype" : "LOC",
+                "ttl" : 1,
+                "name" : "loiosh",
+                "rdata" : "42 21 43.952 N 71 5 6.344 W -24m 1m 200m"
+            },
+            {
+                "rrtype" : "LOC",
+                "ttl" : 1,
+                "name" : "pipex",
+                "rdata" : "52 14 05 N 00 08 50 E 10m"
+            },
+            {
+                "rrtype" : "LOC",
+                "ttl" : 1,
+                "name" : "curtin",
+                "rdata" : "32 7 19 S 116 2 25 E 10m"
+            },
+            {
+                "rrtype" : "LOC",
+                "ttl" : 1,
+                "name" : "rwy04L",
+                "rdata" : "42 21 28.764 N 71 00 51.617 W -44m 2000m"
+            },
+            {
                 "rrtype" : "CAA",
                 "ttl" : 1,
                 "rdata" : "0 issue ca.example.net; account=230123"

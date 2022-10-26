@@ -2,12 +2,11 @@ mod e2e_test;
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use crate::resourcerecord::InternalResourceRecord;
+    use crate::resourcerecord::{InternalResourceRecord, LocRecord};
     use crate::utils::name_as_bytes;
     use crate::{PacketType, Question};
     use packed_struct::prelude::*;
+    use std::str::FromStr;
 
     use log::debug;
 
@@ -390,4 +389,80 @@ mod tests {
     //     );
     //     // TODO: make sure *everything* is right here
     // }
+
+    /// turns a degrees-minutes-seconds input into a signed 32-bit integer.
+    /// when positive = true, you're North or West
+
+    #[test]
+    fn test_dms_to_i32() {
+        use crate::utils::dms_to_u32;
+
+        let equator: u32 = 2u32.pow(31);
+        assert_eq!(dms_to_u32(0, 0, 0.0, true), equator);
+
+        assert_eq!(dms_to_u32(1, 2, 3.0, true), 2151206648);
+    }
+
+    #[test]
+    /// this is based on a record in a pcap in the examples directory -
+    fn test_loc_as_bytes() {
+        // pizza.yaleman.org.	69	IN	LOC	1 2 3.000 N 1 2 3.000 E 10.00m 10m 10m 10m
+        // compression header c00c
+        // LOC: 001d
+        // IN: 0001
+        // TTL: 00000045 (69)
+        // Length: 0010 (16)
+        let expected_bytes: [u8; 16] = [
+            0x00, // Version: 0
+            0x13, // size 19 (10m)
+            0x13, // hor pres 19 (10m)
+            0x13, // ver pres 19 (10m)
+            0x80, 0x38, 0xce, 0xf8, // Latitude: 2151206648 (1 deg 2 min 3.000 sec N)
+            0x80, 0x38, 0xce, 0xf8, // Longitude: 2151206648 (1 deg 2 min 3.000 sec E)
+            0x00, 0x98, 0x9a, 0x68, // Altitude: 10001000 (10 m)
+        ];
+
+        let test_record = LocRecord {
+            version: 0,
+            size: 0x13,
+            horiz_pre: 0x13,
+            vert_pre: 0x13,
+            latitude: 2151206648,
+            longitude: 2151206648,
+            altitude: 10001000,
+        };
+        let test_result = test_record.pack().unwrap();
+        assert_eq!(expected_bytes, test_result);
+    }
+
+    #[test]
+    fn test_loc_record_parser() {
+        use crate::resourcerecord::FileLocRecord;
+
+        // Thanks to the folks from #regex on Liberachat
+
+        let sample_data: Vec<(&str, Option<FileLocRecord>, Vec<usize>)> = vec![
+            (
+                "42 21 43.952 N 71 5 6.344 W -24m 1m 200m 15m",
+                None,
+                vec![0, 1, 2, 3],
+            ),
+            (
+                "42 21 43.952 N 71 5 6.344 W -24m 1m 200m",
+                None,
+                vec![0, 2, 3],
+            ),
+            ("32 S 116 E 10m", None, vec![0, 3]),
+            ("32 7 19 S 116 2 25 E 10m", None, vec![]),
+            ("42 21 54 N 71 06 18 W -24m 30m", None, vec![]),
+            ("52 14 05 N 00 08 50 E 10m", None, vec![]),
+            ("42 21 28.764 N 71 00 51.617 W -44m 2000m", None, vec![]),
+        ];
+        for (input, _output, _matches) in sample_data {
+            eprintln!("Testing {input}");
+            let record = FileLocRecord::try_from(input);
+            assert!(record.is_ok())
+        }
+        assert_eq!(1, 2);
+    }
 }

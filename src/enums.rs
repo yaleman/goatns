@@ -80,7 +80,8 @@ pub enum RecordType {
     TXT = 16,
     /// 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
     AAAA = 28,
-
+    /// https://www.rfc-editor.org/rfc/rfc1876
+    LOC = 29,
     /// NAPTR <https://www.rfc-editor.org/rfc/rfc2915>
     NAPTR = 35,
     /// 252 A request for a transfer of an entire zone
@@ -188,6 +189,7 @@ impl From<InternalResourceRecord> for RecordType {
             InternalResourceRecord::ALL { .. } => RecordType::ALL,
             InternalResourceRecord::InvalidType => RecordType::InvalidType,
             InternalResourceRecord::CAA { .. } => RecordType::CAA,
+            InternalResourceRecord::LOC { .. } => RecordType::LOC,
         }
     }
 }
