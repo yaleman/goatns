@@ -73,6 +73,16 @@ mod tests {
             );
         }
 
+        let response = match resolver.lookup(
+            "_mqtt._http.hello.goat",
+            trust_dns_resolver::proto::rr::RecordType::Unknown(256),
+        ) {
+            Ok(value) => value,
+            Err(error) => panic!("{error:?}"),
+        };
+        assert!(!response.records().is_empty());
+        eprintln!("URL response: {response:?}");
+
         // clean up
         info!("Killing goatns");
         res.kill()?;

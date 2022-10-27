@@ -58,10 +58,7 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 - [x] PTR
 - [x] SOA
 - [x] TXT
-- [ ] URI ([RFC 7553](https://www.rfc-editor.org/rfc/rfc7553))
-  - [x] wire representation
-  - [x] file parsing
-  - [ ] tests
+- [x] URI ([RFC 7553](https://www.rfc-editor.org/rfc/rfc7553))
 - [ ] WKS
 
 ## TODO 
