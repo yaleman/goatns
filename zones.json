@@ -13,7 +13,7 @@
                 "rrtype" : "LOC",
                 "ttl" : 1,
                 "name" : "pizza",
-                "rdata" : "27 28 26.916 S 153 7 30.813 E 8m 10m 100m 10m"
+                "rdata" : "27 28 26.916 S 153 7 30.813 E 8m 10m 10000m 10m"
             },
             {
                 "rrtype" : "LOC",

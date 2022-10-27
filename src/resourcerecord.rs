@@ -3,6 +3,7 @@ use crate::utils::{dms_to_u32, hexdump, name_as_bytes};
 use crate::zones::FileZoneRecord;
 use crate::HEADER_BYTES;
 
+use core::fmt::Debug;
 use log::*;
 use num_traits::Num;
 use packed_struct::prelude::*;
@@ -14,6 +15,10 @@ use std::string::FromUtf8Error;
 lazy_static! {
     static ref CAA_TAG_VALIDATOR: Regex = Regex::new(r"[a-zA-Z0-9]").unwrap();
 }
+
+const DEFAULT_LOC_HORIZ_PRE: u32 = 10000;
+const DEFAULT_LOC_VERT_PRE: u32 = 10;
+const DEFAULT_LOC_SIZE: u32 = 1;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DomainName {
@@ -427,20 +432,21 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                 })
             }
             "LOC" => {
+                // we do this here because the conversion process is *so* big.
                 let res: FileLocRecord = match FileLocRecord::try_from(record.rdata.as_str()) {
                     Ok(value) => value,
                     Err(err) => return Err(err),
                 };
-                let lr: LocRecord = res.into();
+
                 Ok(InternalResourceRecord::LOC {
                     ttl: record.ttl,
-                    version: lr.version,
-                    size: lr.size,
-                    horiz_pre: lr.horiz_pre,
-                    vert_pre: lr.vert_pre,
-                    latitude: lr.latitude,
-                    longitude: lr.longitude,
-                    altitude: lr.altitude,
+                    version: 0,
+                    size: res.size,
+                    horiz_pre: res.horiz_pre,
+                    vert_pre: res.vert_pre,
+                    latitude: dms_to_u32(res.d1, res.m1, res.s1, res.lat_dir == *"N"),
+                    longitude: dms_to_u32(res.d2, res.m2, res.s2, res.lon_dir == *"E"),
+                    altitude: res.alt,
                 })
                 // Err("LOC not finished!".to_string())
             }
@@ -682,7 +688,10 @@ mod tests {
             ttl: 160u32,
         };
         debug!("fzr: {fzr}");
-        let converted = Ipv6Addr::from_str(&fzr.rdata).unwrap();
+        let converted = match Ipv6Addr::from_str(&fzr.rdata) {
+            Ok(value) => value,
+            Err(err) => panic!("Failed to convert rdata to string: {err:?}"),
+        };
         debug!("conversion: {:?}", converted);
         let rr: InternalResourceRecord = match fzr.try_into() {
             Ok(value) => value,
@@ -717,14 +726,15 @@ mod tests {
 }
 
 lazy_static! {
+    // Thanks to the folks from #regex on Liberachat
     static ref LOC_REGEX: Regex = Regex::new(
-        r"^(?P<d1>\d+)(?:[ ](?P<m1>\d+)(?:[ ](?P<s1>\d+(?:[.]\d+)?))?)?[ ](?P<lat_dir>[NS])[ ](?P<d2>\d+)(?:[ ](?P<m2>\d+)(?:[ ](?P<s2>\d+(?:[.]\d+)?))?)?[ ](?P<lon_dir>[EW])[ ](?P<alt>-?\d+(?:[.]\d+)?)m(?:[ ](?P<siz>\d+(?:[.]\d+)?)m(?:[ ](?P<hp>\d+(?:[.]\d+)?)m(?:[ ](?P<vp>\d+(?:[.]\d+)?)m)?)?)?",
+        r"^(?P<d1>\d+)(?:[ ](?P<m1>\d+)(?:[ ](?P<s1>\d+(?:[.]\d+)?))?)?[ ](?P<lat_dir>[NS])[ ](?P<d2>\d+)(?:[ ](?P<m2>\d+)(?:[ ](?P<s2>\d+(?:[.]\d+)?))?)?[ ](?P<lon_dir>[EW])[ ](?P<alt>-?\d+(?:[.]\d+)?)m(?:[ ](?P<size>\d+(?:[.]\d+)?)m(?:[ ](?P<hp>\d+(?:[.]\d+)?)m(?:[ ](?P<vp>\d+(?:[.]\d+)?)m)?)?)?",
     ).unwrap();
 
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(PartialEq)]
 /// This represents a LOC record in a zone file
 pub struct FileLocRecord {
     pub d1: u8,
@@ -736,9 +746,47 @@ pub struct FileLocRecord {
     pub lat_dir: String,
     pub lon_dir: String,
     pub alt: i32,
-    pub size: u32,
-    pub hp: String,
-    pub vp: String,
+    pub size: u8,
+    pub horiz_pre: u8,
+    pub vert_pre: u8,
+}
+
+impl Default for FileLocRecord {
+    fn default() -> Self {
+        Self {
+            d1: 0,
+            m1: 0,
+            s1: 0.0,
+            d2: 0,
+            m2: 0,
+            s2: 0.0,
+            lat_dir: Default::default(),
+            lon_dir: Default::default(),
+            alt: Default::default(),
+            size: 0x12,      // 1m (100cm)
+            horiz_pre: 0x16, // 10000m (1,000,000 cm)
+            vert_pre: 0x13,  // 10m (1,000cm)
+        }
+    }
+}
+
+impl Debug for FileLocRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FileLocRecord")
+            .field("d1", &self.d1)
+            .field("m1", &self.m1)
+            .field("s1", &self.s1)
+            .field("lat_dir", &self.lat_dir)
+            .field("d2", &self.d2)
+            .field("m2", &self.m2)
+            .field("s2", &self.s2)
+            .field("lon_dir", &self.lon_dir)
+            .field("alt", &self.alt)
+            .field("size", &format_args!("0x{:2x}", &self.size))
+            .field("horiz_pre", &format_args!("0x{:2x}", &self.horiz_pre))
+            .field("vert_pre", &format_args!("0x{:2x}", &self.vert_pre))
+            .finish()
+    }
 }
 
 impl TryFrom<&str> for FileLocRecord {
@@ -779,24 +827,27 @@ impl TryFrom<&str> for FileLocRecord {
                 Ok(value) => value,
                 Err(err) => {
                     error!("Failed to parse m1: {err:?}");
-                    0
+                    FileLocRecord::default().m1
                 }
             },
-            None => 0,
+            None => FileLocRecord::default().m1,
         };
         let m2: u8 = match result.name("m2") {
             Some(value) => match value.as_str().parse::<u8>() {
                 Ok(value) => value,
                 Err(err) => {
                     error!("Failed to parse m2: {err:?}");
-                    0
+                    FileLocRecord::default().m2
                 }
             },
-            None => 0,
+            None => FileLocRecord::default().m2,
         };
         let s1: f32 = match result.name("s1") {
             Some(value) => match f32::from_str_radix(value.as_str(), 10) {
-                Ok(value) => value,
+                Ok(value) => {
+                    debug!("Parsed s1 as {value} from string");
+                    value
+                }
                 Err(err) => {
                     error!("Failed to parse s1: {err:?}");
                     0.0
@@ -828,23 +879,62 @@ impl TryFrom<&str> for FileLocRecord {
             }
         };
 
-        let alt: String = match result.name("alt") {
-            Some(value) => value.as_str().into(),
-            None => todo!(),
+        let alt: i32 = match result.name("alt") {
+            Some(value) => match value.as_str().parse::<i32>() {
+                Ok(value) => value,
+                Err(err) => return Err(format!("Error parsing altitude: {err:?}")),
+            },
+            None => return Err("Error finding altitude!".to_string()),
         };
+        // here we work out the final value for the altitude
+        // let altfrac = alt_num % 100;
+        // let altmeters = alt_num ;
+        let alt = 10000000 + (alt * 100);
+
         let size: u32 = match result.name("size") {
-            Some(value) => value.as_str().parse::<u32>().unwrap(),
-            // u32::from_str_radix(value.as_str(), 10).unwrap(),
-            None => 1,
+            Some(value) => match value.as_str().parse::<u32>() {
+                Ok(value) => {
+                    debug!("Parsed size as {value} from string");
+                    value
+                }
+                Err(err) => return Err(format!("Failed to parse size: {value:?}, {err:?}")),
+            },
+            None => {
+                trace!("defaulting to size of 1");
+                DEFAULT_LOC_SIZE
+            }
         };
-        let hp: String = match result.name("hp") {
-            Some(value) => value.as_str().into(),
-            None => "10000".to_string(),
+        let size = crate::utils::loc_size_to_u8(size as f32);
+
+        let horiz_pre: u32 = match result.name("hp") {
+            Some(value) => match value.as_str().parse::<u32>() {
+                Ok(value) => value,
+                Err(_) => {
+                    warn!("Failed to parse {value:?} as horizontal precision, using default");
+                    DEFAULT_LOC_HORIZ_PRE
+                }
+            },
+            None => {
+                trace!("returning default as horiz_pre wasn't set");
+                DEFAULT_LOC_HORIZ_PRE
+            }
         };
-        let vp: String = match result.name("vp") {
-            Some(value) => value.as_str().into(),
-            None => "10".to_string(),
+        let horiz_pre = crate::utils::loc_size_to_u8(horiz_pre as f32);
+        let vert_pre: u32 = match result.name("vp") {
+            Some(value) => match value.as_str().parse::<u32>() {
+                Ok(value) => value,
+                Err(_) => {
+                    warn!("Failed to parse {value:?} as vertical precision, using default");
+                    DEFAULT_LOC_VERT_PRE
+                }
+            },
+
+            None => {
+                trace!("returning default as vert_pre wasn't set");
+                DEFAULT_LOC_VERT_PRE
+            }
         };
+        let vert_pre = crate::utils::loc_size_to_u8(vert_pre as f32);
         Ok(FileLocRecord {
             d1,
             d2,
@@ -854,33 +944,10 @@ impl TryFrom<&str> for FileLocRecord {
             s2,
             lat_dir,
             lon_dir,
-            alt: alt.as_str().parse::<i32>().unwrap_or(-1),
+            alt,
             size,
-            hp,
-            vp,
-        })
-    }
-}
-
-impl From<FileLocRecord> for LocRecord {
-    fn from(input: FileLocRecord) -> Self {
-        // TODO: fix these conversions
-        let horiz_pre = 3u8;
-        let vert_pre = 3u8;
-        let altitude = 3i32;
-        let size = 3u8;
-
-        // if they're North or East, they're "positive"
-        let lat_dir_positive = input.lat_dir == *"N";
-        let lon_dir_positive = input.lon_dir == *"E";
-        LocRecord {
-            version: 0, // because that's the only version!
             horiz_pre,
             vert_pre,
-            latitude: dms_to_u32(input.d1, input.m1, input.s1, lat_dir_positive),
-            longitude: dms_to_u32(input.d2, input.m2, input.s2, lon_dir_positive),
-            altitude,
-            size,
-        }
+        })
     }
 }
