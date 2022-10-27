@@ -3,6 +3,7 @@ use crate::{Header, PacketType, Rcode, HEADER_BYTES};
 // use clap::{arg, command, value_parser, ArgAction, ArgMatches, Command};
 use clap::{arg, command, value_parser, ArgMatches};
 use log::{debug, trace};
+// use num_traits::Num;
 use std::str::from_utf8;
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
@@ -350,4 +351,61 @@ pub fn clap_parser() -> ArgMatches {
         //         .arg(arg!(-l --list "lists test values").action(ArgAction::SetTrue)),
         // )
         .get_matches()
+}
+
+/// turn a degrees/minutes/seconds format into unsigned 32-bit integer matching the format
+/// required for a DNS LOC record
+///
+pub fn dms_to_u32(deg: u8, min: u8, sec: f32, positive: bool) -> u32 {
+    let secsfrac = sec % 1f32;
+
+    let dms_multiplied: u32 = (((((deg as u32 * 60) + min as u32) * 60) + sec as u32) * 1000)
+        + (secsfrac * 1000.0) as u32;
+
+    match positive {
+        true => 2u32.pow(31) + dms_multiplied,
+        false => 2u32.pow(31) - dms_multiplied,
+    }
+}
+
+/// converts size/precision X * 10**Y(cm) to 0xXY
+/// This code is ported from the C code in RFC1876 (Appendix A, precsize_aton)
+#[allow(dead_code)]
+pub fn loc_size_to_u8(input: f32) -> u8 {
+    let mut mantissa: u8;
+
+    let cmval = input * 100.0;
+
+    let mut exponent = 0;
+    for i in 0..10 {
+        if (cmval as f64) < (10u64.pow(i + 1) as f64) {
+            exponent = i;
+            // eprintln!("CMVAL: {cmval} Exponent #{i} {}", (poweroften[i+1] as u64));
+            break;
+        }
+    }
+    // eprintln!("{:?}", ((cmval as f64) / (poweroften[exponent] as f64) ).ceil());
+    mantissa = ((cmval as f64) / (10u64.pow(exponent) as f64)).ceil() as u8;
+    if mantissa > 9u8 {
+        mantissa = 9u8;
+    }
+    // eprintln!("mantissa: {mantissa}, exponent: {exponent}");
+    // turn it into the magic ugly numbers
+    let retval: u8 = (mantissa << 4) | (exponent as u8);
+    retval
+}
+
+#[test]
+fn test_loc_size_to_u8() {
+    // let test = "10";
+    // let res = loc_size_to_u8(&test).unwrap();
+    // eprintln!("res: {res:3x}");
+
+    // assert_eq!(1,2);
+    assert_eq!(loc_size_to_u8(10.0), 0x13);
+    assert_eq!(loc_size_to_u8(100.0), 0x14);
+    eprintln!("testing 90000000.0 = 0x99");
+    assert_eq!(loc_size_to_u8(90000000.0), 0x99);
+    eprintln!("{:3x}", loc_size_to_u8(20000000.0));
+    // assert_eq!(loc_size_to_u8(20000000.0), Ok(0x29));
 }

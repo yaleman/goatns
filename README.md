@@ -35,9 +35,6 @@ Or if you want to fuzz the server and test that it doesn't blow up:
 
 There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml file if that's your thing.
 
-## Notes
-
-- [dnslib](https://github.com/paulc/dnslib/) has some good example data
 
 ## Supported record types
 
@@ -45,6 +42,7 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 - [x] AAAA
 - [x] CNAME
 - [x] HINFO
+- [X] LOC
 - [x] MX
 - [x] NS
 - [x] PTR
@@ -57,15 +55,15 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
   - [x] allow records with an `@` value for `name` which are apex records.
     - [ ] maaaaybe support flattening of apex records?
   - [ ] record caching instead of loading everything into memory
-  - [ ] message length enforcement and testing ([RFC 1035](https://www.rfc-editor.org/rfc/rfc1035#section-2.3.4) 2.3.4. Size limits)
+  - [x] message length enforcement and testing ([RFC 1035](https://www.rfc-editor.org/rfc/rfc1035#section-2.3.4) 2.3.4. Size limits)
     - [x] labels          63 octets or less
     - [x] names           255 octets or less
     - [x] TTL             positive values of a signed 32 bit number.
     - [x] UDP messages    512 octets or less ? I think this got extended?
   - [x] partial compression based on things
   - [x] TTL handling from the records
-  - [ ] TODO: SLIST? <https://www.rfc-editor.org/rfc/rfc1034> something about state handling.
   - [x] lowercase all question name fields - done in the datastore query
   - [x] lowercase all reply name fields
   - [ ] at some point we should be checking that if the zonerecord has a TTL of None, then it should be pulling from the SOA/zone
   - [ ] cleaner ctrl-c handling or shutdown in general
+  - [ ] good e2e tests for LOC records from zone files

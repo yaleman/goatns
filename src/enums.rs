@@ -80,7 +80,8 @@ pub enum RecordType {
     TXT = 16,
     /// 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
     AAAA = 28,
-
+    /// https://www.rfc-editor.org/rfc/rfc1876
+    LOC = 29,
     /// NAPTR <https://www.rfc-editor.org/rfc/rfc2915>
     NAPTR = 35,
     /// 252 A request for a transfer of an entire zone
@@ -114,7 +115,8 @@ impl From<&u16> for RecordType {
             14 => Self::MINFO,
             15 => Self::MX,
             16 => Self::TXT,
-            28 => Self::AAAA,  // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+            28 => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+            29 => Self::LOC,
             35 => Self::NAPTR, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
             252 => Self::AXFR,
             253 => Self::MAILB,
@@ -136,26 +138,27 @@ impl From<&str> for RecordType {
     fn from(input: &str) -> Self {
         match input {
             "A" => Self::A,
-            "NS" => Self::NS,
+            "AAAA" => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+            "ALL" => Self::ALL,
+            "AXFR" => Self::AXFR,
+            "CNAME" => Self::CNAME,
+            "HINFO" => Self::HINFO,
+            "LOC" => Self::LOC,
+            "MAILB" => Self::MAILB,
+            "MB" => Self::MB,
             "MD" => Self::MD,
             "MF" => Self::MF,
-            "CNAME" => Self::CNAME,
-            "SOA" => Self::SOA,
-            "MB" => Self::MB,
             "MG" => Self::MG,
-            "MR" => Self::MR,
-            "NULL" => Self::NULL,
-            "WKS" => Self::WKS,
-            "PTR" => Self::PTR,
-            "HINFO" => Self::HINFO,
             "MINFO" => Self::MINFO,
+            "MR" => Self::MR,
             "MX" => Self::MX,
-            "TXT" => Self::TXT,
-            "AAAA" => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
             "NAPTR" => Self::NAPTR,
-            "AXFR" => Self::AXFR,
-            "MAILB" => Self::MAILB,
-            "ALL" => Self::ALL,
+            "NS" => Self::NS,
+            "NULL" => Self::NULL,
+            "PTR" => Self::PTR,
+            "SOA" => Self::SOA,
+            "TXT" => Self::TXT,
+            "WKS" => Self::WKS,
             _ => Self::InvalidType,
         }
     }
@@ -164,30 +167,31 @@ impl From<&str> for RecordType {
 impl From<InternalResourceRecord> for RecordType {
     fn from(input: InternalResourceRecord) -> Self {
         match input {
+            // InternalResourceRecord::MAILA { .. } => RecordType::MAILA,
             InternalResourceRecord::A { .. } => RecordType::A,
-            InternalResourceRecord::NS { .. } => RecordType::NS,
+            InternalResourceRecord::AAAA { .. } => RecordType::AAAA,
+            InternalResourceRecord::ALL { .. } => RecordType::ALL,
+            InternalResourceRecord::AXFR { .. } => RecordType::AXFR,
+            InternalResourceRecord::CAA { .. } => RecordType::CAA,
+            InternalResourceRecord::CNAME { .. } => RecordType::CNAME,
+            InternalResourceRecord::HINFO { .. } => RecordType::HINFO,
+            InternalResourceRecord::InvalidType => RecordType::InvalidType,
+            InternalResourceRecord::LOC { .. } => RecordType::LOC,
+            InternalResourceRecord::MAILB { .. } => RecordType::MAILB,
+            InternalResourceRecord::MB { .. } => RecordType::MB,
             InternalResourceRecord::MD { .. } => RecordType::MD,
             InternalResourceRecord::MF { .. } => RecordType::MF,
-            InternalResourceRecord::CNAME { .. } => RecordType::CNAME,
-            InternalResourceRecord::SOA { .. } => RecordType::SOA,
-            InternalResourceRecord::MB { .. } => RecordType::MB,
             InternalResourceRecord::MG { .. } => RecordType::MG,
-            InternalResourceRecord::MR { .. } => RecordType::MR,
-            InternalResourceRecord::NULL { .. } => RecordType::NULL,
-            InternalResourceRecord::WKS { .. } => RecordType::WKS,
-            InternalResourceRecord::PTR { .. } => RecordType::PTR,
-            InternalResourceRecord::HINFO { .. } => RecordType::HINFO,
             InternalResourceRecord::MINFO { .. } => RecordType::MINFO,
+            InternalResourceRecord::MR { .. } => RecordType::MR,
             InternalResourceRecord::MX { .. } => RecordType::MX,
-            InternalResourceRecord::TXT { .. } => RecordType::TXT,
-            InternalResourceRecord::AAAA { .. } => RecordType::AAAA,
-            InternalResourceRecord::AXFR { .. } => RecordType::AXFR,
-            InternalResourceRecord::MAILB { .. } => RecordType::MAILB,
             InternalResourceRecord::NAPTR { .. } => RecordType::NAPTR,
-            // InternalResourceRecord::MAILA { .. } => RecordType::MAILA,
-            InternalResourceRecord::ALL { .. } => RecordType::ALL,
-            InternalResourceRecord::InvalidType => RecordType::InvalidType,
-            InternalResourceRecord::CAA { .. } => RecordType::CAA,
+            InternalResourceRecord::NS { .. } => RecordType::NS,
+            InternalResourceRecord::NULL { .. } => RecordType::NULL,
+            InternalResourceRecord::PTR { .. } => RecordType::PTR,
+            InternalResourceRecord::SOA { .. } => RecordType::SOA,
+            InternalResourceRecord::TXT { .. } => RecordType::TXT,
+            InternalResourceRecord::WKS { .. } => RecordType::WKS,
         }
     }
 }
@@ -196,16 +200,17 @@ impl RecordType {
     pub fn supported(self: RecordType) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match self {
-            RecordType::A => true,
-            RecordType::AAAA => true,
-            RecordType::CAA => true,
-            RecordType::CNAME => true,
-            RecordType::HINFO => true,
-            RecordType::MX => true,
-            RecordType::PTR => true,
-            RecordType::SOA => true,
-            RecordType::TXT => true,
-            RecordType::NS => true,
+            RecordType::A
+            | RecordType::AAAA
+            | RecordType::CAA
+            | RecordType::CNAME
+            | RecordType::HINFO
+            | RecordType::LOC
+            | RecordType::MX
+            | RecordType::NS
+            | RecordType::PTR
+            | RecordType::SOA
+            | RecordType::TXT => true,
             _ => false,
         }
     }
