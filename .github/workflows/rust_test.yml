@@ -7,7 +7,7 @@ name: "Rust Test"
   pull_request:
 
 jobs:
-  rust_build:
+  rust_test:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
