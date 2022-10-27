@@ -88,7 +88,7 @@ pub enum RecordType {
     AXFR = 252,
     /// 253 A request for mailbox-related records (MB, MG or MR)
     MAILB = 253,
-
+    URI = 256,
     /// 255 A request for all records (*)
     ALL = 255,
     /// Certification Authority Restriction - <https://www.rfc-editor.org/rfc/rfc6844.txt>
@@ -121,6 +121,7 @@ impl From<&u16> for RecordType {
             252 => Self::AXFR,
             253 => Self::MAILB,
             255 => Self::ALL,
+            256 => Self::URI,
             257 => Self::CAA,
             _ => Self::InvalidType,
         }
@@ -191,6 +192,7 @@ impl From<InternalResourceRecord> for RecordType {
             InternalResourceRecord::PTR { .. } => RecordType::PTR,
             InternalResourceRecord::SOA { .. } => RecordType::SOA,
             InternalResourceRecord::TXT { .. } => RecordType::TXT,
+            InternalResourceRecord::URI { .. } => RecordType::URI,
             InternalResourceRecord::WKS { .. } => RecordType::WKS,
         }
     }
@@ -210,7 +212,8 @@ impl RecordType {
             | RecordType::NS
             | RecordType::PTR
             | RecordType::SOA
-            | RecordType::TXT => true,
+            | RecordType::TXT
+            | RecordType::URI => true,
             _ => false,
         }
     }

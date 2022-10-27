@@ -10,6 +10,12 @@
     "records" :
         [
             {
+                "rrtype" : "URI",
+                "ttl" : 5,
+                "name" : "_mqtt._http",
+                "rdata" : "1 2 mqtt://example.goat"
+            },
+            {
                 "rrtype" : "LOC",
                 "ttl" : 1,
                 "name" : "pizza",

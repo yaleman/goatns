@@ -485,55 +485,67 @@ mod tests {
                     ..Default::default()
                 },
             ),
-            ("32 7 19 S 116 2 25 E 10m",  FileLocRecord {
-                d1: 32,
-                m1: 7,
-                s1: 19.0,
-                lat_dir: "S".to_string(),
-                d2: 116,
-                m2: 2,
-                s2: 25.0,
-                lon_dir: "E".to_string(),
-                alt: 10000000 + (10 * 100),
-                ..FileLocRecord::default()
-            }),
-            ("42 21 54 N 71 06 18 W -24m 30m",  FileLocRecord {
-                d1: 42,
-                m1: 21,
-                s1: 54.0,
-                lat_dir: "N".to_string(),
-                d2: 71,
-                m2: 6,
-                s2: 18.0,
-                lon_dir: "W".to_string(),
-                alt: (-24 * 100 ) + 10000000,
-                size: 0x33,
-                ..FileLocRecord::default()
-            }),
-            ("52 14 05 N 00 08 50 E 10m", FileLocRecord {
-                d1: 52,
-                m1: 14,
-                s1: 5.0,
-                lat_dir: "N".to_string(),
-                m2: 8,
-                s2: 50.0,
-                lon_dir: "E".to_string(),
-                alt: (10 * 100 ) + 10000000,
-                ..FileLocRecord::default()
-            }),
-            ("42 21 28.764 N 71 00 51.617 W -44m 2000m", FileLocRecord {
-                d1: 42,
-                m1: 21,
-                s1: 28.764,
-                lat_dir: "N".to_string(),
-                d2: 71,
-                m2: 0,
-                s2: 51.617,
-                lon_dir: "W".to_string(),
-                alt: ( -44 * 100 ) + 10000000,
-                size: 0x25,
-                ..FileLocRecord::default()
-            }),
+            (
+                "32 7 19 S 116 2 25 E 10m",
+                FileLocRecord {
+                    d1: 32,
+                    m1: 7,
+                    s1: 19.0,
+                    lat_dir: "S".to_string(),
+                    d2: 116,
+                    m2: 2,
+                    s2: 25.0,
+                    lon_dir: "E".to_string(),
+                    alt: 10000000 + (10 * 100),
+                    ..FileLocRecord::default()
+                },
+            ),
+            (
+                "42 21 54 N 71 06 18 W -24m 30m",
+                FileLocRecord {
+                    d1: 42,
+                    m1: 21,
+                    s1: 54.0,
+                    lat_dir: "N".to_string(),
+                    d2: 71,
+                    m2: 6,
+                    s2: 18.0,
+                    lon_dir: "W".to_string(),
+                    alt: (-24 * 100) + 10000000,
+                    size: 0x33,
+                    ..FileLocRecord::default()
+                },
+            ),
+            (
+                "52 14 05 N 00 08 50 E 10m",
+                FileLocRecord {
+                    d1: 52,
+                    m1: 14,
+                    s1: 5.0,
+                    lat_dir: "N".to_string(),
+                    m2: 8,
+                    s2: 50.0,
+                    lon_dir: "E".to_string(),
+                    alt: (10 * 100) + 10000000,
+                    ..FileLocRecord::default()
+                },
+            ),
+            (
+                "42 21 28.764 N 71 00 51.617 W -44m 2000m",
+                FileLocRecord {
+                    d1: 42,
+                    m1: 21,
+                    s1: 28.764,
+                    lat_dir: "N".to_string(),
+                    d2: 71,
+                    m2: 0,
+                    s2: 51.617,
+                    lon_dir: "W".to_string(),
+                    alt: (-44 * 100) + 10000000,
+                    size: 0x25,
+                    ..FileLocRecord::default()
+                },
+            ),
         ];
         for (input, output) in sample_data {
             eprintln!("Testing {input}");
