@@ -14,6 +14,8 @@ use std::string::FromUtf8Error;
 
 lazy_static! {
     static ref CAA_TAG_VALIDATOR: Regex = Regex::new(r"[a-zA-Z0-9]").unwrap();
+    static ref URI_RECORD: Regex =
+        Regex::new(r#"^(?P<priority>\d+) (?P<weight>\d+) (?P<target>.*)"#).unwrap();
 }
 
 const DEFAULT_LOC_HORIZ_PRE: u32 = 10000;
@@ -139,6 +141,14 @@ pub enum InternalResourceRecord {
         address: u32,
         ttl: u32,
     },
+    AAAA {
+        address: u128,
+        ttl: u32,
+    }, // 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+    AXFR {
+        ttl: u32,
+    }, // 252 A request for a transfer of an entire zone
+
     // [RFC8659](https://www.rfc-editor.org/rfc/rfc8659) - CAA Record
     CAA {
         flag: u8,
@@ -147,6 +157,27 @@ pub enum InternalResourceRecord {
         /// A sequence of octets representing the Property Value. Property Values are encoded as binary values and MAY employ sub‑formats.
         value: Vec<u8>,
         ttl: u32,
+    },
+    MD {
+        ttl: u32,
+    }, // 3 a mail destination (Obsolete - use MX)
+    MF {
+        ttl: u32,
+    }, // 4 a mail forwarder (Obsolete - use MX)
+    CNAME {
+        cname: DomainName,
+        ttl: u32,
+    }, // 5 the canonical name for an alias
+    LOC {
+        ttl: u32,
+        /// Version number of the representation.  This must be zero. Implementations are required to check this field and make no assumptions about the format of unrecognized versions.
+        version: u8,
+        size: u8,
+        horiz_pre: u8,
+        vert_pre: u8,
+        latitude: u32,
+        longitude: u32,
+        altitude: i32,
     },
     NAPTR {
         ttl: u32,
@@ -197,16 +228,6 @@ pub enum InternalResourceRecord {
         nsdname: DomainName,
         ttl: u32,
     }, // 2 an authoritative name server
-    MD {
-        ttl: u32,
-    }, // 3 a mail destination (Obsolete - use MX)
-    MF {
-        ttl: u32,
-    }, // 4 a mail forwarder (Obsolete - use MX)
-    CNAME {
-        cname: DomainName,
-        ttl: u32,
-    }, // 5 the canonical name for an alias
     SOA {
         // The zone that this SOA record is for - eg hello.goat or example.com
         zone: DomainName,
@@ -221,17 +242,7 @@ pub enum InternalResourceRecord {
         minimum: u32,
         // this doesn't get a TTL, since that's an expire?
     }, // 6 marks the start of a zone of authority
-    LOC {
-        ttl: u32,
-        /// Version number of the representation.  This must be zero. Implementations are required to check this field and make no assumptions about the format of unrecognized versions.
-        version: u8,
-        size: u8,
-        horiz_pre: u8,
-        vert_pre: u8,
-        latitude: u32,
-        longitude: u32,
-        altitude: i32,
-    },
+
     MB {
         ttl: u32,
     }, // 7 a mailbox domain name (EXPERIMENTAL)
@@ -268,13 +279,12 @@ pub enum InternalResourceRecord {
         txtdata: DNSCharString,
         ttl: u32,
     }, // 16 text strings
-    AAAA {
-        address: u128,
+    URI {
+        priority: u16,
+        weight: u16,
+        target: DNSCharString,
         ttl: u32,
-    }, // 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
-    AXFR {
-        ttl: u32,
-    }, // 252 A request for a transfer of an entire zone
+    },
 
     MAILB {
         ttl: u32,
@@ -359,18 +369,14 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                 cname: DomainName::from(record.rdata),
                 ttl: record.ttl,
             }),
-            "TXT" => Ok(InternalResourceRecord::TXT {
-                txtdata: DNSCharString {
-                    data: record.rdata.into_bytes(),
-                },
-                ttl: record.ttl,
-            }),
             "PTR" => Ok(InternalResourceRecord::PTR {
                 ptrdname: DomainName::from(record.rdata),
                 ttl: record.ttl,
             }),
-            "NS" => Ok(InternalResourceRecord::NS {
-                nsdname: DomainName::from(record.rdata),
+            "TXT" => Ok(InternalResourceRecord::TXT {
+                txtdata: DNSCharString {
+                    data: record.rdata.into_bytes(),
+                },
                 ttl: record.ttl,
             }),
             "MX" => {
@@ -397,6 +403,10 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                     ttl: record.ttl,
                 })
             }
+            "NS" => Ok(InternalResourceRecord::NS {
+                nsdname: DomainName::from(record.rdata),
+                ttl: record.ttl,
+            }),
             "CAA" => {
                 let split_bit: Vec<&str> = record.rdata.split(' ').collect();
                 if split_bit.len() < 3 {
@@ -450,6 +460,42 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                 })
                 // Err("LOC not finished!".to_string())
             }
+            "URI" => {
+                let matches = match URI_RECORD.captures(&record.rdata) {
+                    Some(value) => value,
+                    None => return Err("Failed to parse URL record!".to_string()),
+                };
+
+                let priority = match matches.name("priority") {
+                    Some(value) => match value.as_str().parse::<u16>() {
+                        Ok(value) => value,
+                        Err(err) => {
+                            return Err(format!("Failed to parse priority into u16: {err:?}"))
+                        }
+                    },
+                    None => return Err("No target found in record?".to_string()),
+                };
+                let weight = match matches.name("weight") {
+                    Some(value) => match value.as_str().parse::<u16>() {
+                        Ok(value) => value,
+                        Err(err) => {
+                            return Err(format!("Failed to parse weight into u16: {err:?}"))
+                        }
+                    },
+                    None => return Err("No target found in record?".to_string()),
+                };
+                let target = match matches.name("target") {
+                    Some(value) => DNSCharString::from(value.as_str()),
+                    None => return Err("No target found in record?".to_string()),
+                };
+
+                Ok(InternalResourceRecord::URI {
+                    priority,
+                    weight,
+                    target,
+                    ttl: record.ttl,
+                })
+            }
             _ => Err("Invalid type specified!".to_string()),
         }
     }
@@ -483,6 +529,7 @@ impl PartialEq<RecordType> for InternalResourceRecord {
             InternalResourceRecord::PTR { .. } => other == &RecordType::PTR,
             InternalResourceRecord::SOA { .. } => other == &RecordType::SOA,
             InternalResourceRecord::TXT { .. } => other == &RecordType::TXT,
+            InternalResourceRecord::URI { .. } => other == &RecordType::URI,
             InternalResourceRecord::WKS { .. } => other == &RecordType::WKS,
         }
     }
@@ -493,11 +540,13 @@ impl InternalResourceRecord {
         match self {
             InternalResourceRecord::A { address, ttl: _ } => address.to_be_bytes().to_vec(),
             InternalResourceRecord::AAAA { address, ttl: _ } => address.to_be_bytes().to_vec(),
-            InternalResourceRecord::TXT { txtdata, ttl: _ } => txtdata.as_bytes(),
 
+            InternalResourceRecord::CNAME { cname, .. } => {
+                trace!("turning CNAME {cname:?} into bytes");
+                cname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
+            }
             // InternalResourceRecord::MD {  } => todo!(),
             // InternalResourceRecord::MF {  } => todo!(),
-            #[allow(unused_variables)]
             InternalResourceRecord::LOC {
                 ttl,
                 version,
@@ -522,14 +571,16 @@ impl InternalResourceRecord {
                 match record {
                     Ok(value) => value,
                     Err(error) => {
-                        error!("Failed to pack this: {self:?}");
+                        error!("Failed to pack this: {self:?} {error:?}");
                         vec![]
                     }
                 }
             }
-            InternalResourceRecord::CNAME { cname, .. } => {
-                trace!("turning CNAME {cname:?} into bytes");
-                cname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
+            InternalResourceRecord::NS { nsdname, ttl: _ } => {
+                nsdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
+            }
+            InternalResourceRecord::PTR { ptrdname, ttl: _ } => {
+                ptrdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
             }
             InternalResourceRecord::SOA {
                 zone,
@@ -554,17 +605,24 @@ impl InternalResourceRecord {
                 res.extend(minimum.to_be_bytes());
                 res
             }
+            InternalResourceRecord::TXT { txtdata, ttl: _ } => txtdata.as_bytes(),
+            InternalResourceRecord::URI {
+                priority,
+                weight,
+                target,
+                ..
+            } => {
+                let mut res = vec![];
+                res.extend(priority.to_be_bytes());
+                res.extend(weight.to_be_bytes());
+                res.extend(&target.data);
+                res
+            }
             // InternalResourceRecord::MB {  } => todo!(),
             // InternalResourceRecord::MG {  } => todo!(),
             // InternalResourceRecord::MR {  } => todo!(),
             // InternalResourceRecord::NULL {  } => todo!(),
             // InternalResourceRecord::WKS {  } => todo!(),
-            InternalResourceRecord::NS { nsdname, ttl: _ } => {
-                nsdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
-            }
-            InternalResourceRecord::PTR { ptrdname, ttl: _ } => {
-                ptrdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
-            }
             InternalResourceRecord::HINFO { cpu, os, ttl: _ } => {
                 let mut hinfo_bytes: Vec<u8> = vec![];
                 match cpu {
@@ -845,7 +903,7 @@ impl TryFrom<&str> for FileLocRecord {
         let s1: f32 = match result.name("s1") {
             Some(value) => match f32::from_str_radix(value.as_str(), 10) {
                 Ok(value) => {
-                    debug!("Parsed s1 as {value} from string");
+                    trace!("Parsed s1 as {value} from string");
                     value
                 }
                 Err(err) => {
@@ -894,7 +952,7 @@ impl TryFrom<&str> for FileLocRecord {
         let size: u32 = match result.name("size") {
             Some(value) => match value.as_str().parse::<u32>() {
                 Ok(value) => {
-                    debug!("Parsed size as {value} from string");
+                    trace!("Parsed size as {value} from string");
                     value
                 }
                 Err(err) => return Err(format!("Failed to parse size: {value:?}, {err:?}")),

@@ -36,19 +36,33 @@ Or if you want to fuzz the server and test that it doesn't blow up:
 There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml file if that's your thing.
 
 
-## Supported record types
+## Supported request/record types
 
 - [x] A
 - [x] AAAA
+- [ ] AXFR
+- [x] CAA
 - [x] CNAME
 - [x] HINFO
 - [X] LOC
+- [ ] MAILB
+- [ ] MB
+- [ ] MD
+- [ ] MF
+- [ ] MG
+- [ ] MINFO
+- [ ] MR
 - [x] MX
+- [ ] NAPTR
 - [x] NS
 - [x] PTR
 - [x] SOA
 - [x] TXT
-- [x] CAA
+- [ ] URI ([RFC 7553](https://www.rfc-editor.org/rfc/rfc7553))
+  - [x] wire representation
+  - [x] file parsing
+  - [ ] tests
+- [ ] WKS
 
 ## TODO 
 

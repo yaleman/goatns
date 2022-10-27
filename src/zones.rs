@@ -2,6 +2,7 @@ use crate::config::ConfigFile;
 use crate::resourcerecord::{DomainName, InternalResourceRecord};
 use log::{debug, error, info};
 use patricia_tree::PatriciaMap;
+
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::fs::File;

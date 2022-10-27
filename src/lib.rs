@@ -296,7 +296,6 @@ impl Question {
         }
         qtype_bytes.copy_from_slice(&buf[read_pointer..read_pointer + 2]);
         let qtype = RecordType::from(&u16::from_be_bytes(qtype_bytes));
-
         let mut qclass_bytes: [u8; 2] = [0; 2];
         if buf[read_pointer + 2..read_pointer + 4].len() != 2 {
             return Err(
