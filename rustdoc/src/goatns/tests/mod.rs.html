@@ -555,6 +555,10 @@
 <span id="555">555</span>
 <span id="556">556</span>
 <span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
 </pre><pre class="rust"><code><span class="kw">mod</span> <span class="ident">e2e_test</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -628,6 +632,7 @@
         <span class="kw">let</span> <span class="ident">answers</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">InternalResourceRecord::A</span> {
             <span class="ident">ttl</span>: <span class="number">350</span>,
             <span class="ident">address</span>: <span class="ident">address</span>.<span class="ident">into</span>(),
+            <span class="ident">rclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
         }];
         <span class="kw">let</span> <span class="ident">reply</span> <span class="op">=</span> <span class="ident">Reply</span> {
             <span class="ident">header</span>,
@@ -752,6 +757,7 @@
             <span class="ident">retry</span>: <span class="number">2400</span>,
             <span class="ident">expire</span>: <span class="number">604800</span>,
             <span class="ident">minimum</span>: <span class="number">300</span>,
+            <span class="ident">rclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
         };
 
         <span class="comment">// let rdata = rdata.as_bytes();</span>
@@ -862,6 +868,8 @@
             <span class="comment">// class: crate::RecordClass::Internet,</span>
             <span class="ident">ttl</span>: <span class="number">2u32</span>,
             <span class="ident">address</span>: <span class="number">0u32</span>,
+
+            <span class="ident">rclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
             <span class="comment">// rdlength,</span>
             <span class="comment">// rdata: rdata.into(),</span>
             <span class="comment">// compression: true,</span>

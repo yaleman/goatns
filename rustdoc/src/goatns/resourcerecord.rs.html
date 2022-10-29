@@ -1010,6 +1010,35 @@
 <span id="1010">1010</span>
 <span id="1011">1011</span>
 <span id="1012">1012</span>
+<span id="1013">1013</span>
+<span id="1014">1014</span>
+<span id="1015">1015</span>
+<span id="1016">1016</span>
+<span id="1017">1017</span>
+<span id="1018">1018</span>
+<span id="1019">1019</span>
+<span id="1020">1020</span>
+<span id="1021">1021</span>
+<span id="1022">1022</span>
+<span id="1023">1023</span>
+<span id="1024">1024</span>
+<span id="1025">1025</span>
+<span id="1026">1026</span>
+<span id="1027">1027</span>
+<span id="1028">1028</span>
+<span id="1029">1029</span>
+<span id="1030">1030</span>
+<span id="1031">1031</span>
+<span id="1032">1032</span>
+<span id="1033">1033</span>
+<span id="1034">1034</span>
+<span id="1035">1035</span>
+<span id="1036">1036</span>
+<span id="1037">1037</span>
+<span id="1038">1038</span>
+<span id="1039">1039</span>
+<span id="1040">1040</span>
+<span id="1041">1041</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums</span>::{<span class="ident">RecordClass</span>, <span class="ident">RecordType</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils</span>::{<span class="ident">dms_to_u32</span>, <span class="ident">hexdump</span>, <span class="ident">name_as_bytes</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::zones::FileZoneRecord</span>;
@@ -1152,13 +1181,16 @@
     <span class="ident">A</span> {
         <span class="ident">address</span>: <span class="ident">u32</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     },
     <span class="ident">AAAA</span> {
         <span class="ident">address</span>: <span class="ident">u128</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1</span>
     <span class="ident">AXFR</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 252 A request for a transfer of an entire zone</span>
 
     <span class="comment">// [RFC8659](https://www.rfc-editor.org/rfc/rfc8659) - CAA Record</span>
@@ -1169,13 +1201,16 @@
         <span class="doccomment">/// A sequence of octets representing the Property Value. Property Values are encoded as binary values and MAY employ sub‑formats.</span>
         <span class="ident">value</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     },
     <span class="ident">CNAME</span> {
         <span class="ident">cname</span>: <span class="ident">DomainName</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 5 the canonical name for an alias</span>
     <span class="ident">LOC</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
         <span class="doccomment">/// Version number of the representation.  This must be zero. Implementations are required to check this field and make no assumptions about the format of unrecognized versions.</span>
         <span class="ident">version</span>: <span class="ident">u8</span>,
         <span class="ident">size</span>: <span class="ident">u8</span>,
@@ -1187,6 +1222,7 @@
     },
     <span class="ident">NAPTR</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
         <span class="doccomment">///     Domain - The domain name to which this resource record refers.  This is the &#39;key&#39; for this entry in the rule database.  This value will either be the first well known key (&lt;something&gt;.uri.arpa for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements.</span>
         <span class="ident">domain</span>: <span class="ident">DomainName</span>,
         <span class="comment">// A 16-bit unsigned integer specifying the order in which the NAPTR records MUST be processed to ensure the correct ordering of rules.  Low numbers are processed before high numbers, and once a NAPTR is found whose rule &quot;matches&quot; the target, the client MUST NOT consider any NAPTRs with a higher value for order (except as noted below for the Flags field).</span>
@@ -1233,6 +1269,7 @@
     <span class="ident">NS</span> {
         <span class="ident">nsdname</span>: <span class="ident">DomainName</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 2 an authoritative name server</span>
     <span class="ident">SOA</span> {
         <span class="comment">// The zone that this SOA record is for - eg hello.goat or example.com</span>
@@ -1246,40 +1283,49 @@
         <span class="ident">retry</span>: <span class="ident">u32</span>,
         <span class="ident">expire</span>: <span class="ident">u32</span>,
         <span class="ident">minimum</span>: <span class="ident">u32</span>,
-        <span class="comment">// this doesn&#39;t get a TTL, since that&#39;s an expire?</span>
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 6 marks the start of a zone of authority</span>
 
     <span class="ident">MB</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 7 a mailbox domain name (EXPERIMENTAL)</span>
     <span class="ident">MG</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 8 a mail group member (EXPERIMENTAL)</span>
     <span class="ident">MR</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 9 a mail rename domain name (EXPERIMENTAL)</span>
     <span class="ident">NULL</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 10 a null RR (EXPERIMENTAL)</span>
     <span class="ident">WKS</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 11 a well known service description</span>
     <span class="ident">PTR</span> {
         <span class="ident">ptrdname</span>: <span class="ident">DomainName</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 12 a domain name pointer</span>
     <span class="ident">HINFO</span> {
         <span class="ident">cpu</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DNSCharString</span><span class="op">&gt;</span>,
         <span class="ident">os</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DNSCharString</span><span class="op">&gt;</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 13 host information</span>
     <span class="ident">MINFO</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 14 mailbox or mail list information</span>
     <span class="ident">MX</span> {
         <span class="ident">preference</span>: <span class="ident">u16</span>,
         <span class="ident">exchange</span>: <span class="ident">DomainName</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 15 mail exchange</span>
     <span class="ident">TXT</span> {
         <span class="ident">txtdata</span>: <span class="ident">DNSCharString</span>,
@@ -1291,10 +1337,12 @@
         <span class="ident">weight</span>: <span class="ident">u16</span>,
         <span class="ident">target</span>: <span class="ident">DNSCharString</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     },
 
     <span class="ident">MAILB</span> {
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
+        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     }, <span class="comment">// 253 A request for mailbox-related records (MB, MG or MR)</span>
 
     <span class="comment">// MAILA {</span>
@@ -1350,6 +1398,7 @@
                 <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::A</span> {
                     <span class="ident">address</span>,
                     <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
+                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
                 })
             }
             <span class="string">&quot;AAAA&quot;</span> =&gt; {
@@ -1370,15 +1419,18 @@
                 <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::AAAA</span> {
                     <span class="ident">address</span>,
                     <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
+                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
                 })
             }
             <span class="string">&quot;CNAME&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::CNAME</span> {
                 <span class="ident">cname</span>: <span class="ident">DomainName::from</span>(<span class="ident">record</span>.<span class="ident">rdata</span>),
                 <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
+                <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
             }),
             <span class="string">&quot;PTR&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::PTR</span> {
                 <span class="ident">ptrdname</span>: <span class="ident">DomainName::from</span>(<span class="ident">record</span>.<span class="ident">rdata</span>),
                 <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
+                <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
             }),
             <span class="string">&quot;TXT&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::TXT</span> {
                 <span class="ident">txtdata</span>: <span class="ident">DNSCharString</span> {
@@ -1409,11 +1461,13 @@
                     <span class="ident">preference</span>: <span class="ident">pref</span>,
                     <span class="ident">exchange</span>: <span class="ident">DomainName::from</span>(<span class="ident">split_bit</span>[<span class="number">1</span>]),
                     <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
+                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
                 })
             }
             <span class="string">&quot;NS&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::NS</span> {
                 <span class="ident">nsdname</span>: <span class="ident">DomainName::from</span>(<span class="ident">record</span>.<span class="ident">rdata</span>),
                 <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
+                <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
             }),
             <span class="string">&quot;CAA&quot;</span> =&gt; {
                 <span class="kw">let</span> <span class="ident">split_bit</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">record</span>.<span class="ident">rdata</span>.<span class="ident">split</span>(<span class="string">&#39; &#39;</span>).<span class="ident">collect</span>();
@@ -1447,6 +1501,7 @@
                     <span class="ident">tag</span>,
                     <span class="ident">value</span>,
                     <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
+                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
                 })
             }
             <span class="string">&quot;LOC&quot;</span> =&gt; {
@@ -1458,6 +1513,7 @@
 
                 <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::LOC</span> {
                     <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
+                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
                     <span class="ident">version</span>: <span class="number">0</span>,
                     <span class="ident">size</span>: <span class="ident">res</span>.<span class="ident">size</span>,
                     <span class="ident">horiz_pre</span>: <span class="ident">res</span>.<span class="ident">horiz_pre</span>,
@@ -1502,6 +1558,7 @@
                     <span class="ident">weight</span>,
                     <span class="ident">target</span>,
                     <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
+                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
                 })
             }
             <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Invalid type specified!&quot;</span>.<span class="ident">to_string</span>()),
@@ -1553,8 +1610,8 @@
 <span class="kw">impl</span> <span class="ident">InternalResourceRecord</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_bytes</span>(<span class="self">self</span>: <span class="kw-2">&amp;</span><span class="ident">InternalResourceRecord</span>, <span class="ident">question</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">InternalResourceRecord::A</span> { <span class="ident">address</span>, <span class="ident">ttl</span>: <span class="kw">_</span> } =&gt; <span class="ident">address</span>.<span class="ident">to_be_bytes</span>().<span class="ident">to_vec</span>(),
-            <span class="ident">InternalResourceRecord::AAAA</span> { <span class="ident">address</span>, <span class="ident">ttl</span>: <span class="kw">_</span> } =&gt; <span class="ident">address</span>.<span class="ident">to_be_bytes</span>().<span class="ident">to_vec</span>(),
+            <span class="ident">InternalResourceRecord::A</span> { <span class="ident">address</span>, .. } =&gt; <span class="ident">address</span>.<span class="ident">to_be_bytes</span>().<span class="ident">to_vec</span>(),
+            <span class="ident">InternalResourceRecord::AAAA</span> { <span class="ident">address</span>, .. } =&gt; <span class="ident">address</span>.<span class="ident">to_be_bytes</span>().<span class="ident">to_vec</span>(),
 
             <span class="ident">InternalResourceRecord::CNAME</span> { <span class="ident">cname</span>, .. } =&gt; {
                 <span class="macro">trace!</span>(<span class="string">&quot;turning CNAME {cname:?} into bytes&quot;</span>);
@@ -1571,6 +1628,7 @@
                 <span class="ident">latitude</span>,
                 <span class="ident">longitude</span>,
                 <span class="ident">altitude</span>,
+                ..
             } =&gt; {
                 <span class="macro">error!</span>(<span class="string">&quot;LOC {:?} - TTL={ttl}&quot;</span>, <span class="ident">from_utf8</span>(<span class="ident">question</span>));
                 <span class="kw">let</span> <span class="ident">record</span> <span class="op">=</span> <span class="ident">LocRecord</span> {
@@ -1591,10 +1649,10 @@
                     }
                 }
             }
-            <span class="ident">InternalResourceRecord::NS</span> { <span class="ident">nsdname</span>, <span class="ident">ttl</span>: <span class="kw">_</span> } =&gt; {
+            <span class="ident">InternalResourceRecord::NS</span> { <span class="ident">nsdname</span>, .. } =&gt; {
                 <span class="ident">nsdname</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="ident">question</span>))
             }
-            <span class="ident">InternalResourceRecord::PTR</span> { <span class="ident">ptrdname</span>, <span class="ident">ttl</span>: <span class="kw">_</span> } =&gt; {
+            <span class="ident">InternalResourceRecord::PTR</span> { <span class="ident">ptrdname</span>, .. } =&gt; {
                 <span class="ident">ptrdname</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="ident">question</span>))
             }
             <span class="ident">InternalResourceRecord::SOA</span> {
@@ -1606,6 +1664,7 @@
                 <span class="ident">retry</span>,
                 <span class="ident">expire</span>,
                 <span class="ident">minimum</span>,
+                ..
             } =&gt; {
                 <span class="comment">// TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff</span>
                 <span class="kw">let</span> <span class="ident">zone_as_bytes</span> <span class="op">=</span> <span class="ident">zone</span>.<span class="ident">name</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
@@ -1638,7 +1697,7 @@
             <span class="comment">// InternalResourceRecord::MR {  } =&gt; todo!(),</span>
             <span class="comment">// InternalResourceRecord::NULL {  } =&gt; todo!(),</span>
             <span class="comment">// InternalResourceRecord::WKS {  } =&gt; todo!(),</span>
-            <span class="ident">InternalResourceRecord::HINFO</span> { <span class="ident">cpu</span>, <span class="ident">os</span>, <span class="ident">ttl</span>: <span class="kw">_</span> } =&gt; {
+            <span class="ident">InternalResourceRecord::HINFO</span> { <span class="ident">cpu</span>, <span class="ident">os</span>, .. } =&gt; {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hinfo_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
                 <span class="kw">match</span> <span class="ident">cpu</span> {
                     <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; {
@@ -1665,21 +1724,18 @@
             <span class="ident">InternalResourceRecord::MX</span> {
                 <span class="ident">preference</span>,
                 <span class="ident">exchange</span>,
-                <span class="ident">ttl</span>: <span class="kw">_</span>,
+                ..
             } =&gt; {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mx_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">preference</span>.<span class="ident">to_be_bytes</span>().<span class="ident">into</span>();
                 <span class="ident">mx_bytes</span>.<span class="ident">extend</span>(<span class="ident">exchange</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="ident">question</span>)));
                 <span class="ident">mx_bytes</span>
             }
-            <span class="ident">InternalResourceRecord::AXFR</span> { <span class="ident">ttl</span>: <span class="kw">_</span> } =&gt; <span class="macro">todo!</span>(),
-            <span class="ident">InternalResourceRecord::MAILB</span> { <span class="ident">ttl</span>: <span class="kw">_</span> } =&gt; <span class="macro">todo!</span>(),
+            <span class="ident">InternalResourceRecord::AXFR</span> { .. } =&gt; <span class="macro">todo!</span>(),
+            <span class="ident">InternalResourceRecord::MAILB</span> { .. } =&gt; <span class="macro">todo!</span>(),
             <span class="ident">InternalResourceRecord::ALL</span> {} =&gt; <span class="macro">todo!</span>(),
             <span class="ident">InternalResourceRecord::InvalidType</span> =&gt; <span class="macro">todo!</span>(),
             <span class="ident">InternalResourceRecord::CAA</span> {
-                <span class="ident">flag</span>,
-                <span class="ident">tag</span>,
-                <span class="ident">value</span>,
-                ..
+                <span class="ident">flag</span>, <span class="ident">tag</span>, <span class="ident">value</span>, ..
             } =&gt; {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="kw-2">*</span><span class="ident">flag</span>];
                 <span class="comment">// add the tag</span>
@@ -1691,24 +1747,24 @@
             }
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
             <span class="ident">InternalResourceRecord::NAPTR</span> {
-                <span class="ident">ttl</span>,
                 <span class="ident">domain</span>,
                 <span class="ident">order</span>,
                 <span class="ident">preference</span>,
                 <span class="ident">flags</span>,
+                ..
             } =&gt; <span class="macro">todo!</span>(),
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::MB</span> { <span class="ident">ttl</span> } =&gt; <span class="macro">todo!</span>(),
+            <span class="ident">InternalResourceRecord::MB</span> { .. } =&gt; <span class="macro">todo!</span>(),
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::MG</span> { <span class="ident">ttl</span> } =&gt; <span class="macro">todo!</span>(),
+            <span class="ident">InternalResourceRecord::MG</span> { .. } =&gt; <span class="macro">todo!</span>(),
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::MR</span> { <span class="ident">ttl</span> } =&gt; <span class="macro">todo!</span>(),
+            <span class="ident">InternalResourceRecord::MR</span> { .. } =&gt; <span class="macro">todo!</span>(),
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::NULL</span> { <span class="ident">ttl</span> } =&gt; <span class="macro">todo!</span>(),
+            <span class="ident">InternalResourceRecord::NULL</span> { .. } =&gt; <span class="macro">todo!</span>(),
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::WKS</span> { <span class="ident">ttl</span> } =&gt; <span class="macro">todo!</span>(),
+            <span class="ident">InternalResourceRecord::WKS</span> { .. } =&gt; <span class="macro">todo!</span>(),
             <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::MINFO</span> { <span class="ident">ttl</span> } =&gt; <span class="macro">todo!</span>(),
+            <span class="ident">InternalResourceRecord::MINFO</span> { .. } =&gt; <span class="macro">todo!</span>(),
         }
     }
 
@@ -1734,14 +1790,16 @@
         <span class="macro">assert_eq!</span>(
             <span class="ident">InternalResourceRecord::A</span> {
                 <span class="ident">address</span>: <span class="number">12345</span>,
-                <span class="ident">ttl</span>: <span class="number">1</span>
+                <span class="ident">ttl</span>: <span class="number">1</span>,
+                <span class="ident">rclass</span>: <span class="ident">RecordClass::Internet</span>
             },
             <span class="ident">RecordType::A</span>
         );
         <span class="macro">assert_eq!</span>(
             <span class="ident">InternalResourceRecord::AAAA</span> {
                 <span class="ident">address</span>: <span class="number">12345</span>,
-                <span class="ident">ttl</span>: <span class="number">1</span>
+                <span class="ident">ttl</span>: <span class="number">1</span>,
+                <span class="ident">rclass</span>: <span class="ident">RecordClass::Internet</span>
             },
             <span class="ident">RecordType::AAAA</span>
         );

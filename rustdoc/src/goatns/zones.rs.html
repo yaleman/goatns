@@ -213,6 +213,9 @@
 <span id="213">213</span>
 <span id="214">214</span>
 <span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::ConfigFile</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums::RecordClass</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::resourcerecord</span>::{<span class="ident">DomainName</span>, <span class="ident">InternalResourceRecord</span>};
@@ -358,6 +361,7 @@
                     <span class="ident">cpu</span>: <span class="prelude-val">None</span>,
                     <span class="ident">os</span>: <span class="prelude-val">None</span>,
                     <span class="ident">ttl</span>: <span class="number">1</span>,
+                    <span class="ident">rclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Chaos</span>,
                 }],
             },
         );
@@ -374,6 +378,8 @@
             <span class="ident">retry</span>: <span class="ident">zone</span>.<span class="ident">retry</span>,
             <span class="ident">expire</span>: <span class="ident">zone</span>.<span class="ident">expire</span>,
             <span class="ident">minimum</span>: <span class="ident">zone</span>.<span class="ident">minimum</span>,
+
+            <span class="ident">rclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
         };
         <span class="macro">debug!</span>(<span class="string">&quot;{soa:?}&quot;</span>);
         <span class="ident">tree</span>.<span class="ident">insert</span>(
