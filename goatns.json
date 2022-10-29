@@ -4,7 +4,12 @@
 	"log_level" : "TRACE",
 	"capture_packets" :false,
 	"enable_hinfo" : true,
-	"shutdown_ip_allow_list" : [
-		"127.0.0.1"
-	]
+	"ip_allow_lists" : {
+		"version" : [
+			"127.0.0.1"
+		],
+		"shutdown" : [
+			"127.0.0.1"
+		]
+	}
 }

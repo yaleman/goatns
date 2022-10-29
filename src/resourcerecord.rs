@@ -1,4 +1,4 @@
-use crate::enums::RecordType;
+use crate::enums::{RecordClass, RecordType};
 use crate::utils::{dms_to_u32, hexdump, name_as_bytes};
 use crate::zones::FileZoneRecord;
 use crate::HEADER_BYTES;
@@ -158,12 +158,6 @@ pub enum InternalResourceRecord {
         value: Vec<u8>,
         ttl: u32,
     },
-    MD {
-        ttl: u32,
-    }, // 3 a mail destination (Obsolete - use MX)
-    MF {
-        ttl: u32,
-    }, // 4 a mail forwarder (Obsolete - use MX)
     CNAME {
         cname: DomainName,
         ttl: u32,
@@ -278,6 +272,7 @@ pub enum InternalResourceRecord {
     TXT {
         txtdata: DNSCharString,
         ttl: u32,
+        class: RecordClass,
     }, // 16 text strings
     URI {
         priority: u16,
@@ -378,6 +373,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                     data: record.rdata.into_bytes(),
                 },
                 ttl: record.ttl,
+                class: record.class,
             }),
             "MX" => {
                 let split_bit: Vec<&str> = record.rdata.split(' ').collect();
@@ -503,6 +499,15 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
     type Error = String;
 }
 
+impl PartialEq<RecordClass> for InternalResourceRecord {
+    fn eq(&self, other: &RecordClass) -> bool {
+        match self {
+            InternalResourceRecord::TXT { class, .. } => class == other,
+            _ => other == &RecordClass::Internet, // TODO: we only support IN records outside TXT records
+        }
+    }
+}
+
 impl PartialEq<RecordType> for InternalResourceRecord {
     fn eq(&self, other: &RecordType) -> bool {
         match self {
@@ -517,8 +522,6 @@ impl PartialEq<RecordType> for InternalResourceRecord {
             InternalResourceRecord::MAILB { .. } => other == &RecordType::MAILB,
             InternalResourceRecord::LOC { .. } => other == &RecordType::LOC,
             InternalResourceRecord::MB { .. } => other == &RecordType::MB,
-            InternalResourceRecord::MD { .. } => other == &RecordType::MD,
-            InternalResourceRecord::MF { .. } => other == &RecordType::MF,
             InternalResourceRecord::MG { .. } => other == &RecordType::MG,
             InternalResourceRecord::MINFO { .. } => other == &RecordType::MINFO,
             InternalResourceRecord::MR { .. } => other == &RecordType::MR,
@@ -605,7 +608,7 @@ impl InternalResourceRecord {
                 res.extend(minimum.to_be_bytes());
                 res
             }
-            InternalResourceRecord::TXT { txtdata, ttl: _ } => txtdata.as_bytes(),
+            InternalResourceRecord::TXT { txtdata, .. } => txtdata.as_bytes(),
             InternalResourceRecord::URI {
                 priority,
                 weight,
@@ -660,12 +663,11 @@ impl InternalResourceRecord {
             InternalResourceRecord::MAILB { ttl: _ } => todo!(),
             InternalResourceRecord::ALL {} => todo!(),
             InternalResourceRecord::InvalidType => todo!(),
-            #[allow(unused_variables)]
             InternalResourceRecord::CAA {
                 flag,
                 tag,
                 value,
-                ttl,
+                ..
             } => {
                 let mut result: Vec<u8> = vec![*flag];
                 // add the tag
@@ -683,10 +685,6 @@ impl InternalResourceRecord {
                 preference,
                 flags,
             } => todo!(),
-            #[allow(unused_variables)]
-            InternalResourceRecord::MD { ttl } => todo!(),
-            #[allow(unused_variables)]
-            InternalResourceRecord::MF { ttl } => todo!(),
             #[allow(unused_variables)]
             InternalResourceRecord::MB { ttl } => todo!(),
             #[allow(unused_variables)]
@@ -716,6 +714,7 @@ mod tests {
 
     use crate::enums::RecordType;
     use crate::zones::FileZoneRecord;
+    use crate::RecordClass;
 
     use super::{DNSCharString, InternalResourceRecord};
     #[test]
@@ -744,6 +743,7 @@ mod tests {
             rrtype: "AAAA".to_string(),
             rdata: String::from("1234:5678:cafe:beef:ca75:0:4b9:e94d"),
             ttl: 160u32,
+            class: RecordClass::Internet,
         };
         debug!("fzr: {fzr}");
         let converted = match Ipv6Addr::from_str(&fzr.rdata) {
@@ -775,8 +775,9 @@ mod tests {
         let foo = InternalResourceRecord::TXT {
             txtdata: DNSCharString::from("Hello world"),
             ttl: 1,
+            class: RecordClass::Internet,
         };
-        if let InternalResourceRecord::TXT { txtdata, ttl: _ } = foo {
+        if let InternalResourceRecord::TXT { txtdata, .. } = foo {
             let foo_bytes: Vec<u8> = txtdata.into();
             assert_eq!(foo_bytes[0], 11);
         };

@@ -45,8 +45,6 @@ impl Reply {
                     InternalResourceRecord::LOC { ttl, .. } => ttl,
                     InternalResourceRecord::MAILB { ttl } => ttl,
                     InternalResourceRecord::MB { ttl } => ttl,
-                    InternalResourceRecord::MD { ttl } => ttl,
-                    InternalResourceRecord::MF { ttl } => ttl,
                     InternalResourceRecord::MG { ttl } => ttl,
                     InternalResourceRecord::MINFO { ttl } => ttl,
                     InternalResourceRecord::MR { ttl } => ttl,

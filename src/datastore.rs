@@ -1,7 +1,7 @@
 use std::str::from_utf8;
 
 use crate::config::ConfigFile;
-use crate::enums::RecordType;
+use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::{empty_zones, load_zones, ZoneRecord};
 use log::{debug, error};
@@ -15,6 +15,7 @@ pub enum Command {
         /// Reversed vec of the name
         name: Vec<u8>,
         rtype: RecordType,
+        rclass: RecordClass,
         resp: Responder<Option<ZoneRecord>>,
     },
     // TODO: create a setter when we're ready to accept updates
@@ -28,6 +29,7 @@ fn handle_get_command(
     zone_get: Option<&ZoneRecord>,
     name: Vec<u8>,
     rtype: RecordType,
+    rclass: RecordClass,
     resp: oneshot::Sender<Option<ZoneRecord>>,
 ) {
     debug!(
@@ -43,7 +45,7 @@ fn handle_get_command(
                 .to_owned()
                 .typerecords
                 .into_iter()
-                .filter(|r| r == &rtype)
+                .filter(|r| r == &rtype && r == &rclass)
                 .collect();
             if res.is_empty() {
                 None
@@ -76,8 +78,19 @@ pub async fn manager(
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
-            Command::Get { name, rtype, resp } => {
-                handle_get_command(zones.get(name.to_ascii_lowercase()), name, rtype, resp);
+            Command::Get {
+                name,
+                rtype,
+                rclass,
+                resp,
+            } => {
+                handle_get_command(
+                    zones.get(name.to_ascii_lowercase()),
+                    name,
+                    rtype,
+                    rclass,
+                    resp,
+                );
             }
         }
     }

@@ -4,6 +4,14 @@ use std::net::IpAddr;
 use config::{Config, File};
 use serde::Deserialize;
 
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Default)]
+pub struct IPAllowList {
+    // Allow CH TXT VERSION.BIND or VERSION requests
+    // pub version: Vec<IpAddr>,
+    /// A list of allowed IPs to send a shutdown record from
+    pub shutdown: Vec<IpAddr>,
+}
+
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct ConfigFile {
     /// Listen address, default is 0.0.0.0
@@ -17,12 +25,12 @@ pub struct ConfigFile {
     pub tcp_client_timeout: u16,
     /// Enable a HINFO record at hinfo.goat
     pub enable_hinfo: bool,
-    /// A list of allowed IPs to send a shutdown record from
-    pub shutdown_ip_allow_list: Vec<IpAddr>,
     /// The location for the zone sqlite file
     pub sqlite_path: String,
     /// Where the JSON zone file is
     pub zone_file: String,
+    /// IP Allow lists
+    pub ip_allow_lists: IPAllowList,
 }
 
 impl Default for ConfigFile {
@@ -34,7 +42,10 @@ impl Default for ConfigFile {
             log_level: "DEBUG".to_string(),
             tcp_client_timeout: 15,
             enable_hinfo: false,
-            shutdown_ip_allow_list: vec![],
+            ip_allow_lists: IPAllowList {
+                // version: vec![],
+                shutdown: vec![],
+            },
             sqlite_path: String::from("~/.cache/goatns.sqlite"),
             zone_file: String::from("zones.json"),
         }
@@ -60,9 +71,9 @@ impl From<Config> for ConfigFile {
             enable_hinfo: config
                 .get("enable_hinfo")
                 .unwrap_or(Self::default().enable_hinfo),
-            shutdown_ip_allow_list: config
-                .get("shutdown_ip_allow_list")
-                .unwrap_or(Self::default().shutdown_ip_allow_list),
+            ip_allow_lists: config
+                .get("ip_allow_lists")
+                .unwrap_or(Self::default().ip_allow_lists),
             tcp_client_timeout: config
                 .get("tcp_client_timeout")
                 .unwrap_or(Self::default().tcp_client_timeout),

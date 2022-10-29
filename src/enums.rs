@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use packed_struct::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::resourcerecord::InternalResourceRecord;
 
@@ -60,11 +61,12 @@ pub enum Rcode {
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// RRType, eg A, NS, MX, etc
 pub enum RecordType {
-    A = 1,      // 1 a host address
-    NS = 2,     // 2 an authoritative name server
-    MD = 3,     // 3 a mail destination (Obsolete - use MX)
-    MF = 4,     // 4 a mail forwarder (Obsolete - use MX)
+    /// A host address
+    A = 1,
+    /// Authoritative name server
+    NS = 2,
     CNAME = 5,  // 5 the canonical name for an alias
     SOA = 6,    // 6 marks the start of a zone of authority
     MB = 7,     // 7 a mailbox domain name (EXPERIMENTAL)
@@ -76,11 +78,11 @@ pub enum RecordType {
     HINFO = 13, // 13 host information
     MINFO = 14, // 14 mailbox or mail list information
     MX = 15,    // 15 mail exchange
-    /// 16 text strings
+    /// Text strings
     TXT = 16,
-    /// 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+    /// IPv6 Records <https://www.rfc-editor.org/rfc/rfc3596#section-2.1>
     AAAA = 28,
-    /// https://www.rfc-editor.org/rfc/rfc1876
+    /// For when you want to know the physical location of a thing! <https://www.rfc-editor.org/rfc/rfc1876>
     LOC = 29,
     /// NAPTR <https://www.rfc-editor.org/rfc/rfc2915>
     NAPTR = 35,
@@ -101,8 +103,6 @@ impl From<&u16> for RecordType {
         match input {
             1 => Self::A,
             2 => Self::NS,
-            3 => Self::MD,
-            4 => Self::MF,
             5 => Self::CNAME,
             6 => Self::SOA,
             7 => Self::MB,
@@ -147,8 +147,6 @@ impl From<&str> for RecordType {
             "LOC" => Self::LOC,
             "MAILB" => Self::MAILB,
             "MB" => Self::MB,
-            "MD" => Self::MD,
-            "MF" => Self::MF,
             "MG" => Self::MG,
             "MINFO" => Self::MINFO,
             "MR" => Self::MR,
@@ -168,7 +166,6 @@ impl From<&str> for RecordType {
 impl From<InternalResourceRecord> for RecordType {
     fn from(input: InternalResourceRecord) -> Self {
         match input {
-            // InternalResourceRecord::MAILA { .. } => RecordType::MAILA,
             InternalResourceRecord::A { .. } => RecordType::A,
             InternalResourceRecord::AAAA { .. } => RecordType::AAAA,
             InternalResourceRecord::ALL { .. } => RecordType::ALL,
@@ -180,8 +177,6 @@ impl From<InternalResourceRecord> for RecordType {
             InternalResourceRecord::LOC { .. } => RecordType::LOC,
             InternalResourceRecord::MAILB { .. } => RecordType::MAILB,
             InternalResourceRecord::MB { .. } => RecordType::MB,
-            InternalResourceRecord::MD { .. } => RecordType::MD,
-            InternalResourceRecord::MF { .. } => RecordType::MF,
             InternalResourceRecord::MG { .. } => RecordType::MG,
             InternalResourceRecord::MINFO { .. } => RecordType::MINFO,
             InternalResourceRecord::MR { .. } => RecordType::MR,
@@ -219,17 +214,16 @@ impl RecordType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-/// 3.2.4. CLASS values
-/// CLASS fields appear in resource records.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+/// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
-    /// IN - 1 the Internet
+    /// IN - Internet
     Internet = 1,
-    /// CS - 2 the CSNET class (Obsolete - used only for examples in some obsolete RFCs)
+    /// CS - CSNET class (Obsolete - used only for examples in some obsolete RFCs)
     CsNet = 2,
-    /// CH              3 the CHAOS class
+    /// CH - Chaos
     Chaos = 3,
-    /// HS              4 Hesiod [Dyer 87]
+    /// Hesiod [Dyer 87]
     Hesiod = 4,
 
     InvalidType = 0,

@@ -1,4 +1,4 @@
-# Goat NS
+# GoatNS
 
 A rusty DNS name server.
 
@@ -41,6 +41,7 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 - [x] A
 - [x] AAAA
 - [ ] AXFR
+  - [ ] add an allow-list in the config file (CIDRs)
 - [x] CAA
 - [x] CNAME
 - [x] HINFO
@@ -63,18 +64,16 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 
 ## TODO 
 
-  - [x] allow records with an `@` value for `name` which are apex records.
-    - [ ] maaaaybe support flattening of apex records?
-  - [ ] record caching instead of loading everything into memory
-  - [x] message length enforcement and testing ([RFC 1035](https://www.rfc-editor.org/rfc/rfc1035#section-2.3.4) 2.3.4. Size limits)
-    - [x] labels          63 octets or less
-    - [x] names           255 octets or less
-    - [x] TTL             positive values of a signed 32 bit number.
-    - [x] UDP messages    512 octets or less ? I think this got extended?
-  - [x] partial compression based on things
-  - [x] TTL handling from the records
-  - [x] lowercase all question name fields - done in the datastore query
-  - [x] lowercase all reply name fields
-  - [ ] at some point we should be checking that if the zonerecord has a TTL of None, then it should be pulling from the SOA/zone
-  - [ ] cleaner ctrl-c handling or shutdown in general
+  - [ ] record storage in a DB and caching instead of loading everything into memory
+  - [ ] response caching to save the lookups and parsing
+    - [ ] concread?
+  - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data
   - [ ] good e2e tests for LOC records from zone files
+  - [ ] cleaner ctrl-c handling or shutdown in general
+    - [ ] thinking I need to set up a broadcast tokio channel which the threads consume and shutdown from 
+      - [ ] `datastore` just needs to know to write out anything it's working on at the time, which may need an internal state flag for "are we shutting down" so any new write transactions are rejected
+  - [ ] maaaaybe support flattening of apex records?
+  - [ ] support all sorts of records with classes, because bleh
+  - [ ] support VERSION/VERSION.BIND requests
+    - [x] allow list config
+    - [ ] build the response packets in a nice way that doesn't blow up
