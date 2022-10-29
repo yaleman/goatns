@@ -1,0 +1,40 @@
+---
+name: GitHub Pages
+
+"on":
+  push:
+    branches:
+      - 'refs/heads/main'
+  pull_request:
+
+
+jobs:
+  deploy_book:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          clean: false
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v1
+        with:
+          mdbook-version: 'latest'
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      # - uses: actions-rs/cargo@v1
+      #   with:
+      #     command: install
+      #     args: mdbook-template
+
+      - name: Make all the books
+        run: make book
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/docs
