@@ -18,6 +18,8 @@ use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER
 
 lazy_static! {
     static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").unwrap();
+    // static ref VERSION_STRINGS: Vec<String> =
+        // vec![String::from("version"), String::from("version.bind"),];
 }
 
 /// this handles a shutdown CHAOS request
@@ -26,18 +28,46 @@ async fn check_for_shutdown(r: &Reply, addr: &SocketAddr, config: &ConfigFile) -
     if let Some(q) = &r.question {
         if q.qclass == RecordClass::Chaos {
             if let Ok(qname) = from_utf8(&q.qname) {
-                // TODO: this needs some kind of password or auth, because UDP is weird. Probably should only support this on TCP. But we don't do TCP properly yet so ... yolo? Or just .. not do this on UDP!
-                if (qname == "shutdown") & (config.shutdown_ip_allow_list.contains(&addr.ip())) {
-                    info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
-                    return Ok(());
-                } else {
-                    log::warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip());
+                // Just don't do this on UDP, because we can't really tell who it's coming from.
+                if qname == "shutdown" {
+                    match config.ip_allow_lists.shutdown.contains(&addr.ip()) {
+                        true => {
+                            info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
+                            return Ok(());
+                        }
+                        false => warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip()),
+                    }
                 }
+            } else {
+                error!(
+                    "Failed to parse qname from {:?}, this shouldn't be able to happen!",
+                    q.qname
+                );
             }
         }
     };
     Err(())
 }
+
+/// this handles a version CHAOS request
+// async fn check_for_version(r: &Reply, addr: &SocketAddr, config: &ConfigFile) -> Result<(), ()> {
+//     // when you get a CHAOS from localhost with "VERSION" or "VERSION.BIND" we might respond
+//     if let Some(q) = &r.question {
+//         if q.qclass == RecordClass::Chaos {
+//             if let Ok(qname) = from_utf8(&q.qname) {
+//                 if VERSION_STRINGS.contains(&qname.to_ascii_lowercase()) & (config.ip_allow_lists.shutdown.contains(&addr.ip())) {
+//                     info!("Got CHAOS VERSION from {:?}, responding.", addr.ip());
+//                     return Ok(());
+//                 } else {
+//                     warn!("Got CHAOS VERSION from {:?}, ignoring!", addr.ip());
+//                 }
+//             } else {
+//                 error!("Failed to parse qname from {:?}, this shouldn't be able to happen!", q.qname);
+//             }
+//         }
+//     };
+//     Err(())
+// }
 
 pub async fn udp_server(
     bind_address: SocketAddr,
@@ -202,7 +232,7 @@ pub async fn tcp_server(
             Ok(r) => {
                 debug!("TCP Result: {r:?}");
 
-                // when you get a CHAOS from localhost with "shutdown" break dat loop
+                // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
                 if check_for_shutdown(&r, &addr, &config).await.is_ok() {
                     return Ok(());
                 }
@@ -214,6 +244,7 @@ pub async fn tcp_server(
                         continue;
                     }
                 };
+
                 debug!("reply_bytes: {:?}", reply_bytes);
 
                 let reply_bytes = &reply_bytes as &[u8];
@@ -310,9 +341,10 @@ async fn get_result(
     }
 
     // Check for CHAOS commands
+    #[allow(clippy::collapsible_if)]
     if question.qclass == RecordClass::Chaos {
         if &question.normalized_name().unwrap() == "shutdown" {
-            log::debug!("Got CHAOS shutdown!");
+            debug!("Got CHAOS shutdown!");
             return Ok(Reply {
                 header,
                 question: Some(question),
@@ -320,9 +352,16 @@ async fn get_result(
                 authorities: vec![],
                 additional: vec![],
             });
-        } else {
-            log::error!("Chaos {:?}", question.normalized_name());
-        }
+        } /*else if VERSION_STRINGS.contains(&question.normalized_name().unwrap()) {
+              trace!("Got CHAOS VERSION");
+              return Ok(Reply {
+                  header,
+                  question: Some(question),
+                  answers: vec![],
+                  authorities: vec![],
+                  additional: vec![],
+              });
+          }*/
     }
 
     // build the request to the datastore to make the query
@@ -331,6 +370,7 @@ async fn get_result(
     let ds_req: Command = Command::Get {
         name: question.qname.clone(),
         rtype: question.qtype,
+        rclass: question.qclass,
         resp: tx_oneshot,
     };
 

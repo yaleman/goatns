@@ -1,9 +1,7 @@
 use crate::reply::Reply;
 use crate::{Header, PacketType, Rcode, HEADER_BYTES};
-// use clap::{arg, command, value_parser, ArgAction, ArgMatches, Command};
 use clap::{arg, command, value_parser, ArgMatches};
 use log::{debug, trace};
-// use num_traits::Num;
 use std::str::from_utf8;
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
@@ -225,23 +223,31 @@ pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, String> {
     })
 }
 
-/// Want a generic empty reply with an ID and an RCODE? Here's your function.
 pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
-    let header = Header {
-        id,
-        qr: PacketType::Answer,
-        rcode: Rcode::NameError,
-        ancount: 0,
-        ..Default::default()
-    };
-    Ok(Reply {
-        header,
-        question: None,
-        answers: vec![],
-        authorities: vec![],
-        additional: vec![],
-    })
+    reply_builder(id, Rcode::NameError)
 }
+
+// lazy_static!{
+//     static ref GOATNS_VERSION: DNSCharString = DNSCharString::from(format!("GoatNS {}", env!("CARGO_PKG_VERSION")).as_str());
+// }
+
+// lazy_static!{
+//     static ref VERSION_RESPONSE: Vec<InternalResourceRecord> = vec![InternalResourceRecord::TXT {
+//         class: RecordClass::Chaos,
+//         ttl: 1,
+//         txtdata: GOATNS_VERSION.to_owned(),
+//     }];
+// }
+
+// pub fn reply_version(id: &u16, question: &Option<crate::Question>) -> Result<Reply, String> {
+//     let mut reply = reply_builder(id.to_owned(), Rcode::NoError)?;
+//     reply.question = question.to_owned();
+//     reply.answers = VERSION_RESPONSE.clone();
+//     reply.header.ancount = 1;
+//     debug!("Version: {reply:?}");
+//     debug!("Goatns version: {:?}", GOATNS_VERSION.to_owned());
+//     Ok(reply)
+// }
 
 /// dumps the bytes out as if you were using some kind of fancy packet-dumper
 pub fn hexdump(bytes: Vec<u8>) {

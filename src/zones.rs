@@ -1,4 +1,5 @@
 use crate::config::ConfigFile;
+use crate::enums::RecordClass;
 use crate::resourcerecord::{DomainName, InternalResourceRecord};
 use log::{debug, error, info};
 use patricia_tree::PatriciaMap;
@@ -51,9 +52,17 @@ pub struct FileZoneRecord {
     // #[serde(with = "serde_bytes")]
     pub rdata: String,
     pub ttl: u32,
+    #[serde(default = "default_record_class")]
+    pub class: RecordClass,
 }
+
+/// If you don't specify a name, it's the root.
 fn default_record_name() -> String {
     String::from("@")
+}
+/// Sets a default of IN because well, what else would you use?
+fn default_record_class() -> RecordClass {
+    RecordClass::Internet
 }
 
 impl Display for FileZoneRecord {
