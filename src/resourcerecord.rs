@@ -140,13 +140,16 @@ pub enum InternalResourceRecord {
     A {
         address: u32,
         ttl: u32,
+        rclass: RecordClass,
     },
     AAAA {
         address: u128,
         ttl: u32,
+        rclass: RecordClass,
     }, // 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
     AXFR {
         ttl: u32,
+        rclass: RecordClass,
     }, // 252 A request for a transfer of an entire zone
 
     // [RFC8659](https://www.rfc-editor.org/rfc/rfc8659) - CAA Record
@@ -157,13 +160,16 @@ pub enum InternalResourceRecord {
         /// A sequence of octets representing the Property Value. Property Values are encoded as binary values and MAY employ sub‑formats.
         value: Vec<u8>,
         ttl: u32,
+        rclass: RecordClass,
     },
     CNAME {
         cname: DomainName,
         ttl: u32,
+        rclass: RecordClass,
     }, // 5 the canonical name for an alias
     LOC {
         ttl: u32,
+        rclass: RecordClass,
         /// Version number of the representation.  This must be zero. Implementations are required to check this field and make no assumptions about the format of unrecognized versions.
         version: u8,
         size: u8,
@@ -175,6 +181,7 @@ pub enum InternalResourceRecord {
     },
     NAPTR {
         ttl: u32,
+        rclass: RecordClass,
         ///     Domain - The domain name to which this resource record refers.  This is the 'key' for this entry in the rule database.  This value will either be the first well known key (<something>.uri.arpa for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements.
         domain: DomainName,
         // A 16-bit unsigned integer specifying the order in which the NAPTR records MUST be processed to ensure the correct ordering of rules.  Low numbers are processed before high numbers, and once a NAPTR is found whose rule "matches" the target, the client MUST NOT consider any NAPTRs with a higher value for order (except as noted below for the Flags field).
@@ -221,6 +228,7 @@ pub enum InternalResourceRecord {
     NS {
         nsdname: DomainName,
         ttl: u32,
+        rclass: RecordClass,
     }, // 2 an authoritative name server
     SOA {
         // The zone that this SOA record is for - eg hello.goat or example.com
@@ -234,40 +242,49 @@ pub enum InternalResourceRecord {
         retry: u32,
         expire: u32,
         minimum: u32,
-        // this doesn't get a TTL, since that's an expire?
+        rclass: RecordClass,
     }, // 6 marks the start of a zone of authority
 
     MB {
         ttl: u32,
+        rclass: RecordClass,
     }, // 7 a mailbox domain name (EXPERIMENTAL)
     MG {
         ttl: u32,
+        rclass: RecordClass,
     }, // 8 a mail group member (EXPERIMENTAL)
     MR {
         ttl: u32,
+        rclass: RecordClass,
     }, // 9 a mail rename domain name (EXPERIMENTAL)
     NULL {
         ttl: u32,
+        rclass: RecordClass,
     }, // 10 a null RR (EXPERIMENTAL)
     WKS {
         ttl: u32,
+        rclass: RecordClass,
     }, // 11 a well known service description
     PTR {
         ptrdname: DomainName,
         ttl: u32,
+        rclass: RecordClass,
     }, // 12 a domain name pointer
     HINFO {
         cpu: Option<DNSCharString>,
         os: Option<DNSCharString>,
         ttl: u32,
+        rclass: RecordClass,
     }, // 13 host information
     MINFO {
         ttl: u32,
+        rclass: RecordClass,
     }, // 14 mailbox or mail list information
     MX {
         preference: u16,
         exchange: DomainName,
         ttl: u32,
+        rclass: RecordClass,
     }, // 15 mail exchange
     TXT {
         txtdata: DNSCharString,
@@ -279,10 +296,12 @@ pub enum InternalResourceRecord {
         weight: u16,
         target: DNSCharString,
         ttl: u32,
+        rclass: RecordClass,
     },
 
     MAILB {
         ttl: u32,
+        rclass: RecordClass,
     }, // 253 A request for mailbox-related records (MB, MG or MR)
 
     // MAILA {
@@ -338,6 +357,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                 Ok(InternalResourceRecord::A {
                     address,
                     ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
             "AAAA" => {
@@ -358,15 +378,18 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                 Ok(InternalResourceRecord::AAAA {
                     address,
                     ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
             "CNAME" => Ok(InternalResourceRecord::CNAME {
                 cname: DomainName::from(record.rdata),
                 ttl: record.ttl,
+                rclass: record.class,
             }),
             "PTR" => Ok(InternalResourceRecord::PTR {
                 ptrdname: DomainName::from(record.rdata),
                 ttl: record.ttl,
+                rclass: record.class,
             }),
             "TXT" => Ok(InternalResourceRecord::TXT {
                 txtdata: DNSCharString {
@@ -397,11 +420,13 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                     preference: pref,
                     exchange: DomainName::from(split_bit[1]),
                     ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
             "NS" => Ok(InternalResourceRecord::NS {
                 nsdname: DomainName::from(record.rdata),
                 ttl: record.ttl,
+                rclass: record.class,
             }),
             "CAA" => {
                 let split_bit: Vec<&str> = record.rdata.split(' ').collect();
@@ -435,6 +460,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                     tag,
                     value,
                     ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
             "LOC" => {
@@ -446,6 +472,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
 
                 Ok(InternalResourceRecord::LOC {
                     ttl: record.ttl,
+                    rclass: record.class,
                     version: 0,
                     size: res.size,
                     horiz_pre: res.horiz_pre,
@@ -490,6 +517,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                     weight,
                     target,
                     ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
             _ => Err("Invalid type specified!".to_string()),
@@ -541,8 +569,8 @@ impl PartialEq<RecordType> for InternalResourceRecord {
 impl InternalResourceRecord {
     pub fn as_bytes(self: &InternalResourceRecord, question: &Vec<u8>) -> Vec<u8> {
         match self {
-            InternalResourceRecord::A { address, ttl: _ } => address.to_be_bytes().to_vec(),
-            InternalResourceRecord::AAAA { address, ttl: _ } => address.to_be_bytes().to_vec(),
+            InternalResourceRecord::A { address, .. } => address.to_be_bytes().to_vec(),
+            InternalResourceRecord::AAAA { address, .. } => address.to_be_bytes().to_vec(),
 
             InternalResourceRecord::CNAME { cname, .. } => {
                 trace!("turning CNAME {cname:?} into bytes");
@@ -559,6 +587,7 @@ impl InternalResourceRecord {
                 latitude,
                 longitude,
                 altitude,
+                ..
             } => {
                 error!("LOC {:?} - TTL={ttl}", from_utf8(question));
                 let record = LocRecord {
@@ -579,10 +608,10 @@ impl InternalResourceRecord {
                     }
                 }
             }
-            InternalResourceRecord::NS { nsdname, ttl: _ } => {
+            InternalResourceRecord::NS { nsdname, .. } => {
                 nsdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
             }
-            InternalResourceRecord::PTR { ptrdname, ttl: _ } => {
+            InternalResourceRecord::PTR { ptrdname, .. } => {
                 ptrdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
             }
             InternalResourceRecord::SOA {
@@ -594,6 +623,7 @@ impl InternalResourceRecord {
                 retry,
                 expire,
                 minimum,
+                ..
             } => {
                 // TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
                 let zone_as_bytes = zone.name.as_bytes().to_vec();
@@ -626,7 +656,7 @@ impl InternalResourceRecord {
             // InternalResourceRecord::MR {  } => todo!(),
             // InternalResourceRecord::NULL {  } => todo!(),
             // InternalResourceRecord::WKS {  } => todo!(),
-            InternalResourceRecord::HINFO { cpu, os, ttl: _ } => {
+            InternalResourceRecord::HINFO { cpu, os, .. } => {
                 let mut hinfo_bytes: Vec<u8> = vec![];
                 match cpu {
                     Some(value) => {
@@ -653,21 +683,18 @@ impl InternalResourceRecord {
             InternalResourceRecord::MX {
                 preference,
                 exchange,
-                ttl: _,
+                ..
             } => {
                 let mut mx_bytes: Vec<u8> = preference.to_be_bytes().into();
                 mx_bytes.extend(exchange.as_bytes(Some(HEADER_BYTES as u16), Some(question)));
                 mx_bytes
             }
-            InternalResourceRecord::AXFR { ttl: _ } => todo!(),
-            InternalResourceRecord::MAILB { ttl: _ } => todo!(),
+            InternalResourceRecord::AXFR { .. } => todo!(),
+            InternalResourceRecord::MAILB { .. } => todo!(),
             InternalResourceRecord::ALL {} => todo!(),
             InternalResourceRecord::InvalidType => todo!(),
             InternalResourceRecord::CAA {
-                flag,
-                tag,
-                value,
-                ..
+                flag, tag, value, ..
             } => {
                 let mut result: Vec<u8> = vec![*flag];
                 // add the tag
@@ -679,24 +706,24 @@ impl InternalResourceRecord {
             }
             #[allow(unused_variables)]
             InternalResourceRecord::NAPTR {
-                ttl,
                 domain,
                 order,
                 preference,
                 flags,
+                ..
             } => todo!(),
             #[allow(unused_variables)]
-            InternalResourceRecord::MB { ttl } => todo!(),
+            InternalResourceRecord::MB { .. } => todo!(),
             #[allow(unused_variables)]
-            InternalResourceRecord::MG { ttl } => todo!(),
+            InternalResourceRecord::MG { .. } => todo!(),
             #[allow(unused_variables)]
-            InternalResourceRecord::MR { ttl } => todo!(),
+            InternalResourceRecord::MR { .. } => todo!(),
             #[allow(unused_variables)]
-            InternalResourceRecord::NULL { ttl } => todo!(),
+            InternalResourceRecord::NULL { .. } => todo!(),
             #[allow(unused_variables)]
-            InternalResourceRecord::WKS { ttl } => todo!(),
+            InternalResourceRecord::WKS { .. } => todo!(),
             #[allow(unused_variables)]
-            InternalResourceRecord::MINFO { ttl } => todo!(),
+            InternalResourceRecord::MINFO { .. } => todo!(),
         }
     }
 
@@ -722,14 +749,16 @@ mod tests {
         assert_eq!(
             InternalResourceRecord::A {
                 address: 12345,
-                ttl: 1
+                ttl: 1,
+                rclass: RecordClass::Internet
             },
             RecordType::A
         );
         assert_eq!(
             InternalResourceRecord::AAAA {
                 address: 12345,
-                ttl: 1
+                ttl: 1,
+                rclass: RecordClass::Internet
             },
             RecordType::AAAA
         );
