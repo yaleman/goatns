@@ -1,4 +1,3 @@
-use log::*;
 use packed_struct::prelude::*;
 use std::net::SocketAddr;
 use std::str::{from_utf8, FromStr};
@@ -32,14 +31,14 @@ async fn check_for_shutdown(r: &Reply, addr: &SocketAddr, config: &ConfigFile) -
                 if qname == "shutdown" {
                     match config.ip_allow_lists.shutdown.contains(&addr.ip()) {
                         true => {
-                            info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
+                            log::info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
                             return Ok(());
                         }
-                        false => warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip()),
+                        false => log::warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip()),
                     }
                 }
             } else {
-                error!(
+                log::error!(
                     "Failed to parse qname from {:?}, this shouldn't be able to happen!",
                     q.qname
                 );
@@ -76,11 +75,11 @@ pub async fn udp_server(
 ) -> io::Result<()> {
     let udp_sock = match UdpSocket::bind(bind_address).await {
         Ok(value) => {
-            info!("Started UDP listener on {}:{}", config.address, config.port);
+            log::info!("Started UDP listener on {}:{}", config.address, config.port);
             value
         }
         Err(error) => {
-            error!("Failed to start UDP listener: {:?}", error);
+            log::error!("Failed to start UDP listener: {:?}", error);
             return Ok(());
         }
     };
@@ -91,12 +90,12 @@ pub async fn udp_server(
         let (len, addr) = match udp_sock.recv_from(&mut udp_buffer).await {
             Ok(value) => value,
             Err(error) => {
-                error!("Error accepting connection via UDP: {:?}", error);
+                log::error!("Error accepting connection via UDP: {:?}", error);
                 continue;
             }
         };
 
-        debug!("{:?} bytes received from {:?}", len, addr);
+        log::debug!("{:?} bytes received from {:?}", len, addr);
 
         let udp_result = match timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
@@ -106,14 +105,14 @@ pub async fn udp_server(
         {
             Ok(reply) => reply,
             Err(_) => {
-                error!("Did not receive response from parse_query within 10 ms");
+                log::error!("Did not receive response from parse_query within 10 ms");
                 continue;
             }
         };
 
         match udp_result {
             Ok(mut r) => {
-                debug!("Result: {:?}", r);
+                log::debug!("Result: {:?}", r);
 
                 let reply_bytes: Vec<u8> = match r.as_bytes().await {
                     Ok(value) => {
@@ -129,23 +128,23 @@ pub async fn udp_server(
                         }
                     }
                     Err(error) => {
-                        error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
+                        log::error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
                         continue;
                     }
                 };
 
-                debug!("reply_bytes: {:?}", reply_bytes);
+                log::debug!("reply_bytes: {:?}", reply_bytes);
                 let len = match udp_sock.send_to(&reply_bytes as &[u8], addr).await {
                     Ok(value) => value,
                     Err(err) => {
-                        error!("Failed to send data back to {:?}: {:?}", addr, err);
+                        log::error!("Failed to send data back to {:?}: {:?}", addr, err);
                         return Ok(());
                     }
                 };
                 // let len = sock.send_to(r.answer.as_bytes(), addr).await?;
-                debug!("{:?} bytes sent", len);
+                log::debug!("{:?} bytes sent", len);
             }
-            Err(error) => error!("Error: {}", error),
+            Err(error) => log::error!("Error: {}", error),
         }
     }
 }
@@ -162,11 +161,11 @@ pub async fn tcp_server(
     // TODO: add a configurable idle timeout for the TCP server
     let tcpserver = match TcpListener::bind(bind_address).await {
         Ok(value) => {
-            info!("Started TCP listener on {}", bind_address);
+            log::info!("Started TCP listener on {}", bind_address);
             value
         }
         Err(error) => {
-            error!("Failed to start TCP Server: {:?}", error);
+            log::error!("Failed to start TCP Server: {:?}", error);
             return Ok(());
         }
     };
@@ -176,12 +175,12 @@ pub async fn tcp_server(
             Ok(value) => value,
             Err(error) => panic!("Couldn't get data from TcpStrream: {:?}", error),
         };
-        debug!("TCP connection from {:?}", addr);
+        log::debug!("TCP connection from {:?}", addr);
 
         let (mut reader, writer) = stream.split();
         // TODO: this is a hilariously risky unwrap
         let msg_length: usize = reader.read_u16().await.unwrap().into();
-        debug!("msg_length={msg_length}");
+        log::debug!("msg_length={msg_length}");
         // let mut buf: Vec<u8> = Vec::with_capacity(msg_length.into());
         let mut buf: Vec<u8> = vec![];
 
@@ -189,12 +188,12 @@ pub async fn tcp_server(
             let len = match reader.read_buf(&mut buf).await {
                 Ok(size) => size,
                 Err(error) => {
-                    error!("Failed to read from TCP Stream: {:?}", error);
+                    log::error!("Failed to read from TCP Stream: {:?}", error);
                     return Ok(());
                 }
             };
             if len > 0 {
-                debug!("Read {:?} bytes from TCP stream", len);
+                log::debug!("Read {:?} bytes from TCP stream", len);
             }
         }
 
@@ -204,13 +203,13 @@ pub async fn tcp_server(
 
         // check the message is long enough
         if buf.len() < msg_length {
-            warn!(
+            log::warn!(
                 "Message length too short {}, wanted {}",
                 buf.len(),
                 msg_length + 2
             );
         } else {
-            info!("TCP Message length ftw!");
+            log::info!("TCP Message length ftw!");
         }
 
         // skip the TCP length header because rad
@@ -223,14 +222,16 @@ pub async fn tcp_server(
         {
             Ok(reply) => reply,
             Err(_) => {
-                error!("Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms");
+                log::error!(
+                    "Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms"
+                );
                 continue;
             }
         };
 
         match result {
             Ok(r) => {
-                debug!("TCP Result: {r:?}");
+                log::debug!("TCP Result: {r:?}");
 
                 // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
                 if check_for_shutdown(&r, &addr, &config).await.is_ok() {
@@ -240,12 +241,12 @@ pub async fn tcp_server(
                 let reply_bytes: Vec<u8> = match r.as_bytes().await {
                     Ok(value) => value,
                     Err(error) => {
-                        error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
+                        log::error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
                         continue;
                     }
                 };
 
-                debug!("reply_bytes: {:?}", reply_bytes);
+                log::debug!("reply_bytes: {:?}", reply_bytes);
 
                 let reply_bytes = &reply_bytes as &[u8];
                 // send the outgoing message length
@@ -253,23 +254,23 @@ pub async fn tcp_server(
                 let len = match writer.try_write(&response_length.to_be_bytes()) {
                     Ok(value) => value,
                     Err(err) => {
-                        error!("Failed to send data back to {:?}: {:?}", addr, err);
+                        log::error!("Failed to send data back to {:?}: {:?}", addr, err);
                         return Ok(());
                     }
                 };
-                debug!("{:?} bytes sent", len);
+                log::debug!("{:?} bytes sent", len);
 
                 // send the data
                 let len = match writer.try_write(reply_bytes) {
                     Ok(value) => value,
                     Err(err) => {
-                        error!("Failed to send data back to {:?}: {:?}", addr, err);
+                        log::error!("Failed to send data back to {:?}: {:?}", addr, err);
                         return Ok(());
                     }
                 };
-                debug!("{:?} bytes sent", len);
+                log::debug!("{:?} bytes sent", len);
             }
-            Err(error) => error!("Error: {}", error),
+            Err(error) => log::error!("Error: {}", error),
         }
     }
 }
@@ -299,8 +300,8 @@ pub async fn parse_query(
             return Err(format!("Failed to parse header: {:?}", error));
         }
     };
-    debug!("Buffer length: {}", len);
-    debug!("Parsed header: {:?}", header);
+    log::trace!("Buffer length: {}", len);
+    log::trace!("Parsed header: {:?}", header);
     get_result(header, len, buf, datastore).await
 }
 
@@ -320,19 +321,19 @@ async fn get_result(
 
     let question = match Question::from_packets(&buf[HEADER_BYTES..len]).await {
         Ok(value) => {
-            debug!("Parsed question: {:?}", value);
+            log::debug!("Parsed question: {:?}", value);
             value
         }
         Err(error) => {
             // TODO: this should return a SERVFAIL
-            error!("Failed to parse question: {} id={}", error, header.id);
+            log::error!("Failed to parse question: {} id={}", error, header.id);
             return reply_builder(header.id, Rcode::ServFail);
         }
     };
 
     // yeet them when we get a request we can't handle
     if !question.qtype.supported() {
-        debug!(
+        log::debug!(
             "Unsupported request: {} {:?}, returning NotImplemented",
             from_utf8(&question.qname).unwrap_or("<unable to parse>"),
             question.qtype,
@@ -344,7 +345,7 @@ async fn get_result(
     #[allow(clippy::collapsible_if)]
     if question.qclass == RecordClass::Chaos {
         if &question.normalized_name().unwrap() == "shutdown" {
-            debug!("Got CHAOS shutdown!");
+            log::debug!("Got CHAOS shutdown!");
             return Ok(Reply {
                 header,
                 question: Some(question),
@@ -376,24 +377,24 @@ async fn get_result(
 
     // here we talk to the datastore to pull the result
     match datastore.send(ds_req).await {
-        Ok(_) => trace!("Sent a request to the datastore!"),
+        Ok(_) => log::trace!("Sent a request to the datastore!"),
         // TODO: handle this properly
-        Err(error) => error!("Error sending to datastore: {:?}", error),
+        Err(error) => log::error!("Error sending to datastore: {:?}", error),
     };
 
     let record: ZoneRecord = match rx_oneshot.await {
         Ok(value) => match value {
             Some(zr) => {
-                debug!("DS Response: {}", zr);
+                log::debug!("DS Response: {}", zr);
                 zr
             }
             None => {
-                debug!("No response from datastore");
+                log::debug!("No response from datastore");
                 return reply_nxdomain(header.id);
             }
         },
         Err(error) => {
-            error!("Failed to get response from datastore: {:?}", error);
+            log::error!("Failed to get response from datastore: {:?}", error);
             return reply_builder(header.id, Rcode::ServFail);
         }
     };

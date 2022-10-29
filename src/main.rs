@@ -56,9 +56,25 @@ async fn main() -> io::Result<()> {
         tx.clone(),
     ));
 
+    // let apiserver = tokio::spawn(
+    let apiserver = match goatns::api::main(config.api_port, tx.clone()).await {
+        Ok(value) => value,
+        Err(err) => {
+            log::error!("Failed to start API server: {err:?}");
+            return Ok(());
+        }
+    };
+
+    match apiserver.launch().await {
+        Ok(value) => log::error!("{value:?}"),
+        Err(err) => log::error!("Failed to start {err:?}"),
+    }
+
     loop {
         // if any of the servers bail, the server does too.
-        if udpserver.is_finished() || tcpserver.is_finished() || datastore_manager.is_finished() {
+        if udpserver.is_finished() || tcpserver.is_finished() || datastore_manager.is_finished()
+        // || apiserver.is_finished()
+        {
             return Ok(());
         }
         sleep(std::time::Duration::from_secs(1)).await;

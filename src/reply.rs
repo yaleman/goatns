@@ -1,7 +1,7 @@
 use crate::resourcerecord::InternalResourceRecord;
 use crate::{Header, Question};
 use crate::{ResourceRecord, UDP_BUFFER_SIZE};
-use log::*;
+use log::error;
 use packed_struct::prelude::*;
 
 #[derive(Debug, Clone)]

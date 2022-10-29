@@ -31,6 +31,8 @@ pub struct ConfigFile {
     pub zone_file: String,
     /// IP Allow lists
     pub ip_allow_lists: IPAllowList,
+    /// API / Web UI Port
+    pub api_port: u16,
 }
 
 impl Default for ConfigFile {
@@ -48,6 +50,7 @@ impl Default for ConfigFile {
             },
             sqlite_path: String::from("~/.cache/goatns.sqlite"),
             zone_file: String::from("zones.json"),
+            api_port: 9000,
         }
     }
 }
@@ -80,9 +83,8 @@ impl From<Config> for ConfigFile {
             sqlite_path: config
                 .get("sqlite_path")
                 .unwrap_or(Self::default().sqlite_path),
-            zone_file: config
-                .get("sqlite_path")
-                .unwrap_or(Self::default().zone_file),
+            zone_file: config.get("zone_file").unwrap_or(Self::default().zone_file),
+            api_port: config.get("api_port").unwrap_or(Self::default().api_port),
         }
     }
 }

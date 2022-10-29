@@ -2,6 +2,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate rocket;
+
 use crate::enums::*;
 use crate::utils::*;
 use log::trace;
@@ -9,6 +12,8 @@ use packed_struct::prelude::*;
 use std::fmt::{Debug, Display};
 use std::str::from_utf8;
 
+/// Configuration and management API
+pub mod api;
 /// Configuration handling for the server
 pub mod config;
 /// The data-storing backend for zone information and (eventually) caching.
@@ -18,6 +23,7 @@ pub mod enums;
 pub mod packet_dumper;
 pub mod reply;
 pub mod resourcerecord;
+pub mod serializers;
 pub mod servers;
 mod tests;
 pub mod utils;
