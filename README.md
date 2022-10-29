@@ -6,6 +6,10 @@ Currently designed to be authoritative.
 
 Though, "designed" is a stretch.
 
+## Crate Documentation
+
+Auto-generated and available here: [https://yaleman.github.io/goatns/rustdoc/goatns](https://yaleman.github.io/goatns/rustdoc/goatns/)
+
 ## Configuration
 
 Look at `zones.json` and `goatns.json` for examples.
