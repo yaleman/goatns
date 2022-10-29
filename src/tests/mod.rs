@@ -71,6 +71,7 @@ mod tests {
         let answers = vec![InternalResourceRecord::A {
             ttl: 350,
             address: address.into(),
+            rclass: crate::RecordClass::Internet,
         }];
         let reply = Reply {
             header,
@@ -195,6 +196,7 @@ mod tests {
             retry: 2400,
             expire: 604800,
             minimum: 300,
+            rclass: crate::RecordClass::Internet,
         };
 
         // let rdata = rdata.as_bytes();
@@ -305,6 +307,8 @@ mod tests {
             // class: crate::RecordClass::Internet,
             ttl: 2u32,
             address: 0u32,
+
+            rclass: crate::RecordClass::Internet,
             // rdlength,
             // rdata: rdata.into(),
             // compression: true,

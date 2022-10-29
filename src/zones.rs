@@ -143,6 +143,7 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
                     cpu: None,
                     os: None,
                     ttl: 1,
+                    rclass: crate::RecordClass::Chaos,
                 }],
             },
         );
@@ -159,6 +160,8 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
             retry: zone.retry,
             expire: zone.expire,
             minimum: zone.minimum,
+
+            rclass: crate::RecordClass::Internet,
         };
         debug!("{soa:?}");
         tree.insert(
