@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use packed_struct::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 use crate::resourcerecord::InternalResourceRecord;
 
@@ -214,7 +214,7 @@ impl RecordType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 /// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
     /// IN - Internet
@@ -241,6 +241,15 @@ impl Display for RecordClass {
                 RecordClass::InvalidType => "Invalid",
             }
         ))
+    }
+}
+
+impl Serialize for RecordClass {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(format!("{self}").as_str())
     }
 }
 

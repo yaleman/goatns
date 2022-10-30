@@ -8,3 +8,4 @@ pcaps/
 out.stacks
 flamegraph.svg
 vendor
+certificates/*
