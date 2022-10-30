@@ -69,8 +69,11 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 ## TODO 
 
   - [ ] record storage in a DB and caching instead of loading everything into memory
+    - [ ] add zoneid to soa InternalResourceRecords
+    - [ ] add recordid to all other InternalResourceRecords
   - [ ] support all sorts of records with classes, because bleh
   - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data
+   - [ ] SOA minimum overrides RR TTL - RFC1035 3.3.13 - "Whenever a RR is sent in a response to a query, the TTL field is set to the maximum of the TTL field from the RR and the MINIMUM field in the appropriate SOA."
   - [ ] response caching to save the lookups and parsing
     - [ ] concread?
   - [ ] good e2e tests for LOC records from zone files

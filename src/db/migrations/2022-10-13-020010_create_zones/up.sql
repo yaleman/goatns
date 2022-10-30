@@ -1,5 +1,0 @@
--- Your SQL goes here
-CREATE TABLE zones (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name VARCHAR NOT NULL
-)

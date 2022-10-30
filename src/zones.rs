@@ -11,30 +11,32 @@ use std::io::Read;
 use std::str::from_utf8;
 
 /// A DNS Zone in a JSON file
-#[derive(Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename(serialize = "UPPERCASE"))]
 pub struct FileZone {
+    #[serde(default)]
+    pub id: u64,
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
     #[serde(rename(serialize = "MNAME"))]
     pub name: String,
     // RNAME A <domain-name> which specifies the mailbox of the person responsible for this zone.
     #[serde(rename(serialize = "RNAME"), default = "rname_default")]
     pub rname: String,
+    /// SERIAL - The unsigned 32 bit version number of the original copy of the zone.  Zone transfers preserve this value.  This value wraps and should be compared using sequence space arithmetic.
+    #[serde(default)]
+    pub serial: u32,
     /// REFRESH - A 32 bit time interval before the zone should be refreshed.
     #[serde(default)]
     pub refresh: u32,
     /// RETRY - A 32 bit time interval that should elapse before a failed refresh should be retried.
     #[serde(default)]
     pub retry: u32,
-    /// SERIAL - The unsigned 32 bit version number of the original copy of the zone.  Zone transfers preserve this value.  This value wraps and should be compared using sequence space arithmetic.
-    #[serde(default)]
-    pub serial: u32,
-    /// MINIMUM - The unsigned 32 bit minimum TTL field that should be exported with any RR from this zone.
-    #[serde(default)]
-    pub minimum: u32,
     ///  EXPIRE - A 32 bit time value that specifies the upper limit on the time interval that can elapse before the zone is no longer authoritative.
     #[serde(default)]
     pub expire: u32,
+    /// MINIMUM - The unsigned 32 bit minimum TTL field that should be exported with any RR from this zone.
+    #[serde(default)]
+    pub minimum: u32,
     pub records: Vec<FileZoneRecord>,
 }
 

@@ -161,14 +161,7 @@ rm "${CADB}"
 
 touch ${CADB}
 
-if [ ! -f "${CASRL}" ]; then
-    echo 1000 > ${CASRL}
-else
-    SERIAL=$(cat ${CASRL})
-    SERIAL=$((SERIAL+1))
-    echo "${SERIAL}" > ${CASRL}
-    echo "Updated serial to ${SERIAL}"
-fi
+echo 1000 > ${CASRL}
 
 if [ ! -f "${CAKEY}" ]; then
     echo "Make the CA key..."
@@ -208,4 +201,6 @@ openssl ca -config "${ALTNAME_FILE}" \
 # Create the chain
 cat "${CERTFILE}" "${CACERT}" > "${CHAINFILE}"
 
-echo "Success!"
+echo "####################################"
+echo "Successfully created certs!"
+echo "####################################"

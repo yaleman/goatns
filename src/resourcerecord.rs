@@ -6,7 +6,7 @@ use core::fmt::Debug;
 use num_traits::Num;
 use packed_struct::prelude::*;
 use regex::Regex;
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 use std::env::consts;
 use std::str::{from_utf8, FromStr};
 use std::string::FromUtf8Error;
@@ -21,7 +21,7 @@ const DEFAULT_LOC_HORIZ_PRE: u32 = 10000;
 const DEFAULT_LOC_VERT_PRE: u32 = 10;
 const DEFAULT_LOC_SIZE: u32 = 1;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct DomainName {
     pub name: String,
 }
