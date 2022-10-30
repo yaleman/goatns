@@ -108,6 +108,7 @@ pub async fn build(
     let config = rocket::Config {
         port: goatns_config.api_port,
         shutdown,
+        log_level: rocket::log::LogLevel::Normal,
         tls: Some(tls),
         ..rocket::Config::debug_default()
     };
