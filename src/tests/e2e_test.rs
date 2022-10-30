@@ -17,7 +17,10 @@ mod tests {
             return Ok(());
         }
 
-        // TODO: add a test config and zone file here
+        // YOLO some certs
+        std::process::Command::new("./insecure_generate_tls.sh").spawn()?;
+
+        // start the server
         let goat = std::process::Command::new("cargo")
             .args([
                 "run",

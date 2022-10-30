@@ -1,18 +1,9 @@
+use crate::config::ConfigFile;
 use crate::datastore;
 use crate::enums::RecordType;
 use rocket;
 use rocket::State;
 use tokio::sync::mpsc::Sender;
-
-#[get("/")]
-async fn index() -> &'static str {
-    "Hello, world!"
-}
-
-#[get("/status")]
-async fn status() -> &'static str {
-    "OK"
-}
 
 #[derive(Responder)]
 enum ResponseError {
@@ -22,6 +13,16 @@ enum ResponseError {
     BadRequest(String),
     #[response(status = 404)]
     NotFound(()),
+}
+
+#[get("/")]
+async fn index() -> &'static str {
+    "Hello, world!"
+}
+
+#[get("/status")]
+async fn status() -> &'static str {
+    "OK"
 }
 
 #[get("/query/<qname>/<qtype>")]
@@ -85,22 +86,29 @@ async fn api_query(
     }
 }
 
+/// Internal State handler for the datastore object within rocket
 struct Datastore {
-    #[allow(dead_code)]
     tx: Sender<datastore::Command>,
 }
 
-pub async fn main(
-    port: u16,
+pub async fn build(
+    goatns_config: ConfigFile,
     tx: Sender<datastore::Command>,
 ) -> Result<rocket::Rocket<rocket::Ignite>, rocket::Error> {
     let shutdown = rocket::config::Shutdown {
         ctrlc: false,
         ..rocket::config::Shutdown::default()
     };
+
+    let tls = rocket::config::TlsConfig::from_paths(
+        goatns_config.api_tls_cert,
+        goatns_config.api_tls_key,
+    );
+
     let config = rocket::Config {
-        port,
+        port: goatns_config.api_port,
         shutdown,
+        tls: Some(tls),
         ..rocket::Config::debug_default()
     };
     rocket::custom(&config)

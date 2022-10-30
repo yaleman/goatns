@@ -1,6 +1,6 @@
 use crate::reply::Reply;
 use crate::{Header, PacketType, Rcode, HEADER_BYTES};
-use clap::{arg, command, value_parser, ArgMatches};
+use clap::{arg, command, value_parser, Arg, ArgMatches};
 use log::{debug, trace};
 use std::str::from_utf8;
 
@@ -347,6 +347,17 @@ pub fn clap_parser() -> ArgMatches {
             // We don't have syntax yet for optional options, so manually calling `required`
             .required(false)
             .value_parser(value_parser!(String)),
+        )
+        .arg(
+            Arg::new("configcheck")
+                .short('t')
+                .long("configcheck")
+                .help("Check the config file, show it and then quit.")
+                .action(clap::ArgAction::SetTrue), // arg!(
+                                                   //     -C --configcheck
+                                                   // )
+                                                   // .required(false)
+                                                   // .value_parser(value_parser!(String)),
         )
         // .arg(arg!(
         //     -d --debug ... "Turn debugging information on"

@@ -184,7 +184,7 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
             let record_data: InternalResourceRecord = match record.try_into() {
                 Ok(value) => value,
                 Err(error) => {
-                    eprintln!("Error loading record: {error:?}");
+                    error!("Error loading record: {error:?}");
                     continue;
                 }
             };

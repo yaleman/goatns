@@ -68,10 +68,10 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 
 ## TODO 
 
-  - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data
   - [ ] record storage in a DB and caching instead of loading everything into memory
-  - [ ] response caching to save the lookups and parsing
   - [ ] support all sorts of records with classes, because bleh
+  - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data
+  - [ ] response caching to save the lookups and parsing
     - [ ] concread?
   - [ ] good e2e tests for LOC records from zone files
   - [ ] cleaner ctrl-c handling or shutdown in general
@@ -82,4 +82,5 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
     - [x] allow list config
     - [ ] build the response packets in a nice way that doesn't blow up
   - [ ] API things
+    - [ ] try and fix rocket's horrible logging
     - [ ] [Oauth](https://docs.rs/rocket_oauth2/latest/rocket_oauth2/)

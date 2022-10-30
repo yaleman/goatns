@@ -746,7 +746,6 @@ mod tests {
 
     #[test]
     fn test_resourcerecord_from_ipv6_string() {
-        // femme::with_level(log::LevelFilter::Debug);
         let fzr = FileZoneRecord {
             name: "test".to_string(),
             rrtype: "AAAA".to_string(),
@@ -801,7 +800,6 @@ lazy_static! {
 
 }
 
-#[allow(dead_code)]
 #[derive(PartialEq)]
 /// This represents a LOC record in a zone file
 pub struct FileLocRecord {
@@ -867,7 +865,7 @@ impl TryFrom<&str> for FileLocRecord {
                 return Err("Failed to match input to expected format!".to_string());
             }
         };
-        eprintln!("{result:?}");
+        trace!("{result:?}");
 
         let d1: u8 = match result.name("d1") {
             Some(value) => match value.as_str().parse::<u8>() {
@@ -983,7 +981,7 @@ impl TryFrom<&str> for FileLocRecord {
                 }
             },
             None => {
-                log::trace!("returning default as horiz_pre wasn't set");
+                log::trace!("Using horiz_pre default as it wasn't specified");
                 DEFAULT_LOC_HORIZ_PRE
             }
         };
@@ -998,7 +996,7 @@ impl TryFrom<&str> for FileLocRecord {
             },
 
             None => {
-                log::trace!("returning default as vert_pre wasn't set");
+                log::trace!("Using vert_pre default as it wasn't specified");
                 DEFAULT_LOC_VERT_PRE
             }
         };

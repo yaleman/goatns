@@ -1,10 +1,12 @@
+use clap::ArgMatches;
+use config::{Config, File};
+use flexi_logger::LoggerHandle;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::net::IpAddr;
+use std::path::PathBuf;
 
-use config::{Config, File};
-use serde::Deserialize;
-
-#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Default)]
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct IPAllowList {
     // Allow CH TXT VERSION.BIND or VERSION requests
     // pub version: Vec<IpAddr>,
@@ -12,7 +14,7 @@ pub struct IPAllowList {
     pub shutdown: Vec<IpAddr>,
 }
 
-#[derive(Deserialize, Debug, Eq, PartialEq, Clone)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Serialize)]
 pub struct ConfigFile {
     /// Listen address, default is 0.0.0.0
     pub address: String,
@@ -33,6 +35,10 @@ pub struct ConfigFile {
     pub ip_allow_lists: IPAllowList,
     /// API / Web UI Port
     pub api_port: u16,
+    /// Certificate path
+    pub api_tls_cert: PathBuf,
+    /// TLS key path
+    pub api_tls_key: PathBuf,
 }
 
 impl Default for ConfigFile {
@@ -41,7 +47,7 @@ impl Default for ConfigFile {
             address: "0.0.0.0".to_string(),
             port: 15353,
             capture_packets: false,
-            log_level: "DEBUG".to_string(),
+            log_level: "INFO".to_string(),
             tcp_client_timeout: 15,
             enable_hinfo: false,
             ip_allow_lists: IPAllowList {
@@ -51,6 +57,8 @@ impl Default for ConfigFile {
             sqlite_path: String::from("~/.cache/goatns.sqlite"),
             zone_file: String::from("zones.json"),
             api_port: 9000,
+            api_tls_cert: PathBuf::from("./certificates/cert.pem"),
+            api_tls_key: PathBuf::from("./certificates/key.pem"),
         }
     }
 }
@@ -85,6 +93,12 @@ impl From<Config> for ConfigFile {
                 .unwrap_or(Self::default().sqlite_path),
             zone_file: config.get("zone_file").unwrap_or(Self::default().zone_file),
             api_port: config.get("api_port").unwrap_or(Self::default().api_port),
+            api_tls_cert: config
+                .get("api_tls_cert")
+                .unwrap_or(Self::default().api_tls_cert),
+            api_tls_key: config
+                .get("api_tls_key")
+                .unwrap_or(Self::default().api_tls_key),
         }
     }
 }
@@ -128,4 +142,52 @@ pub fn get_config(config_path: Option<&String>) -> ConfigFile {
         }
     }
     ConfigFile::default()
+}
+
+pub fn check_config(config: &ConfigFile) -> Result<(), Vec<String>> {
+    let mut config_ok: bool = true;
+    let mut errors: Vec<String> = vec![];
+    if !config.api_tls_key.exists() {
+        errors.push(format!(
+            "Failed to find API TLS Key file: {:?}",
+            config.api_tls_key
+        ));
+        config_ok = false;
+    };
+
+    if !config.api_tls_cert.exists() {
+        errors.push(format!(
+            "Failed to find API TLS cert file: {:?}",
+            config.api_tls_cert
+        ));
+        config_ok = false;
+    };
+
+    match config_ok {
+        true => Ok(()),
+        false => Err(errors),
+    }
+}
+
+pub fn setup_logging(
+    config: &ConfigFile,
+    clap_results: &ArgMatches,
+) -> Result<LoggerHandle, String> {
+    // force the log level to info if we're testing config
+    let log_level = match clap_results.get_flag("configcheck") {
+        true => "info".to_string(),
+        false => config.log_level.to_ascii_lowercase(),
+    };
+
+    match flexi_logger::Logger::try_with_str(&log_level) {
+        Ok(logger) => Ok(logger
+            .write_mode(flexi_logger::WriteMode::Async)
+            .set_palette("b1;3;2;6;5".to_string())
+            .start()
+            .unwrap()),
+        Err(error) => {
+            eprintln!("Failed to start logger! {error:?}");
+            Err(format!("Failed to start logger! {error:?}"))
+        }
+    }
 }
