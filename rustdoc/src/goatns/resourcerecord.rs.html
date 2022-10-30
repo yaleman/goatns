@@ -1039,16 +1039,25 @@
 <span id="1039">1039</span>
 <span id="1040">1040</span>
 <span id="1041">1041</span>
+<span id="1042">1042</span>
+<span id="1043">1043</span>
+<span id="1044">1044</span>
+<span id="1045">1045</span>
+<span id="1046">1046</span>
+<span id="1047">1047</span>
+<span id="1048">1048</span>
+<span id="1049">1049</span>
+<span id="1050">1050</span>
+<span id="1051">1051</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums</span>::{<span class="ident">RecordClass</span>, <span class="ident">RecordType</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils</span>::{<span class="ident">dms_to_u32</span>, <span class="ident">hexdump</span>, <span class="ident">name_as_bytes</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::zones::FileZoneRecord</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::HEADER_BYTES</span>;
-
 <span class="kw">use</span> <span class="ident">core::fmt::Debug</span>;
-<span class="kw">use</span> <span class="ident">log</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">num_traits::Num</span>;
 <span class="kw">use</span> <span class="ident">packed_struct::prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">regex::Regex</span>;
+<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Serialize</span>, <span class="ident">Serializer</span>};
 <span class="kw">use</span> <span class="ident">std::env::consts</span>;
 <span class="kw">use</span> <span class="ident">std::str</span>::{<span class="ident">from_utf8</span>, <span class="ident">FromStr</span>};
 <span class="kw">use</span> <span class="ident">std::string::FromUtf8Error</span>;
@@ -1063,7 +1072,7 @@
 <span class="kw">const</span> <span class="ident">DEFAULT_LOC_VERT_PRE</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">10</span>;
 <span class="kw">const</span> <span class="ident">DEFAULT_LOC_SIZE</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">1</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DomainName</span> {
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
 }
@@ -1147,6 +1156,16 @@
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
+<span class="kw">impl</span> <span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">DNSCharString</span> {
+    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">S</span>: <span class="ident">Serializer</span>,
+    {
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>).<span class="ident">unwrap</span>();
+        <span class="ident">serializer</span>.<span class="ident">serialize_str</span>(<span class="ident">res</span>)
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DNSCharString</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">DNSCharString</span> { <span class="ident">data</span>: <span class="ident">input</span>.<span class="ident">into</span>() }
@@ -1175,15 +1194,17 @@
 }
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::upper_case_acronyms</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">InternalResourceRecord</span> {
     <span class="doccomment">/// A single host address</span>
     <span class="ident">A</span> {
+        <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">serialize_with</span> <span class="op">=</span> <span class="string">&quot;crate::serializers::a_to_ip&quot;</span>)]</span>
         <span class="ident">address</span>: <span class="ident">u32</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
         <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
     },
     <span class="ident">AAAA</span> {
+        <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">serialize_with</span> <span class="op">=</span> <span class="string">&quot;crate::serializers::aaaa_to_ip&quot;</span>)]</span>
         <span class="ident">address</span>: <span class="ident">u128</span>,
         <span class="ident">ttl</span>: <span class="ident">u32</span>,
         <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
@@ -1388,9 +1409,10 @@
                 <span class="kw">let</span> <span class="ident">address</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">std::net::Ipv4Addr::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">record</span>.<span class="ident">rdata</span>) {
                     <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">into</span>(),
                     <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                        <span class="macro">error!</span>(
+                        <span class="macro">log::error!</span>(
                             <span class="string">&quot;Failed to parse {:?} into an IPv4 address: {:?}&quot;</span>,
-                            <span class="ident">record</span>.<span class="ident">rdata</span>, <span class="ident">error</span>
+                            <span class="ident">record</span>.<span class="ident">rdata</span>,
+                            <span class="ident">error</span>
                         );
                         <span class="number">0u32</span>
                     }
@@ -1405,7 +1427,7 @@
                 <span class="kw">let</span> <span class="ident">address</span>: <span class="ident">u128</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">std::net::Ipv6Addr::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">record</span>.<span class="ident">rdata</span>) {
                     <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
                         <span class="kw">let</span> <span class="ident">res</span>: <span class="ident">u128</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">into</span>();
-                        <span class="macro">trace!</span>(<span class="string">&quot;Encoding {:?} as {:?}&quot;</span>, <span class="ident">value</span>, <span class="ident">res</span>);
+                        <span class="macro">log::trace!</span>(<span class="string">&quot;Encoding {:?} as {:?}&quot;</span>, <span class="ident">value</span>, <span class="ident">res</span>);
                         <span class="ident">res</span>
                     }
                     <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
@@ -1456,7 +1478,7 @@
                         ))
                     }
                 };
-                <span class="macro">trace!</span>(<span class="string">&quot;got pref {}, now {pref}&quot;</span>, <span class="ident">split_bit</span>[<span class="number">0</span>]);
+                <span class="macro">log::trace!</span>(<span class="string">&quot;got pref {}, now {pref}&quot;</span>, <span class="ident">split_bit</span>[<span class="number">0</span>]);
                 <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::MX</span> {
                     <span class="ident">preference</span>: <span class="ident">pref</span>,
                     <span class="ident">exchange</span>: <span class="ident">DomainName::from</span>(<span class="ident">split_bit</span>[<span class="number">1</span>]),
@@ -1614,7 +1636,7 @@
             <span class="ident">InternalResourceRecord::AAAA</span> { <span class="ident">address</span>, .. } =&gt; <span class="ident">address</span>.<span class="ident">to_be_bytes</span>().<span class="ident">to_vec</span>(),
 
             <span class="ident">InternalResourceRecord::CNAME</span> { <span class="ident">cname</span>, .. } =&gt; {
-                <span class="macro">trace!</span>(<span class="string">&quot;turning CNAME {cname:?} into bytes&quot;</span>);
+                <span class="macro">log::trace!</span>(<span class="string">&quot;turning CNAME {cname:?} into bytes&quot;</span>);
                 <span class="ident">cname</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="ident">question</span>))
             }
             <span class="comment">// InternalResourceRecord::MD {  } =&gt; todo!(),</span>
@@ -1630,7 +1652,7 @@
                 <span class="ident">altitude</span>,
                 ..
             } =&gt; {
-                <span class="macro">error!</span>(<span class="string">&quot;LOC {:?} - TTL={ttl}&quot;</span>, <span class="ident">from_utf8</span>(<span class="ident">question</span>));
+                <span class="macro">log::error!</span>(<span class="string">&quot;LOC {:?} - TTL={ttl}&quot;</span>, <span class="ident">from_utf8</span>(<span class="ident">question</span>));
                 <span class="kw">let</span> <span class="ident">record</span> <span class="op">=</span> <span class="ident">LocRecord</span> {
                     <span class="ident">version</span>: <span class="kw-2">*</span><span class="ident">version</span>,
                     <span class="ident">size</span>: <span class="kw-2">*</span><span class="ident">size</span>,
@@ -1644,7 +1666,7 @@
                 <span class="kw">match</span> <span class="ident">record</span> {
                     <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
                     <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                        <span class="macro">error!</span>(<span class="string">&quot;Failed to pack this: {self:?} {error:?}&quot;</span>);
+                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to pack this: {self:?} {error:?}&quot;</span>);
                         <span class="macro">vec!</span>[]
                     }
                 }
@@ -1807,7 +1829,6 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_resourcerecord_from_ipv6_string</span>() {
-        <span class="comment">// femme::with_level(log::LevelFilter::Debug);</span>
         <span class="kw">let</span> <span class="ident">fzr</span> <span class="op">=</span> <span class="ident">FileZoneRecord</span> {
             <span class="ident">name</span>: <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">rrtype</span>: <span class="string">&quot;AAAA&quot;</span>.<span class="ident">to_string</span>(),
@@ -1862,7 +1883,6 @@
 
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>)]</span>
 <span class="doccomment">/// This represents a LOC record in a zone file</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FileLocRecord</span> {
@@ -1928,13 +1948,13 @@
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Failed to match input to expected format!&quot;</span>.<span class="ident">to_string</span>());
             }
         };
-        <span class="macro">eprintln!</span>(<span class="string">&quot;{result:?}&quot;</span>);
+        <span class="macro">trace!</span>(<span class="string">&quot;{result:?}&quot;</span>);
 
         <span class="kw">let</span> <span class="ident">d1</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;d1&quot;</span>) {
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>() {
                 <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
                 <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                    <span class="macro">error!</span>(<span class="string">&quot;Failed to parse d1: {err:?}&quot;</span>);
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse d1: {err:?}&quot;</span>);
                     <span class="number">0</span>
                 }
             },
@@ -1944,7 +1964,7 @@
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>() {
                 <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
                 <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                    <span class="macro">error!</span>(<span class="string">&quot;Failed to parse d2: {err:?}&quot;</span>);
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse d2: {err:?}&quot;</span>);
                     <span class="number">0</span>
                 }
             },
@@ -1955,7 +1975,7 @@
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>() {
                 <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
                 <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                    <span class="macro">error!</span>(<span class="string">&quot;Failed to parse m1: {err:?}&quot;</span>);
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse m1: {err:?}&quot;</span>);
                     <span class="ident">FileLocRecord::default</span>().<span class="ident">m1</span>
                 }
             },
@@ -1965,7 +1985,7 @@
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>() {
                 <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
                 <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                    <span class="macro">error!</span>(<span class="string">&quot;Failed to parse m2: {err:?}&quot;</span>);
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse m2: {err:?}&quot;</span>);
                     <span class="ident">FileLocRecord::default</span>().<span class="ident">m2</span>
                 }
             },
@@ -1974,11 +1994,11 @@
         <span class="kw">let</span> <span class="ident">s1</span>: <span class="ident">f32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;s1&quot;</span>) {
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">f32::from_str_radix</span>(<span class="ident">value</span>.<span class="ident">as_str</span>(), <span class="number">10</span>) {
                 <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
-                    <span class="macro">trace!</span>(<span class="string">&quot;Parsed s1 as {value} from string&quot;</span>);
+                    <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed s1 as {value} from string&quot;</span>);
                     <span class="ident">value</span>
                 }
                 <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                    <span class="macro">error!</span>(<span class="string">&quot;Failed to parse s1: {err:?}&quot;</span>);
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse s1: {err:?}&quot;</span>);
                     <span class="number">0.0</span>
                 }
             },
@@ -1988,7 +2008,7 @@
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">f32::from_str_radix</span>(<span class="ident">value</span>.<span class="ident">as_str</span>(), <span class="number">10</span>) {
                 <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
                 <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                    <span class="macro">error!</span>(<span class="string">&quot;Failed to parse s2: {err:?}&quot;</span>);
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse s2: {err:?}&quot;</span>);
                     <span class="number">0.0</span>
                 }
             },
@@ -2023,13 +2043,13 @@
         <span class="kw">let</span> <span class="ident">size</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;size&quot;</span>) {
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>() {
                 <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
-                    <span class="macro">trace!</span>(<span class="string">&quot;Parsed size as {value} from string&quot;</span>);
+                    <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed size as {value} from string&quot;</span>);
                     <span class="ident">value</span>
                 }
                 <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse size: {value:?}, {err:?}&quot;</span>)),
             },
             <span class="prelude-val">None</span> =&gt; {
-                <span class="macro">trace!</span>(<span class="string">&quot;defaulting to size of 1&quot;</span>);
+                <span class="macro">log::trace!</span>(<span class="string">&quot;defaulting to size of 1&quot;</span>);
                 <span class="ident">DEFAULT_LOC_SIZE</span>
             }
         };
@@ -2039,12 +2059,12 @@
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>() {
                 <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
                 <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                    <span class="macro">warn!</span>(<span class="string">&quot;Failed to parse {value:?} as horizontal precision, using default&quot;</span>);
+                    <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to parse {value:?} as horizontal precision, using default&quot;</span>);
                     <span class="ident">DEFAULT_LOC_HORIZ_PRE</span>
                 }
             },
             <span class="prelude-val">None</span> =&gt; {
-                <span class="macro">trace!</span>(<span class="string">&quot;returning default as horiz_pre wasn&#39;t set&quot;</span>);
+                <span class="macro">log::trace!</span>(<span class="string">&quot;Using horiz_pre default as it wasn&#39;t specified&quot;</span>);
                 <span class="ident">DEFAULT_LOC_HORIZ_PRE</span>
             }
         };
@@ -2053,13 +2073,13 @@
             <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>() {
                 <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
                 <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                    <span class="macro">warn!</span>(<span class="string">&quot;Failed to parse {value:?} as vertical precision, using default&quot;</span>);
+                    <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to parse {value:?} as vertical precision, using default&quot;</span>);
                     <span class="ident">DEFAULT_LOC_VERT_PRE</span>
                 }
             },
 
             <span class="prelude-val">None</span> =&gt; {
-                <span class="macro">trace!</span>(<span class="string">&quot;returning default as vert_pre wasn&#39;t set&quot;</span>);
+                <span class="macro">log::trace!</span>(<span class="string">&quot;Using vert_pre default as it wasn&#39;t specified&quot;</span>);
                 <span class="ident">DEFAULT_LOC_VERT_PRE</span>
             }
         };

@@ -415,9 +415,20 @@
 <span id="415">415</span>
 <span id="416">416</span>
 <span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::reply::Reply</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Header</span>, <span class="ident">PacketType</span>, <span class="ident">Rcode</span>, <span class="ident">HEADER_BYTES</span>};
-<span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">arg</span>, <span class="ident">command</span>, <span class="ident">value_parser</span>, <span class="ident">ArgMatches</span>};
+<span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">arg</span>, <span class="ident">command</span>, <span class="ident">value_parser</span>, <span class="ident">Arg</span>, <span class="ident">ArgMatches</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">trace</span>};
 <span class="kw">use</span> <span class="ident">std::str::from_utf8</span>;
 
@@ -764,6 +775,17 @@ name_as_bytes(
             <span class="comment">// We don&#39;t have syntax yet for optional options, so manually calling `required`</span>
             .<span class="ident">required</span>(<span class="bool-val">false</span>)
             .<span class="ident">value_parser</span>(<span class="macro">value_parser!</span>(<span class="ident">String</span>)),
+        )
+        .<span class="ident">arg</span>(
+            <span class="ident">Arg::new</span>(<span class="string">&quot;configcheck&quot;</span>)
+                .<span class="ident">short</span>(<span class="string">&#39;t&#39;</span>)
+                .<span class="ident">long</span>(<span class="string">&quot;configcheck&quot;</span>)
+                .<span class="ident">help</span>(<span class="string">&quot;Check the config file, show it and then quit.&quot;</span>)
+                .<span class="ident">action</span>(<span class="ident">clap::ArgAction::SetTrue</span>), <span class="comment">// arg!(</span>
+                                                   <span class="comment">//     -C --configcheck</span>
+                                                   <span class="comment">// )</span>
+                                                   <span class="comment">// .required(false)</span>
+                                                   <span class="comment">// .value_parser(value_parser!(String)),</span>
         )
         <span class="comment">// .arg(arg!(</span>
         <span class="comment">//     -d --debug ... &quot;Turn debugging information on&quot;</span>

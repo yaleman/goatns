@@ -115,7 +115,7 @@
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::resourcerecord::InternalResourceRecord</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Header</span>, <span class="ident">Question</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ResourceRecord</span>, <span class="ident">UDP_BUFFER_SIZE</span>};
-<span class="kw">use</span> <span class="ident">log</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">log::error</span>;
 <span class="kw">use</span> <span class="ident">packed_struct::prelude</span>::<span class="kw-2">*</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>

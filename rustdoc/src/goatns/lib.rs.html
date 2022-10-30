@@ -324,9 +324,18 @@
 <span id="324">324</span>
 <span id="325">325</span>
 <span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
 </pre><pre class="rust"><code><span class="comment">// extern crate diesel;</span>
 <span class="attribute">#[<span class="ident">macro_use</span>]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">lazy_static</span>;
+
+<span class="attribute">#[<span class="ident">macro_use</span>]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">rocket</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils</span>::<span class="kw-2">*</span>;
@@ -335,6 +344,8 @@
 <span class="kw">use</span> <span class="ident">std::fmt</span>::{<span class="ident">Debug</span>, <span class="ident">Display</span>};
 <span class="kw">use</span> <span class="ident">std::str::from_utf8</span>;
 
+<span class="doccomment">/// Configuration and management API</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">api</span>;
 <span class="doccomment">/// Configuration handling for the server</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">config</span>;
 <span class="doccomment">/// The data-storing backend for zone information and (eventually) caching.</span>
@@ -344,6 +355,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">packet_dumper</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">reply</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">resourcerecord</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">serializers</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">servers</span>;
 <span class="kw">mod</span> <span class="ident">tests</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">utils</span>;
