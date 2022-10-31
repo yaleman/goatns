@@ -767,6 +767,7 @@ mod tests {
             ttl: 160u32,
             class: RecordClass::Internet,
             zoneid: 1,
+            id: 1,
         };
         debug!("fzr: {fzr}");
         let converted = match Ipv6Addr::from_str(&fzr.rdata) {

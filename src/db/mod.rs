@@ -280,40 +280,31 @@ pub async fn update_zone_with_conn(
 }
 
 pub async fn get_records(
-    conn: &SqlitePool,
+    conn: &Pool<Sqlite>,
     name: String,
     rtype: RecordType,
     rclass: RecordClass,
 ) -> Result<Vec<InternalResourceRecord>, sqlx::Error> {
-    // let mut tx = pool.begin().await?;
-    let mut tx = conn.begin().await?;
-    let search_rtype = (rtype as u16).to_string();
-    let search_rclass = (rclass as u16).to_string();
-    let mut args: SqliteArguments = SqliteArguments::default();
-    eprintln!("search_rtype {search_rtype} search_rclass {search_rclass}");
-    args.add(&name);
-    args.add(search_rtype);
-    args.add(search_rclass);
-    let res = sqlx::query_with(
-        &format!(
-            "SELECT
+    let res = sqlx::query(&format!(
+        "SELECT
         record_id, zone_id, name, rclass, rtype, rdata, ttl
         FROM {}
         WHERE name = ? AND rtype = ? AND rclass = ?",
-            SQL_VIEW_RECORDS
-        ),
-        args,
-    )
-    .fetch_all(&mut *tx)
+        SQL_VIEW_RECORDS
+    ))
+    .bind(&name)
+    .bind((rtype as u16).to_string())
+    .bind((rclass as u16).to_string())
+    .fetch_all(&mut conn.acquire().await?)
     .await?;
 
     if res.is_empty() {
-        log::error!("No results returned for {name}");
+        log::trace!("No results returned for {name}");
     }
 
     let mut results: Vec<InternalResourceRecord> = vec![];
     for row in res {
-        // let record_id: i64 = row.get(0);
+        let record_id: i64 = row.get(0);
         let zoneid: i64 = row.get(1);
         let zoneid: u64 = zoneid.try_into().unwrap_or(0);
         let record_name: String = row.get(2);
@@ -326,6 +317,7 @@ pub async fn get_records(
             name: record_name,
             ttl,
             zoneid,
+            id: record_id as u64,
             rrtype: rrtype.to_string(),
             class: RecordClass::from(&record_class),
             rdata,
@@ -413,8 +405,9 @@ async fn test_db_create_records() -> Result<(), sqlx::Error> {
     let rrtype: &str = RecordType::TXT.into();
     let rec_to_create = FileZoneRecord {
         name: "foo".to_string(),
-        ttl: 123,
         zoneid,
+        ttl: 123,
+        id: 1,
         rrtype: rrtype.into(),
         class: RecordClass::Internet.into(),
         rdata: "test txt".to_string(),
@@ -465,6 +458,7 @@ async fn test_all_db_things() -> Result<(), sqlx::Error> {
         name: "foo".to_string(),
         ttl: 123,
         zoneid: 1,
+        id: 1,
         rrtype: rrtype.into(),
         class: RecordClass::Internet.into(),
         rdata: "test txt".to_string(),

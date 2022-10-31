@@ -38,9 +38,8 @@ async fn handle_get_command(
     resp: oneshot::Sender<Option<ZoneRecord>>,
 ) -> Result<(), String> {
     debug!(
-        "searching for name={:?} rtype={:?}",
+        "query name={:?} rtype={rtype:?} rclass={rclass}",
         from_utf8(&name).unwrap_or("-"),
-        rtype
     );
 
     // query the database
