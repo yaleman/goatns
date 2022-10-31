@@ -322,24 +322,6 @@ pub enum InternalResourceRecord {
     InvalidType,
 }
 
-/// tests to ensure that no label in the name is longer than 63 octets (bytes)
-pub fn check_long_labels(testval: &str) -> bool {
-    return testval.split('.').into_iter().any(|x| x.len() > 63);
-}
-
-#[test]
-fn test_check_long_labels() {
-    assert_eq!(false, check_long_labels(&"hello.".to_string()));
-    assert_eq!(false, check_long_labels(&"hello.world".to_string()));
-    assert_eq!(
-        true,
-        check_long_labels(
-            &"foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890"
-                .to_string()
-        )
-    );
-}
-
 impl TryFrom<FileZoneRecord> for InternalResourceRecord {
     // TODO: This should be a try_into because we're parsing text
     /// This is where we convert from the JSON blob in the file to an internal representation of the data.
@@ -784,6 +766,7 @@ mod tests {
             rdata: String::from("1234:5678:cafe:beef:ca75:0:4b9:e94d"),
             ttl: 160u32,
             class: RecordClass::Internet,
+            zoneid: 1,
         };
         debug!("fzr: {fzr}");
         let converted = match Ipv6Addr::from_str(&fzr.rdata) {
@@ -1048,4 +1031,22 @@ impl TryFrom<&str> for FileLocRecord {
             vert_pre,
         })
     }
+}
+
+/// tests to ensure that no label in the name is longer than 63 octets (bytes)
+pub fn check_long_labels(testval: &str) -> bool {
+    return testval.split('.').into_iter().any(|x| x.len() > 63);
+}
+
+#[test]
+fn test_check_long_labels() {
+    assert_eq!(false, check_long_labels(&"hello.".to_string()));
+    assert_eq!(false, check_long_labels(&"hello.world".to_string()));
+    assert_eq!(
+        true,
+        check_long_labels(
+            &"foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+                .to_string()
+        )
+    );
 }

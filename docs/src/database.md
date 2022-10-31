@@ -23,5 +23,3 @@ Records
     rtype - Integer
     rclass - Integer
     rdata (Text? Varchar?)
-
-Butts.

@@ -134,7 +134,6 @@ impl From<String> for RecordType {
         input
     }
 }
-
 impl From<&str> for RecordType {
     fn from(input: &str) -> Self {
         match input {
@@ -163,8 +162,38 @@ impl From<&str> for RecordType {
     }
 }
 
+impl From<RecordType> for &'static str {
+    fn from(input: RecordType) -> &'static str {
+        match input {
+            RecordType::A => "A",
+            RecordType::AAAA => "AAAA",
+            RecordType::ALL => "ALL",
+            RecordType::AXFR => "AXFR",
+            RecordType::CAA => "CAA",
+            RecordType::CNAME => "CNAME",
+            RecordType::HINFO => "HINFO",
+            RecordType::LOC => "LOC",
+            RecordType::MAILB => "MAILB",
+            RecordType::MB => "MB",
+            RecordType::MG => "MG",
+            RecordType::MINFO => "MINFO",
+            RecordType::MR => "MR",
+            RecordType::MX => "MX",
+            RecordType::NAPTR => "NAPTR",
+            RecordType::NS => "NS",
+            RecordType::NULL => "NULL",
+            RecordType::PTR => "PTR",
+            RecordType::SOA => "SOA",
+            RecordType::TXT => "TXT",
+            RecordType::URI => "URI",
+            RecordType::WKS => "WKS",
+            RecordType::InvalidType => "",
+        }
+    }
+}
+
 impl From<InternalResourceRecord> for RecordType {
-    fn from(input: InternalResourceRecord) -> Self {
+    fn from(input: InternalResourceRecord) -> RecordType {
         match input {
             InternalResourceRecord::A { .. } => RecordType::A,
             InternalResourceRecord::AAAA { .. } => RecordType::AAAA,

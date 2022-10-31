@@ -40,6 +40,18 @@ pub struct FileZone {
     pub records: Vec<FileZoneRecord>,
 }
 
+impl FileZone {
+    /// Checks if they're equal, ignores the zone id and records
+    pub fn matching_data(&self, cmp: &FileZone) -> bool {
+        self.expire == cmp.expire
+            && self.minimum == cmp.minimum
+            && self.name == cmp.name
+            && self.refresh == cmp.refresh
+            && self.retry == cmp.retry
+            && self.rname == cmp.rname
+            && self.serial == cmp.serial
+    }
+}
 /// default RNAME value for FileZone
 pub fn rname_default() -> String {
     String::from("barry.goat")
@@ -48,14 +60,15 @@ pub fn rname_default() -> String {
 /// A DNS Record from the JSON file
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct FileZoneRecord {
+    #[serde(default)]
+    pub zoneid: u64,
     #[serde(default = "default_record_name")]
     pub name: String,
     pub rrtype: String,
-    // #[serde(with = "serde_bytes")]
-    pub rdata: String,
-    pub ttl: u32,
     #[serde(default = "default_record_class")]
     pub class: RecordClass,
+    pub rdata: String,
+    pub ttl: u32,
 }
 
 /// If you don't specify a name, it's the root.
