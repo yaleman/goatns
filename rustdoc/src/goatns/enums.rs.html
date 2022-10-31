@@ -279,6 +279,35 @@
 <span id="279">279</span>
 <span id="280">280</span>
 <span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::fmt::Display</span>;
 
 <span class="kw">use</span> <span class="ident">packed_struct::prelude</span>::<span class="kw-2">*</span>;
@@ -415,7 +444,6 @@
         <span class="ident">input</span>
     }
 }
-
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RecordType</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">match</span> <span class="ident">input</span> {
@@ -444,8 +472,38 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">RecordType</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="ident">RecordType</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+        <span class="kw">match</span> <span class="ident">input</span> {
+            <span class="ident">RecordType::A</span> =&gt; <span class="string">&quot;A&quot;</span>,
+            <span class="ident">RecordType::AAAA</span> =&gt; <span class="string">&quot;AAAA&quot;</span>,
+            <span class="ident">RecordType::ALL</span> =&gt; <span class="string">&quot;ALL&quot;</span>,
+            <span class="ident">RecordType::AXFR</span> =&gt; <span class="string">&quot;AXFR&quot;</span>,
+            <span class="ident">RecordType::CAA</span> =&gt; <span class="string">&quot;CAA&quot;</span>,
+            <span class="ident">RecordType::CNAME</span> =&gt; <span class="string">&quot;CNAME&quot;</span>,
+            <span class="ident">RecordType::HINFO</span> =&gt; <span class="string">&quot;HINFO&quot;</span>,
+            <span class="ident">RecordType::LOC</span> =&gt; <span class="string">&quot;LOC&quot;</span>,
+            <span class="ident">RecordType::MAILB</span> =&gt; <span class="string">&quot;MAILB&quot;</span>,
+            <span class="ident">RecordType::MB</span> =&gt; <span class="string">&quot;MB&quot;</span>,
+            <span class="ident">RecordType::MG</span> =&gt; <span class="string">&quot;MG&quot;</span>,
+            <span class="ident">RecordType::MINFO</span> =&gt; <span class="string">&quot;MINFO&quot;</span>,
+            <span class="ident">RecordType::MR</span> =&gt; <span class="string">&quot;MR&quot;</span>,
+            <span class="ident">RecordType::MX</span> =&gt; <span class="string">&quot;MX&quot;</span>,
+            <span class="ident">RecordType::NAPTR</span> =&gt; <span class="string">&quot;NAPTR&quot;</span>,
+            <span class="ident">RecordType::NS</span> =&gt; <span class="string">&quot;NS&quot;</span>,
+            <span class="ident">RecordType::NULL</span> =&gt; <span class="string">&quot;NULL&quot;</span>,
+            <span class="ident">RecordType::PTR</span> =&gt; <span class="string">&quot;PTR&quot;</span>,
+            <span class="ident">RecordType::SOA</span> =&gt; <span class="string">&quot;SOA&quot;</span>,
+            <span class="ident">RecordType::TXT</span> =&gt; <span class="string">&quot;TXT&quot;</span>,
+            <span class="ident">RecordType::URI</span> =&gt; <span class="string">&quot;URI&quot;</span>,
+            <span class="ident">RecordType::WKS</span> =&gt; <span class="string">&quot;WKS&quot;</span>,
+            <span class="ident">RecordType::InvalidType</span> =&gt; <span class="string">&quot;&quot;</span>,
+        }
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">InternalResourceRecord</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RecordType</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="ident">InternalResourceRecord</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="ident">InternalResourceRecord</span>) -&gt; <span class="ident">RecordType</span> {
         <span class="kw">match</span> <span class="ident">input</span> {
             <span class="ident">InternalResourceRecord::A</span> { .. } =&gt; <span class="ident">RecordType::A</span>,
             <span class="ident">InternalResourceRecord::AAAA</span> { .. } =&gt; <span class="ident">RecordType::AAAA</span>,

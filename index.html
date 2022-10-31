@@ -209,11 +209,20 @@ WKS</li>
 <h2 id="todo"><a class="header" href="#todo">TODO</a></h2>
 <ul>
 <li><input disabled="" type="checkbox"/>
-record storage in a DB and caching instead of loading everything into memory</li>
+record storage in a DB and caching instead of loading everything into memory
+<ul>
+<li><input disabled="" type="checkbox"/>
+add zoneid to soa InternalResourceRecords</li>
+<li><input disabled="" type="checkbox"/>
+add recordid to all other InternalResourceRecords</li>
+</ul>
+</li>
 <li><input disabled="" type="checkbox"/>
 support all sorts of records with classes, because bleh</li>
 <li><input disabled="" type="checkbox"/>
 rewrite ttl handling so you don't <em>have</em> to specify it per-record and it uses zone data</li>
+<li><input disabled="" type="checkbox"/>
+SOA minimum overrides RR TTL - RFC1035 3.3.13 - &quot;Whenever a RR is sent in a response to a query, the TTL field is set to the maximum of the TTL field from the RR and the MINIMUM field in the appropriate SOA.&quot;</li>
 <li><input disabled="" type="checkbox"/>
 response caching to save the lookups and parsing
 <ul>
