@@ -133,7 +133,7 @@ pub async fn udp_server(
                     }
                 };
 
-                log::debug!("reply_bytes: {:?}", reply_bytes);
+                log::trace!("reply_bytes: {:?}", reply_bytes);
                 let len = match udp_sock.send_to(&reply_bytes as &[u8], addr).await {
                     Ok(value) => value,
                     Err(err) => {
@@ -142,7 +142,7 @@ pub async fn udp_server(
                     }
                 };
                 // let len = sock.send_to(r.answer.as_bytes(), addr).await?;
-                log::debug!("{:?} bytes sent", len);
+                log::trace!("{:?} bytes sent", len);
             }
             Err(error) => log::error!("Error: {}", error),
         }
@@ -246,7 +246,7 @@ pub async fn tcp_server(
                     }
                 };
 
-                log::debug!("reply_bytes: {:?}", reply_bytes);
+                log::trace!("reply_bytes: {:?}", reply_bytes);
 
                 let reply_bytes = &reply_bytes as &[u8];
                 // send the outgoing message length
@@ -258,7 +258,7 @@ pub async fn tcp_server(
                         return Ok(());
                     }
                 };
-                log::debug!("{:?} bytes sent", len);
+                log::trace!("{:?} bytes sent", len);
 
                 // send the data
                 let len = match writer.try_write(reply_bytes) {
@@ -268,7 +268,7 @@ pub async fn tcp_server(
                         return Ok(());
                     }
                 };
-                log::debug!("{:?} bytes sent", len);
+                log::trace!("{:?} bytes sent", len);
             }
             Err(error) => log::error!("Error: {}", error),
         }
@@ -321,12 +321,11 @@ async fn get_result(
 
     let question = match Question::from_packets(&buf[HEADER_BYTES..len]).await {
         Ok(value) => {
-            log::debug!("Parsed question: {:?}", value);
+            log::trace!("Parsed question: {:?}", value);
             value
         }
         Err(error) => {
-            // TODO: this should return a SERVFAIL
-            log::error!("Failed to parse question: {} id={}", error, header.id);
+            log::debug!("Failed to parse question: {} id={}", error, header.id);
             return reply_builder(header.id, Rcode::ServFail);
         }
     };

@@ -69,21 +69,34 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 ## TODO 
 
   - [ ] record storage in a DB and caching instead of loading everything into memory
-    - [ ] add zoneid to soa InternalResourceRecords
-    - [ ] add recordid to all other InternalResourceRecords
-  - [ ] support all sorts of records with classes, because bleh
+    - [x] add zoneid to FileZoneRecord
+    - [x] add recordid (id) to FileZoneRecord
+    - [ ] zone
+      - [x] create
+      - [x] retrieve
+      - [x] update
+      - [ ] delete 
+    - [ ] record
+      - [x] create
+      - [x] retrieve
+      - [ ] update
+      - [ ] delete
+  - [ ] support all record-classes
   - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data
-   - [ ] SOA minimum overrides RR TTL - RFC1035 3.3.13 - "Whenever a RR is sent in a response to a query, the TTL field is set to the maximum of the TTL field from the RR and the MINIMUM field in the appropriate SOA."
+   - [?] SOA minimum overrides RR TTL - RFC1035 3.3.13 - "Whenever a RR is sent in a response to a query, the TTL field is set to the maximum of the TTL field from the RR and the MINIMUM field in the appropriate SOA." - this is done in the database view currently
+   - [ ] write tests for this
   - [ ] response caching to save the lookups and parsing
     - [ ] concread?
   - [ ] good e2e tests for LOC records from zone files
+    - [ ] a converter from InternalResourceRecord::LOC to FileZoneRecord::LOC
   - [ ] cleaner ctrl-c handling or shutdown in general
     - [ ] thinking I need to set up a broadcast tokio channel which the threads consume and shutdown from 
       - [ ] `datastore` just needs to know to write out anything it's working on at the time, which may need an internal state flag for "are we shutting down" so any new write transactions are rejected
   - [ ] maaaaybe support flattening of apex records?
+  - [ ] stats?
   - [ ] support VERSION/VERSION.BIND requests
     - [x] allow list config
     - [ ] build the response packets in a nice way that doesn't blow up
   - [ ] API things
-    - [ ] try and fix rocket's horrible logging
-    - [ ] [Oauth](https://docs.rs/rocket_oauth2/latest/rocket_oauth2/)
+    - [ ] move to another web framework
+    - [ ] Oauth for management/UI things

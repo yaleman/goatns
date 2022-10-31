@@ -62,6 +62,8 @@ pub fn rname_default() -> String {
 pub struct FileZoneRecord {
     #[serde(default)]
     pub zoneid: u64,
+    #[serde(default)]
+    pub id: u64,
     #[serde(default = "default_record_name")]
     pub name: String,
     pub rrtype: String,

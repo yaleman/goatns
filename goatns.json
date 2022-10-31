@@ -1,7 +1,7 @@
 {
 	"addr" : "0.0.0.0",
 	"port" : 15353,
-	"log_level" : "INFO",
+	"log_level" : "DEBUG",
 	"capture_packets" :false,
 	"enable_hinfo" : true,
 	"ip_allow_lists" : {
