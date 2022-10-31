@@ -231,6 +231,8 @@
 <span id="231">231</span>
 <span id="232">232</span>
 <span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::ConfigFile</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums::RecordClass</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::resourcerecord</span>::{<span class="ident">DomainName</span>, <span class="ident">InternalResourceRecord</span>};
@@ -295,6 +297,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FileZoneRecord</span> {
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">zoneid</span>: <span class="ident">u64</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">u64</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_record_name&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">rrtype</span>: <span class="ident">String</span>,

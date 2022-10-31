@@ -211,18 +211,45 @@ WKS</li>
 <li><input disabled="" type="checkbox"/>
 record storage in a DB and caching instead of loading everything into memory
 <ul>
+<li><input disabled="" type="checkbox" checked=""/>
+add zoneid to FileZoneRecord</li>
+<li><input disabled="" type="checkbox" checked=""/>
+add recordid (id) to FileZoneRecord</li>
 <li><input disabled="" type="checkbox"/>
-add zoneid to soa InternalResourceRecords</li>
+zone
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+create</li>
+<li><input disabled="" type="checkbox" checked=""/>
+retrieve</li>
+<li><input disabled="" type="checkbox" checked=""/>
+update</li>
 <li><input disabled="" type="checkbox"/>
-add recordid to all other InternalResourceRecords</li>
+delete </li>
 </ul>
 </li>
 <li><input disabled="" type="checkbox"/>
-support all sorts of records with classes, because bleh</li>
+record
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+create</li>
+<li><input disabled="" type="checkbox" checked=""/>
+retrieve</li>
+<li><input disabled="" type="checkbox"/>
+update</li>
+<li><input disabled="" type="checkbox"/>
+delete</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+support all record-classes</li>
 <li><input disabled="" type="checkbox"/>
 rewrite ttl handling so you don't <em>have</em> to specify it per-record and it uses zone data</li>
+<li>[?] SOA minimum overrides RR TTL - RFC1035 3.3.13 - &quot;Whenever a RR is sent in a response to a query, the TTL field is set to the maximum of the TTL field from the RR and the MINIMUM field in the appropriate SOA.&quot; - this is done in the database view currently</li>
 <li><input disabled="" type="checkbox"/>
-SOA minimum overrides RR TTL - RFC1035 3.3.13 - &quot;Whenever a RR is sent in a response to a query, the TTL field is set to the maximum of the TTL field from the RR and the MINIMUM field in the appropriate SOA.&quot;</li>
+write tests for this</li>
 <li><input disabled="" type="checkbox"/>
 response caching to save the lookups and parsing
 <ul>
@@ -231,7 +258,12 @@ concread?</li>
 </ul>
 </li>
 <li><input disabled="" type="checkbox"/>
-good e2e tests for LOC records from zone files</li>
+good e2e tests for LOC records from zone files
+<ul>
+<li><input disabled="" type="checkbox"/>
+a converter from InternalResourceRecord::LOC to FileZoneRecord::LOC</li>
+</ul>
+</li>
 <li><input disabled="" type="checkbox"/>
 cleaner ctrl-c handling or shutdown in general
 <ul>
@@ -247,6 +279,8 @@ thinking I need to set up a broadcast tokio channel which the threads consume an
 <li><input disabled="" type="checkbox"/>
 maaaaybe support flattening of apex records?</li>
 <li><input disabled="" type="checkbox"/>
+stats?</li>
+<li><input disabled="" type="checkbox"/>
 support VERSION/VERSION.BIND requests
 <ul>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -259,9 +293,9 @@ build the response packets in a nice way that doesn't blow up</li>
 API things
 <ul>
 <li><input disabled="" type="checkbox"/>
-try and fix rocket's horrible logging</li>
+move to another web framework</li>
 <li><input disabled="" type="checkbox"/>
-<a href="https://docs.rs/rocket_oauth2/latest/rocket_oauth2/">Oauth</a></li>
+Oauth for management/UI things</li>
 </ul>
 </li>
 </ul>
