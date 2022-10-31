@@ -18,7 +18,7 @@ pub mod api;
 pub mod config;
 /// The data-storing backend for zone information and (eventually) caching.
 pub mod datastore;
-// pub mod db;
+pub mod db;
 pub mod enums;
 pub mod packet_dumper;
 pub mod reply;

@@ -6,7 +6,7 @@ use core::fmt::Debug;
 use num_traits::Num;
 use packed_struct::prelude::*;
 use regex::Regex;
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 use std::env::consts;
 use std::str::{from_utf8, FromStr};
 use std::string::FromUtf8Error;
@@ -21,7 +21,7 @@ const DEFAULT_LOC_HORIZ_PRE: u32 = 10000;
 const DEFAULT_LOC_VERT_PRE: u32 = 10;
 const DEFAULT_LOC_SIZE: u32 = 1;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct DomainName {
     pub name: String,
 }
@@ -320,24 +320,6 @@ pub enum InternalResourceRecord {
     // }, // 254 A request for mail agent RRs (Obsolete - see MX)
     ALL {}, // 255 A request for all records (*)
     InvalidType,
-}
-
-/// tests to ensure that no label in the name is longer than 63 octets (bytes)
-pub fn check_long_labels(testval: &str) -> bool {
-    return testval.split('.').into_iter().any(|x| x.len() > 63);
-}
-
-#[test]
-fn test_check_long_labels() {
-    assert_eq!(false, check_long_labels(&"hello.".to_string()));
-    assert_eq!(false, check_long_labels(&"hello.world".to_string()));
-    assert_eq!(
-        true,
-        check_long_labels(
-            &"foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890"
-                .to_string()
-        )
-    );
 }
 
 impl TryFrom<FileZoneRecord> for InternalResourceRecord {
@@ -784,6 +766,7 @@ mod tests {
             rdata: String::from("1234:5678:cafe:beef:ca75:0:4b9:e94d"),
             ttl: 160u32,
             class: RecordClass::Internet,
+            zoneid: 1,
         };
         debug!("fzr: {fzr}");
         let converted = match Ipv6Addr::from_str(&fzr.rdata) {
@@ -1048,4 +1031,22 @@ impl TryFrom<&str> for FileLocRecord {
             vert_pre,
         })
     }
+}
+
+/// tests to ensure that no label in the name is longer than 63 octets (bytes)
+pub fn check_long_labels(testval: &str) -> bool {
+    return testval.split('.').into_iter().any(|x| x.len() > 63);
+}
+
+#[test]
+fn test_check_long_labels() {
+    assert_eq!(false, check_long_labels(&"hello.".to_string()));
+    assert_eq!(false, check_long_labels(&"hello.world".to_string()));
+    assert_eq!(
+        true,
+        check_long_labels(
+            &"foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+                .to_string()
+        )
+    );
 }

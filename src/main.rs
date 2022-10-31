@@ -81,11 +81,20 @@ async fn main() -> io::Result<()> {
 
     loop {
         // if any of the servers bail, the server does too.
-        if udpserver.is_finished()
-            || tcpserver.is_finished()
-            || datastore_manager.is_finished()
-            || api.is_finished()
-        {
+        if udpserver.is_finished() {
+            log::info!("UDP Server shut down");
+            return Ok(());
+        };
+        if tcpserver.is_finished() {
+            log::info!("TCP Server shut down");
+            return Ok(());
+        };
+        if datastore_manager.is_finished() {
+            log::info!("Datastore manager shut down");
+            return Ok(());
+        };
+        if api.is_finished() {
+            log::info!("API manager shut down");
             return Ok(());
         }
         sleep(std::time::Duration::from_secs(1)).await;
