@@ -622,6 +622,9 @@ pub async fn load_zone(
                         eprintln!("Creating zone {zone:?}");
                         log::debug!("Creating zone {zone:?}");
                         create_zone_with_conn(conn, zone.clone()).await?;
+
+                        #[cfg(test)]
+                        eprintln!("Done creating zone");
                         get_zone_with_conn(conn, &zone.name).await?.unwrap()
                     }
                     Some(ez) => {
@@ -642,20 +645,27 @@ pub async fn load_zone(
                         get_zone_with_conn(conn, &zone.name).await.unwrap().unwrap()
                     }
                 };
+                #[cfg(test)]
+                eprintln!("Zone after update: {updated_zone:?}");
                 log::trace!("Zone after update: {updated_zone:?}");
 
                 // drop all the records
                 let mut args = SqliteArguments::default();
                 args.add(updated_zone.id as f64);
 
+                #[cfg(test)]
+                eprintln!("Dropping all records for zone {zone:?}");
                 log::debug!("Dropping all records for zone {zone:?}");
                 sqlx_core::query::query_with("delete from records where zoneid = ?", args)
                     .execute(&mut *conn)
                     .await?;
 
                 // add the records
-                for record in zone.records {
+                for mut record in zone.records {
+                    #[cfg(test)]
+                    eprintln!("Creating new zone record: {record:?}");
                     log::trace!("Creating new zone record: {record:?}");
+                    record.zoneid = updated_zone.id;
                     create_record_with_conn(conn, record).await?;
                 }
 
@@ -736,12 +746,60 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
 
     let json_result = serde_json::to_string(&exported_zone).unwrap();
 
-    print!("{json_result}");
+    println!("{json_result}");
 
     let export_json_result = export_zone_json(pool.acquire().await?, zone.id).await?;
 
     assert_eq!(json_result, export_json_result);
 
-    // Ok(())
-    Err(sqlx::Error::RowNotFound)
+    Ok(())
+}
+
+#[tokio::test]
+async fn load_then_export() -> Result<(), sqlx::Error> {
+    use tokio::io::AsyncReadExt;
+    // set up the DB
+    let pool = test_get_sqlite_memory().await;
+    eprintln!("Setting up DB");
+    start_db(&pool).await?;
+
+    // let example_zone_file = std::fs::Path:: ::from("./examples/test_config/single-zone.json");
+    // let example_zone_file = example_zone_file.as_path();
+    // if !example_zone_file.exists() {
+    // panic!("couldn't find example zone file {:?}", example_zone_file);
+    // }
+    let example_zone_file = std::path::Path::new(&"./examples/test_config/single-zone.json");
+
+    eprintln!("load_zone_from_file from {:?}", example_zone_file);
+    let example_zone = match crate::zones::load_zone_from_file(example_zone_file) {
+        Ok(value) => value,
+        Err(error) => panic!("Failed to load zone file! {:?}", error),
+    };
+
+    eprint!("importing zone into db...");
+    load_zone(pool.acquire().await?, example_zone.clone()).await?;
+    eprintln!("done!");
+
+    let mut file = match tokio::fs::File::open(example_zone_file).await {
+        Ok(value) => value,
+        Err(error) => {
+            panic!("Failed to open zone file: {:?}", error);
+        }
+    };
+    let mut buf: String = String::new();
+    file.read_to_string(&mut buf).await.unwrap();
+
+    eprintln!("File contents: {:?}", buf);
+
+    let json: FileZone = json5::from_str(&buf).map_err(|e| panic!("{e:?}")).unwrap();
+    eprintln!("loaded zone from file again: {json:?}");
+    let _json: String = serde_json::to_string(&json).unwrap();
+
+    eprintln!("Exporting zone");
+    let zone_got = get_zone(&pool, example_zone.clone().name).await?;
+    eprintln!("zone_got {zone_got:?}");
+
+    let _res = export_zone_json(pool.acquire().await?, 1).await?;
+
+    Ok(())
 }

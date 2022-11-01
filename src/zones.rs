@@ -10,13 +10,14 @@ use sqlx::Row;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 use std::str::from_utf8;
 
 /// A DNS Zone in a JSON file
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename(serialize = "UPPERCASE"))]
 pub struct FileZone {
-    #[serde(default)]
+    #[serde(default = "default_id")]
     pub id: u64,
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
     #[serde(rename(serialize = "MNAME"))]
@@ -62,7 +63,7 @@ pub fn rname_default() -> String {
 /// A DNS Record from the JSON file
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct FileZoneRecord {
-    #[serde(default)]
+    #[serde(default = "default_id")]
     pub zoneid: u64,
     #[serde(default)]
     pub id: u64,
@@ -75,6 +76,10 @@ pub struct FileZoneRecord {
     pub ttl: u32,
 }
 
+/// If you don't specify a name, it's the root.
+fn default_id() -> u64 {
+    1
+}
 /// If you don't specify a name, it's the root.
 fn default_record_name() -> String {
     String::from("@")
@@ -138,6 +143,26 @@ impl Display for ZoneRecord {
 pub fn empty_zones() -> PatriciaMap<ZoneRecord> {
     let tree: PatriciaMap<ZoneRecord> = PatriciaMap::new();
     tree
+}
+
+pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, String> {
+    let mut file = match File::open(filename) {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(format!("Failed to open zone file: {:?}", error));
+        }
+    };
+    let mut buf: String = String::new();
+    file.read_to_string(&mut buf).unwrap();
+    let jsonstruct: FileZone = match json5::from_str(&buf) {
+        Ok(value) => value,
+        Err(error) => {
+            let emsg = format!("Failed to read JSON file: {:?}", error);
+            error!("{}", emsg);
+            return Err(emsg);
+        }
+    };
+    Ok(jsonstruct)
 }
 
 /// Load the data from a JSON file on disk

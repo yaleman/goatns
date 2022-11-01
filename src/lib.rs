@@ -247,12 +247,25 @@ pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
                 buf.len()
             ));
         }
-        trace!("Before extend: {result:?}");
+        #[cfg(test)]
+        eprintln!("Before extend: {result:?}");
+        if buf.len() < label_len {
+            return Err(format!(
+                "Buffer was too sort to pull bytes from ({})",
+                buf.len()
+            ));
+        }
         result.extend(buf[1..label_len + 1].to_vec());
-        trace!("After extend:  {result:?}");
+        #[cfg(test)]
+        eprintln!("After extend:  {result:?}");
 
         // slice off the front part
-        trace!("Before slicing buf: {buf:?}");
+        #[cfg(test)]
+        eprintln!(
+            "Before slicing buf: {buf:?}, about to grab {}..{}",
+            label_len + 1,
+            buf.len()
+        );
         buf = buf[label_len + 1..buf.len()].to_vec();
         trace!("After slicing buf:  {buf:?}");
         if buf[0] != 0 {
@@ -268,7 +281,8 @@ pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
         Ok(value) => value.to_owned().to_lowercase(),
         Err(error) => return Err(format!("{error:?}")),
     };
-
+    #[cfg(test)]
+    eprintln!("Returning from get_question_qname {result_string:?}");
     Ok(result_string.as_bytes().to_vec())
 }
 
@@ -286,13 +300,18 @@ impl Question {
         }
     }
 
-    /// hand it the *actual* length of the buffer and the things, and get back a [Question]
+    /// hand it the buffer and the things, and get back a [Question]
     async fn from_packets(buf: &[u8]) -> Result<Self, String> {
         let qname = get_question_qname(buf)?;
 
         // skip past the end of the question
         let read_pointer = qname.len() + 2;
-
+        if buf.len() <= read_pointer + 1 {
+            return Err(format!(
+                "Packet not long enough, looked for {read_pointer}, got {}",
+                buf.len()
+            ));
+        }
         let mut qtype_bytes: [u8; 2] = [0; 2];
         if buf[read_pointer..read_pointer + 2].len() != 2 {
             return Err(
@@ -303,6 +322,10 @@ impl Question {
         qtype_bytes.copy_from_slice(&buf[read_pointer..read_pointer + 2]);
         let qtype = RecordType::from(&u16::from_be_bytes(qtype_bytes));
         let mut qclass_bytes: [u8; 2] = [0; 2];
+        if buf.len() <= read_pointer + 3 {
+            return Err("Buffer length too short to get two bytes when I asked for it from the header for the QCLASS"
+            .to_string(),);
+        }
         if buf[read_pointer + 2..read_pointer + 4].len() != 2 {
             return Err(
                 "Couldn't get two bytes when I asked for it from the header for the QCLASS"
@@ -328,5 +351,27 @@ impl Question {
         retval.extend((self.qtype as u16).to_be_bytes());
         retval.extend((self.qclass as u16).to_be_bytes());
         retval
+    }
+}
+
+#[tokio::test]
+///tries to test when input buffers are weird
+async fn test_question_from_bytes() {
+    let ok_question = vec![
+        /* question - 14 bytes */
+        0x04, 0x69, 0x61, 0x6e, 0x61, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, //0x00, 0x01,
+    ];
+    let input_bufs: Vec<Vec<u8>> = vec![
+        /* header - 12 bytes */
+        // 0xa3, 0x70, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        ok_question[0..10].to_vec(),
+        ok_question[0..11].to_vec(),
+        ok_question[0..12].to_vec(),
+    ];
+
+    for buf in input_bufs {
+        if Question::from_packets(&buf).await.is_ok() {
+            panic!("This should bail!");
+        }
     }
 }
