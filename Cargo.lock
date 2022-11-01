@@ -936,6 +936,7 @@ dependencies = [
  "num-traits",
  "packed_struct",
  "patricia_tree",
+ "rand",
  "regex",
  "rocket",
  "serde",

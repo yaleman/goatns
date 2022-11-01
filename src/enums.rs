@@ -192,6 +192,13 @@ impl From<RecordType> for &'static str {
     }
 }
 
+impl Display for RecordType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let res: &'static str = self.to_owned().into();
+        f.write_fmt(format_args!("{res}"))
+    }
+}
+
 impl From<InternalResourceRecord> for RecordType {
     fn from(input: InternalResourceRecord) -> RecordType {
         match input {
@@ -270,6 +277,18 @@ impl Display for RecordClass {
                 RecordClass::InvalidType => "Invalid",
             }
         ))
+    }
+}
+
+impl From<&'static str> for RecordClass {
+    fn from(value: &'static str) -> Self {
+        match value {
+            "IN" => RecordClass::Internet,
+            "CS" => RecordClass::CsNet,
+            "CHAOS" => RecordClass::Chaos,
+            "HESIOD" => RecordClass::Hesiod,
+            _ => RecordClass::InvalidType,
+        }
     }
 }
 

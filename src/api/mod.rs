@@ -33,8 +33,8 @@ async fn api_query(
 ) -> Result<String, ResponseError> {
     use tokio::sync::oneshot;
 
-    let rtype: RecordType = qtype.into();
-    if let RecordType::InvalidType = rtype {
+    let rrtype: RecordType = qtype.into();
+    if let RecordType::InvalidType = rrtype {
         return Err(ResponseError::BadRequest(format!(
             "Invalid RRTYPE requested: {qtype:?}"
         )));
@@ -43,7 +43,7 @@ async fn api_query(
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
     let ds_req: datastore::Command = datastore::Command::Get {
         name: qname.into(),
-        rtype,
+        rrtype,
         rclass: crate::RecordClass::Internet,
         resp: tx_oneshot,
     };

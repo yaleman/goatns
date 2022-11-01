@@ -16,14 +16,14 @@ pub enum Command {
     Get {
         /// Reversed vec of the name
         name: Vec<u8>,
-        rtype: RecordType,
+        rrtype: RecordType,
         rclass: RecordClass,
         resp: Responder<Option<ZoneRecord>>,
     },
     // TODO: create a setter when we're ready to accept updates
     // Set {
     //     name: Vec<u8>,
-    //     rtype: RecordType,
+    //     rrtype: RecordType,
     // }
 }
 
@@ -33,12 +33,12 @@ async fn handle_get_command(
     // this is the result from the things in memory
     zone_get: Option<&ZoneRecord>,
     name: Vec<u8>,
-    rtype: RecordType,
+    rrtype: RecordType,
     rclass: RecordClass,
     resp: oneshot::Sender<Option<ZoneRecord>>,
 ) -> Result<(), String> {
     debug!(
-        "query name={:?} rtype={rtype:?} rclass={rclass}",
+        "query name={:?} rrtype={rrtype:?} rclass={rclass}",
         from_utf8(&name).unwrap_or("-"),
     );
 
@@ -52,7 +52,7 @@ async fn handle_get_command(
         typerecords: vec![],
     };
 
-    match db::get_records(conn, db_name.to_string(), rtype, rclass).await {
+    match db::get_records(conn, db_name.to_string(), rrtype, rclass).await {
         Ok(value) => zr.typerecords.extend(value),
         Err(err) => {
             log::error!("Failed to query db: {err:?}")
@@ -65,7 +65,7 @@ async fn handle_get_command(
             .to_owned()
             .typerecords
             .into_iter()
-            .filter(|r| r == &rtype && r == &rclass)
+            .filter(|r| r == &rrtype && r == &rclass)
             .collect();
         zr.typerecords.extend(res);
     };
@@ -112,7 +112,7 @@ pub async fn manager(
         match cmd {
             Command::Get {
                 name,
-                rtype,
+                rrtype,
                 rclass,
                 resp,
             } => {
@@ -120,7 +120,7 @@ pub async fn manager(
                     &connpool,
                     zones.get(name.to_ascii_lowercase()),
                     name,
-                    rtype,
+                    rrtype,
                     rclass,
                     resp,
                 )

@@ -5,7 +5,7 @@ use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::FileZone;
 use crate::zones::FileZoneRecord;
 use sqlx::pool::PoolConnection;
-use sqlx::sqlite::SqliteArguments;
+use sqlx::sqlite::{SqliteArguments, SqliteRow};
 use sqlx::{Arguments, Connection, Pool, Row, Sqlite, SqliteConnection, SqlitePool, Transaction};
 
 const SQL_VIEW_RECORDS: &str = "records_merged";
@@ -21,21 +21,19 @@ pub async fn get_conn(config: &ConfigFile) -> Result<Pool<Sqlite>, String> {
     }
 }
 
+/// Do the basic setup and checks (if we write any)
 pub async fn start_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     create_zones_table(pool).await?;
-
     create_records_table(pool).await?;
-
     log::info!("Completed DB Startup!");
     Ok(())
 }
 
-#[allow(dead_code)]
 pub async fn create_zones_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await.unwrap();
 
     log::info!("Ensuring DB Zones table exists");
-    let _res = sqlx::query(
+    sqlx::query(
         r#"CREATE TABLE IF NOT EXISTS
         zones (
             id   INTEGER PRIMARY KEY,
@@ -49,7 +47,7 @@ pub async fn create_zones_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         )"#,
     )
     .execute(&mut tx)
-    .await;
+    .await?;
 
     // .execute(tx).await;
     log::info!("Ensuring DB Records index exists");
@@ -67,34 +65,33 @@ pub async fn create_zones_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-#[allow(dead_code)]
 pub async fn create_records_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     log::info!("Ensuring DB Records table exists");
 
     let mut tx = pool.begin().await.unwrap();
 
-    let _res = sqlx::query(
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS
         records (
             id      INTEGER PRIMARY KEY,
             zoneid  INTEGER NOT NULL,
             name    TEXT, /* this can be null for apex records */
             ttl     INTEGER,
-            rtype   INTEGER NOT NULL,
+            rrtype   INTEGER NOT NULL,
             rclass  INTEGER NOT NULL,
             rdata   TEXT NOT NULL,
             FOREIGN KEY(zoneid) REFERENCES zones(id)
         )",
     )
     .execute(&mut tx)
-    .await;
+    .await?;
     log::info!("Ensuring DB Records index exists");
     sqlx::query(
         "CREATE UNIQUE INDEX
         IF NOT EXISTS
         ind_records
         ON records (
-            id,zoneid,name,rtype,rclass
+            id,zoneid,name,rrtype,rclass
         )",
     )
     .execute(&mut tx)
@@ -102,8 +99,8 @@ pub async fn create_records_table(pool: &SqlitePool) -> Result<(), sqlx::Error> 
     log::info!("Ensuring DB Records view exists");
     // this view lets us query based on the full name
     sqlx::query(
-        &format!("CREATE VIEW IF NOT EXISTS {} ( record_id, zone_id, rtype, rclass, rdata, name, ttl ) as
-        SELECT records.id as record_id, zones.id as zone_id, records.rtype, records.rclass ,records.rdata,
+        &format!("CREATE VIEW IF NOT EXISTS {} ( record_id, zone_id, rrtype, rclass, rdata, name, ttl ) as
+        SELECT records.id as record_id, zones.id as zone_id, records.rrtype, records.rclass ,records.rdata,
         CASE
             WHEN records.name is NULL THEN zones.name
             ELSE records.name || '.' || zones.name
@@ -118,7 +115,6 @@ pub async fn create_records_table(pool: &SqlitePool) -> Result<(), sqlx::Error> 
     Ok(())
 }
 
-#[allow(dead_code)]
 /// define a zone
 pub async fn create_zone(pool: &SqlitePool, zone: FileZone) -> Result<u64, sqlx::Error> {
     let mut tx = pool.begin().await.unwrap();
@@ -167,7 +163,6 @@ pub async fn create_record(pool: &SqlitePool, record: FileZoneRecord) -> Result<
     Ok(res)
 }
 
-#[allow(dead_code)]
 /// create a resource record within a zone
 pub async fn create_record_with_conn(
     txn: &mut Transaction<'_, Sqlite>,
@@ -190,7 +185,7 @@ pub async fn create_record_with_conn(
         args.add(arg);
     }
     let result = sqlx::query_with(
-        "INSERT INTO records (zoneid, name, ttl, rtype, rclass, rdata)
+        "INSERT INTO records (zoneid, name, ttl,rrtype, rclass, rdata)
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         args,
     )
@@ -199,21 +194,22 @@ pub async fn create_record_with_conn(
     Ok(result.rows_affected())
 }
 
+/// Query the zones table, name_or_id can be the zoneid or the name - if they match then you're bad and you should feel bacd.
 pub async fn get_zone_with_conn(
     txn: &mut Transaction<'_, Sqlite>,
-    name: &str,
+    name_or_id: &str,
 ) -> Result<Option<FileZone>, sqlx::Error> {
-    let mut args = SqliteArguments::default();
+    // let mut args = SqliteArguments::default();
+    // args.add(name);
 
-    args.add(name);
-
-    let result = sqlx::query_with(
+    let result = sqlx::query(
         "SELECT
         id, name, rname, serial, refresh, retry, expire, minimum
         FROM zones
-        WHERE name = ?",
-        args,
+        WHERE name = ? or id = ? LIMIT 1",
     )
+    .bind(name_or_id)
+    .bind(name_or_id)
     .fetch_optional(&mut *txn)
     .await?;
     match result {
@@ -279,21 +275,45 @@ pub async fn update_zone_with_conn(
     Ok(qry.rows_affected())
 }
 
+impl TryFrom<SqliteRow> for InternalResourceRecord {
+    type Error = String;
+    fn try_from(row: SqliteRow) -> Result<InternalResourceRecord, String> {
+        let record_id: i64 = row.get(0);
+        let zoneid: i64 = row.get(1);
+        let zoneid: u64 = zoneid.try_into().unwrap_or(0);
+        let record_name: String = row.get(2);
+        let record_class: u16 = row.get(3);
+        let record_type: u16 = row.get(4);
+        let rrtype: &str = RecordType::from(&record_type).into();
+        let rdata: String = row.get(5);
+        let ttl: u32 = row.get(6);
+        InternalResourceRecord::try_from(FileZoneRecord {
+            name: record_name,
+            ttl,
+            zoneid,
+            id: record_id as u64,
+            rrtype: rrtype.to_string(),
+            class: RecordClass::from(&record_class),
+            rdata,
+        })
+    }
+}
+
 pub async fn get_records(
     conn: &Pool<Sqlite>,
     name: String,
-    rtype: RecordType,
+    rrtype: RecordType,
     rclass: RecordClass,
 ) -> Result<Vec<InternalResourceRecord>, sqlx::Error> {
     let res = sqlx::query(&format!(
         "SELECT
-        record_id, zone_id, name, rclass, rtype, rdata, ttl
+        record_id, zone_id, name, rclass, rrtype, rdata, ttl
         FROM {}
-        WHERE name = ? AND rtype = ? AND rclass = ?",
+        WHERE name = ? AND rrtype = ? AND rclass = ?",
         SQL_VIEW_RECORDS
     ))
     .bind(&name)
-    .bind((rtype as u16).to_string())
+    .bind((rrtype as u16).to_string())
     .bind((rclass as u16).to_string())
     .fetch_all(&mut conn.acquire().await?)
     .await?;
@@ -304,31 +324,103 @@ pub async fn get_records(
 
     let mut results: Vec<InternalResourceRecord> = vec![];
     for row in res {
-        let record_id: i64 = row.get(0);
-        let zoneid: i64 = row.get(1);
-        let zoneid: u64 = zoneid.try_into().unwrap_or(0);
-        let record_name: String = row.get(2);
-        let record_class: u16 = row.get(3);
-        let record_type: u16 = row.get(4);
-        let rrtype: &str = RecordType::from(&record_type).into();
-        let rdata: String = row.get(5);
-        let ttl: u32 = row.get(6);
-        let irr = InternalResourceRecord::try_from(FileZoneRecord {
-            name: record_name,
-            ttl,
-            zoneid,
-            id: record_id as u64,
-            rrtype: rrtype.to_string(),
-            class: RecordClass::from(&record_class),
-            rdata,
-        });
-        if irr.is_ok() {
-            results.push(irr.unwrap());
+        if let Ok(irr) = InternalResourceRecord::try_from(row) {
+            results.push(irr);
         }
     }
 
     log::trace!("results: {results:?}");
     Ok(results)
+}
+
+pub async fn get_zone_records(
+    txn: &mut Transaction<'_, Sqlite>,
+    zone_id: u64,
+) -> Result<Vec<FileZoneRecord>, sqlx::Error> {
+    let res = sqlx::query(
+        "SELECT
+        id, zoneid, name, ttl, rrtype, rclass, rdata
+        FROM records
+        WHERE zoneid = ?",
+    )
+    .bind(&zone_id.to_string())
+    .fetch_all(&mut *txn)
+    .await?;
+
+    if res.is_empty() {
+        log::trace!("No results returned for zone_id={zone_id}");
+    }
+
+    let mut results: Vec<FileZoneRecord> = vec![];
+    for row in res {
+        if let Ok(irr) = FileZoneRecord::try_from(row) {
+            results.push(irr);
+        }
+    }
+
+    log::trace!("results: {results:?}");
+    Ok(results)
+}
+
+#[cfg(test)]
+/// create a zone example.com
+async fn test_create_example_com_zone(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    create_zone(&pool, test_example_com_zone()).await?;
+    Ok(())
+}
+
+#[cfg(test)]
+/// create a zone example.com
+async fn test_create_example_com_records(
+    pool: &SqlitePool,
+    zoneid: u64,
+    num_records: usize,
+) -> Result<(), sqlx::Error> {
+    use rand::distributions::{Alphanumeric, DistString};
+
+    let mut name: String;
+    let mut rdata: String;
+    for i in 0..num_records {
+        name = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+        rdata = Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
+        create_record(
+            &pool,
+            FileZoneRecord {
+                zoneid,
+                name,
+                rrtype: RecordType::A.to_string(),
+                class: RecordClass::Internet,
+                rdata,
+                id: i as u64,
+                ttl: i as u32,
+            },
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_zone_records() -> Result<(), sqlx::Error> {
+    let pool = test_get_sqlite_memory().await;
+    start_db(&pool).await?;
+    test_create_example_com_zone(&pool).await?;
+    let testzone = test_example_com_zone();
+
+    let zone = match get_zone(&pool, testzone.name).await? {
+        Some(value) => value,
+        None => return Err(sqlx::Error::RowNotFound),
+    };
+
+    test_create_example_com_records(&pool, zone.id, 1000).await?;
+
+    let records = get_zone_records(&mut pool.begin().await?, zone.id).await?;
+    for record in &records {
+        eprintln!("{}", record);
+    }
+
+    assert_eq!(records.len(), 1000);
+    Ok(())
 }
 
 /// Ensures that when we ask for something that isn't there, it returns None
@@ -385,10 +477,7 @@ pub async fn test_get_sqlite_memory() -> SqlitePool {
 async fn test_db_create_records() -> Result<(), sqlx::Error> {
     let pool = test_get_sqlite_memory().await;
 
-    println!("Creating Zones Table");
-    create_zones_table(&pool).await?;
-    println!("Creating Records Table");
-    create_records_table(&pool).await?;
+    start_db(&pool).await?;
 
     println!("Creating Zone");
     let zoneid = match create_zone(&pool, test_example_com_zone()).await {
@@ -579,6 +668,80 @@ pub async fn load_zone(
     if let Err(err) = res {
         eprintln!("Error loading zone: {err:?}");
     };
-    // todo!()
     Ok(())
+}
+
+/// export a zone!
+pub async fn export_zone(
+    mut conn: PoolConnection<Sqlite>,
+    zone_id: u64,
+) -> Result<FileZone, sqlx::Error> {
+    let mut txn = conn.begin().await?;
+
+    let mut zone = match get_zone_with_conn(&mut txn, &zone_id.to_string()).await? {
+        None => {
+            eprintln!("Couldn't find zone with id: {zone_id}");
+            return Err(sqlx::Error::RowNotFound);
+        }
+        Some(value) => value,
+    };
+
+    let zone_records = get_zone_records(&mut txn, zone.id).await?;
+
+    zone.records = zone_records;
+
+    Ok(zone)
+}
+
+pub async fn export_zone_json(
+    conn: PoolConnection<Sqlite>,
+    zone_id: u64,
+) -> Result<String, sqlx::Error> {
+    let zone = export_zone(conn, zone_id).await?;
+
+    match serde_json::to_string(&zone) {
+        Ok(value) => Ok(value),
+        Err(err) => Err(sqlx::Error::Protocol(format!("{err:?}"))),
+    }
+}
+
+#[tokio::test]
+async fn test_export_zone() -> Result<(), sqlx::Error> {
+    let pool = test_get_sqlite_memory().await;
+    eprintln!("Setting up DB");
+    start_db(&pool).await?;
+    eprintln!("Setting up example zone");
+    test_create_example_com_zone(&pool).await?;
+    let testzone = test_example_com_zone();
+
+    eprintln!("Getting example zone");
+    let zone = match get_zone(&pool, testzone.clone().name).await? {
+        Some(value) => value,
+        None => {
+            eprintln!("couldn't find zone {}", testzone.name);
+            return Err(sqlx::Error::RowNotFound);
+        }
+    };
+
+    let records_to_create = 100usize;
+    eprintln!("Creating records");
+    test_create_example_com_records(&pool, zone.id, records_to_create).await?;
+
+    eprintln!("Exporting zone {}", zone.id);
+    let exported_zone = export_zone(pool.acquire().await?, zone.id).await?;
+    eprintln!("Done exporting zone");
+
+    println!("found {} records", exported_zone.records.len());
+    assert_eq!(exported_zone.records.len(), records_to_create);
+
+    let json_result = serde_json::to_string(&exported_zone).unwrap();
+
+    print!("{json_result}");
+
+    let export_json_result = export_zone_json(pool.acquire().await?, zone.id).await?;
+
+    assert_eq!(json_result, export_json_result);
+
+    // Ok(())
+    Err(sqlx::Error::RowNotFound)
 }

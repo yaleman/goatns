@@ -323,6 +323,7 @@ pub enum InternalResourceRecord {
 }
 
 impl TryFrom<FileZoneRecord> for InternalResourceRecord {
+    type Error = String;
     // TODO: This should be a try_into because we're parsing text
     /// This is where we convert from the JSON blob in the file to an internal representation of the data.
     fn try_from(record: FileZoneRecord) -> Result<Self, String> {
@@ -517,8 +518,6 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
             _ => Err("Invalid type specified!".to_string()),
         }
     }
-
-    type Error = String;
 }
 
 impl PartialEq<RecordClass> for InternalResourceRecord {

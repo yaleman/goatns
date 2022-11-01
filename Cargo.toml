@@ -38,6 +38,7 @@ tokio-util = { version = "0.7.4", features = ["full"] }
 
 [dev-dependencies]
 criterion = "^0.4"
+rand = "0.8.5"
 trust-dns-resolver = "0.22.0"
 
 [[bench]]

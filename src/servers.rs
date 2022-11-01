@@ -369,7 +369,7 @@ async fn get_result(
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
     let ds_req: Command = Command::Get {
         name: question.qname.clone(),
-        rtype: question.qtype,
+        rrtype: question.qtype,
         rclass: question.qclass,
         resp: tx_oneshot,
     };
