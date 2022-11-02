@@ -5,6 +5,20 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use crate::resourcerecord::InternalResourceRecord;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Agent {
+    Datastore,
+    API,
+    UDPServer,
+    TCPServer,
+}
+
+#[derive(Clone, Debug)]
+pub enum AgentState {
+    Started { agent: Agent },
+    Stopped { agent: Agent },
+}
+
 #[derive(Debug, Eq, PartialEq, PrimitiveEnum_u8, Copy, Clone)]
 /// A four bit field that specifies kind of query in this message.
 /// This value is set by the originator of a query and copied into the response.

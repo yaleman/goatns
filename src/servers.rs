@@ -4,12 +4,12 @@ use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
 use tokio::net::{TcpListener, UdpSocket};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::time::timeout;
 
 use crate::config::ConfigFile;
 use crate::datastore::Command;
-use crate::enums::{PacketType, Rcode, RecordClass};
+use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass};
 use crate::reply::Reply;
 use crate::utils::*;
 use crate::zones::ZoneRecord;
@@ -72,6 +72,8 @@ pub async fn udp_server(
     bind_address: SocketAddr,
     config: ConfigFile,
     datastore: mpsc::Sender<crate::datastore::Command>,
+    _agent_tx: broadcast::Sender<AgentState>,
+    mut _agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
     let udp_sock = match UdpSocket::bind(bind_address).await {
         Ok(value) => {
@@ -157,6 +159,8 @@ pub async fn tcp_server(
     bind_address: SocketAddr,
     config: ConfigFile,
     tx: mpsc::Sender<crate::datastore::Command>,
+    agent_tx: broadcast::Sender<AgentState>,
+    mut agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
     // TODO: add a configurable idle timeout for the TCP server
     let tcpserver = match TcpListener::bind(bind_address).await {
@@ -235,6 +239,15 @@ pub async fn tcp_server(
 
                 // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
                 if check_for_shutdown(&r, &addr, &config).await.is_ok() {
+                    if let Err(error) = agent_tx.send(AgentState::Stopped {
+                        agent: Agent::TCPServer,
+                    }) {
+                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                    };
+                    if let Err(error) = tx.send(Command::Shutdown).await {
+                        eprintln!("Failed to send shutdown command to datastore.. {error:?}");
+                    };
+
                     return Ok(());
                 }
 
@@ -272,6 +285,9 @@ pub async fn tcp_server(
             }
             Err(error) => log::error!("Error: {}", error),
         }
+        if let Ok(agent_state) = agent_rx.try_recv() {
+            log::info!("Got agent state: {:?}", agent_state);
+        };
     }
 }
 

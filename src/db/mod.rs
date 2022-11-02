@@ -4,9 +4,13 @@ use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::FileZone;
 use crate::zones::FileZoneRecord;
+use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteArguments, SqliteRow};
 use sqlx::{Arguments, Connection, Pool, Row, Sqlite, SqliteConnection, SqlitePool, Transaction};
+
+#[cfg(test)]
+mod test;
 
 const SQL_VIEW_RECORDS: &str = "records_merged";
 
@@ -24,9 +28,155 @@ pub async fn get_conn(config: &ConfigFile) -> Result<Pool<Sqlite>, String> {
 /// Do the basic setup and checks (if we write any)
 pub async fn start_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     create_zones_table(pool).await?;
+    create_users_table(pool).await?;
     create_records_table(pool).await?;
+    create_ownership_table(pool).await?;
     log::info!("Completed DB Startup!");
     Ok(())
+}
+
+pub async fn create_users_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    log::info!("Ensuring DB Users table exists");
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS
+        users (
+            id  INTEGER PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL,
+            disabled BOOL NOT NULL
+        )"#,
+    )
+    .execute(&mut pool.acquire().await?)
+    .await?;
+
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS
+        ind_users_fields
+        ON users ( username, email )",
+    )
+    .execute(&mut pool.acquire().await?)
+    .await?;
+
+    Ok(())
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
+pub struct User {
+    #[serde(default)]
+    pub id: u64,
+    pub username: String,
+    pub email: String,
+    #[serde(default)]
+    pub owned_zones: Vec<u64>,
+}
+
+impl User {
+    #[allow(dead_code, unused_variables)]
+    pub async fn create(&self, pool: &SqlitePool) -> Result<usize, sqlx::Error> {
+        // TODO: test user create
+        let res = sqlx::query("INSERT into users (username, email, disabled) VALUES(?, ?, ?)")
+            .bind(&self.username)
+            .bind(&self.email)
+            .bind(false)
+            .execute(&mut pool.acquire().await?)
+            .await?;
+
+        Ok(1)
+    }
+    #[allow(dead_code, unused_variables)]
+    pub async fn delete(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        // TODO: test user delete
+        let mut txn = pool.begin().await?;
+
+        let res = sqlx::query("DELETE FROM ownership WHERE userid = ?")
+            .bind(self.id as f64)
+            .execute(&mut *txn)
+            .await?;
+
+        let res = sqlx::query("DELETE FROM users WHERE id = ?")
+            .bind(self.id as f64)
+            .execute(&mut *txn)
+            .await?;
+
+        txn.commit().await?;
+
+        Ok(())
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct ZoneOwnership {
+    #[serde(default)]
+    id: u64,
+    pub userid: u64,
+    pub zoneid: u64,
+}
+
+impl ZoneOwnership {
+    #[allow(dead_code, unused_variables)]
+    pub async fn create(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        // TODO: test ownership create
+        sqlx::query(
+            "INSERT INTO ownership (zoneid, userid) VALUES ( ?, ? ) ON CONFLICT DO NOTHING",
+        )
+        .bind(self.zoneid as f64)
+        .bind(self.userid as f64)
+        .execute(&mut pool.acquire().await?)
+        .await?;
+        Ok(())
+    }
+    #[allow(dead_code, unused_variables)]
+    pub async fn delete(&self, pool: &SqlitePool) -> Result<u64, sqlx::Error> {
+        // TODO: test ownership delete
+        let res = sqlx::query("DELETE FROM ownership WHERE zoneid = ? AND userid = ?")
+            .bind(self.zoneid as f64)
+            .bind(self.userid as f64)
+            .execute(&mut pool.acquire().await?)
+            .await?;
+        Ok(res.rows_affected())
+    }
+    #[allow(dead_code, unused_variables)]
+    pub async fn delete_for_user(self, pool: &SqlitePool) -> Result<User, sqlx::Error> {
+        // TODO: test user delete
+        // TODO: delete all ownership records
+        todo!();
+    }
+}
+
+pub async fn create_ownership_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await.unwrap();
+
+    #[cfg(test)]
+    eprintln!("Ensuring DB Ownership table exists");
+    log::info!("Ensuring DB Ownership table exists");
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS
+        ownership (
+            id   INTEGER PRIMARY KEY,
+            zoneid INTEGER NOT NULL,
+            userid INTEGER NOT NULL,
+            FOREIGN KEY(zoneid) REFERENCES zones(id),
+            FOREIGN KEY(userid) REFERENCES users(id)
+        )"#,
+    )
+    .execute(&mut tx)
+    .await?;
+
+    #[cfg(test)]
+    eprintln!("Ensuring DB Ownership index exists");
+    sqlx::query(
+        "CREATE UNIQUE INDEX
+        IF NOT EXISTS
+        ind_ownership
+        ON ownership (
+            zoneid,
+            userid
+        )",
+    )
+    .execute(&mut tx)
+    .await?;
+
+    tx.commit().await
 }
 
 pub async fn create_zones_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {

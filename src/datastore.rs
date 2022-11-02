@@ -20,10 +20,14 @@ pub enum Command {
         rclass: RecordClass,
         resp: Responder<Option<ZoneRecord>>,
     },
+    Shutdown,
     // TODO: create a setter when we're ready to accept updates
     // Set {
     //     name: Vec<u8>,
     //     rrtype: RecordType,
+    // }
+    // CreateZone {
+    //     zone: FileZone,
     // }
 }
 
@@ -110,6 +114,10 @@ pub async fn manager(
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
+            Command::Shutdown => {
+                log::info!("Datastore was sent shutdown message, shutting down.");
+                break;
+            }
             Command::Get {
                 name,
                 rrtype,

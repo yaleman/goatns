@@ -353,11 +353,14 @@ pub fn clap_parser() -> ArgMatches {
                 .short('t')
                 .long("configcheck")
                 .help("Check the config file, show it and then quit.")
-                .action(clap::ArgAction::SetTrue), // arg!(
-                                                   //     -C --configcheck
-                                                   // )
-                                                   // .required(false)
-                                                   // .value_parser(value_parser!(String)),
+                .action(clap::ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("export_zone")
+                .short('e')
+                .long("export-zone")
+                .help("Export a single zone.")
+                .value_parser(value_parser!(String)),
         )
         // .arg(arg!(
         //     -d --debug ... "Turn debugging information on"
