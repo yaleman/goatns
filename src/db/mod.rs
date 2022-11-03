@@ -1,3 +1,6 @@
+use std::str::FromStr;
+use std::time::Duration;
+
 use crate::config::ConfigFile;
 use crate::enums::{RecordClass, RecordType};
 
@@ -6,8 +9,11 @@ use crate::zones::FileZone;
 use crate::zones::FileZoneRecord;
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolConnection;
-use sqlx::sqlite::{SqliteArguments, SqliteRow};
-use sqlx::{Arguments, Connection, Pool, Row, Sqlite, SqliteConnection, SqlitePool, Transaction};
+use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
+use sqlx::{
+    Arguments, ConnectOptions, Connection, Pool, Row, Sqlite, SqliteConnection, SqlitePool,
+    Transaction,
+};
 
 #[cfg(test)]
 mod test;
@@ -19,7 +25,16 @@ pub async fn get_conn(config: &ConfigFile) -> Result<Pool<Sqlite>, String> {
     let db_url = format!("sqlite://{db_path}?mode=rwc");
     log::debug!("Opening Database: {db_url}");
 
-    match SqlitePool::connect(&db_url).await {
+    let mut options = match SqliteConnectOptions::from_str(&db_url) {
+        Ok(value) => value,
+        Err(error) => return Err(format!("connection failed: {error:?}")),
+    };
+    options.log_statements(log::LevelFilter::Trace);
+    // log anything that takes longer than 1s
+    // TODO: make this configurable
+    options.log_slow_statements(log::LevelFilter::Warn, Duration::from_secs(1));
+
+    match SqlitePool::connect_with(options).await {
         Ok(value) => Ok(value),
         Err(err) => Err(format!("Error opening SQLite DB ({db_url:?}): {err:?}")),
     }
