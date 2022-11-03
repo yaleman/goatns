@@ -5,6 +5,29 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use crate::resourcerecord::InternalResourceRecord;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Agent {
+    Datastore,
+    API,
+    UDPServer,
+    TCPServer,
+}
+
+#[derive(Clone, Debug)]
+pub enum AgentState {
+    Started { agent: Agent },
+    Stopped { agent: Agent },
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum SystemState {
+    #[allow(dead_code)]
+    Import,
+    Export,
+    Server,
+    ShuttingDown,
+}
+
 #[derive(Debug, Eq, PartialEq, PrimitiveEnum_u8, Copy, Clone)]
 /// A four bit field that specifies kind of query in this message.
 /// This value is set by the originator of a query and copied into the response.
@@ -21,7 +44,6 @@ impl From<u8> for OpCode {
     fn from(input: u8) -> Self {
         match input {
             0 => Self::Query,
-            // 1 => Self::IQuery,
             2 => Self::Status,
             _ => Self::Reserved,
         }
@@ -32,7 +54,6 @@ impl From<OpCode> for i32 {
     fn from(val: OpCode) -> i32 {
         match val {
             OpCode::Query => 0b00,
-            // OpCode::IQuery => 0b01,
             OpCode::Status => 0b10,
             //  Self::Reserved
             _ => 0b11,
@@ -192,6 +213,13 @@ impl From<RecordType> for &'static str {
     }
 }
 
+impl Display for RecordType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let res: &'static str = self.to_owned().into();
+        f.write_fmt(format_args!("{res}"))
+    }
+}
+
 impl From<InternalResourceRecord> for RecordType {
     fn from(input: InternalResourceRecord) -> RecordType {
         match input {
@@ -270,6 +298,18 @@ impl Display for RecordClass {
                 RecordClass::InvalidType => "Invalid",
             }
         ))
+    }
+}
+
+impl From<&'static str> for RecordClass {
+    fn from(value: &'static str) -> Self {
+        match value {
+            "IN" => RecordClass::Internet,
+            "CS" => RecordClass::CsNet,
+            "CHAOS" => RecordClass::Chaos,
+            "HESIOD" => RecordClass::Hesiod,
+            _ => RecordClass::InvalidType,
+        }
     }
 }
 

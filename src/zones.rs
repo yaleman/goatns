@@ -1,20 +1,23 @@
 use crate::config::ConfigFile;
-use crate::enums::RecordClass;
+use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::{DomainName, InternalResourceRecord};
 use log::{debug, error, info};
 use patricia_tree::PatriciaMap;
 
 use serde::{Deserialize, Serialize};
+use sqlx::sqlite::SqliteRow;
+use sqlx::Row;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 use std::str::from_utf8;
 
 /// A DNS Zone in a JSON file
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename(serialize = "UPPERCASE"))]
 pub struct FileZone {
-    #[serde(default)]
+    #[serde(default = "default_id")]
     pub id: u64,
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
     #[serde(rename(serialize = "MNAME"))]
@@ -60,7 +63,7 @@ pub fn rname_default() -> String {
 /// A DNS Record from the JSON file
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct FileZoneRecord {
-    #[serde(default)]
+    #[serde(default = "default_id")]
     pub zoneid: u64,
     #[serde(default)]
     pub id: u64,
@@ -74,6 +77,10 @@ pub struct FileZoneRecord {
 }
 
 /// If you don't specify a name, it's the root.
+fn default_id() -> u64 {
+    1
+}
+/// If you don't specify a name, it's the root.
 fn default_record_name() -> String {
     String::from("@")
 }
@@ -85,38 +92,50 @@ fn default_record_class() -> RecordClass {
 impl Display for FileZoneRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "FileZoneRecord {{ name: {} rrtype: {}, rdata: {}, ttl: {} }}",
-            self.name, self.rrtype, self.rdata, self.ttl
+            "FileZoneRecord {{ name={} class={} rrtype={}, ttl={}, zoneid={}, id={}, rdata={} }}",
+            self.name, self.class, self.rrtype, self.ttl, self.zoneid, self.id, self.rdata
         ))
     }
 }
 
+impl TryFrom<SqliteRow> for FileZoneRecord {
+    type Error = String;
+    fn try_from(row: SqliteRow) -> Result<Self, String> {
+        let zoneid: i64 = row.get("zoneid");
+        let id: i64 = row.get("id");
+        let name: String = row.get("name");
+        let rrtype: u16 = row.get("rrtype");
+        let class: u16 = row.get("rclass");
+        let rdata: String = row.get("rdata");
+        let ttl: u32 = row.get("ttl");
+
+        Ok(FileZoneRecord {
+            zoneid: zoneid as u64,
+            id: id as u64,
+            name,
+            rrtype: RecordType::from(&rrtype).to_string(),
+            class: RecordClass::from(&class),
+            rdata,
+            ttl,
+        })
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
+/// This is used when storing a set of records in the memory-based datastore
 pub struct ZoneRecord {
     // the full name including the zone
     pub name: Vec<u8>,
     pub typerecords: Vec<InternalResourceRecord>,
-    // pub rname: String,
-    // pub serial: u32,
-    // pub refresh: u32,
-    // pub retry: u32,
-    // pub expire: u32,
-    // pub minimum_ttl: u32,
 }
 
 impl Display for ZoneRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "Name: {:?} Name Bytes: {:?} Records: {:?}", //, Rname: {} Serial: {} Refresh: {} Retry: {} Expire: {} Minimum TTL: {}
+            "Name: {:?} Name Bytes: {:?} Records: {:?}",
             from_utf8(&self.name),
             &self.name,
             self.typerecords,
-            // self.rname,
-            // self.serial,
-            // self.refresh,
-            // self.retry,
-            // self.expire,
-            // self.minimum_ttl,
         ))
     }
 }
@@ -124,6 +143,26 @@ impl Display for ZoneRecord {
 pub fn empty_zones() -> PatriciaMap<ZoneRecord> {
     let tree: PatriciaMap<ZoneRecord> = PatriciaMap::new();
     tree
+}
+
+pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, String> {
+    let mut file = match File::open(filename) {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(format!("Failed to open zone file: {:?}", error));
+        }
+    };
+    let mut buf: String = String::new();
+    file.read_to_string(&mut buf).unwrap();
+    let jsonstruct: FileZone = match json5::from_str(&buf) {
+        Ok(value) => value,
+        Err(error) => {
+            let emsg = format!("Failed to read JSON file: {:?}", error);
+            error!("{}", emsg);
+            return Err(emsg);
+        }
+    };
+    Ok(jsonstruct)
 }
 
 /// Load the data from a JSON file on disk
@@ -226,10 +265,4 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
         }
     }
     Ok(tree)
-}
-
-#[allow(dead_code)]
-// TODO: this should be the end of the tree, so we can cover wildcards
-struct ZoneTreeLeaf {
-    wildcards: Vec<ZoneRecord>,
 }

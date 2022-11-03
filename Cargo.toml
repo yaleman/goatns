@@ -24,7 +24,6 @@ packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
 patricia_tree = "0.3.2"
 flexi_logger = { version = "0.24", features = ["async", "default"] }
 regex = "1.6.0"
-rocket = { version = "0.5.0-rc.2", features = ["json", "tls"] }
 serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
 serde_derive = "1.0.145"
@@ -35,9 +34,13 @@ sqlx-core = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite
 tokio = { version = "1.21.2", features = ["full"] }
 tokio-stream = { version = "0.1.11", features = ["net"] }
 tokio-util = { version = "0.7.4", features = ["full"] }
+tide = "0.16.0"
+tide-rustls = "0.3.0"
+driftwood = "0.0.6"
 
 [dev-dependencies]
 criterion = "^0.4"
+rand = "0.8.5"
 trust-dns-resolver = "0.22.0"
 
 [[bench]]

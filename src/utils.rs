@@ -1,3 +1,5 @@
+use crate::config::ConfigFile;
+use crate::enums::SystemState;
 use crate::reply::Reply;
 use crate::{Header, PacketType, Rcode, HEADER_BYTES};
 use clap::{arg, command, value_parser, Arg, ArgMatches};
@@ -353,11 +355,28 @@ pub fn clap_parser() -> ArgMatches {
                 .short('t')
                 .long("configcheck")
                 .help("Check the config file, show it and then quit.")
-                .action(clap::ArgAction::SetTrue), // arg!(
-                                                   //     -C --configcheck
-                                                   // )
-                                                   // .required(false)
-                                                   // .value_parser(value_parser!(String)),
+                .action(clap::ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("export_zone")
+                .short('e')
+                .long("export-zone")
+                .help("Export a single zone.")
+                .value_parser(value_parser!(String)),
+        )
+        .arg(
+            Arg::new("import_zone")
+                .short('i')
+                .long("import-zone")
+                .help("Import a single zone file.")
+                .value_parser(value_parser!(String)),
+        )
+        .arg(
+            Arg::new("filename")
+                .short('f')
+                .long("filename")
+                .help("Filename to save to (used in other commands).")
+                .value_parser(value_parser!(String)),
         )
         // .arg(arg!(
         //     -d --debug ... "Turn debugging information on"
@@ -425,4 +444,30 @@ fn test_loc_size_to_u8() {
     assert_eq!(loc_size_to_u8(90000000.0), 0x99);
     eprintln!("{:3x}", loc_size_to_u8(20000000.0));
     // assert_eq!(loc_size_to_u8(20000000.0), Ok(0x29));
+}
+
+pub fn cli_commands(
+    _config: &ConfigFile,
+    clap_results: &ArgMatches,
+) -> Result<SystemState, String> {
+    if let Some(zone_name) = clap_results.get_one::<String>("export_zone") {
+        if let Some(output_filename) = clap_results.get_one::<String>("filename") {
+            log::info!("Exporting zone {zone_name} to {output_filename}");
+            return Ok(SystemState::Export);
+        } else {
+            log::error!("You need to specify a a filename to save to.");
+            return Ok(SystemState::ShuttingDown);
+        }
+    };
+
+    if let Some(zone_name) = clap_results.get_one::<String>("import_zone") {
+        if let Some(output_filename) = clap_results.get_one::<String>("filename") {
+            log::info!("Exporting zone {zone_name} to {output_filename}");
+            return Ok(SystemState::Import);
+        } else {
+            log::error!("You need to specify a a filename to save to.");
+            return Ok(SystemState::ShuttingDown);
+        }
+    };
+    Ok(SystemState::Server)
 }

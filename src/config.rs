@@ -41,6 +41,13 @@ pub struct ConfigFile {
     pub api_tls_key: PathBuf,
 }
 
+impl ConfigFile {
+    /// get a string version of the listener address
+    pub fn api_listener_address(&self) -> String {
+        format!("{}:{}", self.address, self.api_port)
+    }
+}
+
 impl Default for ConfigFile {
     fn default() -> Self {
         Self {
