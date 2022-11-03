@@ -92,11 +92,13 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
+<span id="95">95</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident">log::info</span>;
     <span class="kw">use</span> <span class="ident">std::env</span>;
     <span class="kw">use</span> <span class="ident">std::net</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="ident">std::thread::sleep</span>;
     <span class="kw">use</span> <span class="ident">trust_dns_resolver::config</span>::<span class="kw-2">*</span>;
     <span class="kw">use</span> <span class="ident">trust_dns_resolver::Resolver</span>;
 
@@ -113,7 +115,7 @@
 
         <span class="comment">// YOLO some certs</span>
         <span class="ident">std::process::Command::new</span>(<span class="string">&quot;./insecure_generate_tls.sh&quot;</span>).<span class="ident">spawn</span>()<span class="question-mark">?</span>;
-
+        <span class="ident">sleep</span>(<span class="ident">std::time::Duration::from_secs</span>(<span class="number">1</span>));
         <span class="comment">// start the server</span>
         <span class="kw">let</span> <span class="ident">goat</span> <span class="op">=</span> <span class="ident">std::process::Command::new</span>(<span class="string">&quot;cargo&quot;</span>)
             .<span class="ident">args</span>([

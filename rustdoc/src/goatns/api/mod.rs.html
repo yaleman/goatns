@@ -134,7 +134,7 @@
     }
 
     <span class="kw">let</span> (<span class="ident">tx_oneshot</span>, <span class="ident">rx_oneshot</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>();
-    <span class="kw">let</span> <span class="ident">ds_req</span>: <span class="ident">datastore::Command</span> <span class="op">=</span> <span class="ident">datastore::Command::Get</span> {
+    <span class="kw">let</span> <span class="ident">ds_req</span>: <span class="ident">datastore::Command</span> <span class="op">=</span> <span class="ident">datastore::Command::GetRecord</span> {
         <span class="ident">name</span>: <span class="ident">qname</span>.<span class="ident">into</span>(),
         <span class="ident">rrtype</span>,
         <span class="ident">rclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,

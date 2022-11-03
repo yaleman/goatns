@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Command",""]],"fn":[["handle_get_command",""],["manager","Manages the datastore, waits for signals from the server instances and responds with data"]],"type":[["Responder",""]]};
+window.SIDEBAR_ITEMS = {"enum":[["Command",""]],"fn":[["handle_get_command",""],["handle_get_zone",""],["handle_import_file",""],["manager","Manages the datastore, waits for signals from the server instances and responds with data"]],"type":[["Responder",""]]};

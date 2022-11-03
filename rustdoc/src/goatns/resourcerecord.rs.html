@@ -1162,7 +1162,7 @@
     <span class="kw">where</span>
         <span class="ident">S</span>: <span class="ident">Serializer</span>,
     {
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>).<span class="ident">expect</span>(<span class="string">&quot;This shouldn&#39;t ever fail&quot;</span>);
         <span class="ident">serializer</span>.<span class="ident">serialize_str</span>(<span class="ident">res</span>)
     }
 }

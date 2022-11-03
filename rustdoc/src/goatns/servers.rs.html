@@ -440,8 +440,6 @@
 <span id="440">440</span>
 <span id="441">441</span>
 <span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">packed_struct::prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">std::net::SocketAddr</span>;
 <span class="kw">use</span> <span class="ident">std::str</span>::{<span class="ident">from_utf8</span>, <span class="ident">FromStr</span>};
@@ -626,10 +624,8 @@
         <span class="macro">log::debug!</span>(<span class="string">&quot;TCP connection from {:?}&quot;</span>, <span class="ident">addr</span>);
 
         <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">reader</span>, <span class="ident">writer</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">split</span>();
-        <span class="comment">// TODO: this is a hilariously risky unwrap</span>
-        <span class="kw">let</span> <span class="ident">msg_length</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u16</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>().<span class="ident">into</span>();
+        <span class="kw">let</span> <span class="ident">msg_length</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u16</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">into</span>();
         <span class="macro">log::debug!</span>(<span class="string">&quot;msg_length={msg_length}&quot;</span>);
-        <span class="comment">// let mut buf: Vec&lt;u8&gt; = Vec::with_capacity(msg_length.into());</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
 
         <span class="kw">while</span> <span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">msg_length</span> {
@@ -803,7 +799,7 @@
     <span class="comment">// Check for CHAOS commands</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::collapsible_if</span>)]</span>
     <span class="kw">if</span> <span class="ident">question</span>.<span class="ident">qclass</span> <span class="op">==</span> <span class="ident">RecordClass::Chaos</span> {
-        <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">question</span>.<span class="ident">normalized_name</span>().<span class="ident">unwrap</span>() <span class="op">==</span> <span class="string">&quot;shutdown&quot;</span> {
+        <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">question</span>.<span class="ident">normalized_name</span>()<span class="question-mark">?</span> <span class="op">==</span> <span class="string">&quot;shutdown&quot;</span> {
             <span class="macro">log::debug!</span>(<span class="string">&quot;Got CHAOS shutdown!&quot;</span>);
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Reply</span> {
                 <span class="ident">header</span>,
@@ -827,7 +823,7 @@
     <span class="comment">// build the request to the datastore to make the query</span>
 
     <span class="kw">let</span> (<span class="ident">tx_oneshot</span>, <span class="ident">rx_oneshot</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>();
-    <span class="kw">let</span> <span class="ident">ds_req</span>: <span class="ident">Command</span> <span class="op">=</span> <span class="ident">Command::Get</span> {
+    <span class="kw">let</span> <span class="ident">ds_req</span>: <span class="ident">Command</span> <span class="op">=</span> <span class="ident">Command::GetRecord</span> {
         <span class="ident">name</span>: <span class="ident">question</span>.<span class="ident">qname</span>.<span class="ident">clone</span>(),
         <span class="ident">rrtype</span>: <span class="ident">question</span>.<span class="ident">qtype</span>,
         <span class="ident">rclass</span>: <span class="ident">question</span>.<span class="ident">qclass</span>,
