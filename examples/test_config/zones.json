@@ -15,6 +15,13 @@
                 "rdata" : "1",
                 "ttl" : 1
             },
+
+            {
+                "rrtype" : "URI",
+                "ttl" : 5,
+                "name" : "_mqtt._http",
+                "rdata" : "1 2 mqtt://example.goat"
+            },
             {
                 "rrtype" : "NS",
                 "rdata" : "ns1.hello.goat",

@@ -337,14 +337,19 @@ pub async fn create_record_with_conn(
     let rrtype = RecordType::from(record.rrtype);
     let rrtype = rrtype as u16;
 
+    let record_name = match record.name.len() {
+        0 => None,
+        _ => Some(record.name),
+    };
+
     let mut args = SqliteArguments::default();
-    let input_args: Vec<String> = vec![
-        record.zoneid.to_string(),
-        record.name,
-        record.ttl.to_string(),
-        rrtype.to_string(),
-        rclass.to_string(),
-        record.rdata,
+    let input_args: Vec<Option<String>> = vec![
+        Some(record.zoneid.to_string()),
+        record_name,
+        Some(record.ttl.to_string()),
+        Some(rrtype.to_string()),
+        Some(rclass.to_string()),
+        Some(record.rdata),
     ];
     for arg in input_args {
         args.add(arg);
@@ -360,7 +365,7 @@ pub async fn create_record_with_conn(
 }
 
 /// Query the zones table, name_or_id can be the zoneid or the name - if they match then you're bad and you should feel bacd.
-pub async fn get_zone_with_conn(
+pub async fn get_zone_with_txn(
     txn: &mut Transaction<'_, Sqlite>,
     name_or_id: &str,
 ) -> Result<Option<FileZone>, sqlx::Error> {
@@ -377,12 +382,12 @@ pub async fn get_zone_with_conn(
     .bind(name_or_id)
     .fetch_optional(&mut *txn)
     .await?;
-    match result {
-        None => Ok(None),
+    let mut zone = match result {
+        None => return Ok(None),
         Some(row) => {
             let id: i64 = row.get(0);
 
-            Ok(Some(FileZone {
+            FileZone {
                 id: id as u64,
                 name: row.get(1),
                 rname: row.get(2),
@@ -392,16 +397,34 @@ pub async fn get_zone_with_conn(
                 expire: row.get(6),
                 minimum: row.get(7),
                 records: vec![],
-            }))
+            }
         }
-    }
+    };
+
+    let result = sqlx::query(
+        "SELECT
+        id, zoneid, name, ttl, rrtype, rclass, rdata
+        FROM records
+        WHERE zoneid = ?",
+    )
+    .bind(zone.id as f64)
+    .fetch_all(&mut *txn)
+    .await?;
+
+    zone.records = result
+        .into_iter()
+        .filter_map(|r| match FileZoneRecord::try_from(r) {
+            Ok(val) => Some(val),
+            Err(_) => None,
+        })
+        .collect();
+    Ok(Some(zone))
 }
 
-#[allow(dead_code)]
 pub async fn get_zone(pool: &SqlitePool, name: String) -> Result<Option<FileZone>, sqlx::Error> {
     let mut txn = pool.begin().await?;
 
-    get_zone_with_conn(&mut txn, &name).await
+    get_zone_with_txn(&mut txn, &name).await
 }
 
 #[allow(dead_code)]
@@ -760,80 +783,90 @@ async fn test_load_zone() -> Result<(), sqlx::Error> {
     Ok(())
 }
 
+pub async fn load_zone_with_txn(
+    txn: &mut Transaction<'_, Sqlite>,
+    zone: &FileZone,
+) -> Result<(), sqlx::Error> {
+    // check the zone exists
+    let find_zone = match get_zone_with_txn(txn, &zone.name).await {
+        Ok(val) => {
+            log::trace!("Found existing zone");
+            val
+        }
+        Err(err) => {
+            // failed to query the DB
+            return Err(err);
+        }
+    };
+
+    let updated_zone: FileZone = match find_zone {
+        None => {
+            // if it's new, add it
+            #[cfg(test)]
+            eprintln!("Creating zone {zone:?}");
+            log::debug!("Creating zone {zone:?}");
+            create_zone_with_conn(txn, zone.clone()).await?;
+
+            #[cfg(test)]
+            eprintln!("Done creating zone");
+            get_zone_with_txn(txn, &zone.name).await?.unwrap()
+        }
+        Some(ez) => {
+            if !zone.matching_data(&ez) {
+                // update it if it's wrong
+
+                #[cfg(test)]
+                eprintln!("Updating zone");
+                log::debug!("Updating zone");
+                let mut new_zone = zone.clone();
+                new_zone.id = ez.id;
+
+                let updated = update_zone_with_conn(txn, new_zone).await?;
+                #[cfg(test)]
+                eprintln!("Updated: {:?} record", updated);
+                log::debug!("Updated: {:?} record", updated);
+            }
+            get_zone_with_txn(txn, &zone.name).await.unwrap().unwrap()
+        }
+    };
+    #[cfg(test)]
+    eprintln!("Zone after update: {updated_zone:?}");
+    log::trace!("Zone after update: {updated_zone:?}");
+
+    // drop all the records
+    let mut args = SqliteArguments::default();
+    args.add(updated_zone.id as f64);
+
+    #[cfg(test)]
+    eprintln!("Dropping all records for zone {zone:?}");
+    log::debug!("Dropping all records for zone {zone:?}");
+    sqlx_core::query::query_with("delete from records where zoneid = ?", args)
+        .execute(&mut *txn)
+        .await?;
+
+    // add the records
+    for mut record in zone.records.clone() {
+        #[cfg(test)]
+        eprintln!("Creating new zone record: {record:?}");
+        log::trace!("Creating new zone record: {record:?}");
+        record.zoneid = updated_zone.id;
+        if record.name == "@" {
+            record.name = "".to_string();
+        }
+        create_record_with_conn(txn, record).await?;
+    }
+    Ok(())
+}
+
 ///Hand it a filezone and it'll update the things
 pub async fn load_zone(
     mut conn: PoolConnection<Sqlite>,
     zone: FileZone,
 ) -> Result<(), sqlx::Error> {
-    let res = conn
-        .transaction(|conn| {
+    let res: Result<(), sqlx::Error> = conn
+        .transaction(|txn| {
             Box::pin(async move {
-                // check the zone exists
-                let find_zone = match get_zone_with_conn(conn, &zone.name).await {
-                    Ok(val) => {
-                        log::trace!("Found existing zone");
-                        val
-                    }
-                    Err(err) => {
-                        // failed to query the DB
-                        return Err(err);
-                    }
-                };
-
-                let updated_zone: FileZone = match find_zone {
-                    None => {
-                        // if it's new, add it
-                        #[cfg(test)]
-                        eprintln!("Creating zone {zone:?}");
-                        log::debug!("Creating zone {zone:?}");
-                        create_zone_with_conn(conn, zone.clone()).await?;
-
-                        #[cfg(test)]
-                        eprintln!("Done creating zone");
-                        get_zone_with_conn(conn, &zone.name).await?.unwrap()
-                    }
-                    Some(ez) => {
-                        if !zone.matching_data(&ez) {
-                            // update it if it's wrong
-
-                            #[cfg(test)]
-                            eprintln!("Updating zone");
-                            log::debug!("Updating zone");
-                            let mut new_zone = zone.clone();
-                            new_zone.id = ez.id;
-
-                            let updated = update_zone_with_conn(conn, new_zone).await?;
-                            #[cfg(test)]
-                            eprintln!("Updated: {:?} record", updated);
-                            log::debug!("Updated: {:?} record", updated);
-                        }
-                        get_zone_with_conn(conn, &zone.name).await.unwrap().unwrap()
-                    }
-                };
-                #[cfg(test)]
-                eprintln!("Zone after update: {updated_zone:?}");
-                log::trace!("Zone after update: {updated_zone:?}");
-
-                // drop all the records
-                let mut args = SqliteArguments::default();
-                args.add(updated_zone.id as f64);
-
-                #[cfg(test)]
-                eprintln!("Dropping all records for zone {zone:?}");
-                log::debug!("Dropping all records for zone {zone:?}");
-                sqlx_core::query::query_with("delete from records where zoneid = ?", args)
-                    .execute(&mut *conn)
-                    .await?;
-
-                // add the records
-                for mut record in zone.records {
-                    #[cfg(test)]
-                    eprintln!("Creating new zone record: {record:?}");
-                    log::trace!("Creating new zone record: {record:?}");
-                    record.zoneid = updated_zone.id;
-                    create_record_with_conn(conn, record).await?;
-                }
-
+                load_zone_with_txn(txn, &zone).await?;
                 // done!
                 Ok(())
             })
@@ -853,7 +886,7 @@ pub async fn export_zone(
 ) -> Result<FileZone, sqlx::Error> {
     let mut txn = conn.begin().await?;
 
-    let mut zone = match get_zone_with_conn(&mut txn, &zone_id.to_string()).await? {
+    let mut zone = match get_zone_with_txn(&mut txn, &zone_id.to_string()).await? {
         None => {
             eprintln!("Couldn't find zone with id: {zone_id}");
             return Err(sqlx::Error::RowNotFound);

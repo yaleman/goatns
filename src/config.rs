@@ -30,7 +30,7 @@ pub struct ConfigFile {
     /// The location for the zone sqlite file
     pub sqlite_path: String,
     /// Where the JSON zone file is
-    pub zone_file: String,
+    pub zone_file: Option<String>,
     /// IP Allow lists
     pub ip_allow_lists: IPAllowList,
     /// API / Web UI Port
@@ -62,7 +62,7 @@ impl Default for ConfigFile {
                 shutdown: vec![],
             },
             sqlite_path: String::from("~/.cache/goatns.sqlite"),
-            zone_file: String::from("zones.json"),
+            zone_file: None,
             api_port: 9000,
             api_tls_cert: PathBuf::from("./certificates/cert.pem"),
             api_tls_key: PathBuf::from("./certificates/key.pem"),
@@ -73,8 +73,8 @@ impl Default for ConfigFile {
 impl Display for ConfigFile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "Listening address=\"{}:{}\" Capturing={} Log level={}",
-            self.address, self.port, self.capture_packets, self.log_level
+            "listening_address=\"{}:{}\" api_endpoint=\"https://{}\" capturing_pcaps={} Log_level={}",
+            self.address, self.port, self.api_listener_address(), self.capture_packets, self.log_level
         ))
     }
 }
@@ -112,7 +112,7 @@ impl From<Config> for ConfigFile {
 
 lazy_static! {
     static ref CONFIG_LOCATIONS: Vec<&'static str> =
-        ["~/.config/goatns.json", "./goatns.json",].to_vec();
+        ["./goatns.json", "~/.config/goatns.json",].to_vec();
 }
 
 /// Loads the configuration from a given file or from some default locations.
@@ -186,15 +186,12 @@ pub fn setup_logging(
         false => config.log_level.to_ascii_lowercase(),
     };
 
-    match flexi_logger::Logger::try_with_str(&log_level) {
-        Ok(logger) => Ok(logger
+    match flexi_logger::Logger::try_with_str(&log_level).map_err(|e| format!("{e:?}")) {
+        Ok(logger) => logger
             .write_mode(flexi_logger::WriteMode::Async)
             .set_palette("b1;3;2;6;5".to_string())
             .start()
-            .unwrap()),
-        Err(error) => {
-            eprintln!("Failed to start logger! {error:?}");
-            Err(format!("Failed to start logger! {error:?}"))
-        }
+            .map_err(|e| format!("{e:?}")),
+        Err(error) => Err(format!("Failed to start logger! {error:?}"))
     }
 }

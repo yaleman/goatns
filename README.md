@@ -84,8 +84,7 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
       - [ ] update
       - [ ] delete
     - [x] import from json
-      - [x] db::load_zone takes the FileZone
-    - [ ] export to json (file-per-zone)
+    - [x] export to json (file-per-zone)
   - [ ] API things
     - [x] move to another web framework (tide-rs)
     - [ ] Oauth for management/UI things
