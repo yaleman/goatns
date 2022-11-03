@@ -35,7 +35,6 @@ impl From<u8> for OpCode {
     fn from(input: u8) -> Self {
         match input {
             0 => Self::Query,
-            // 1 => Self::IQuery,
             2 => Self::Status,
             _ => Self::Reserved,
         }
@@ -46,7 +45,6 @@ impl From<OpCode> for i32 {
     fn from(val: OpCode) -> i32 {
         match val {
             OpCode::Query => 0b00,
-            // OpCode::IQuery => 0b01,
             OpCode::Status => 0b10,
             //  Self::Reserved
             _ => 0b11,
