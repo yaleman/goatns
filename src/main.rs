@@ -69,104 +69,115 @@ async fn main() -> io::Result<()> {
     // start all the things!
     let datastore_manager = tokio::spawn(datastore::manager(rx, config.clone()));
 
-    let system_state = goatns::utils::cli_commands(&config, &clap_results);
-
-    log::error!("{system_state:?}");
-    // if we got this far we can shut down again
-    match system_state.unwrap() {
-        SystemState::Export | SystemState::Import | SystemState::ShuttingDown => {
-            if let Err(error) = tx.send(datastore::Command::Shutdown).await {
-                eprintln!("failed to tell Datastore to shut down! {error:?} Bailing!");
-                return Ok(());
-            };
-            // return Ok(())
-        }
-        _ => {}
-    }
-    // Let's start up the listeners!
-    let udpserver = tokio::spawn(servers::udp_server(
-        bind_address,
-        config.clone(),
-        tx.clone(),
-        agent_tx.clone(),
-        agent_tx.subscribe(),
-    ));
-    let tcpserver = tokio::spawn(servers::tcp_server(
-        bind_address,
-        config.clone(),
-        tx.clone(),
-        agent_tx.clone(),
-        agent_tx.subscribe(),
-    ));
-
-    let api_listener = match TlsListener::build()
-        .addrs(config.api_listener_address())
-        .cert(&config.api_tls_cert)
-        .key(&config.api_tls_key)
-        .finish()
-    {
+    let system_state = match goatns::utils::cli_commands(tx.clone(), &clap_results).await {
         Ok(value) => value,
         Err(error) => {
-            log::error!("Failed to start API TLS Listener: {error:?}");
-            return Ok(());
+            eprintln!("{error}");
+            SystemState::ShuttingDown
         }
     };
-    let api = match goatns::api::build(tx.clone()).await {
-        Ok(value) => value,
-        Err(err) => {
-            // TODO: need to clean-shutdown the server here
-            log::error!("Failed to build API server: {err:?}");
-            return Ok(());
-        }
-    };
-    let apiserver = tokio::spawn(api.listen(api_listener));
 
-    loop {
-        // if any of the servers bail, the server does too.
-        if udpserver.is_finished() {
-            log::info!("UDP Server shut down");
-            if let Err(error) = agent_tx.send(AgentState::Stopped {
-                agent: Agent::UDPServer,
-            }) {
-                eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+    log::debug!("System state: {system_state:?}");
+    // if we got this far we can shut down again
+    match system_state {
+        SystemState::Export | SystemState::Import | SystemState::ShuttingDown => {
+            logger.flush();
+            if let Err(error) = tx.send(datastore::Command::Shutdown).await {
+                eprintln!("failed to tell Datastore to shut down! {error:?} Bailing!");
+                logger.flush();
+                return Ok(());
             };
-            return Ok(());
-        };
-        if tcpserver.is_finished() {
-            log::info!("TCP Server shut down");
-            if let Err(error) = agent_tx.send(AgentState::Stopped {
-                agent: Agent::TCPServer,
-            }) {
-                eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-            };
-            return Ok(());
-        };
-        if datastore_manager.is_finished() {
-            log::info!("Datastore manager shut down");
-            if let Err(error) = agent_tx.send(AgentState::Stopped {
-                agent: Agent::Datastore,
-            }) {
-                eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-            };
-            return Ok(());
-        };
-        if apiserver.is_finished() {
-            log::info!("API manager shut down");
-            if let Err(error) = agent_tx.send(AgentState::Stopped { agent: Agent::API }) {
-                eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-            };
-            // return Ok(());
         }
+        SystemState::Server => {
+            // Let's start up the listeners!
+            let udpserver = tokio::spawn(servers::udp_server(
+                bind_address,
+                config.clone(),
+                tx.clone(),
+                agent_tx.clone(),
+                agent_tx.subscribe(),
+            ));
+            let tcpserver = tokio::spawn(servers::tcp_server(
+                bind_address,
+                config.clone(),
+                tx.clone(),
+                agent_tx.clone(),
+                agent_tx.subscribe(),
+            ));
 
-        if udpserver.is_finished()
-            & tcpserver.is_finished()
-            & apiserver.is_finished()
-            & datastore_manager.is_finished()
-        {
-            break;
+            let api_listener = match TlsListener::build()
+                .addrs(config.api_listener_address())
+                .cert(&config.api_tls_cert)
+                .key(&config.api_tls_key)
+                .finish()
+            {
+                Ok(value) => value,
+                Err(error) => {
+                    log::error!("Failed to start API TLS Listener: {error:?}");
+                    return Ok(());
+                }
+            };
+            let api = match goatns::api::build(tx.clone()).await {
+                Ok(value) => value,
+                Err(err) => {
+                    // TODO: need to clean-shutdown the server here
+                    log::error!("Failed to build API server: {err:?}");
+                    return Ok(());
+                }
+            };
+            let apiserver = tokio::spawn(api.listen(api_listener));
+
+            loop {
+                // if any of the servers bail, the server does too.
+                if udpserver.is_finished() {
+                    log::info!("UDP Server shut down");
+                    if let Err(error) = agent_tx.send(AgentState::Stopped {
+                        agent: Agent::UDPServer,
+                    }) {
+                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                    };
+                    return Ok(());
+                };
+                if tcpserver.is_finished() {
+                    log::info!("TCP Server shut down");
+                    if let Err(error) = agent_tx.send(AgentState::Stopped {
+                        agent: Agent::TCPServer,
+                    }) {
+                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                    };
+                    return Ok(());
+                };
+                if datastore_manager.is_finished() {
+                    log::info!("Datastore manager shut down");
+                    if let Err(error) = agent_tx.send(AgentState::Stopped {
+                        agent: Agent::Datastore,
+                    }) {
+                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                    };
+                    return Ok(());
+                };
+                if apiserver.is_finished() {
+                    log::info!("API manager shut down");
+                    if let Err(error) = agent_tx.send(AgentState::Stopped { agent: Agent::API }) {
+                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                    };
+                    // return Ok(());
+                }
+
+                if udpserver.is_finished()
+                    & tcpserver.is_finished()
+                    & apiserver.is_finished()
+                    & datastore_manager.is_finished()
+                {
+                    break;
+                }
+                sleep(std::time::Duration::from_secs(1)).await;
+            }
         }
-        sleep(std::time::Duration::from_secs(1)).await;
     }
+
+    logger.flush();
+    sleep(std::time::Duration::from_secs(1)).await;
     logger.flush();
     Ok(())
 }

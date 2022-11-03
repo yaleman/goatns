@@ -165,10 +165,8 @@ pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, String> {
     Ok(jsonstruct)
 }
 
-/// Load the data from a JSON file on disk
-pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String> {
-    let zone_filename = "zones.json";
-    let mut file = match File::open(zone_filename) {
+pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, String> {
+    let mut file = match File::open(filename) {
         Ok(value) => value,
         Err(error) => {
             return Err(format!("Failed to open zone file: {:?}", error));
@@ -177,13 +175,29 @@ pub fn load_zones(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String
 
     let mut buf: String = String::new();
     file.read_to_string(&mut buf).unwrap();
-    let jsonstruct: Vec<FileZone> = match json5::from_str(&buf) {
+    let jsonstruct: Result<Vec<FileZone>, String> =
+        json5::from_str(&buf).map_err(|e| format!("Failed to read JSON file: {e:?}"));
+    //  {
+    //     Ok(value) => value,
+    //     Err(error) => {
+    //         let emsg = format!("Failed to read JSON file: {:?}", error);
+    //         error!("{}", emsg);
+    //         return Err(emsg);
+    //     }
+    // };
+    jsonstruct
+}
+
+/// Load the data from a JSON file on disk
+pub fn load_zones_to_tree(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String> {
+    let zone_filename = match &config.zone_file {
+        Some(filename) => filename,
+        None => return Err("No zone file specified".to_string()),
+    };
+
+    let jsonstruct = match load_zones(zone_filename) {
         Ok(value) => value,
-        Err(error) => {
-            let emsg = format!("Failed to read JSON file: {:?}", error);
-            error!("{}", emsg);
-            return Err(emsg);
-        }
+        Err(err) => return Err(format!("Error loading file {zone_filename}: {err}")),
     };
     debug!("{:?}", jsonstruct);
 

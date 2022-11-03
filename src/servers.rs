@@ -182,10 +182,8 @@ pub async fn tcp_server(
         log::debug!("TCP connection from {:?}", addr);
 
         let (mut reader, writer) = stream.split();
-        // TODO: this is a hilariously risky unwrap
-        let msg_length: usize = reader.read_u16().await.unwrap().into();
+        let msg_length: usize = reader.read_u16().await?.into();
         log::debug!("msg_length={msg_length}");
-        // let mut buf: Vec<u8> = Vec::with_capacity(msg_length.into());
         let mut buf: Vec<u8> = vec![];
 
         while buf.len() < msg_length {
@@ -359,7 +357,7 @@ async fn get_result(
     // Check for CHAOS commands
     #[allow(clippy::collapsible_if)]
     if question.qclass == RecordClass::Chaos {
-        if &question.normalized_name().unwrap() == "shutdown" {
+        if &question.normalized_name()? == "shutdown" {
             log::debug!("Got CHAOS shutdown!");
             return Ok(Reply {
                 header,
@@ -383,7 +381,7 @@ async fn get_result(
     // build the request to the datastore to make the query
 
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
-    let ds_req: Command = Command::Get {
+    let ds_req: Command = Command::GetRecord {
         name: question.qname.clone(),
         rrtype: question.qtype,
         rclass: question.qclass,

@@ -4,7 +4,7 @@ use crate::config::ConfigFile;
 use crate::db;
 use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::InternalResourceRecord;
-use crate::zones::{empty_zones, load_zones, ZoneRecord};
+use crate::zones::{empty_zones, load_zones_to_tree, FileZone, ZoneRecord};
 use log::{debug, error};
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
@@ -13,12 +13,21 @@ type Responder<T> = oneshot::Sender<T>;
 
 #[derive(Debug)]
 pub enum Command {
-    Get {
+    GetRecord {
         /// Reversed vec of the name
         name: Vec<u8>,
         rrtype: RecordType,
         rclass: RecordClass,
         resp: Responder<Option<ZoneRecord>>,
+    },
+    GetZone {
+        name: String,
+        resp: Responder<Option<FileZone>>,
+    },
+    ImportFile {
+        filename: String,
+        zone_name: Option<String>,
+        resp: Responder<()>,
     },
     Shutdown,
     // TODO: create a setter when we're ready to accept updates
@@ -85,17 +94,69 @@ async fn handle_get_command(
     Ok(())
 }
 
+async fn handle_import_file(
+    pool: &Pool<Sqlite>,
+    filename: String,
+    zone_name: Option<String>,
+) -> Result<(), String> {
+    let mut txn = pool
+        .begin()
+        .await
+        .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+
+    let zones: Vec<FileZone> = crate::zones::load_zones(filename.as_str())?;
+
+    let zones = match zone_name {
+        Some(name) => zones.into_iter().filter(|z| z.name == name).collect(),
+        None => zones,
+    };
+
+    if zones.is_empty() {
+        log::warn!("No zones to import!");
+        return Err("No zones to import!".to_string());
+    }
+
+    for zone in zones {
+        crate::db::load_zone_with_txn(&mut txn, &zone)
+            .await
+            .map_err(|e| format!("Failed to load zone {}: {e:?}", zone.name))?;
+        log::info!("Imported {}", zone.name);
+    }
+    txn.commit()
+        .await
+        .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+    Ok(())
+}
+
+async fn handle_get_zone(
+    tx: oneshot::Sender<Option<FileZone>>,
+    pool: &Pool<Sqlite>,
+    name: String,
+) -> Result<(), String> {
+    let mut txn = pool.begin().await.map_err(|e| format!("{e:?}"))?;
+
+    let zone = crate::db::get_zone_with_txn(&mut txn, &name)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+
+    tx.send(zone).map_err(|e| format!("{e:?}"))
+}
+
 /// Manages the datastore, waits for signals from the server instances and responds with data
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
     config: ConfigFile,
 ) -> Result<(), String> {
-    let zones = match load_zones(&config) {
-        Ok(value) => value,
-        Err(error) => {
-            error!("{}", error);
-            empty_zones()
-        }
+    // if they specified a static zone file in the config, then load it
+    let zones = match config.zone_file {
+        Some(_) => match load_zones_to_tree(&config) {
+            Ok(value) => value,
+            Err(error) => {
+                error!("{}", error);
+                empty_zones()
+            }
+        },
+        None => empty_zones(),
     };
 
     let connpool = match db::get_conn(&config).await {
@@ -114,11 +175,33 @@ pub async fn manager(
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
+            Command::GetZone { name, resp } => {
+                let res = handle_get_zone(resp, &connpool, name).await;
+                if let Err(e) = res {
+                    log::error!("{e:?}")
+                };
+            }
             Command::Shutdown => {
                 log::info!("Datastore was sent shutdown message, shutting down.");
                 break;
             }
-            Command::Get {
+            Command::ImportFile {
+                filename,
+                resp,
+                zone_name,
+            } => {
+                handle_import_file(&connpool, filename, zone_name)
+                    .await
+                    .map_err(|e| format!("{e:?}"))?;
+                match resp.send(()) {
+                    Ok(_) => log::info!("DS Sent Success"),
+                    Err(err) => {
+                        let res = format!("Failed to send response: {err:?}");
+                        log::info!("{res}");
+                    }
+                }
+            }
+            Command::GetRecord {
                 name,
                 rrtype,
                 rclass,

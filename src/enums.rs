@@ -21,7 +21,6 @@ pub enum AgentState {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SystemState {
-    #[allow(dead_code)]
     Import,
     Export,
     Server,

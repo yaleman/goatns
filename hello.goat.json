@@ -1,0 +1,318 @@
+{
+  "id": 1,
+  "MNAME": "hello.goat",
+  "RNAME": "billy@hello.goat",
+  "serial": 1,
+  "refresh": 2,
+  "retry": 3,
+  "expire": 4,
+  "minimum": 60,
+  "records": [
+    {
+      "zoneid": 1,
+      "id": 1,
+      "name": "_mqtt._http",
+      "rrtype": "",
+      "class": "IN",
+      "rdata": "1 2 mqtt://example.goat",
+      "ttl": 5
+    },
+    {
+      "zoneid": 1,
+      "id": 2,
+      "name": "pizza",
+      "rrtype": "LOC",
+      "class": "IN",
+      "rdata": "27 28 26.916 S 153 7 30.813 E 8m 10m 10000m 10m",
+      "ttl": 1
+    },
+    {
+      "zoneid": 1,
+      "id": 3,
+      "name": "cambridge",
+      "rrtype": "LOC",
+      "class": "IN",
+      "rdata": "42 21 54 N 71 06 18 W -24m 30m",
+      "ttl": 1
+    },
+    {
+      "zoneid": 1,
+      "id": 4,
+      "name": "loiosh",
+      "rrtype": "LOC",
+      "class": "IN",
+      "rdata": "42 21 43.952 N 71 5 6.344 W -24m 1m 200m",
+      "ttl": 1
+    },
+    {
+      "zoneid": 1,
+      "id": 5,
+      "name": "pipex",
+      "rrtype": "LOC",
+      "class": "IN",
+      "rdata": "52 14 05 N 00 08 50 E 10m",
+      "ttl": 1
+    },
+    {
+      "zoneid": 1,
+      "id": 6,
+      "name": "curtin",
+      "rrtype": "LOC",
+      "class": "IN",
+      "rdata": "32 7 19 S 116 2 25 E 10m",
+      "ttl": 1
+    },
+    {
+      "zoneid": 1,
+      "id": 7,
+      "name": "rwy04L",
+      "rrtype": "LOC",
+      "class": "IN",
+      "rdata": "42 21 28.764 N 71 00 51.617 W -44m 2000m",
+      "ttl": 1
+    },
+    {
+      "zoneid": 1,
+      "id": 8,
+      "name": "",
+      "rrtype": "",
+      "class": "IN",
+      "rdata": "0 issue ca.example.net; account=230123",
+      "ttl": 1
+    },
+    {
+      "zoneid": 1,
+      "id": 9,
+      "name": "",
+      "rrtype": "",
+      "class": "IN",
+      "rdata": "128 tbs Unknown",
+      "ttl": 1
+    },
+    {
+      "zoneid": 1,
+      "id": 10,
+      "name": "foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "1",
+      "ttl": 1
+    },
+    {
+      "zoneid": 1,
+      "id": 11,
+      "name": "",
+      "rrtype": "NS",
+      "class": "IN",
+      "rdata": "ns1.hello.goat",
+      "ttl": 3600
+    },
+    {
+      "zoneid": 1,
+      "id": 12,
+      "name": "",
+      "rrtype": "MX",
+      "class": "IN",
+      "rdata": "10 mx.hello.goat",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 13,
+      "name": "",
+      "rrtype": "MX",
+      "class": "IN",
+      "rdata": "150 mx2.hello.goat",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 14,
+      "name": "fooptr",
+      "rrtype": "PTR",
+      "class": "IN",
+      "rdata": "ns1.hello.goat",
+      "ttl": 3600
+    },
+    {
+      "zoneid": 1,
+      "id": 15,
+      "name": "",
+      "rrtype": "NS",
+      "class": "IN",
+      "rdata": "ns2.hello.goat",
+      "ttl": 300
+    },
+    {
+      "zoneid": 1,
+      "id": 16,
+      "name": "test",
+      "rrtype": "A",
+      "class": "IN",
+      "rdata": "1.2.3.4",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 17,
+      "name": "test",
+      "rrtype": "A",
+      "class": "IN",
+      "rdata": "12.2.3.4",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 18,
+      "name": "",
+      "rrtype": "A",
+      "class": "IN",
+      "rdata": "6.6.6.6",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 19,
+      "name": "a",
+      "rrtype": "A",
+      "class": "IN",
+      "rdata": "1.2.3.5",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 20,
+      "name": "cname",
+      "rrtype": "CNAME",
+      "class": "IN",
+      "rdata": "a.hello.goat",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 21,
+      "name": "aaaa",
+      "rrtype": "AAAA",
+      "class": "IN",
+      "rdata": "1234:5678:cafe:beef:ca75:0:4b9:e94d",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 22,
+      "name": "cafe",
+      "rrtype": "AAAA",
+      "class": "IN",
+      "rdata": "fe80:580a:2d::caf3:b33f",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 23,
+      "name": "cafe",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "Hello world",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 24,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 25,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 26,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 27,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 28,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 29,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 30,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 31,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 32,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 33,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    },
+    {
+      "zoneid": 1,
+      "id": 34,
+      "name": "reallybig",
+      "rrtype": "TXT",
+      "class": "IN",
+      "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "ttl": 60
+    }
+  ]
+}

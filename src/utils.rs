@@ -1,10 +1,11 @@
-use crate::config::ConfigFile;
 use crate::enums::SystemState;
 use crate::reply::Reply;
 use crate::{Header, PacketType, Rcode, HEADER_BYTES};
 use clap::{arg, command, value_parser, Arg, ArgMatches};
 use log::{debug, trace};
 use std::str::from_utf8;
+use tokio::io::AsyncWriteExt;
+use tokio::time::sleep;
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
     for (index, curr_byte) in search.iter().enumerate() {
@@ -255,7 +256,7 @@ pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
 pub fn hexdump(bytes: Vec<u8>) {
     for byte in bytes.chunks(2) {
         let byte0_alpha = match byte[0].is_ascii_alphanumeric() {
-            true => from_utf8(byte[0..1].into()).unwrap(),
+            true => from_utf8(byte[0..1].into()).expect("Failed to decode bytes"),
             false => " ",
         };
         match byte.len() {
@@ -346,7 +347,6 @@ pub fn clap_parser() -> ArgMatches {
             arg!(
                 -c --config <FILE> "Sets a custom config file"
             )
-            // We don't have syntax yet for optional options, so manually calling `required`
             .required(false)
             .value_parser(value_parser!(String)),
         )
@@ -365,10 +365,16 @@ pub fn clap_parser() -> ArgMatches {
                 .value_parser(value_parser!(String)),
         )
         .arg(
-            Arg::new("import_zone")
+            Arg::new("import_zones")
                 .short('i')
-                .long("import-zone")
+                .long("import-zones")
                 .help("Import a single zone file.")
+                .action(clap::ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("import_zone")
+                .long("import-zone")
+                .help("Import a single zone from a file.")
                 .value_parser(value_parser!(String)),
         )
         .arg(
@@ -446,13 +452,17 @@ fn test_loc_size_to_u8() {
     // assert_eq!(loc_size_to_u8(20000000.0), Ok(0x29));
 }
 
-pub fn cli_commands(
-    _config: &ConfigFile,
+pub async fn cli_commands(
+    tx: tokio::sync::mpsc::Sender<Command>,
     clap_results: &ArgMatches,
 ) -> Result<SystemState, String> {
     if let Some(zone_name) = clap_results.get_one::<String>("export_zone") {
         if let Some(output_filename) = clap_results.get_one::<String>("filename") {
             log::info!("Exporting zone {zone_name} to {output_filename}");
+            let res = export_zone_file(tx, zone_name, output_filename).await;
+            if let Err(err) = res {
+                log::error!("{err}");
+            }
             return Ok(SystemState::Export);
         } else {
             log::error!("You need to specify a a filename to save to.");
@@ -460,9 +470,26 @@ pub fn cli_commands(
         }
     };
 
+    if clap_results.get_flag("import_zones") {
+        if let Some(filename) = clap_results.get_one::<String>("filename") {
+            log::info!("Importing zones from {filename}");
+            import_zones(tx, filename.to_owned(), None)
+                .await
+                .map_err(|e| format!("Error importing {filename}: {e:?}"))?;
+
+            return Ok(SystemState::Import);
+        } else {
+            log::error!("You need to specify a a filename to save to.");
+            return Ok(SystemState::ShuttingDown);
+        }
+    };
     if let Some(zone_name) = clap_results.get_one::<String>("import_zone") {
-        if let Some(output_filename) = clap_results.get_one::<String>("filename") {
-            log::info!("Exporting zone {zone_name} to {output_filename}");
+        if let Some(filename) = clap_results.get_one::<String>("filename") {
+            log::info!("Importing zones from {filename}");
+            import_zones(tx, filename.to_owned(), Some(zone_name.to_owned()))
+                .await
+                .map_err(|e| format!("Error importing {filename}: {e:?}"))?;
+
             return Ok(SystemState::Import);
         } else {
             log::error!("You need to specify a a filename to save to.");
@@ -470,4 +497,85 @@ pub fn cli_commands(
         }
     };
     Ok(SystemState::Server)
+}
+use crate::datastore::Command;
+use crate::zones::FileZone;
+use tokio::sync::mpsc;
+use tokio::sync::oneshot;
+/// dump a zone to a file
+pub async fn export_zone_file(
+    tx: mpsc::Sender<Command>,
+    zone_name: &String,
+    filename: &String,
+) -> Result<(), String> {
+    // make a channel
+
+    let (tx_oneshot, rx_oneshot) = oneshot::channel();
+    let ds_req: Command = Command::GetZone {
+        name: zone_name.to_owned(),
+        resp: tx_oneshot,
+    };
+    if let Err(error) = tx.send(ds_req).await {
+        return Err(format!(
+            "failed to send to datastore from export_zone_file {error:?}"
+        ));
+    };
+
+    let zone: Option<FileZone> = match rx_oneshot.await {
+        Ok(value) => value,
+        Err(err) => return Err(format!("rx from ds failed {err:?}")),
+    };
+    eprintln!("Got filezone: {zone:?}");
+
+    if zone.is_none() {
+        log::warn!("Couldn't find the zone {zone_name}");
+        return Ok(());
+    }
+
+    // dump the zone
+    let zone_bytes = serde_json::to_string_pretty(&zone.unwrap()).unwrap();
+
+    // open the file
+    let mut file = tokio::fs::File::create(filename)
+        .await
+        .map_err(|e| format!("Failed to open file {e:?}"))
+        .unwrap();
+    // write the thing
+    file.write_all(zone_bytes.as_bytes())
+        .await
+        .map_err(|e| format!("Failed to write file: {e:?}"))
+        .unwrap();
+    // make some cake
+
+    Ok(())
+}
+
+pub async fn import_zones(
+    tx: mpsc::Sender<Command>,
+    filename: String,
+    zone_name: Option<String>,
+) -> Result<(), String> {
+    let (tx_oneshot, mut rx_oneshot) = oneshot::channel();
+    let msg = Command::ImportFile {
+        filename,
+        resp: tx_oneshot,
+        zone_name,
+    };
+    if let Err(err) = tx.send(msg).await {
+        log::error!("Failed to send message to datastore: {err:?}");
+    }
+    loop {
+        let res = rx_oneshot.try_recv();
+        match res {
+            Err(error) => {
+                if let oneshot::error::TryRecvError::Closed = error {
+                    break;
+                }
+            }
+            Ok(()) => break,
+        };
+        sleep(std::time::Duration::from_micros(500)).await;
+    }
+    Ok(())
+    // rx_oneshot.await.map_err(|e| format!("Failed to receive result: {e:?}"))
 }

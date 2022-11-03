@@ -3,6 +3,7 @@ mod tests {
     use log::info;
     use std::env;
     use std::net::*;
+    use std::thread::sleep;
     use trust_dns_resolver::config::*;
     use trust_dns_resolver::Resolver;
 
@@ -19,7 +20,7 @@ mod tests {
 
         // YOLO some certs
         std::process::Command::new("./insecure_generate_tls.sh").spawn()?;
-
+        sleep(std::time::Duration::from_secs(1));
         // start the server
         let goat = std::process::Command::new("cargo")
             .args([

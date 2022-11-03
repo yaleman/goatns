@@ -110,7 +110,7 @@ impl Serialize for DNSCharString {
     where
         S: Serializer,
     {
-        let res = from_utf8(&self.data).unwrap();
+        let res = from_utf8(&self.data).expect("This shouldn't ever fail");
         serializer.serialize_str(res)
     }
 }

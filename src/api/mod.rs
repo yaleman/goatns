@@ -32,7 +32,7 @@ async fn api_query(req: tide::Request<State>) -> tide::Result {
     }
 
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
-    let ds_req: datastore::Command = datastore::Command::Get {
+    let ds_req: datastore::Command = datastore::Command::GetRecord {
         name: qname.into(),
         rrtype,
         rclass: crate::RecordClass::Internet,
