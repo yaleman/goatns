@@ -308,12 +308,75 @@
 <span id="308">308</span>
 <span id="309">309</span>
 <span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::fmt::Display</span>;
 
 <span class="kw">use</span> <span class="ident">packed_struct::prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">Serializer</span>};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::resourcerecord::InternalResourceRecord</span>;
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Agent</span> {
+    <span class="ident">Datastore</span>,
+    <span class="ident">API</span>,
+    <span class="ident">UDPServer</span>,
+    <span class="ident">TCPServer</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AgentState</span> {
+    <span class="ident">Started</span> { <span class="ident">agent</span>: <span class="ident">Agent</span> },
+    <span class="ident">Stopped</span> { <span class="ident">agent</span>: <span class="ident">Agent</span> },
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SystemState</span> {
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+    <span class="ident">Import</span>,
+    <span class="ident">Export</span>,
+    <span class="ident">Server</span>,
+    <span class="ident">ShuttingDown</span>,
+}
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">PrimitiveEnum_u8</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
 <span class="doccomment">/// A four bit field that specifies kind of query in this message.</span>
@@ -331,7 +394,6 @@
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="ident">u8</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">match</span> <span class="ident">input</span> {
             <span class="number">0</span> =&gt; <span class="ident"><span class="self">Self</span>::Query</span>,
-            <span class="comment">// 1 =&gt; Self::IQuery,</span>
             <span class="number">2</span> =&gt; <span class="ident"><span class="self">Self</span>::Status</span>,
             <span class="kw">_</span> =&gt; <span class="ident"><span class="self">Self</span>::Reserved</span>,
         }
@@ -342,7 +404,6 @@
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">val</span>: <span class="ident">OpCode</span>) -&gt; <span class="ident">i32</span> {
         <span class="kw">match</span> <span class="ident">val</span> {
             <span class="ident">OpCode::Query</span> =&gt; <span class="number">0b00</span>,
-            <span class="comment">// OpCode::IQuery =&gt; 0b01,</span>
             <span class="ident">OpCode::Status</span> =&gt; <span class="number">0b10</span>,
             <span class="comment">//  Self::Reserved</span>
             <span class="kw">_</span> =&gt; <span class="number">0b11</span>,
@@ -502,6 +563,13 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">RecordType</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
+        <span class="kw">let</span> <span class="ident">res</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">to_owned</span>().<span class="ident">into</span>();
+        <span class="ident">f</span>.<span class="ident">write_fmt</span>(<span class="macro">format_args!</span>(<span class="string">&quot;{res}&quot;</span>))
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">InternalResourceRecord</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RecordType</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="ident">InternalResourceRecord</span>) -&gt; <span class="ident">RecordType</span> {
         <span class="kw">match</span> <span class="ident">input</span> {
@@ -580,6 +648,18 @@
                 <span class="ident">RecordClass::InvalidType</span> =&gt; <span class="string">&quot;Invalid&quot;</span>,
             }
         ))
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RecordClass</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>) -&gt; <span class="self">Self</span> {
+        <span class="kw">match</span> <span class="ident">value</span> {
+            <span class="string">&quot;IN&quot;</span> =&gt; <span class="ident">RecordClass::Internet</span>,
+            <span class="string">&quot;CS&quot;</span> =&gt; <span class="ident">RecordClass::CsNet</span>,
+            <span class="string">&quot;CHAOS&quot;</span> =&gt; <span class="ident">RecordClass::Chaos</span>,
+            <span class="string">&quot;HESIOD&quot;</span> =&gt; <span class="ident">RecordClass::Hesiod</span>,
+            <span class="kw">_</span> =&gt; <span class="ident">RecordClass::InvalidType</span>,
+        }
     }
 }
 

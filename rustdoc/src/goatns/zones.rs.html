@@ -233,23 +233,59 @@
 <span id="233">233</span>
 <span id="234">234</span>
 <span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::ConfigFile</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums::RecordClass</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums</span>::{<span class="ident">RecordClass</span>, <span class="ident">RecordType</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::resourcerecord</span>::{<span class="ident">DomainName</span>, <span class="ident">InternalResourceRecord</span>};
 <span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">error</span>, <span class="ident">info</span>};
 <span class="kw">use</span> <span class="ident">patricia_tree::PatriciaMap</span>;
 
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+<span class="kw">use</span> <span class="ident">sqlx::sqlite::SqliteRow</span>;
+<span class="kw">use</span> <span class="ident">sqlx::Row</span>;
 <span class="kw">use</span> <span class="ident">std::fmt::Display</span>;
 <span class="kw">use</span> <span class="ident">std::fs::File</span>;
 <span class="kw">use</span> <span class="ident">std::io::Read</span>;
+<span class="kw">use</span> <span class="ident">std::path::Path</span>;
 <span class="kw">use</span> <span class="ident">std::str::from_utf8</span>;
 
 <span class="doccomment">/// A DNS Zone in a JSON file</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span>(<span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;UPPERCASE&quot;</span>))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FileZone</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_id&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// MNAME The &lt;domain-name&gt; of the name server that was the original or primary source of data for this zone.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span>(<span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;MNAME&quot;</span>))]</span>
@@ -295,7 +331,7 @@
 <span class="doccomment">/// A DNS Record from the JSON file</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FileZoneRecord</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_id&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">zoneid</span>: <span class="ident">u64</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">id</span>: <span class="ident">u64</span>,
@@ -309,6 +345,10 @@
 }
 
 <span class="doccomment">/// If you don&#39;t specify a name, it&#39;s the root.</span>
+<span class="kw">fn</span> <span class="ident">default_id</span>() -&gt; <span class="ident">u64</span> {
+    <span class="number">1</span>
+}
+<span class="doccomment">/// If you don&#39;t specify a name, it&#39;s the root.</span>
 <span class="kw">fn</span> <span class="ident">default_record_name</span>() -&gt; <span class="ident">String</span> {
     <span class="ident">String::from</span>(<span class="string">&quot;@&quot;</span>)
 }
@@ -320,38 +360,50 @@
 <span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">FileZoneRecord</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
         <span class="ident">f</span>.<span class="ident">write_fmt</span>(<span class="macro">format_args!</span>(
-            <span class="string">&quot;FileZoneRecord {{ name: {} rrtype: {}, rdata: {}, ttl: {} }}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">name</span>, <span class="self">self</span>.<span class="ident">rrtype</span>, <span class="self">self</span>.<span class="ident">rdata</span>, <span class="self">self</span>.<span class="ident">ttl</span>
+            <span class="string">&quot;FileZoneRecord {{ name={} class={} rrtype={}, ttl={}, zoneid={}, id={}, rdata={} }}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">name</span>, <span class="self">self</span>.<span class="ident">class</span>, <span class="self">self</span>.<span class="ident">rrtype</span>, <span class="self">self</span>.<span class="ident">ttl</span>, <span class="self">self</span>.<span class="ident">zoneid</span>, <span class="self">self</span>.<span class="ident">id</span>, <span class="self">self</span>.<span class="ident">rdata</span>
         ))
     }
 }
 
+<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">SqliteRow</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FileZoneRecord</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">String</span>;
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">row</span>: <span class="ident">SqliteRow</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">zoneid</span>: <span class="ident">i64</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="string">&quot;zoneid&quot;</span>);
+        <span class="kw">let</span> <span class="ident">id</span>: <span class="ident">i64</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="string">&quot;id&quot;</span>);
+        <span class="kw">let</span> <span class="ident">name</span>: <span class="ident">String</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="string">&quot;name&quot;</span>);
+        <span class="kw">let</span> <span class="ident">rrtype</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="string">&quot;rrtype&quot;</span>);
+        <span class="kw">let</span> <span class="ident">class</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="string">&quot;rclass&quot;</span>);
+        <span class="kw">let</span> <span class="ident">rdata</span>: <span class="ident">String</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="string">&quot;rdata&quot;</span>);
+        <span class="kw">let</span> <span class="ident">ttl</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="string">&quot;ttl&quot;</span>);
+
+        <span class="prelude-val">Ok</span>(<span class="ident">FileZoneRecord</span> {
+            <span class="ident">zoneid</span>: <span class="ident">zoneid</span> <span class="kw">as</span> <span class="ident">u64</span>,
+            <span class="ident">id</span>: <span class="ident">id</span> <span class="kw">as</span> <span class="ident">u64</span>,
+            <span class="ident">name</span>,
+            <span class="ident">rrtype</span>: <span class="ident">RecordType::from</span>(<span class="kw-2">&amp;</span><span class="ident">rrtype</span>).<span class="ident">to_string</span>(),
+            <span class="ident">class</span>: <span class="ident">RecordClass::from</span>(<span class="kw-2">&amp;</span><span class="ident">class</span>),
+            <span class="ident">rdata</span>,
+            <span class="ident">ttl</span>,
+        })
+    }
+}
+
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>)]</span>
+<span class="doccomment">/// This is used when storing a set of records in the memory-based datastore</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ZoneRecord</span> {
     <span class="comment">// the full name including the zone</span>
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">typerecords</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">InternalResourceRecord</span><span class="op">&gt;</span>,
-    <span class="comment">// pub rname: String,</span>
-    <span class="comment">// pub serial: u32,</span>
-    <span class="comment">// pub refresh: u32,</span>
-    <span class="comment">// pub retry: u32,</span>
-    <span class="comment">// pub expire: u32,</span>
-    <span class="comment">// pub minimum_ttl: u32,</span>
 }
 
 <span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">ZoneRecord</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
         <span class="ident">f</span>.<span class="ident">write_fmt</span>(<span class="macro">format_args!</span>(
-            <span class="string">&quot;Name: {:?} Name Bytes: {:?} Records: {:?}&quot;</span>, <span class="comment">//, Rname: {} Serial: {} Refresh: {} Retry: {} Expire: {} Minimum TTL: {}</span>
+            <span class="string">&quot;Name: {:?} Name Bytes: {:?} Records: {:?}&quot;</span>,
             <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">name</span>),
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">name</span>,
             <span class="self">self</span>.<span class="ident">typerecords</span>,
-            <span class="comment">// self.rname,</span>
-            <span class="comment">// self.serial,</span>
-            <span class="comment">// self.refresh,</span>
-            <span class="comment">// self.retry,</span>
-            <span class="comment">// self.expire,</span>
-            <span class="comment">// self.minimum_ttl,</span>
         ))
     }
 }
@@ -359,6 +411,26 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_zones</span>() -&gt; <span class="ident">PatriciaMap</span><span class="op">&lt;</span><span class="ident">ZoneRecord</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">tree</span>: <span class="ident">PatriciaMap</span><span class="op">&lt;</span><span class="ident">ZoneRecord</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">PatriciaMap::new</span>();
     <span class="ident">tree</span>
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load_zone_from_file</span>(<span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FileZone</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">File::open</span>(<span class="ident">filename</span>) {
+        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
+        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to open zone file: {:?}&quot;</span>, <span class="ident">error</span>));
+        }
+    };
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span>: <span class="ident">String</span> <span class="op">=</span> <span class="ident">String::new</span>();
+    <span class="ident">file</span>.<span class="ident">read_to_string</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">jsonstruct</span>: <span class="ident">FileZone</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">json5::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>) {
+        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
+        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+            <span class="kw">let</span> <span class="ident">emsg</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;Failed to read JSON file: {:?}&quot;</span>, <span class="ident">error</span>);
+            <span class="macro">error!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">emsg</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">emsg</span>);
+        }
+    };
+    <span class="prelude-val">Ok</span>(<span class="ident">jsonstruct</span>)
 }
 
 <span class="doccomment">/// Load the data from a JSON file on disk</span>
@@ -461,12 +533,6 @@
         }
     }
     <span class="prelude-val">Ok</span>(<span class="ident">tree</span>)
-}
-
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="comment">// TODO: this should be the end of the tree, so we can cover wildcards</span>
-<span class="kw">struct</span> <span class="ident">ZoneTreeLeaf</span> {
-    <span class="ident">wildcards</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ZoneRecord</span><span class="op">&gt;</span>,
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>

@@ -226,7 +226,14 @@ retrieve</li>
 <li><input disabled="" type="checkbox" checked=""/>
 update</li>
 <li><input disabled="" type="checkbox"/>
-delete </li>
+delete 
+<ul>
+<li><input disabled="" type="checkbox"/>
+need to delete all the user ownership</li>
+<li><input disabled="" type="checkbox"/>
+delete all associated records</li>
+</ul>
+</li>
 </ul>
 </li>
 <li><input disabled="" type="checkbox"/>
@@ -242,6 +249,24 @@ update</li>
 delete</li>
 </ul>
 </li>
+<li><input disabled="" type="checkbox" checked=""/>
+import from json
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+db::load_zone takes the FileZone</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+export to json (file-per-zone)</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+API things
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+move to another web framework (tide-rs)</li>
+<li><input disabled="" type="checkbox"/>
+Oauth for management/UI things</li>
 </ul>
 </li>
 <li><input disabled="" type="checkbox"/>
@@ -288,15 +313,6 @@ support VERSION/VERSION.BIND requests
 allow list config</li>
 <li><input disabled="" type="checkbox"/>
 build the response packets in a nice way that doesn't blow up</li>
-</ul>
-</li>
-<li><input disabled="" type="checkbox"/>
-API things
-<ul>
-<li><input disabled="" type="checkbox"/>
-move to another web framework</li>
-<li><input disabled="" type="checkbox"/>
-Oauth for management/UI things</li>
 </ul>
 </li>
 </ul>
