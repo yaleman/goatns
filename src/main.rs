@@ -1,12 +1,13 @@
 use log::{error, info};
 use std::io;
 use std::net::SocketAddr;
+use tide_rustls::TlsListener;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 
 use goatns::config::{check_config, get_config, setup_logging, ConfigFile};
 use goatns::datastore;
-use goatns::enums::{Agent, AgentState};
+use goatns::enums::{Agent, AgentState, SystemState};
 use goatns::servers;
 use goatns::utils::clap_parser;
 use goatns::MAX_IN_FLIGHT;
@@ -56,6 +57,7 @@ async fn main() -> io::Result<()> {
         }
     };
 
+    // agent signalling
     let agent_tx: tokio::sync::broadcast::Sender<AgentState>;
     #[allow(unused_variables)]
     let _agent_rx: tokio::sync::broadcast::Receiver<AgentState>;
@@ -67,13 +69,20 @@ async fn main() -> io::Result<()> {
     // start all the things!
     let datastore_manager = tokio::spawn(datastore::manager(rx, config.clone()));
 
-    if clap_results.get_one::<String>("export_zone").is_some() {
-        let zone_name = clap_results.get_one::<String>("export_zone").unwrap();
+    let system_state = goatns::utils::cli_commands(&config, &clap_results);
 
-        info!("Exporting zone {zone_name}");
-        return Ok(());
+    log::error!("{system_state:?}");
+    // if we got this far we can shut down again
+    match system_state.unwrap() {
+        SystemState::Export | SystemState::Import | SystemState::ShuttingDown => {
+            if let Err(error) = tx.send(datastore::Command::Shutdown).await {
+                eprintln!("failed to tell Datastore to shut down! {error:?} Bailing!");
+                return Ok(());
+            };
+            // return Ok(())
+        }
+        _ => {}
     }
-
     // Let's start up the listeners!
     let udpserver = tokio::spawn(servers::udp_server(
         bind_address,
@@ -90,14 +99,27 @@ async fn main() -> io::Result<()> {
         agent_tx.subscribe(),
     ));
 
-    let api = match goatns::api::build(config, tx.clone()).await {
+    let api_listener = match TlsListener::build()
+        .addrs(config.api_listener_address())
+        .cert(&config.api_tls_cert)
+        .key(&config.api_tls_key)
+        .finish()
+    {
+        Ok(value) => value,
+        Err(error) => {
+            log::error!("Failed to start API TLS Listener: {error:?}");
+            return Ok(());
+        }
+    };
+    let api = match goatns::api::build(tx.clone()).await {
         Ok(value) => value,
         Err(err) => {
+            // TODO: need to clean-shutdown the server here
             log::error!("Failed to build API server: {err:?}");
             return Ok(());
         }
     };
-    let apiserver = tokio::spawn(api.launch());
+    let apiserver = tokio::spawn(api.listen(api_listener));
 
     loop {
         // if any of the servers bail, the server does too.

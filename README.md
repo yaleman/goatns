@@ -76,16 +76,18 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
       - [x] retrieve
       - [x] update
       - [ ] delete 
+        - [ ] need to delete all the user ownership
+        - [ ] delete all associated records
     - [ ] record
       - [x] create
       - [x] retrieve
       - [ ] update
       - [ ] delete
-    - [ ] import from json
-      - [ ] db::load_zone takes the FileZone
+    - [x] import from json
+      - [x] db::load_zone takes the FileZone
     - [ ] export to json (file-per-zone)
   - [ ] API things
-    - [ ] move to another web framework
+    - [x] move to another web framework (tide-rs)
     - [ ] Oauth for management/UI things
   - [ ] support all record-classes
   - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data

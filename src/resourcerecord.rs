@@ -880,7 +880,7 @@ impl TryFrom<&str> for FileLocRecord {
                 return Err("Failed to match input to expected format!".to_string());
             }
         };
-        trace!("{result:?}");
+        log::trace!("{result:?}");
 
         let d1: u8 = match result.name("d1") {
             Some(value) => match value.as_str().parse::<u8>() {
