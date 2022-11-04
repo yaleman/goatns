@@ -192,6 +192,6 @@ pub fn setup_logging(
             .set_palette("b1;3;2;6;5".to_string())
             .start()
             .map_err(|e| format!("{e:?}")),
-        Err(error) => Err(format!("Failed to start logger! {error:?}"))
+        Err(error) => Err(format!("Failed to start logger! {error:?}")),
     }
 }

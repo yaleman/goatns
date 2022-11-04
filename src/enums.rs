@@ -2,6 +2,8 @@ use std::fmt::Display;
 
 use packed_struct::prelude::*;
 use serde::{Deserialize, Serialize, Serializer};
+use sqlx::encode::IsNull;
+use sqlx::sqlite::SqliteArgumentValue;
 
 use crate::resourcerecord::InternalResourceRecord;
 
@@ -270,6 +272,19 @@ impl RecordType {
     }
 }
 
+impl sqlx::Type<sqlx::Sqlite> for RecordType {
+    fn type_info() -> sqlx::sqlite::SqliteTypeInfo {
+        i64::type_info()
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for RecordType {
+    fn encode_by_ref(&self, args: &mut Vec<SqliteArgumentValue<'q>>) -> IsNull {
+        args.push(SqliteArgumentValue::Int64(*self as i64));
+        IsNull::No
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 /// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
@@ -283,6 +298,19 @@ pub enum RecordClass {
     Hesiod = 4,
 
     InvalidType = 0,
+}
+
+impl sqlx::Type<sqlx::Sqlite> for RecordClass {
+    fn type_info() -> sqlx::sqlite::SqliteTypeInfo {
+        i64::type_info()
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for RecordClass {
+    fn encode_by_ref(&self, args: &mut Vec<SqliteArgumentValue<'q>>) -> IsNull {
+        args.push(SqliteArgumentValue::Int64(*self as i64));
+        IsNull::No
+    }
 }
 
 impl Display for RecordClass {

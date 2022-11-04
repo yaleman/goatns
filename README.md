@@ -71,13 +71,13 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
   - [ ] record storage in a DB and caching instead of loading everything into memory
     - [x] add zoneid to FileZoneRecord
     - [x] add recordid (id) to FileZoneRecord
-    - [ ] zone
+    - [x] zone
       - [x] create
       - [x] retrieve
       - [x] update
-      - [ ] delete 
-        - [ ] need to delete all the user ownership
-        - [ ] delete all associated records
+      - [x] delete 
+        - [x] need to delete all the user ownership
+        - [x] delete all associated records
     - [ ] record
       - [x] create
       - [x] retrieve

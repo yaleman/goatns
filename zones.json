@@ -209,5 +209,17 @@
             }
 
         ]
-    }
+    },
+    {
+        "name" : "cheeky.goat",
+        "rname" : "billy@cheeky.goat",
+        "serial" : 1,
+        "refresh" : 2,
+        "retry" : 3,
+        "expire" : 4,
+        "minimum" : 60,
+        "records" :
+            [
+            ]
+        }
 ]

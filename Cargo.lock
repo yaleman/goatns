@@ -1255,8 +1255,9 @@ dependencies = [
 
 [[package]]
 name = "goatns"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
+ "async-trait",
  "bit-vec",
  "bytes",
  "chrono",
