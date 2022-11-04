@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/servers.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>servers.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goatns/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/servers.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>servers.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goatns/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -440,49 +440,49 @@
 <span id="440">440</span>
 <span id="441">441</span>
 <span id="442">442</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">packed_struct::prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">std::net::SocketAddr</span>;
-<span class="kw">use</span> <span class="ident">std::str</span>::{<span class="ident">from_utf8</span>, <span class="ident">FromStr</span>};
-<span class="kw">use</span> <span class="ident">std::time::Duration</span>;
-<span class="kw">use</span> <span class="ident">tokio::io</span>::{<span class="self">self</span>, <span class="ident">AsyncReadExt</span>};
-<span class="kw">use</span> <span class="ident">tokio::net</span>::{<span class="ident">TcpListener</span>, <span class="ident">UdpSocket</span>};
-<span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">broadcast</span>, <span class="ident">mpsc</span>, <span class="ident">oneshot</span>};
-<span class="kw">use</span> <span class="ident">tokio::time::timeout</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>std::net::SocketAddr;
+<span class="kw">use </span>std::str::{from_utf8, FromStr};
+<span class="kw">use </span>std::time::Duration;
+<span class="kw">use </span>tokio::io::{<span class="self">self</span>, AsyncReadExt};
+<span class="kw">use </span>tokio::net::{TcpListener, UdpSocket};
+<span class="kw">use </span>tokio::sync::{broadcast, mpsc, oneshot};
+<span class="kw">use </span>tokio::time::timeout;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::config::ConfigFile</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::datastore::Command</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums</span>::{<span class="ident">Agent</span>, <span class="ident">AgentState</span>, <span class="ident">PacketType</span>, <span class="ident">Rcode</span>, <span class="ident">RecordClass</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::reply::Reply</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::zones::ZoneRecord</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Header</span>, <span class="ident">OpCode</span>, <span class="ident">Question</span>, <span class="ident">HEADER_BYTES</span>, <span class="ident">REPLY_TIMEOUT_MS</span>, <span class="ident">UDP_BUFFER_SIZE</span>};
+<span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
+<span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
+<span class="kw">use </span><span class="kw">crate</span>::enums::{Agent, AgentState, PacketType, Rcode, RecordClass};
+<span class="kw">use </span><span class="kw">crate</span>::reply::Reply;
+<span class="kw">use </span><span class="kw">crate</span>::utils::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::zones::ZoneRecord;
+<span class="kw">use crate</span>::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
-<span class="macro">lazy_static!</span> {
-    <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">LOCALHOST</span>: <span class="ident">std::net::IpAddr</span> <span class="op">=</span> <span class="ident">std::net::IpAddr::from_str</span>(<span class="string">&quot;127.0.0.1&quot;</span>).<span class="ident">unwrap</span>();
-    <span class="comment">// static ref VERSION_STRINGS: Vec&lt;String&gt; =</span>
-        <span class="comment">// vec![String::from(&quot;version&quot;), String::from(&quot;version.bind&quot;),];</span>
-}
+<span class="macro">lazy_static! </span>{
+    <span class="kw">static </span><span class="kw-2">ref </span>LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str(<span class="string">&quot;127.0.0.1&quot;</span>).unwrap();
+    <span class="comment">// static ref VERSION_STRINGS: Vec&lt;String&gt; =
+        // vec![String::from(&quot;version&quot;), String::from(&quot;version.bind&quot;),];
+</span>}
 
-<span class="doccomment">/// this handles a shutdown CHAOS request</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">check_for_shutdown</span>(<span class="ident">r</span>: <span class="kw-2">&amp;</span><span class="ident">Reply</span>, <span class="ident">addr</span>: <span class="kw-2">&amp;</span><span class="ident">SocketAddr</span>, <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">ConfigFile</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), ()<span class="op">&gt;</span> {
-    <span class="comment">// when you get a CHAOS from localhost with &quot;shutdown&quot; break dat loop</span>
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">q</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">r</span>.<span class="ident">question</span> {
-        <span class="kw">if</span> <span class="ident">q</span>.<span class="ident">qclass</span> <span class="op">==</span> <span class="ident">RecordClass::Chaos</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">qname</span>) <span class="op">=</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">q</span>.<span class="ident">qname</span>) {
-                <span class="comment">// Just don&#39;t do this on UDP, because we can&#39;t really tell who it&#39;s coming from.</span>
-                <span class="kw">if</span> <span class="ident">qname</span> <span class="op">==</span> <span class="string">&quot;shutdown&quot;</span> {
-                    <span class="kw">match</span> <span class="ident">config</span>.<span class="ident">ip_allow_lists</span>.<span class="ident">shutdown</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>.<span class="ident">ip</span>()) {
-                        <span class="bool-val">true</span> =&gt; {
-                            <span class="macro">log::info!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, shutting down&quot;</span>, <span class="ident">addr</span>.<span class="ident">ip</span>());
-                            <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+<span class="doccomment">/// this handles a shutdown CHAOS request
+</span><span class="kw">async fn </span>check_for_shutdown(r: <span class="kw-2">&amp;</span>Reply, addr: <span class="kw-2">&amp;</span>SocketAddr, config: <span class="kw-2">&amp;</span>ConfigFile) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+    <span class="comment">// when you get a CHAOS from localhost with &quot;shutdown&quot; break dat loop
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(q) = <span class="kw-2">&amp;</span>r.question {
+        <span class="kw">if </span>q.qclass == RecordClass::Chaos {
+            <span class="kw">if let </span><span class="prelude-val">Ok</span>(qname) = from_utf8(<span class="kw-2">&amp;</span>q.qname) {
+                <span class="comment">// Just don&#39;t do this on UDP, because we can&#39;t really tell who it&#39;s coming from.
+                </span><span class="kw">if </span>qname == <span class="string">&quot;shutdown&quot; </span>{
+                    <span class="kw">match </span>config.ip_allow_lists.shutdown.contains(<span class="kw-2">&amp;</span>addr.ip()) {
+                        <span class="bool-val">true </span>=&gt; {
+                            <span class="macro">log::info!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, shutting down&quot;</span>, addr.ip());
+                            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                         }
-                        <span class="bool-val">false</span> =&gt; <span class="macro">log::warn!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, ignoring!&quot;</span>, <span class="ident">addr</span>.<span class="ident">ip</span>()),
+                        <span class="bool-val">false </span>=&gt; <span class="macro">log::warn!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, ignoring!&quot;</span>, addr.ip()),
                     }
                 }
-            } <span class="kw">else</span> {
+            } <span class="kw">else </span>{
                 <span class="macro">log::error!</span>(
                     <span class="string">&quot;Failed to parse qname from {:?}, this shouldn&#39;t be able to happen!&quot;</span>,
-                    <span class="ident">q</span>.<span class="ident">qname</span>
+                    q.qname
                 );
             }
         }
@@ -490,323 +490,323 @@
     <span class="prelude-val">Err</span>(())
 }
 
-<span class="doccomment">/// this handles a version CHAOS request</span>
-<span class="comment">// async fn check_for_version(r: &amp;Reply, addr: &amp;SocketAddr, config: &amp;ConfigFile) -&gt; Result&lt;(), ()&gt; {</span>
-<span class="comment">//     // when you get a CHAOS from localhost with &quot;VERSION&quot; or &quot;VERSION.BIND&quot; we might respond</span>
-<span class="comment">//     if let Some(q) = &amp;r.question {</span>
-<span class="comment">//         if q.qclass == RecordClass::Chaos {</span>
-<span class="comment">//             if let Ok(qname) = from_utf8(&amp;q.qname) {</span>
-<span class="comment">//                 if VERSION_STRINGS.contains(&amp;qname.to_ascii_lowercase()) &amp; (config.ip_allow_lists.shutdown.contains(&amp;addr.ip())) {</span>
-<span class="comment">//                     info!(&quot;Got CHAOS VERSION from {:?}, responding.&quot;, addr.ip());</span>
-<span class="comment">//                     return Ok(());</span>
-<span class="comment">//                 } else {</span>
-<span class="comment">//                     warn!(&quot;Got CHAOS VERSION from {:?}, ignoring!&quot;, addr.ip());</span>
-<span class="comment">//                 }</span>
-<span class="comment">//             } else {</span>
-<span class="comment">//                 error!(&quot;Failed to parse qname from {:?}, this shouldn&#39;t be able to happen!&quot;, q.qname);</span>
-<span class="comment">//             }</span>
-<span class="comment">//         }</span>
-<span class="comment">//     };</span>
-<span class="comment">//     Err(())</span>
-<span class="comment">// }</span>
+<span class="doccomment">/// this handles a version CHAOS request
+</span><span class="comment">// async fn check_for_version(r: &amp;Reply, addr: &amp;SocketAddr, config: &amp;ConfigFile) -&gt; Result&lt;(), ()&gt; {
+//     // when you get a CHAOS from localhost with &quot;VERSION&quot; or &quot;VERSION.BIND&quot; we might respond
+//     if let Some(q) = &amp;r.question {
+//         if q.qclass == RecordClass::Chaos {
+//             if let Ok(qname) = from_utf8(&amp;q.qname) {
+//                 if VERSION_STRINGS.contains(&amp;qname.to_ascii_lowercase()) &amp; (config.ip_allow_lists.shutdown.contains(&amp;addr.ip())) {
+//                     info!(&quot;Got CHAOS VERSION from {:?}, responding.&quot;, addr.ip());
+//                     return Ok(());
+//                 } else {
+//                     warn!(&quot;Got CHAOS VERSION from {:?}, ignoring!&quot;, addr.ip());
+//                 }
+//             } else {
+//                 error!(&quot;Failed to parse qname from {:?}, this shouldn&#39;t be able to happen!&quot;, q.qname);
+//             }
+//         }
+//     };
+//     Err(())
+// }
 
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">udp_server</span>(
-    <span class="ident">bind_address</span>: <span class="ident">SocketAddr</span>,
-    <span class="ident">config</span>: <span class="ident">ConfigFile</span>,
-    <span class="ident">datastore</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::datastore::Command</span><span class="op">&gt;</span>,
-    <span class="ident">_agent_tx</span>: <span class="ident">broadcast::Sender</span><span class="op">&lt;</span><span class="ident">AgentState</span><span class="op">&gt;</span>,
-    <span class="kw-2">mut</span> <span class="ident">_agent_rx</span>: <span class="ident">broadcast::Receiver</span><span class="op">&lt;</span><span class="ident">AgentState</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">udp_sock</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">UdpSocket::bind</span>(<span class="ident">bind_address</span>).<span class="kw">await</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Started UDP listener on {}:{}&quot;</span>, <span class="ident">config</span>.<span class="ident">address</span>, <span class="ident">config</span>.<span class="ident">port</span>);
-            <span class="ident">value</span>
+</span><span class="kw">pub async fn </span>udp_server(
+    bind_address: SocketAddr,
+    config: ConfigFile,
+    datastore: mpsc::Sender&lt;<span class="kw">crate</span>::datastore::Command&gt;,
+    _agent_tx: broadcast::Sender&lt;AgentState&gt;,
+    <span class="kw-2">mut </span>_agent_rx: broadcast::Receiver&lt;AgentState&gt;,
+) -&gt; io::Result&lt;()&gt; {
+    <span class="kw">let </span>udp_sock = <span class="kw">match </span>UdpSocket::bind(bind_address).<span class="kw">await </span>{
+        <span class="prelude-val">Ok</span>(value) =&gt; {
+            <span class="macro">log::info!</span>(<span class="string">&quot;Started UDP listener on {}:{}&quot;</span>, config.address, config.port);
+            value
         }
-        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to start UDP listener: {:?}&quot;</span>, <span class="ident">error</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+        <span class="prelude-val">Err</span>(error) =&gt; {
+            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to start UDP listener: {:?}&quot;</span>, error);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
     };
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">udp_buffer</span> <span class="op">=</span> [<span class="number">0</span>; <span class="ident">UDP_BUFFER_SIZE</span>];
+    <span class="kw">let </span><span class="kw-2">mut </span>udp_buffer = [<span class="number">0</span>; UDP_BUFFER_SIZE];
 
-    <span class="kw">loop</span> {
-        <span class="kw">let</span> (<span class="ident">len</span>, <span class="ident">addr</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">udp_sock</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;mut</span> <span class="ident">udp_buffer</span>).<span class="kw">await</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;Error accepting connection via UDP: {:?}&quot;</span>, <span class="ident">error</span>);
+    <span class="kw">loop </span>{
+        <span class="kw">let </span>(len, addr) = <span class="kw">match </span>udp_sock.recv_from(<span class="kw-2">&amp;mut </span>udp_buffer).<span class="kw">await </span>{
+            <span class="prelude-val">Ok</span>(value) =&gt; value,
+            <span class="prelude-val">Err</span>(error) =&gt; {
+                <span class="macro">log::error!</span>(<span class="string">&quot;Error accepting connection via UDP: {:?}&quot;</span>, error);
                 <span class="kw">continue</span>;
             }
         };
 
-        <span class="macro">log::debug!</span>(<span class="string">&quot;{:?} bytes received from {:?}&quot;</span>, <span class="ident">len</span>, <span class="ident">addr</span>);
+        <span class="macro">log::debug!</span>(<span class="string">&quot;{:?} bytes received from {:?}&quot;</span>, len, addr);
 
-        <span class="kw">let</span> <span class="ident">udp_result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">timeout</span>(
-            <span class="ident">Duration::from_millis</span>(<span class="ident">REPLY_TIMEOUT_MS</span>),
-            <span class="ident">parse_query</span>(<span class="ident">datastore</span>.<span class="ident">clone</span>(), <span class="ident">len</span>, <span class="kw-2">&amp;</span><span class="ident">udp_buffer</span>, <span class="ident">config</span>.<span class="ident">capture_packets</span>),
+        <span class="kw">let </span>udp_result = <span class="kw">match </span>timeout(
+            Duration::from_millis(REPLY_TIMEOUT_MS),
+            parse_query(datastore.clone(), len, <span class="kw-2">&amp;</span>udp_buffer, config.capture_packets),
         )
-        .<span class="kw">await</span>
-        {
-            <span class="prelude-val">Ok</span>(<span class="ident">reply</span>) =&gt; <span class="ident">reply</span>,
+        .<span class="kw">await
+        </span>{
+            <span class="prelude-val">Ok</span>(reply) =&gt; reply,
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                 <span class="macro">log::error!</span>(<span class="string">&quot;Did not receive response from parse_query within 10 ms&quot;</span>);
                 <span class="kw">continue</span>;
             }
         };
 
-        <span class="kw">match</span> <span class="ident">udp_result</span> {
-            <span class="prelude-val">Ok</span>(<span class="kw-2">mut</span> <span class="ident">r</span>) =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;Result: {:?}&quot;</span>, <span class="ident">r</span>);
+        <span class="kw">match </span>udp_result {
+            <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>r) =&gt; {
+                <span class="macro">log::debug!</span>(<span class="string">&quot;Result: {:?}&quot;</span>, r);
 
-                <span class="kw">let</span> <span class="ident">reply_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">r</span>.<span class="ident">as_bytes</span>().<span class="kw">await</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
-                        <span class="comment">// Check if it&#39;s too long and set truncate flag if so, it&#39;s safe to unwrap since we&#39;ve already gone</span>
-                        <span class="kw">if</span> <span class="ident">value</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">UDP_BUFFER_SIZE</span> {
-                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response_bytes</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">to_vec</span>();
-                            <span class="ident">response_bytes</span>.<span class="ident">truncate</span>(<span class="ident">UDP_BUFFER_SIZE</span>);
-                            <span class="ident">r</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">check_set_truncated</span>().<span class="kw">await</span>;
-                            <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">as_bytes_udp</span>().<span class="kw">await</span>;
-                            <span class="ident">r</span>.<span class="ident">unwrap_or</span>(<span class="ident">value</span>)
-                        } <span class="kw">else</span> {
-                            <span class="ident">value</span>
+                <span class="kw">let </span>reply_bytes: Vec&lt;u8&gt; = <span class="kw">match </span>r.as_bytes().<span class="kw">await </span>{
+                    <span class="prelude-val">Ok</span>(value) =&gt; {
+                        <span class="comment">// Check if it&#39;s too long and set truncate flag if so, it&#39;s safe to unwrap since we&#39;ve already gone
+                        </span><span class="kw">if </span>value.len() &gt; UDP_BUFFER_SIZE {
+                            <span class="kw">let </span><span class="kw-2">mut </span>response_bytes = value.to_vec();
+                            response_bytes.truncate(UDP_BUFFER_SIZE);
+                            r = r.check_set_truncated().<span class="kw">await</span>;
+                            <span class="kw">let </span>r = r.as_bytes_udp().<span class="kw">await</span>;
+                            r.unwrap_or(value)
+                        } <span class="kw">else </span>{
+                            value
                         }
                     }
-                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse reply {:?} into bytes: {:?}&quot;</span>, <span class="ident">r</span>, <span class="ident">error</span>);
+                    <span class="prelude-val">Err</span>(error) =&gt; {
+                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse reply {:?} into bytes: {:?}&quot;</span>, r, error);
                         <span class="kw">continue</span>;
                     }
                 };
 
-                <span class="macro">log::trace!</span>(<span class="string">&quot;reply_bytes: {:?}&quot;</span>, <span class="ident">reply_bytes</span>);
-                <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">udp_sock</span>.<span class="ident">send_to</span>(<span class="kw-2">&amp;</span><span class="ident">reply_bytes</span> <span class="kw">as</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">addr</span>).<span class="kw">await</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, <span class="ident">addr</span>, <span class="ident">err</span>);
-                        <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+                <span class="macro">log::trace!</span>(<span class="string">&quot;reply_bytes: {:?}&quot;</span>, reply_bytes);
+                <span class="kw">let </span>len = <span class="kw">match </span>udp_sock.send_to(<span class="kw-2">&amp;</span>reply_bytes <span class="kw">as </span><span class="kw-2">&amp;</span>[u8], addr).<span class="kw">await </span>{
+                    <span class="prelude-val">Ok</span>(value) =&gt; value,
+                    <span class="prelude-val">Err</span>(err) =&gt; {
+                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                     }
                 };
-                <span class="comment">// let len = sock.send_to(r.answer.as_bytes(), addr).await?;</span>
-                <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, <span class="ident">len</span>);
+                <span class="comment">// let len = sock.send_to(r.answer.as_bytes(), addr).await?;
+                </span><span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
             }
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error: {}&quot;</span>, <span class="ident">error</span>),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error: {}&quot;</span>, error),
         }
     }
 }
 
-<span class="doccomment">/// main handler for the TCP side of things</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Ref &lt;https://www.rfc-editor.org/rfc/rfc7766&gt;</span>
+<span class="doccomment">/// main handler for the TCP side of things
+///
+/// Ref &lt;https://www.rfc-editor.org/rfc/rfc7766&gt;
 
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">tcp_server</span>(
-    <span class="ident">bind_address</span>: <span class="ident">SocketAddr</span>,
-    <span class="ident">config</span>: <span class="ident">ConfigFile</span>,
-    <span class="ident">tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::datastore::Command</span><span class="op">&gt;</span>,
-    <span class="ident">agent_tx</span>: <span class="ident">broadcast::Sender</span><span class="op">&lt;</span><span class="ident">AgentState</span><span class="op">&gt;</span>,
-    <span class="kw-2">mut</span> <span class="ident">agent_rx</span>: <span class="ident">broadcast::Receiver</span><span class="op">&lt;</span><span class="ident">AgentState</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="comment">// TODO: add a configurable idle timeout for the TCP server</span>
-    <span class="kw">let</span> <span class="ident">tcpserver</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">TcpListener::bind</span>(<span class="ident">bind_address</span>).<span class="kw">await</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Started TCP listener on {}&quot;</span>, <span class="ident">bind_address</span>);
-            <span class="ident">value</span>
+</span><span class="kw">pub async fn </span>tcp_server(
+    bind_address: SocketAddr,
+    config: ConfigFile,
+    tx: mpsc::Sender&lt;<span class="kw">crate</span>::datastore::Command&gt;,
+    agent_tx: broadcast::Sender&lt;AgentState&gt;,
+    <span class="kw-2">mut </span>agent_rx: broadcast::Receiver&lt;AgentState&gt;,
+) -&gt; io::Result&lt;()&gt; {
+    <span class="comment">// TODO: add a configurable idle timeout for the TCP server
+    </span><span class="kw">let </span>tcpserver = <span class="kw">match </span>TcpListener::bind(bind_address).<span class="kw">await </span>{
+        <span class="prelude-val">Ok</span>(value) =&gt; {
+            <span class="macro">log::info!</span>(<span class="string">&quot;Started TCP listener on {}&quot;</span>, bind_address);
+            value
         }
-        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to start TCP Server: {:?}&quot;</span>, <span class="ident">error</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+        <span class="prelude-val">Err</span>(error) =&gt; {
+            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to start TCP Server: {:?}&quot;</span>, error);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
     };
 
-    <span class="kw">loop</span> {
-        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">stream</span>, <span class="ident">addr</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">tcpserver</span>.<span class="ident">accept</span>().<span class="kw">await</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t get data from TcpStrream: {:?}&quot;</span>, <span class="ident">error</span>),
+    <span class="kw">loop </span>{
+        <span class="kw">let </span>(<span class="kw-2">mut </span>stream, addr) = <span class="kw">match </span>tcpserver.accept().<span class="kw">await </span>{
+            <span class="prelude-val">Ok</span>(value) =&gt; value,
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t get data from TcpStrream: {:?}&quot;</span>, error),
         };
-        <span class="macro">log::debug!</span>(<span class="string">&quot;TCP connection from {:?}&quot;</span>, <span class="ident">addr</span>);
+        <span class="macro">log::debug!</span>(<span class="string">&quot;TCP connection from {:?}&quot;</span>, addr);
 
-        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">reader</span>, <span class="ident">writer</span>) <span class="op">=</span> <span class="ident">stream</span>.<span class="ident">split</span>();
-        <span class="kw">let</span> <span class="ident">msg_length</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">reader</span>.<span class="ident">read_u16</span>().<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">into</span>();
+        <span class="kw">let </span>(<span class="kw-2">mut </span>reader, writer) = stream.split();
+        <span class="kw">let </span>msg_length: usize = reader.read_u16().<span class="kw">await</span><span class="question-mark">?</span>.into();
         <span class="macro">log::debug!</span>(<span class="string">&quot;msg_length={msg_length}&quot;</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+        <span class="kw">let </span><span class="kw-2">mut </span>buf: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
 
-        <span class="kw">while</span> <span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">msg_length</span> {
-            <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">reader</span>.<span class="ident">read_buf</span>(<span class="kw-2">&amp;mut</span> <span class="ident">buf</span>).<span class="kw">await</span> {
-                <span class="prelude-val">Ok</span>(<span class="ident">size</span>) =&gt; <span class="ident">size</span>,
-                <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to read from TCP Stream: {:?}&quot;</span>, <span class="ident">error</span>);
-                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+        <span class="kw">while </span>buf.len() &lt; msg_length {
+            <span class="kw">let </span>len = <span class="kw">match </span>reader.read_buf(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await </span>{
+                <span class="prelude-val">Ok</span>(size) =&gt; size,
+                <span class="prelude-val">Err</span>(error) =&gt; {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to read from TCP Stream: {:?}&quot;</span>, error);
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
             };
-            <span class="kw">if</span> <span class="ident">len</span> <span class="op">&gt;</span> <span class="number">0</span> {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;Read {:?} bytes from TCP stream&quot;</span>, <span class="ident">len</span>);
+            <span class="kw">if </span>len &gt; <span class="number">0 </span>{
+                <span class="macro">log::debug!</span>(<span class="string">&quot;Read {:?} bytes from TCP stream&quot;</span>, len);
             }
         }
 
-        <span class="ident"><span class="kw">crate</span>::utils::hexdump</span>(<span class="ident">buf</span>.<span class="ident">clone</span>());
-        <span class="comment">// the first two bytes of a tcp query is the message length</span>
-        <span class="comment">// ref &lt;https://www.rfc-editor.org/rfc/rfc7766#section-8&gt;</span>
+        <span class="kw">crate</span>::utils::hexdump(buf.clone());
+        <span class="comment">// the first two bytes of a tcp query is the message length
+        // ref &lt;https://www.rfc-editor.org/rfc/rfc7766#section-8&gt;
 
-        <span class="comment">// check the message is long enough</span>
-        <span class="kw">if</span> <span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">msg_length</span> {
+        // check the message is long enough
+        </span><span class="kw">if </span>buf.len() &lt; msg_length {
             <span class="macro">log::warn!</span>(
                 <span class="string">&quot;Message length too short {}, wanted {}&quot;</span>,
-                <span class="ident">buf</span>.<span class="ident">len</span>(),
-                <span class="ident">msg_length</span> <span class="op">+</span> <span class="number">2</span>
-            );
-        } <span class="kw">else</span> {
+                buf.len(),
+                msg_length + <span class="number">2
+            </span>);
+        } <span class="kw">else </span>{
             <span class="macro">log::info!</span>(<span class="string">&quot;TCP Message length ftw!&quot;</span>);
         }
 
-        <span class="comment">// skip the TCP length header because rad</span>
-        <span class="kw">let</span> <span class="ident">buf</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">buf</span>[<span class="number">0</span>..<span class="ident">msg_length</span>];
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">timeout</span>(
-            <span class="ident">Duration::from_millis</span>(<span class="ident">REPLY_TIMEOUT_MS</span>),
-            <span class="ident">parse_query</span>(<span class="ident">tx</span>.<span class="ident">clone</span>(), <span class="ident">msg_length</span>, <span class="ident">buf</span>, <span class="ident">config</span>.<span class="ident">capture_packets</span>),
+        <span class="comment">// skip the TCP length header because rad
+        </span><span class="kw">let </span>buf = <span class="kw-2">&amp;</span>buf[<span class="number">0</span>..msg_length];
+        <span class="kw">let </span>result = <span class="kw">match </span>timeout(
+            Duration::from_millis(REPLY_TIMEOUT_MS),
+            parse_query(tx.clone(), msg_length, buf, config.capture_packets),
         )
-        .<span class="kw">await</span>
-        {
-            <span class="prelude-val">Ok</span>(<span class="ident">reply</span>) =&gt; <span class="ident">reply</span>,
+        .<span class="kw">await
+        </span>{
+            <span class="prelude-val">Ok</span>(reply) =&gt; reply,
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                 <span class="macro">log::error!</span>(
-                    <span class="string">&quot;Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms&quot;</span>
-                );
+                    <span class="string">&quot;Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms&quot;
+                </span>);
                 <span class="kw">continue</span>;
             }
         };
 
-        <span class="kw">match</span> <span class="ident">result</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">r</span>) =&gt; {
+        <span class="kw">match </span>result {
+            <span class="prelude-val">Ok</span>(r) =&gt; {
                 <span class="macro">log::debug!</span>(<span class="string">&quot;TCP Result: {r:?}&quot;</span>);
 
-                <span class="comment">// when you get a CHAOS from the allow-list with &quot;shutdown&quot; it&#39;s quitting time</span>
-                <span class="kw">if</span> <span class="ident">check_for_shutdown</span>(<span class="kw-2">&amp;</span><span class="ident">r</span>, <span class="kw-2">&amp;</span><span class="ident">addr</span>, <span class="kw-2">&amp;</span><span class="ident">config</span>).<span class="kw">await</span>.<span class="ident">is_ok</span>() {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">agent_tx</span>.<span class="ident">send</span>(<span class="ident">AgentState::Stopped</span> {
-                        <span class="ident">agent</span>: <span class="ident">Agent::TCPServer</span>,
+                <span class="comment">// when you get a CHAOS from the allow-list with &quot;shutdown&quot; it&#39;s quitting time
+                </span><span class="kw">if </span>check_for_shutdown(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>addr, <span class="kw-2">&amp;</span>config).<span class="kw">await</span>.is_ok() {
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = agent_tx.send(AgentState::Stopped {
+                        agent: Agent::TCPServer,
                     }) {
                         <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send UDPServer shutdown message: {error:?}&quot;</span>);
                     };
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">Command::Shutdown</span>).<span class="kw">await</span> {
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = tx.send(Command::Shutdown).<span class="kw">await </span>{
                         <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send shutdown command to datastore.. {error:?}&quot;</span>);
                     };
 
-                    <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
 
-                <span class="kw">let</span> <span class="ident">reply_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">r</span>.<span class="ident">as_bytes</span>().<span class="kw">await</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse reply {:?} into bytes: {:?}&quot;</span>, <span class="ident">r</span>, <span class="ident">error</span>);
+                <span class="kw">let </span>reply_bytes: Vec&lt;u8&gt; = <span class="kw">match </span>r.as_bytes().<span class="kw">await </span>{
+                    <span class="prelude-val">Ok</span>(value) =&gt; value,
+                    <span class="prelude-val">Err</span>(error) =&gt; {
+                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse reply {:?} into bytes: {:?}&quot;</span>, r, error);
                         <span class="kw">continue</span>;
                     }
                 };
 
-                <span class="macro">log::trace!</span>(<span class="string">&quot;reply_bytes: {:?}&quot;</span>, <span class="ident">reply_bytes</span>);
+                <span class="macro">log::trace!</span>(<span class="string">&quot;reply_bytes: {:?}&quot;</span>, reply_bytes);
 
-                <span class="kw">let</span> <span class="ident">reply_bytes</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">reply_bytes</span> <span class="kw">as</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>];
-                <span class="comment">// send the outgoing message length</span>
-                <span class="kw">let</span> <span class="ident">response_length</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="ident">reply_bytes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u16</span>;
-                <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">writer</span>.<span class="ident">try_write</span>(<span class="kw-2">&amp;</span><span class="ident">response_length</span>.<span class="ident">to_be_bytes</span>()) {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, <span class="ident">addr</span>, <span class="ident">err</span>);
-                        <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+                <span class="kw">let </span>reply_bytes = <span class="kw-2">&amp;</span>reply_bytes <span class="kw">as </span><span class="kw-2">&amp;</span>[u8];
+                <span class="comment">// send the outgoing message length
+                </span><span class="kw">let </span>response_length: u16 = reply_bytes.len() <span class="kw">as </span>u16;
+                <span class="kw">let </span>len = <span class="kw">match </span>writer.try_write(<span class="kw-2">&amp;</span>response_length.to_be_bytes()) {
+                    <span class="prelude-val">Ok</span>(value) =&gt; value,
+                    <span class="prelude-val">Err</span>(err) =&gt; {
+                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                     }
                 };
-                <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, <span class="ident">len</span>);
+                <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
 
-                <span class="comment">// send the data</span>
-                <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">writer</span>.<span class="ident">try_write</span>(<span class="ident">reply_bytes</span>) {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, <span class="ident">addr</span>, <span class="ident">err</span>);
-                        <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+                <span class="comment">// send the data
+                </span><span class="kw">let </span>len = <span class="kw">match </span>writer.try_write(reply_bytes) {
+                    <span class="prelude-val">Ok</span>(value) =&gt; value,
+                    <span class="prelude-val">Err</span>(err) =&gt; {
+                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                     }
                 };
-                <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, <span class="ident">len</span>);
+                <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
             }
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error: {}&quot;</span>, <span class="ident">error</span>),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error: {}&quot;</span>, error),
         }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">agent_state</span>) <span class="op">=</span> <span class="ident">agent_rx</span>.<span class="ident">try_recv</span>() {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Got agent state: {:?}&quot;</span>, <span class="ident">agent_state</span>);
+        <span class="kw">if let </span><span class="prelude-val">Ok</span>(agent_state) = agent_rx.try_recv() {
+            <span class="macro">log::info!</span>(<span class="string">&quot;Got agent state: {:?}&quot;</span>, agent_state);
         };
     }
 }
 
-<span class="doccomment">/// Parses the rest of the packets once we have stripped the header off.</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">parse_query</span>(
-    <span class="ident">datastore</span>: <span class="ident">tokio::sync::mpsc::Sender</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::datastore::Command</span><span class="op">&gt;</span>,
-    <span class="ident">len</span>: <span class="ident">usize</span>,
-    <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">capture_packets</span>: <span class="ident">bool</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Reply</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">capture_packets</span> {
-        <span class="ident"><span class="kw">crate</span>::packet_dumper::dump_bytes</span>(
-            <span class="ident">buf</span>[<span class="number">0</span>..<span class="ident">len</span>].<span class="ident">into</span>(),
-            <span class="ident"><span class="kw">crate</span>::packet_dumper::DumpType::ClientRequest</span>,
+<span class="doccomment">/// Parses the rest of the packets once we have stripped the header off.
+</span><span class="kw">pub async fn </span>parse_query(
+    datastore: tokio::sync::mpsc::Sender&lt;<span class="kw">crate</span>::datastore::Command&gt;,
+    len: usize,
+    buf: <span class="kw-2">&amp;</span>[u8],
+    capture_packets: bool,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, String&gt; {
+    <span class="kw">if </span>capture_packets {
+        <span class="kw">crate</span>::packet_dumper::dump_bytes(
+            buf[<span class="number">0</span>..len].into(),
+            <span class="kw">crate</span>::packet_dumper::DumpType::ClientRequest,
         )
         .<span class="kw">await</span>;
     }
-    <span class="comment">// we only want the first 12 bytes for the header</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">split_header</span>: [<span class="ident">u8</span>; <span class="ident">HEADER_BYTES</span>] <span class="op">=</span> [<span class="number">0</span>; <span class="ident">HEADER_BYTES</span>];
-    <span class="ident">split_header</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[<span class="number">0</span>..<span class="ident">HEADER_BYTES</span>]);
-    <span class="comment">// unpack the header for great justice</span>
-    <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident"><span class="kw">crate</span>::Header::unpack</span>(<span class="kw-2">&amp;</span><span class="ident">split_header</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-            <span class="comment">// can&#39;t return a servfail if we can&#39;t unpack the header, they&#39;re probably doing something bad.</span>
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse header: {:?}&quot;</span>, <span class="ident">error</span>));
+    <span class="comment">// we only want the first 12 bytes for the header
+    </span><span class="kw">let </span><span class="kw-2">mut </span>split_header: [u8; HEADER_BYTES] = [<span class="number">0</span>; HEADER_BYTES];
+    split_header.copy_from_slice(<span class="kw-2">&amp;</span>buf[<span class="number">0</span>..HEADER_BYTES]);
+    <span class="comment">// unpack the header for great justice
+    </span><span class="kw">let </span>header = <span class="kw">match </span><span class="kw">crate</span>::Header::unpack(<span class="kw-2">&amp;</span>split_header) {
+        <span class="prelude-val">Ok</span>(value) =&gt; value,
+        <span class="prelude-val">Err</span>(error) =&gt; {
+            <span class="comment">// can&#39;t return a servfail if we can&#39;t unpack the header, they&#39;re probably doing something bad.
+            </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse header: {:?}&quot;</span>, error));
         }
     };
-    <span class="macro">log::trace!</span>(<span class="string">&quot;Buffer length: {}&quot;</span>, <span class="ident">len</span>);
-    <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed header: {:?}&quot;</span>, <span class="ident">header</span>);
-    <span class="ident">get_result</span>(<span class="ident">header</span>, <span class="ident">len</span>, <span class="ident">buf</span>, <span class="ident">datastore</span>).<span class="kw">await</span>
-}
+    <span class="macro">log::trace!</span>(<span class="string">&quot;Buffer length: {}&quot;</span>, len);
+    <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed header: {:?}&quot;</span>, header);
+    get_result(header, len, buf, datastore).<span class="kw">await
+</span>}
 
-<span class="doccomment">/// The generic handler for the packets once they&#39;ve been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y&#39;know?</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_result</span>(
-    <span class="ident">header</span>: <span class="ident">Header</span>,
-    <span class="ident">len</span>: <span class="ident">usize</span>,
-    <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
-    <span class="ident">datastore</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident"><span class="kw">crate</span>::datastore::Command</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Reply</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+<span class="doccomment">/// The generic handler for the packets once they&#39;ve been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y&#39;know?
+</span><span class="kw">async fn </span>get_result(
+    header: Header,
+    len: usize,
+    buf: <span class="kw-2">&amp;</span>[u8],
+    datastore: mpsc::Sender&lt;<span class="kw">crate</span>::datastore::Command&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, String&gt; {
     <span class="macro">log::trace!</span>(<span class="string">&quot;called get_result(header={header}, len={len})&quot;</span>);
 
-    <span class="comment">// if we get something other than a query, yeah nah.</span>
-    <span class="kw">if</span> <span class="ident">header</span>.<span class="ident">opcode</span> <span class="op">!</span><span class="op">=</span> <span class="ident">OpCode::Query</span> {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Invalid OPCODE, got {:?}&quot;</span>, <span class="ident">header</span>.<span class="ident">opcode</span>));
+    <span class="comment">// if we get something other than a query, yeah nah.
+    </span><span class="kw">if </span>header.opcode != OpCode::Query {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Invalid OPCODE, got {:?}&quot;</span>, header.opcode));
     };
 
-    <span class="kw">let</span> <span class="ident">question</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">Question::from_packets</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[<span class="ident">HEADER_BYTES</span>..<span class="ident">len</span>]).<span class="kw">await</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
-            <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed question: {:?}&quot;</span>, <span class="ident">value</span>);
-            <span class="ident">value</span>
+    <span class="kw">let </span>question = <span class="kw">match </span>Question::from_packets(<span class="kw-2">&amp;</span>buf[HEADER_BYTES..len]).<span class="kw">await </span>{
+        <span class="prelude-val">Ok</span>(value) =&gt; {
+            <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed question: {:?}&quot;</span>, value);
+            value
         }
-        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to parse question: {} id={}&quot;</span>, <span class="ident">error</span>, <span class="ident">header</span>.<span class="ident">id</span>);
-            <span class="kw">return</span> <span class="ident">reply_builder</span>(<span class="ident">header</span>.<span class="ident">id</span>, <span class="ident">Rcode::ServFail</span>);
+        <span class="prelude-val">Err</span>(error) =&gt; {
+            <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to parse question: {} id={}&quot;</span>, error, header.id);
+            <span class="kw">return </span>reply_builder(header.id, Rcode::ServFail);
         }
     };
 
-    <span class="comment">// yeet them when we get a request we can&#39;t handle</span>
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">question</span>.<span class="ident">qtype</span>.<span class="ident">supported</span>() {
+    <span class="comment">// yeet them when we get a request we can&#39;t handle
+    </span><span class="kw">if </span>!question.qtype.supported() {
         <span class="macro">log::debug!</span>(
             <span class="string">&quot;Unsupported request: {} {:?}, returning NotImplemented&quot;</span>,
-            <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">question</span>.<span class="ident">qname</span>).<span class="ident">unwrap_or</span>(<span class="string">&quot;&lt;unable to parse&gt;&quot;</span>),
-            <span class="ident">question</span>.<span class="ident">qtype</span>,
+            from_utf8(<span class="kw-2">&amp;</span>question.qname).unwrap_or(<span class="string">&quot;&lt;unable to parse&gt;&quot;</span>),
+            question.qtype,
         );
-        <span class="kw">return</span> <span class="ident">reply_builder</span>(<span class="ident">header</span>.<span class="ident">id</span>, <span class="ident">Rcode::NotImplemented</span>);
+        <span class="kw">return </span>reply_builder(header.id, Rcode::NotImplemented);
     }
 
-    <span class="comment">// Check for CHAOS commands</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::collapsible_if</span>)]</span>
-    <span class="kw">if</span> <span class="ident">question</span>.<span class="ident">qclass</span> <span class="op">==</span> <span class="ident">RecordClass::Chaos</span> {
-        <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">question</span>.<span class="ident">normalized_name</span>()<span class="question-mark">?</span> <span class="op">==</span> <span class="string">&quot;shutdown&quot;</span> {
+    <span class="comment">// Check for CHAOS commands
+    </span><span class="attribute">#[allow(clippy::collapsible_if)]
+    </span><span class="kw">if </span>question.qclass == RecordClass::Chaos {
+        <span class="kw">if </span><span class="kw-2">&amp;</span>question.normalized_name()<span class="question-mark">? </span>== <span class="string">&quot;shutdown&quot; </span>{
             <span class="macro">log::debug!</span>(<span class="string">&quot;Got CHAOS shutdown!&quot;</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Reply</span> {
-                <span class="ident">header</span>,
-                <span class="ident">question</span>: <span class="prelude-val">Some</span>(<span class="ident">question</span>),
-                <span class="ident">answers</span>: <span class="macro">vec!</span>[],
-                <span class="ident">authorities</span>: <span class="macro">vec!</span>[],
-                <span class="ident">additional</span>: <span class="macro">vec!</span>[],
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(Reply {
+                header,
+                question: <span class="prelude-val">Some</span>(question),
+                answers: <span class="macro">vec!</span>[],
+                authorities: <span class="macro">vec!</span>[],
+                additional: <span class="macro">vec!</span>[],
             });
         } <span class="comment">/*else if VERSION_STRINGS.contains(&amp;question.normalized_name().unwrap()) {
               trace!(&quot;Got CHAOS VERSION&quot;);
@@ -817,70 +817,70 @@
                   authorities: vec![],
                   additional: vec![],
               });
-          }*/</span>
-    }
+          }*/
+    </span>}
 
-    <span class="comment">// build the request to the datastore to make the query</span>
+    <span class="comment">// build the request to the datastore to make the query
 
-    <span class="kw">let</span> (<span class="ident">tx_oneshot</span>, <span class="ident">rx_oneshot</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>();
-    <span class="kw">let</span> <span class="ident">ds_req</span>: <span class="ident">Command</span> <span class="op">=</span> <span class="ident">Command::GetRecord</span> {
-        <span class="ident">name</span>: <span class="ident">question</span>.<span class="ident">qname</span>.<span class="ident">clone</span>(),
-        <span class="ident">rrtype</span>: <span class="ident">question</span>.<span class="ident">qtype</span>,
-        <span class="ident">rclass</span>: <span class="ident">question</span>.<span class="ident">qclass</span>,
-        <span class="ident">resp</span>: <span class="ident">tx_oneshot</span>,
+    </span><span class="kw">let </span>(tx_oneshot, rx_oneshot) = oneshot::channel();
+    <span class="kw">let </span>ds_req: Command = Command::GetRecord {
+        name: question.qname.clone(),
+        rrtype: question.qtype,
+        rclass: question.qclass,
+        resp: tx_oneshot,
     };
 
-    <span class="comment">// here we talk to the datastore to pull the result</span>
-    <span class="kw">match</span> <span class="ident">datastore</span>.<span class="ident">send</span>(<span class="ident">ds_req</span>).<span class="kw">await</span> {
+    <span class="comment">// here we talk to the datastore to pull the result
+    </span><span class="kw">match </span>datastore.send(ds_req).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">log::trace!</span>(<span class="string">&quot;Sent a request to the datastore!&quot;</span>),
-        <span class="comment">// TODO: handle this properly</span>
-        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error sending to datastore: {:?}&quot;</span>, <span class="ident">error</span>),
+        <span class="comment">// TODO: handle this properly
+        </span><span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error sending to datastore: {:?}&quot;</span>, error),
     };
 
-    <span class="kw">let</span> <span class="ident">record</span>: <span class="ident">ZoneRecord</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">rx_oneshot</span>.<span class="kw">await</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">zr</span>) =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;DS Response: {}&quot;</span>, <span class="ident">zr</span>);
-                <span class="ident">zr</span>
+    <span class="kw">let </span>record: ZoneRecord = <span class="kw">match </span>rx_oneshot.<span class="kw">await </span>{
+        <span class="prelude-val">Ok</span>(value) =&gt; <span class="kw">match </span>value {
+            <span class="prelude-val">Some</span>(zr) =&gt; {
+                <span class="macro">log::debug!</span>(<span class="string">&quot;DS Response: {}&quot;</span>, zr);
+                zr
             }
-            <span class="prelude-val">None</span> =&gt; {
+            <span class="prelude-val">None </span>=&gt; {
                 <span class="macro">log::debug!</span>(<span class="string">&quot;No response from datastore&quot;</span>);
-                <span class="kw">return</span> <span class="ident">reply_nxdomain</span>(<span class="ident">header</span>.<span class="ident">id</span>);
+                <span class="kw">return </span>reply_nxdomain(header.id);
             }
         },
-        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to get response from datastore: {:?}&quot;</span>, <span class="ident">error</span>);
-            <span class="kw">return</span> <span class="ident">reply_builder</span>(<span class="ident">header</span>.<span class="ident">id</span>, <span class="ident">Rcode::ServFail</span>);
+        <span class="prelude-val">Err</span>(error) =&gt; {
+            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to get response from datastore: {:?}&quot;</span>, error);
+            <span class="kw">return </span>reply_builder(header.id, Rcode::ServFail);
         }
     };
 
-    <span class="comment">// this is our reply - static until that bit&#39;s done</span>
-    <span class="prelude-val">Ok</span>(<span class="ident">Reply</span> {
-        <span class="ident">header</span>: <span class="ident">Header</span> {
-            <span class="ident">id</span>: <span class="ident">header</span>.<span class="ident">id</span>,
-            <span class="ident">qr</span>: <span class="ident">PacketType::Answer</span>,
-            <span class="ident">opcode</span>: <span class="ident">header</span>.<span class="ident">opcode</span>,
-            <span class="ident">authoritative</span>: <span class="bool-val">false</span>, <span class="comment">// TODO: are we authoritative</span>
-            <span class="ident">truncated</span>: <span class="bool-val">false</span>,     <span class="comment">// TODO: work out if it&#39;s truncated (ie, UDP)</span>
-            <span class="ident">recursion_desired</span>: <span class="ident">header</span>.<span class="ident">recursion_desired</span>,
-            <span class="ident">recursion_available</span>: <span class="ident">header</span>.<span class="ident">recursion_desired</span>, <span class="comment">// TODO: work this out</span>
-            <span class="ident">z</span>: <span class="bool-val">false</span>,
-            <span class="ident">ad</span>: <span class="bool-val">true</span>, <span class="comment">// TODO: decide how the ad flag should be set -  &quot;authentic data&quot; - This requests the server to return whether all of the answer and</span>
-            <span class="comment">// authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all</span>
-            <span class="comment">// records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer</span>
-            <span class="comment">// was insecure or not validated. This bit is set by default.</span>
-            <span class="ident">cd</span>: <span class="bool-val">false</span>, <span class="comment">// TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.</span>
-            <span class="ident">rcode</span>: <span class="ident">Rcode::NoError</span>, <span class="comment">// TODO: this could be something to return if we don&#39;t die half way through</span>
-            <span class="ident">qdcount</span>: <span class="number">1</span>,
-            <span class="ident">ancount</span>: <span class="ident">record</span>.<span class="ident">typerecords</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u16</span>, <span class="comment">// TODO: work out how many we&#39;ll return</span>
-            <span class="ident">nscount</span>: <span class="number">0</span>,
-            <span class="ident">arcount</span>: <span class="number">0</span>,
+    <span class="comment">// this is our reply - static until that bit&#39;s done
+    </span><span class="prelude-val">Ok</span>(Reply {
+        header: Header {
+            id: header.id,
+            qr: PacketType::Answer,
+            opcode: header.opcode,
+            authoritative: <span class="bool-val">false</span>, <span class="comment">// TODO: are we authoritative
+            </span>truncated: <span class="bool-val">false</span>,     <span class="comment">// TODO: work out if it&#39;s truncated (ie, UDP)
+            </span>recursion_desired: header.recursion_desired,
+            recursion_available: header.recursion_desired, <span class="comment">// TODO: work this out
+            </span>z: <span class="bool-val">false</span>,
+            ad: <span class="bool-val">true</span>, <span class="comment">// TODO: decide how the ad flag should be set -  &quot;authentic data&quot; - This requests the server to return whether all of the answer and
+            // authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all
+            // records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer
+            // was insecure or not validated. This bit is set by default.
+            </span>cd: <span class="bool-val">false</span>, <span class="comment">// TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
+            </span>rcode: Rcode::NoError, <span class="comment">// TODO: this could be something to return if we don&#39;t die half way through
+            </span>qdcount: <span class="number">1</span>,
+            ancount: record.typerecords.len() <span class="kw">as </span>u16, <span class="comment">// TODO: work out how many we&#39;ll return
+            </span>nscount: <span class="number">0</span>,
+            arcount: <span class="number">0</span>,
         },
-        <span class="ident">question</span>: <span class="prelude-val">Some</span>(<span class="ident">question</span>),
-        <span class="ident">answers</span>: <span class="ident">record</span>.<span class="ident">typerecords</span>,
-        <span class="ident">authorities</span>: <span class="macro">vec!</span>[],
-        <span class="ident">additional</span>: <span class="macro">vec!</span>[],
+        question: <span class="prelude-val">Some</span>(question),
+        answers: record.typerecords,
+        authorities: <span class="macro">vec!</span>[],
+        additional: <span class="macro">vec!</span>[],
     })
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

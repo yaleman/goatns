@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goatns/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goatns/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -371,378 +371,378 @@
 <span id="371">371</span>
 <span id="372">372</span>
 <span id="373">373</span>
-</pre><pre class="rust"><code><span class="attribute">#[<span class="ident">macro_use</span>]</span>
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">lazy_static</span>;
+</pre><pre class="rust"><code><span class="attribute">#[macro_use]
+</span><span class="kw">extern crate </span>lazy_static;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">log::trace</span>;
-<span class="kw">use</span> <span class="ident">packed_struct::prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">std::fmt</span>::{<span class="ident">Debug</span>, <span class="ident">Display</span>};
-<span class="kw">use</span> <span class="ident">std::str::from_utf8</span>;
+<span class="kw">use </span><span class="kw">crate</span>::enums::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::utils::<span class="kw-2">*</span>;
+<span class="kw">use </span>log::trace;
+<span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>std::fmt::{Debug, Display};
+<span class="kw">use </span>std::str::from_utf8;
 
-<span class="doccomment">/// Configuration and management API</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">api</span>;
-<span class="doccomment">/// Configuration handling for the server</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">config</span>;
-<span class="doccomment">/// The data-storing backend for zone information and (eventually) caching.</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">datastore</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">db</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">enums</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">packet_dumper</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">reply</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">resourcerecord</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">serializers</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">servers</span>;
-<span class="kw">mod</span> <span class="ident">tests</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">utils</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">zones</span>;
+<span class="doccomment">/// Configuration and management API
+</span><span class="kw">pub mod </span>api;
+<span class="doccomment">/// Configuration handling for the server
+</span><span class="kw">pub mod </span>config;
+<span class="doccomment">/// The data-storing backend for zone information and (eventually) caching.
+</span><span class="kw">pub mod </span>datastore;
+<span class="kw">pub mod </span>db;
+<span class="kw">pub mod </span>enums;
+<span class="kw">pub mod </span>packet_dumper;
+<span class="kw">pub mod </span>reply;
+<span class="kw">pub mod </span>resourcerecord;
+<span class="kw">pub mod </span>serializers;
+<span class="kw">pub mod </span>servers;
+<span class="kw">mod </span>tests;
+<span class="kw">pub mod </span>utils;
+<span class="kw">pub mod </span>zones;
 
-<span class="doccomment">/// Internal limit of in-flight requests</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_IN_FLIGHT</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">512</span>;
-<span class="doccomment">/// The size of a DNS request header</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">HEADER_BYTES</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">12</span>;
+<span class="doccomment">/// Internal limit of in-flight requests
+</span><span class="kw">pub const </span>MAX_IN_FLIGHT: usize = <span class="number">512</span>;
+<span class="doccomment">/// The size of a DNS request header
+</span><span class="kw">pub const </span>HEADER_BYTES: usize = <span class="number">12</span>;
 
-<span class="doccomment">/// The default &quot;cancel a server response&quot; timeout</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">REPLY_TIMEOUT_MS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1000</span>;
-<span class="doccomment">/// The maximum size of a UDP packet &lt;https://dnsflagday.net/2020/#dns-flag-day-2020&gt;</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">UDP_BUFFER_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1232</span>;
+<span class="doccomment">/// The default &quot;cancel a server response&quot; timeout
+</span><span class="kw">pub const </span>REPLY_TIMEOUT_MS: u64 = <span class="number">1000</span>;
+<span class="doccomment">/// The maximum size of a UDP packet &lt;https://dnsflagday.net/2020/#dns-flag-day-2020&gt;
+</span><span class="kw">pub const </span>UDP_BUFFER_SIZE: usize = <span class="number">1232</span>;
 
-<span class="doccomment">/// The header of a DNS transmission, either a Query or Reply. Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.1) section 4.1.1.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PackedStruct</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">packed_struct</span>(<span class="ident">bit_numbering</span> <span class="op">=</span> <span class="string">&quot;msb0&quot;</span>, <span class="ident">size_bytes</span> <span class="op">=</span> <span class="string">&quot;12&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Header</span> {
-    <span class="doccomment">/// The query ID</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;0..=15&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="ident">id</span>: <span class="ident">u16</span>,
-    <span class="comment">// Is it a query or response</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;16&quot;</span>, <span class="ident">ty</span> <span class="op">=</span> <span class="string">&quot;enum&quot;</span>)]</span>
-    <span class="ident">qr</span>: <span class="ident">PacketType</span>, <span class="comment">// bit 16</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;17..=20&quot;</span>, <span class="ident">ty</span> <span class="op">=</span> <span class="string">&quot;enum&quot;</span>)]</span>
-    <span class="ident">opcode</span>: <span class="ident">OpCode</span>, <span class="comment">// 17-20 actually 4 bits</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;21&quot;</span>)]</span>
-    <span class="ident">authoritative</span>: <span class="ident">bool</span>, <span class="comment">// 21</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;22&quot;</span>)]</span>
-    <span class="ident">truncated</span>: <span class="ident">bool</span>, <span class="comment">// 22</span>
-    <span class="comment">// RD - Recursion Desired - this bit may be set in a query and is copied into the response.  If RD is set, it directs the name server to pursue the query recursively. Recursive query support is optional.</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;23&quot;</span>)]</span>
-    <span class="ident">recursion_desired</span>: <span class="ident">bool</span>, <span class="comment">// 23</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;24&quot;</span>)]</span>
-    <span class="ident">recursion_available</span>: <span class="ident">bool</span>, <span class="comment">// 24</span>
-    <span class="doccomment">/// reserved, must be all 0&#39;s</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;25&quot;</span>)]</span>
-    <span class="ident">z</span>: <span class="ident">bool</span>, <span class="comment">// 25-27 -</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;26&quot;</span>)]</span>
-    <span class="ident">ad</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;27&quot;</span>)]</span>
-    <span class="ident">cd</span>: <span class="ident">bool</span>,
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;28..=31&quot;</span>, <span class="ident">ty</span> <span class="op">=</span> <span class="string">&quot;enum&quot;</span>)]</span>
-    <span class="ident">rcode</span>: <span class="ident">Rcode</span>, <span class="comment">// bits 28-31</span>
-    <span class="doccomment">/// an unsigned 16 bit integer specifying the number of entries in the question section.</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;32..=47&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="ident">qdcount</span>: <span class="ident">u16</span>, <span class="comment">// bits 32-47</span>
-    <span class="doccomment">/// an unsigned 16 bit integer specifying the number of entries in the answer section.</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;48..=63&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="ident">ancount</span>: <span class="ident">u16</span>, <span class="comment">// 48-63</span>
-    <span class="doccomment">/// an unsigned 16 bit integer specifying the number of name server resource records in the authority records section.</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;64..=79&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="ident">nscount</span>: <span class="ident">u16</span>, <span class="comment">// 64-79</span>
-    <span class="doccomment">/// an unsigned 16 bit integer specifying the number of resource records in the additional records section.</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;80..=95&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="ident">arcount</span>: <span class="ident">u16</span>, <span class="comment">// 80-95</span>
-}
+<span class="doccomment">/// The header of a DNS transmission, either a Query or Reply. Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.1) section 4.1.1.
+</span><span class="attribute">#[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
+#[packed_struct(bit_numbering = <span class="string">&quot;msb0&quot;</span>, size_bytes = <span class="string">&quot;12&quot;</span>)]
+</span><span class="kw">pub struct </span>Header {
+    <span class="doccomment">/// The query ID
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;0..=15&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span>id: u16,
+    <span class="comment">// Is it a query or response
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;16&quot;</span>, ty = <span class="string">&quot;enum&quot;</span>)]
+    </span>qr: PacketType, <span class="comment">// bit 16
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;17..=20&quot;</span>, ty = <span class="string">&quot;enum&quot;</span>)]
+    </span>opcode: OpCode, <span class="comment">// 17-20 actually 4 bits
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;21&quot;</span>)]
+    </span>authoritative: bool, <span class="comment">// 21
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;22&quot;</span>)]
+    </span>truncated: bool, <span class="comment">// 22
+    // RD - Recursion Desired - this bit may be set in a query and is copied into the response.  If RD is set, it directs the name server to pursue the query recursively. Recursive query support is optional.
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;23&quot;</span>)]
+    </span>recursion_desired: bool, <span class="comment">// 23
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;24&quot;</span>)]
+    </span>recursion_available: bool, <span class="comment">// 24
+    </span><span class="doccomment">/// reserved, must be all 0&#39;s
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;25&quot;</span>)]
+    </span>z: bool, <span class="comment">// 25-27 -
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;26&quot;</span>)]
+    </span>ad: bool,
+    <span class="attribute">#[packed_field(bits = <span class="string">&quot;27&quot;</span>)]
+    </span>cd: bool,
+    <span class="attribute">#[packed_field(bits = <span class="string">&quot;28..=31&quot;</span>, ty = <span class="string">&quot;enum&quot;</span>)]
+    </span>rcode: Rcode, <span class="comment">// bits 28-31
+    </span><span class="doccomment">/// an unsigned 16 bit integer specifying the number of entries in the question section.
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;32..=47&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span>qdcount: u16, <span class="comment">// bits 32-47
+    </span><span class="doccomment">/// an unsigned 16 bit integer specifying the number of entries in the answer section.
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;48..=63&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span>ancount: u16, <span class="comment">// 48-63
+    </span><span class="doccomment">/// an unsigned 16 bit integer specifying the number of name server resource records in the authority records section.
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;64..=79&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span>nscount: u16, <span class="comment">// 64-79
+    </span><span class="doccomment">/// an unsigned 16 bit integer specifying the number of resource records in the additional records section.
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;80..=95&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span>arcount: u16, <span class="comment">// 80-95
+</span>}
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Header</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">Header</span> {
-            <span class="ident">id</span>: <span class="number">0</span>,
-            <span class="ident">qr</span>: <span class="ident">PacketType::Query</span>,
-            <span class="ident">opcode</span>: <span class="ident">OpCode::Query</span>,
-            <span class="ident">authoritative</span>: <span class="bool-val">false</span>,
-            <span class="ident">truncated</span>: <span class="bool-val">false</span>,
-            <span class="ident">recursion_desired</span>: <span class="bool-val">false</span>,
-            <span class="ident">recursion_available</span>: <span class="bool-val">false</span>,
-            <span class="ident">z</span>: <span class="bool-val">false</span>,
-            <span class="ident">ad</span>: <span class="bool-val">false</span>,
-            <span class="ident">cd</span>: <span class="bool-val">false</span>,
-            <span class="ident">rcode</span>: <span class="ident">Rcode::NoError</span>,
-            <span class="ident">qdcount</span>: <span class="number">0</span>,
-            <span class="ident">ancount</span>: <span class="number">0</span>,
-            <span class="ident">nscount</span>: <span class="number">0</span>,
-            <span class="ident">arcount</span>: <span class="number">0</span>,
+<span class="kw">impl </span>Default <span class="kw">for </span>Header {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        Header {
+            id: <span class="number">0</span>,
+            qr: PacketType::Query,
+            opcode: OpCode::Query,
+            authoritative: <span class="bool-val">false</span>,
+            truncated: <span class="bool-val">false</span>,
+            recursion_desired: <span class="bool-val">false</span>,
+            recursion_available: <span class="bool-val">false</span>,
+            z: <span class="bool-val">false</span>,
+            ad: <span class="bool-val">false</span>,
+            cd: <span class="bool-val">false</span>,
+            rcode: Rcode::NoError,
+            qdcount: <span class="number">0</span>,
+            ancount: <span class="number">0</span>,
+            nscount: <span class="number">0</span>,
+            arcount: <span class="number">0</span>,
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Header</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_answer</span>(<span class="self">self</span>) -&gt; <span class="ident">Header</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>;
-        <span class="ident">response</span>.<span class="ident">qr</span> <span class="op">=</span> <span class="ident">PacketType::Answer</span>;
-        <span class="ident">response</span>
+<span class="kw">impl </span>Header {
+    <span class="kw">pub fn </span>as_answer(<span class="self">self</span>) -&gt; Header {
+        <span class="kw">let </span><span class="kw-2">mut </span>response = <span class="self">self</span>;
+        response.qr = PacketType::Answer;
+        response
     }
 }
 
-<span class="doccomment">/// The answer, authority, and additional sections all share the same</span>
-<span class="doccomment">/// format: a variable number of resource records, where the number of</span>
-<span class="doccomment">/// records is specified in the corresponding count field in the header.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Ref [RFC1035 Section 4.1.3](https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.3)</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ResourceRecord</span> {
-    <span class="doccomment">/// A domain name to which this resource record pertains.</span>
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Two octets containing one of the RR type codes. This field specifies the meaning of the data in the RDATA field. The official name is &quot;type&quot;.</span>
-    <span class="kw">pub</span> <span class="ident">record_type</span>: <span class="ident">RecordType</span>,
-    <span class="doccomment">/// Two octets which specify the class of the data in the RDATA field.</span>
-    <span class="kw">pub</span> <span class="ident">class</span>: <span class="ident">RecordClass</span>,
-    <span class="doccomment">/// A 32 bit unsigned integer that specifies the time interval (in seconds) that the resource record may be cached before it should be discarded. Zero values are interpreted to mean that the RR can only be used for the transaction in progress, and should not be cached.</span>
-    <span class="kw">pub</span> <span class="ident">ttl</span>: <span class="ident">u32</span>,
-    <span class="doccomment">/// A variable length string of octets that describes the resource.</span>
-    <span class="doccomment">/// The format of this information varies according to the TYPE and CLASS of the resource record.</span>
-    <span class="doccomment">/// For example, the if the TYPE is A and the CLASS is IN, the RDATA field is a 4 octet ARPA Internet address.</span>
-    <span class="kw">pub</span> <span class="ident">rdata</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// The answer, authority, and additional sections all share the same
+/// format: a variable number of resource records, where the number of
+/// records is specified in the corresponding count field in the header.
+///
+/// Ref [RFC1035 Section 4.1.3](https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.3)
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>ResourceRecord {
+    <span class="doccomment">/// A domain name to which this resource record pertains.
+    </span><span class="kw">pub </span>name: Vec&lt;u8&gt;,
+    <span class="doccomment">/// Two octets containing one of the RR type codes. This field specifies the meaning of the data in the RDATA field. The official name is &quot;type&quot;.
+    </span><span class="kw">pub </span>record_type: RecordType,
+    <span class="doccomment">/// Two octets which specify the class of the data in the RDATA field.
+    </span><span class="kw">pub </span>class: RecordClass,
+    <span class="doccomment">/// A 32 bit unsigned integer that specifies the time interval (in seconds) that the resource record may be cached before it should be discarded. Zero values are interpreted to mean that the RR can only be used for the transaction in progress, and should not be cached.
+    </span><span class="kw">pub </span>ttl: u32,
+    <span class="doccomment">/// A variable length string of octets that describes the resource.
+    /// The format of this information varies according to the TYPE and CLASS of the resource record.
+    /// For example, the if the TYPE is A and the CLASS is IN, the RDATA field is a 4 octet ARPA Internet address.
+    </span><span class="kw">pub </span>rdata: Vec&lt;u8&gt;,
 }
-<span class="kw">impl</span> <span class="ident">ResourceRecord</span> {}
+<span class="kw">impl </span>ResourceRecord {}
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ResourceRecord</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">record</span>: <span class="ident">ResourceRecord</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Vec</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="kw-2">&amp;</span><span class="ident">record</span>)
+<span class="kw">impl </span>From&lt;ResourceRecord&gt; <span class="kw">for </span>Vec&lt;u8&gt; {
+    <span class="kw">fn </span>from(record: ResourceRecord) -&gt; <span class="self">Self </span>{
+        Vec::&lt;u8&gt;::from(<span class="kw-2">&amp;</span>record)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">ResourceRecord</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">record</span>: <span class="kw-2">&amp;</span><span class="ident">ResourceRecord</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">retval</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>ResourceRecord&gt; <span class="kw">for </span>Vec&lt;u8&gt; {
+    <span class="kw">fn </span>from(record: <span class="kw-2">&amp;</span>ResourceRecord) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>retval: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
 
-        <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">record</span>);
+        <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, record);
 
-        <span class="kw">let</span> <span class="ident">record_name_bytes</span> <span class="op">=</span>
-            <span class="ident">name_as_bytes</span>(<span class="ident">record</span>.<span class="ident">name</span>.<span class="ident">to_vec</span>(), <span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">None</span>);
-        <span class="ident">retval</span>.<span class="ident">extend</span>(<span class="ident">record_name_bytes</span>);
-        <span class="comment">// type</span>
-        <span class="ident">retval</span>.<span class="ident">extend</span>((<span class="ident">record</span>.<span class="ident">record_type</span> <span class="kw">as</span> <span class="ident">u16</span>).<span class="ident">to_be_bytes</span>());
-        <span class="comment">// class</span>
-        <span class="ident">retval</span>.<span class="ident">extend</span>((<span class="ident">record</span>.<span class="ident">class</span> <span class="kw">as</span> <span class="ident">u16</span>).<span class="ident">to_be_bytes</span>());
-        <span class="comment">// reply ttl</span>
-        <span class="kw">let</span> <span class="ident">ttl_bytes</span>: [<span class="ident">u8</span>; <span class="number">4</span>] <span class="op">=</span> <span class="ident">record</span>.<span class="ident">ttl</span>.<span class="ident">to_be_bytes</span>();
-        <span class="macro">trace!</span>(<span class="string">&quot;ttl_bytes: {:?}&quot;</span>, <span class="ident">ttl_bytes</span>);
-        <span class="ident">retval</span>.<span class="ident">extend</span>(<span class="ident">ttl_bytes</span>);
-        <span class="comment">// reply data length</span>
-        <span class="ident">retval</span>.<span class="ident">extend</span>((<span class="ident">record</span>.<span class="ident">rdata</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u16</span>).<span class="ident">to_be_bytes</span>());
-        <span class="comment">// rdata</span>
-        <span class="ident">retval</span>.<span class="ident">extend</span>(<span class="ident">record</span>.<span class="ident">rdata</span>.<span class="ident">to_vec</span>());
+        <span class="kw">let </span>record_name_bytes =
+            name_as_bytes(record.name.to_vec(), <span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">None</span>);
+        retval.extend(record_name_bytes);
+        <span class="comment">// type
+        </span>retval.extend((record.record_type <span class="kw">as </span>u16).to_be_bytes());
+        <span class="comment">// class
+        </span>retval.extend((record.class <span class="kw">as </span>u16).to_be_bytes());
+        <span class="comment">// reply ttl
+        </span><span class="kw">let </span>ttl_bytes: [u8; <span class="number">4</span>] = record.ttl.to_be_bytes();
+        <span class="macro">trace!</span>(<span class="string">&quot;ttl_bytes: {:?}&quot;</span>, ttl_bytes);
+        retval.extend(ttl_bytes);
+        <span class="comment">// reply data length
+        </span>retval.extend((record.rdata.len() <span class="kw">as </span>u16).to_be_bytes());
+        <span class="comment">// rdata
+        </span>retval.extend(record.rdata.to_vec());
 
-        <span class="ident">retval</span>
+        retval
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
-<span class="doccomment">/// A DNS Question section, from Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.2) section 4.1.2 &quot;Question section format&quot;.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Question</span> {
-    <span class="doccomment">/// The name which is being queried</span>
-    <span class="ident">qname</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The Record type that is being requested, eg A, NS, MX, TXT etc.</span>
-    <span class="ident">qtype</span>: <span class="ident">RecordType</span>,
-    <span class="doccomment">/// The class, (typically IN for &quot;Internet&quot;)</span>
-    <span class="ident">qclass</span>: <span class="ident">RecordClass</span>,
+<span class="attribute">#[derive(Clone, Debug, PartialEq, Eq)]
+</span><span class="doccomment">/// A DNS Question section, from Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.2) section 4.1.2 &quot;Question section format&quot;.
+</span><span class="kw">pub struct </span>Question {
+    <span class="doccomment">/// The name which is being queried
+    </span>qname: Vec&lt;u8&gt;,
+    <span class="doccomment">/// The Record type that is being requested, eg A, NS, MX, TXT etc.
+    </span>qtype: RecordType,
+    <span class="doccomment">/// The class, (typically IN for &quot;Internet&quot;)
+    </span>qclass: RecordClass,
 }
 
-<span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Question</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
-        <span class="kw">let</span> <span class="ident">qname</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">qname</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">to_string</span>(),
+<span class="kw">impl </span>Display <span class="kw">for </span>Question {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="kw">let </span>qname = <span class="kw">match </span>from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.qname) {
+            <span class="prelude-val">Ok</span>(value) =&gt; value.to_string(),
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="ident">qname</span>)
+                <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.qname)
             }
         };
-        <span class="ident">f</span>.<span class="ident">write_fmt</span>(<span class="macro">format_args!</span>(
+        f.write_fmt(<span class="macro">format_args!</span>(
             <span class="string">&quot;QNAME={} QTYPE={:?} QCLASS={}&quot;</span>,
-            <span class="ident">qname</span>, <span class="self">self</span>.<span class="ident">qtype</span>, <span class="self">self</span>.<span class="ident">qclass</span>,
+            qname, <span class="self">self</span>.qtype, <span class="self">self</span>.qclass,
         ))
     }
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_normalize_name</span>() {
-    <span class="kw">let</span> <span class="ident">q</span> <span class="op">=</span> <span class="ident">Question</span> {
-        <span class="ident">qname</span>: <span class="ident">String::from</span>(<span class="string">&quot;HellO.world&quot;</span>).<span class="ident">into_bytes</span>(),
-        <span class="ident">qtype</span>: <span class="ident"><span class="kw">crate</span>::enums::RecordType::A</span>,
-        <span class="ident">qclass</span>: <span class="ident"><span class="kw">crate</span>::enums::RecordClass::Internet</span>,
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_normalize_name() {
+    <span class="kw">let </span>q = Question {
+        qname: String::from(<span class="string">&quot;HellO.world&quot;</span>).into_bytes(),
+        qtype: <span class="kw">crate</span>::enums::RecordType::A,
+        qclass: <span class="kw">crate</span>::enums::RecordClass::Internet,
     };
-    <span class="macro">assert_eq!</span>(<span class="ident">q</span>.<span class="ident">normalized_name</span>().<span class="ident">unwrap</span>(), <span class="ident">String::from</span>(<span class="string">&quot;hello.world&quot;</span>));
-    <span class="kw">let</span> <span class="ident">q</span> <span class="op">=</span> <span class="ident">Question</span> {
-        <span class="ident">qname</span>: <span class="ident">String::from</span>(<span class="string">&quot;hello.world&quot;</span>).<span class="ident">into_bytes</span>(),
-        <span class="ident">qtype</span>: <span class="ident"><span class="kw">crate</span>::enums::RecordType::A</span>,
-        <span class="ident">qclass</span>: <span class="ident"><span class="kw">crate</span>::enums::RecordClass::Internet</span>,
+    <span class="macro">assert_eq!</span>(q.normalized_name().unwrap(), String::from(<span class="string">&quot;hello.world&quot;</span>));
+    <span class="kw">let </span>q = Question {
+        qname: String::from(<span class="string">&quot;hello.world&quot;</span>).into_bytes(),
+        qtype: <span class="kw">crate</span>::enums::RecordType::A,
+        qclass: <span class="kw">crate</span>::enums::RecordClass::Internet,
     };
-    <span class="macro">assert_eq!</span>(<span class="ident">q</span>.<span class="ident">normalized_name</span>().<span class="ident">unwrap</span>(), <span class="ident">String::from</span>(<span class="string">&quot;hello.world&quot;</span>));
+    <span class="macro">assert_eq!</span>(q.normalized_name().unwrap(), String::from(<span class="string">&quot;hello.world&quot;</span>));
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_get_question_qname</span>() {
-    <span class="macro">assert!</span>(<span class="ident">get_question_qname</span>(<span class="kw-2">&amp;</span>[<span class="number">23</span>, <span class="number">0</span>]).<span class="ident">is_err</span>());
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_get_question_qname() {
+    <span class="macro">assert!</span>(get_question_qname(<span class="kw-2">&amp;</span>[<span class="number">23</span>, <span class="number">0</span>]).is_err());
 
-    <span class="kw">let</span> <span class="ident">sample_data</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">7</span>, <span class="number">101</span>, <span class="number">120</span>, <span class="number">97</span>, <span class="number">109</span>, <span class="number">112</span>, <span class="number">108</span>, <span class="number">101</span>, <span class="number">3</span>, <span class="number">99</span>, <span class="number">111</span>, <span class="number">109</span>, <span class="number">0</span>];
-    <span class="macro">eprintln!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">sample_data</span>);
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">get_question_qname</span>(<span class="kw-2">&amp;</span><span class="ident">sample_data</span>);
+    <span class="kw">let </span>sample_data = <span class="macro">vec!</span>[<span class="number">7</span>, <span class="number">101</span>, <span class="number">120</span>, <span class="number">97</span>, <span class="number">109</span>, <span class="number">112</span>, <span class="number">108</span>, <span class="number">101</span>, <span class="number">3</span>, <span class="number">99</span>, <span class="number">111</span>, <span class="number">109</span>, <span class="number">0</span>];
+    <span class="macro">eprintln!</span>(<span class="string">&quot;{:?}&quot;</span>, sample_data);
+    <span class="kw">let </span>result = get_question_qname(<span class="kw-2">&amp;</span>sample_data);
     <span class="macro">assert_eq!</span>(
-        <span class="ident">result</span>,
+        result,
         <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[<span class="number">101</span>, <span class="number">120</span>, <span class="number">97</span>, <span class="number">109</span>, <span class="number">112</span>, <span class="number">108</span>, <span class="number">101</span>, <span class="number">46</span>, <span class="number">99</span>, <span class="number">111</span>, <span class="number">109</span>])
     );
 }
 
-<span class="doccomment">/// Returns a Vec&lt;u8&gt; representation of the name</span>
-<span class="doccomment">/// (ie, example.com = [101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109])</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_question_qname</span>(<span class="ident">input_val</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+<span class="doccomment">/// Returns a Vec&lt;u8&gt; representation of the name
+/// (ie, example.com = [101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109])
+</span><span class="kw">pub fn </span>get_question_qname(input_val: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, String&gt; {
     <span class="macro">trace!</span>(<span class="string">&quot;got buf: {input_val:?}&quot;</span>);
-    <span class="kw">if</span> <span class="ident">input_val</span>.<span class="ident">is_empty</span>() {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;zero-length buffer? That&#39;s bad.&quot;</span>.<span class="ident">to_string</span>());
+    <span class="kw">if </span>input_val.is_empty() {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;zero-length buffer? That&#39;s bad.&quot;</span>.to_string());
     }
-    <span class="comment">// let&#39;s make a mut copy of the input so we can do things to do it</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="ident">input_val</span>.<span class="ident">to_owned</span>();
+    <span class="comment">// let&#39;s make a mut copy of the input so we can do things to do it
+    </span><span class="kw">let </span><span class="kw-2">mut </span>buf = input_val.to_owned();
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">while</span> <span class="op">!</span><span class="ident">buf</span>.<span class="ident">is_empty</span>() {
-        <span class="kw">let</span> <span class="ident">label_len</span> <span class="op">=</span> <span class="ident">buf</span>[<span class="number">0</span>] <span class="kw">as</span> <span class="ident">usize</span>;
-        <span class="kw">if</span> <span class="ident">label_len</span> <span class="op">==</span> <span class="number">0</span> {
-            <span class="comment">// we got to the end</span>
-            <span class="kw">break</span>;
-        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">label_len</span> <span class="op">&gt;</span> <span class="number">63</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Label length provided was {label_len}, needs to be &lt;=63 while parsing {input_val:?}&quot;</span>));
+    <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
+    <span class="kw">while </span>!buf.is_empty() {
+        <span class="kw">let </span>label_len = buf[<span class="number">0</span>] <span class="kw">as </span>usize;
+        <span class="kw">if </span>label_len == <span class="number">0 </span>{
+            <span class="comment">// we got to the end
+            </span><span class="kw">break</span>;
+        } <span class="kw">else if </span>label_len &gt; <span class="number">63 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Label length provided was {label_len}, needs to be &lt;=63 while parsing {input_val:?}&quot;</span>));
         }
-        <span class="kw">if</span> <span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">label_len</span> <span class="op">+</span> <span class="number">1</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+        <span class="kw">if </span>buf.len() &lt; label_len + <span class="number">1 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;Label length was {label_len} but remaining size was too short: {} while parsing {input_val:?}&quot;</span>,
-                <span class="ident">buf</span>.<span class="ident">len</span>()
+                buf.len()
             ));
         }
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Before extend: {result:?}&quot;</span>);
-        <span class="kw">if</span> <span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">label_len</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+        <span class="attribute">#[cfg(test)]
+        </span><span class="macro">eprintln!</span>(<span class="string">&quot;Before extend: {result:?}&quot;</span>);
+        <span class="kw">if </span>buf.len() &lt; label_len {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;Buffer was too sort to pull bytes from ({})&quot;</span>,
-                <span class="ident">buf</span>.<span class="ident">len</span>()
+                buf.len()
             ));
         }
-        <span class="ident">result</span>.<span class="ident">extend</span>(<span class="ident">buf</span>[<span class="number">1</span>..<span class="ident">label_len</span> <span class="op">+</span> <span class="number">1</span>].<span class="ident">to_vec</span>());
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-        <span class="macro">eprintln!</span>(<span class="string">&quot;After extend:  {result:?}&quot;</span>);
+        result.extend(buf[<span class="number">1</span>..label_len + <span class="number">1</span>].to_vec());
+        <span class="attribute">#[cfg(test)]
+        </span><span class="macro">eprintln!</span>(<span class="string">&quot;After extend:  {result:?}&quot;</span>);
 
-        <span class="comment">// slice off the front part</span>
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-        <span class="macro">eprintln!</span>(
+        <span class="comment">// slice off the front part
+        </span><span class="attribute">#[cfg(test)]
+        </span><span class="macro">eprintln!</span>(
             <span class="string">&quot;Before slicing buf: {buf:?}, about to grab {}..{}&quot;</span>,
-            <span class="ident">label_len</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">buf</span>.<span class="ident">len</span>()
+            label_len + <span class="number">1</span>,
+            buf.len()
         );
-        <span class="ident">buf</span> <span class="op">=</span> <span class="ident">buf</span>[<span class="ident">label_len</span> <span class="op">+</span> <span class="number">1</span>..<span class="ident">buf</span>.<span class="ident">len</span>()].<span class="ident">to_vec</span>();
+        buf = buf[label_len + <span class="number">1</span>..buf.len()].to_vec();
         <span class="macro">trace!</span>(<span class="string">&quot;After slicing buf:  {buf:?}&quot;</span>);
-        <span class="kw">if</span> <span class="ident">buf</span>[<span class="number">0</span>] <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="ident">result</span>.<span class="ident">push</span>(<span class="number">46</span>);
+        <span class="kw">if </span>buf[<span class="number">0</span>] != <span class="number">0 </span>{
+            result.push(<span class="number">46</span>);
         }
-        <span class="kw">if</span> <span class="ident">result</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">255</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;qname length over 255 while parsing question: {result:?}&quot;</span>
-            ));
+        <span class="kw">if </span>result.len() &gt; <span class="number">255 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+                <span class="string">&quot;qname length over 255 while parsing question: {result:?}&quot;
+            </span>));
         }
     }
-    <span class="kw">let</span> <span class="ident">result_string</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">to_owned</span>().<span class="ident">to_lowercase</span>(),
-        <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>)),
+    <span class="kw">let </span>result_string = <span class="kw">match </span>from_utf8(<span class="kw-2">&amp;</span>result) {
+        <span class="prelude-val">Ok</span>(value) =&gt; value.to_owned().to_lowercase(),
+        <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>)),
     };
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-    <span class="macro">eprintln!</span>(<span class="string">&quot;Returning from get_question_qname {result_string:?}&quot;</span>);
-    <span class="prelude-val">Ok</span>(<span class="ident">result_string</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>())
+    <span class="attribute">#[cfg(test)]
+    </span><span class="macro">eprintln!</span>(<span class="string">&quot;Returning from get_question_qname {result_string:?}&quot;</span>);
+    <span class="prelude-val">Ok</span>(result_string.as_bytes().to_vec())
 }
 
-<span class="kw">impl</span> <span class="ident">Question</span> {
-    <span class="kw">fn</span> <span class="ident">normalized_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">qname</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">value</span>.<span class="ident">to_lowercase</span>()),
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                <span class="comment">// TODO: this probably shouldn&#39;t be a panic</span>
-                <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+<span class="kw">impl </span>Question {
+    <span class="kw">fn </span>normalized_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
+        <span class="kw">match </span>from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.qname) {
+            <span class="prelude-val">Ok</span>(value) =&gt; <span class="prelude-val">Ok</span>(value.to_lowercase()),
+            <span class="prelude-val">Err</span>(error) =&gt; {
+                <span class="comment">// TODO: this probably shouldn&#39;t be a panic
+                </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                     <span class="string">&quot;Failed to normalize {:?}: {:?}&quot;</span>,
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">qname</span>, <span class="ident">error</span>
+                    <span class="kw-2">&amp;</span><span class="self">self</span>.qname, error
                 ))
             }
         }
     }
 
-    <span class="doccomment">/// hand it the buffer and the things, and get back a [Question]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">from_packets</span>(<span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">qname</span> <span class="op">=</span> <span class="ident">get_question_qname</span>(<span class="ident">buf</span>)<span class="question-mark">?</span>;
+    <span class="doccomment">/// hand it the buffer and the things, and get back a [Question]
+    </span><span class="kw">async fn </span>from_packets(buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, String&gt; {
+        <span class="kw">let </span>qname = get_question_qname(buf)<span class="question-mark">?</span>;
 
-        <span class="comment">// skip past the end of the question</span>
-        <span class="kw">let</span> <span class="ident">read_pointer</span> <span class="op">=</span> <span class="ident">qname</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">2</span>;
-        <span class="kw">if</span> <span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">read_pointer</span> <span class="op">+</span> <span class="number">1</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+        <span class="comment">// skip past the end of the question
+        </span><span class="kw">let </span>read_pointer = qname.len() + <span class="number">2</span>;
+        <span class="kw">if </span>buf.len() &lt;= read_pointer + <span class="number">1 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;Packet not long enough, looked for {read_pointer}, got {}&quot;</span>,
-                <span class="ident">buf</span>.<span class="ident">len</span>()
+                buf.len()
             ));
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">qtype_bytes</span>: [<span class="ident">u8</span>; <span class="number">2</span>] <span class="op">=</span> [<span class="number">0</span>; <span class="number">2</span>];
-        <span class="kw">if</span> <span class="ident">buf</span>[<span class="ident">read_pointer</span>..<span class="ident">read_pointer</span> <span class="op">+</span> <span class="number">2</span>].<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(
-                <span class="string">&quot;Couldn&#39;t get two bytes when I asked for it from the header for the QTYPE&quot;</span>
-                    .<span class="ident">to_string</span>(),
+        <span class="kw">let </span><span class="kw-2">mut </span>qtype_bytes: [u8; <span class="number">2</span>] = [<span class="number">0</span>; <span class="number">2</span>];
+        <span class="kw">if </span>buf[read_pointer..read_pointer + <span class="number">2</span>].len() != <span class="number">2 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(
+                <span class="string">&quot;Couldn&#39;t get two bytes when I asked for it from the header for the QTYPE&quot;
+                    </span>.to_string(),
             );
         }
-        <span class="ident">qtype_bytes</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[<span class="ident">read_pointer</span>..<span class="ident">read_pointer</span> <span class="op">+</span> <span class="number">2</span>]);
-        <span class="kw">let</span> <span class="ident">qtype</span> <span class="op">=</span> <span class="ident">RecordType::from</span>(<span class="kw-2">&amp;</span><span class="ident">u16::from_be_bytes</span>(<span class="ident">qtype_bytes</span>));
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">qclass_bytes</span>: [<span class="ident">u8</span>; <span class="number">2</span>] <span class="op">=</span> [<span class="number">0</span>; <span class="number">2</span>];
-        <span class="kw">if</span> <span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">read_pointer</span> <span class="op">+</span> <span class="number">3</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Buffer length too short to get two bytes when I asked for it from the header for the QCLASS&quot;</span>
-            .<span class="ident">to_string</span>(),);
+        qtype_bytes.copy_from_slice(<span class="kw-2">&amp;</span>buf[read_pointer..read_pointer + <span class="number">2</span>]);
+        <span class="kw">let </span>qtype = RecordType::from(<span class="kw-2">&amp;</span>u16::from_be_bytes(qtype_bytes));
+        <span class="kw">let </span><span class="kw-2">mut </span>qclass_bytes: [u8; <span class="number">2</span>] = [<span class="number">0</span>; <span class="number">2</span>];
+        <span class="kw">if </span>buf.len() &lt;= read_pointer + <span class="number">3 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Buffer length too short to get two bytes when I asked for it from the header for the QCLASS&quot;
+            </span>.to_string(),);
         }
-        <span class="kw">if</span> <span class="ident">buf</span>[<span class="ident">read_pointer</span> <span class="op">+</span> <span class="number">2</span>..<span class="ident">read_pointer</span> <span class="op">+</span> <span class="number">4</span>].<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(
-                <span class="string">&quot;Couldn&#39;t get two bytes when I asked for it from the header for the QCLASS&quot;</span>
-                    .<span class="ident">to_string</span>(),
+        <span class="kw">if </span>buf[read_pointer + <span class="number">2</span>..read_pointer + <span class="number">4</span>].len() != <span class="number">2 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(
+                <span class="string">&quot;Couldn&#39;t get two bytes when I asked for it from the header for the QCLASS&quot;
+                    </span>.to_string(),
             );
         }
-        <span class="ident">qclass_bytes</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[<span class="ident">read_pointer</span> <span class="op">+</span> <span class="number">2</span>..<span class="ident">read_pointer</span> <span class="op">+</span> <span class="number">4</span>]);
-        <span class="kw">let</span> <span class="ident">qclass</span>: <span class="ident">RecordClass</span> <span class="op">=</span> <span class="ident">RecordClass::from</span>(<span class="kw-2">&amp;</span><span class="ident">u16::from_be_bytes</span>(<span class="ident">qclass_bytes</span>));
+        qclass_bytes.copy_from_slice(<span class="kw-2">&amp;</span>buf[read_pointer + <span class="number">2</span>..read_pointer + <span class="number">4</span>]);
+        <span class="kw">let </span>qclass: RecordClass = RecordClass::from(<span class="kw-2">&amp;</span>u16::from_be_bytes(qclass_bytes));
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Question</span> {
-            <span class="ident">qname</span>,
-            <span class="ident">qtype</span>,
-            <span class="ident">qclass</span>,
+        <span class="prelude-val">Ok</span>(Question {
+            qname,
+            qtype,
+            qclass,
         })
     }
 
-    <span class="doccomment">/// turn a question into a vec of bytes to send back to the user</span>
-    <span class="kw">fn</span> <span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">retval</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+    <span class="doccomment">/// turn a question into a vec of bytes to send back to the user
+    </span><span class="kw">fn </span>to_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>retval: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
 
-        <span class="kw">let</span> <span class="ident">name_bytes</span> <span class="op">=</span> <span class="ident">name_as_bytes</span>(<span class="self">self</span>.<span class="ident">qname</span>.<span class="ident">clone</span>(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-        <span class="ident">retval</span>.<span class="ident">extend</span>(<span class="ident">name_bytes</span>);
-        <span class="ident">retval</span>.<span class="ident">extend</span>((<span class="self">self</span>.<span class="ident">qtype</span> <span class="kw">as</span> <span class="ident">u16</span>).<span class="ident">to_be_bytes</span>());
-        <span class="ident">retval</span>.<span class="ident">extend</span>((<span class="self">self</span>.<span class="ident">qclass</span> <span class="kw">as</span> <span class="ident">u16</span>).<span class="ident">to_be_bytes</span>());
-        <span class="ident">retval</span>
+        <span class="kw">let </span>name_bytes = name_as_bytes(<span class="self">self</span>.qname.clone(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+        retval.extend(name_bytes);
+        retval.extend((<span class="self">self</span>.qtype <span class="kw">as </span>u16).to_be_bytes());
+        retval.extend((<span class="self">self</span>.qclass <span class="kw">as </span>u16).to_be_bytes());
+        retval
     }
 }
 
-<span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-<span class="doccomment">///tries to test when input buffers are weird</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_question_from_bytes</span>() {
-    <span class="kw">let</span> <span class="ident">ok_question</span> <span class="op">=</span> <span class="macro">vec!</span>[
-        <span class="comment">/* question - 14 bytes */</span>
-        <span class="number">0x04</span>, <span class="number">0x69</span>, <span class="number">0x61</span>, <span class="number">0x6e</span>, <span class="number">0x61</span>, <span class="number">0x03</span>, <span class="number">0x6f</span>, <span class="number">0x72</span>, <span class="number">0x67</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="comment">//0x00, 0x01,</span>
-    ];
-    <span class="kw">let</span> <span class="ident">input_bufs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[
-        <span class="comment">/* header - 12 bytes */</span>
-        <span class="comment">// 0xa3, 0x70, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,</span>
-        <span class="ident">ok_question</span>[<span class="number">0</span>..<span class="number">10</span>].<span class="ident">to_vec</span>(),
-        <span class="ident">ok_question</span>[<span class="number">0</span>..<span class="number">11</span>].<span class="ident">to_vec</span>(),
-        <span class="ident">ok_question</span>[<span class="number">0</span>..<span class="number">12</span>].<span class="ident">to_vec</span>(),
+<span class="attribute">#[tokio::test]
+</span><span class="doccomment">///tries to test when input buffers are weird
+</span><span class="kw">async fn </span>test_question_from_bytes() {
+    <span class="kw">let </span>ok_question = <span class="macro">vec!</span>[
+        <span class="comment">/* question - 14 bytes */
+        </span><span class="number">0x04</span>, <span class="number">0x69</span>, <span class="number">0x61</span>, <span class="number">0x6e</span>, <span class="number">0x61</span>, <span class="number">0x03</span>, <span class="number">0x6f</span>, <span class="number">0x72</span>, <span class="number">0x67</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="comment">//0x00, 0x01,
+    </span>];
+    <span class="kw">let </span>input_bufs: Vec&lt;Vec&lt;u8&gt;&gt; = <span class="macro">vec!</span>[
+        <span class="comment">/* header - 12 bytes */
+        // 0xa3, 0x70, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        </span>ok_question[<span class="number">0</span>..<span class="number">10</span>].to_vec(),
+        ok_question[<span class="number">0</span>..<span class="number">11</span>].to_vec(),
+        ok_question[<span class="number">0</span>..<span class="number">12</span>].to_vec(),
     ];
 
-    <span class="kw">for</span> <span class="ident">buf</span> <span class="kw">in</span> <span class="ident">input_bufs</span> {
-        <span class="kw">if</span> <span class="ident">Question::from_packets</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>).<span class="kw">await</span>.<span class="ident">is_ok</span>() {
+    <span class="kw">for </span>buf <span class="kw">in </span>input_bufs {
+        <span class="kw">if </span>Question::from_packets(<span class="kw-2">&amp;</span>buf).<span class="kw">await</span>.is_ok() {
             <span class="macro">panic!</span>(<span class="string">&quot;This should bail!&quot;</span>);
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

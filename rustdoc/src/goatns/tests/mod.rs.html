@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/tests/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../goatns/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/tests/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../goatns/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -559,566 +559,566 @@
 <span id="559">559</span>
 <span id="560">560</span>
 <span id="561">561</span>
-</pre><pre class="rust"><code><span class="kw">mod</span> <span class="ident">e2e_test</span>;
+</pre><pre class="rust"><code><span class="kw">mod </span>e2e_test;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::resourcerecord</span>::{<span class="ident">InternalResourceRecord</span>, <span class="ident">LocRecord</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils::name_as_bytes</span>;
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">PacketType</span>, <span class="ident">Question</span>};
-    <span class="kw">use</span> <span class="ident">packed_struct::prelude</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span><span class="kw">crate</span>::resourcerecord::{InternalResourceRecord, LocRecord};
+    <span class="kw">use </span><span class="kw">crate</span>::utils::name_as_bytes;
+    <span class="kw">use crate</span>::{PacketType, Question};
+    <span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
+    <span class="kw">use </span>std::str::FromStr;
 
-    <span class="kw">use</span> <span class="ident">log::debug</span>;
+    <span class="kw">use </span>log::debug;
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_resourcerecord_name_to_bytes</span>() {
-        <span class="kw">let</span> <span class="ident">rdata</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="string">&quot;cheese.world&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_resourcerecord_name_to_bytes() {
+        <span class="kw">let </span>rdata: Vec&lt;u8&gt; = <span class="string">&quot;cheese.world&quot;</span>.as_bytes().to_vec();
         <span class="macro">assert_eq!</span>(
-            <span class="ident">name_as_bytes</span>(<span class="ident">rdata</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
+            name_as_bytes(rdata, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
             [<span class="number">6</span>, <span class="number">99</span>, <span class="number">104</span>, <span class="number">101</span>, <span class="number">101</span>, <span class="number">115</span>, <span class="number">101</span>, <span class="number">5</span>, <span class="number">119</span>, <span class="number">111</span>, <span class="number">114</span>, <span class="number">108</span>, <span class="number">100</span>, <span class="number">0</span>]
         );
     }
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_resourcerecord_short_name_to_bytes</span>() {
-        <span class="kw">let</span> <span class="ident">rdata</span> <span class="op">=</span> <span class="string">&quot;cheese&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_resourcerecord_short_name_to_bytes() {
+        <span class="kw">let </span>rdata = <span class="string">&quot;cheese&quot;</span>.as_bytes().to_vec();
         <span class="macro">assert_eq!</span>(
-            <span class="ident">name_as_bytes</span>(<span class="ident">rdata</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
+            name_as_bytes(rdata, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
             [<span class="number">6</span>, <span class="number">99</span>, <span class="number">104</span>, <span class="number">101</span>, <span class="number">101</span>, <span class="number">115</span>, <span class="number">101</span>, <span class="number">0</span>]
         );
     }
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_name_as_bytes</span>() {
-        <span class="kw">let</span> <span class="ident">rdata</span> <span class="op">=</span> <span class="string">&quot;cheese.hello.world&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-        <span class="kw">let</span> <span class="ident">compress_ref</span> <span class="op">=</span> <span class="string">&quot;zing.hello.world&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_name_as_bytes() {
+        <span class="kw">let </span>rdata = <span class="string">&quot;cheese.hello.world&quot;</span>.as_bytes().to_vec();
+        <span class="kw">let </span>compress_ref = <span class="string">&quot;zing.hello.world&quot;</span>.as_bytes().to_vec();
         <span class="macro">assert_eq!</span>(
-            <span class="ident">name_as_bytes</span>(<span class="ident">rdata</span>, <span class="prelude-val">Some</span>(<span class="number">12u16</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">compress_ref</span>)),
+            name_as_bytes(rdata, <span class="prelude-val">Some</span>(<span class="number">12u16</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>compress_ref)),
             [<span class="number">6</span>, <span class="number">99</span>, <span class="number">104</span>, <span class="number">101</span>, <span class="number">101</span>, <span class="number">115</span>, <span class="number">101</span>, <span class="number">192</span>, <span class="number">17</span>]
         );
     }
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_build_iana_org_a_reply</span>() {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::reply::Reply</span>;
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::resourcerecord::InternalResourceRecord</span>;
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Header</span>;
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>test_build_iana_org_a_reply() {
+        <span class="kw">use </span><span class="kw">crate</span>::reply::Reply;
+        <span class="kw">use </span><span class="kw">crate</span>::resourcerecord::InternalResourceRecord;
+        <span class="kw">use </span><span class="kw">crate</span>::Header;
 
-        <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="ident">Header</span> {
-            <span class="ident">id</span>: <span class="number">41840</span>,
-            <span class="ident">qr</span>: <span class="ident">PacketType::Answer</span>,
-            <span class="ident">opcode</span>: <span class="ident"><span class="kw">crate</span>::OpCode::Query</span>,
-            <span class="ident">authoritative</span>: <span class="bool-val">false</span>,
-            <span class="ident">truncated</span>: <span class="bool-val">false</span>,
-            <span class="ident">recursion_desired</span>: <span class="bool-val">true</span>,
-            <span class="ident">recursion_available</span>: <span class="bool-val">true</span>,
-            <span class="ident">z</span>: <span class="bool-val">false</span>,
-            <span class="ident">ad</span>: <span class="bool-val">false</span>,
-            <span class="ident">cd</span>: <span class="bool-val">false</span>,
-            <span class="ident">rcode</span>: <span class="ident"><span class="kw">crate</span>::Rcode::NoError</span>,
-            <span class="ident">qdcount</span>: <span class="number">1</span>,
-            <span class="ident">ancount</span>: <span class="number">1</span>,
-            <span class="ident">arcount</span>: <span class="number">0</span>,
-            <span class="ident">nscount</span>: <span class="number">0</span>,
+        <span class="kw">let </span>header = Header {
+            id: <span class="number">41840</span>,
+            qr: PacketType::Answer,
+            opcode: <span class="kw">crate</span>::OpCode::Query,
+            authoritative: <span class="bool-val">false</span>,
+            truncated: <span class="bool-val">false</span>,
+            recursion_desired: <span class="bool-val">true</span>,
+            recursion_available: <span class="bool-val">true</span>,
+            z: <span class="bool-val">false</span>,
+            ad: <span class="bool-val">false</span>,
+            cd: <span class="bool-val">false</span>,
+            rcode: <span class="kw">crate</span>::Rcode::NoError,
+            qdcount: <span class="number">1</span>,
+            ancount: <span class="number">1</span>,
+            arcount: <span class="number">0</span>,
+            nscount: <span class="number">0</span>,
         };
-        <span class="kw">let</span> <span class="ident">qname</span> <span class="op">=</span> <span class="string">&quot;iana.org&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-        <span class="kw">let</span> <span class="ident">question</span> <span class="op">=</span> <span class="ident">Question</span> {
-            <span class="ident">qname</span>: <span class="ident">qname</span>.<span class="ident">clone</span>(),
-            <span class="ident">qtype</span>: <span class="ident"><span class="kw">crate</span>::RecordType::A</span>,
-            <span class="ident">qclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
+        <span class="kw">let </span>qname = <span class="string">&quot;iana.org&quot;</span>.as_bytes().to_vec();
+        <span class="kw">let </span>question = Question {
+            qname: qname.clone(),
+            qtype: <span class="kw">crate</span>::RecordType::A,
+            qclass: <span class="kw">crate</span>::RecordClass::Internet,
         };
-        <span class="kw">let</span> <span class="ident">question_length</span> <span class="op">=</span> <span class="ident">question</span>.<span class="ident">to_bytes</span>().<span class="ident">len</span>();
-        <span class="macro">debug!</span>(<span class="string">&quot;question byte length: {}&quot;</span>, <span class="ident">question_length</span>);
-        <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">std::net::Ipv4Addr::from_str</span>(<span class="string">&quot;192.0.43.8&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">answers</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">InternalResourceRecord::A</span> {
-            <span class="ident">ttl</span>: <span class="number">350</span>,
-            <span class="ident">address</span>: <span class="ident">address</span>.<span class="ident">into</span>(),
-            <span class="ident">rclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
+        <span class="kw">let </span>question_length = question.to_bytes().len();
+        <span class="macro">debug!</span>(<span class="string">&quot;question byte length: {}&quot;</span>, question_length);
+        <span class="kw">let </span>address = std::net::Ipv4Addr::from_str(<span class="string">&quot;192.0.43.8&quot;</span>).unwrap();
+        <span class="kw">let </span>answers = <span class="macro">vec!</span>[InternalResourceRecord::A {
+            ttl: <span class="number">350</span>,
+            address: address.into(),
+            rclass: <span class="kw">crate</span>::RecordClass::Internet,
         }];
-        <span class="kw">let</span> <span class="ident">reply</span> <span class="op">=</span> <span class="ident">Reply</span> {
-            <span class="ident">header</span>,
-            <span class="ident">question</span>: <span class="prelude-val">Some</span>(<span class="ident">question</span>),
-            <span class="ident">answers</span>,
-            <span class="ident">authorities</span>: <span class="macro">vec!</span>[],
-            <span class="ident">additional</span>: <span class="macro">vec!</span>[],
+        <span class="kw">let </span>reply = Reply {
+            header,
+            question: <span class="prelude-val">Some</span>(question),
+            answers,
+            authorities: <span class="macro">vec!</span>[],
+            additional: <span class="macro">vec!</span>[],
         };
-        <span class="kw">let</span> <span class="ident">reply_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">reply</span>.<span class="ident">as_bytes</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="macro">debug!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">reply_bytes</span>);
-        <span class="kw">let</span> <span class="ident">expected_bytes</span> <span class="op">=</span> [
-            <span class="comment">/* header - 12 bytes */</span>
-            <span class="number">0xa3</span>, <span class="number">0x70</span>, <span class="number">0x81</span>, <span class="number">0x80</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>,
-            <span class="comment">/* question - 14 bytes */</span>
-            <span class="number">0x04</span>, <span class="number">0x69</span>, <span class="number">0x61</span>, <span class="number">0x6e</span>, <span class="number">0x61</span>, <span class="number">0x03</span>, <span class="number">0x6f</span>, <span class="number">0x72</span>, <span class="number">0x67</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>,
-            <span class="comment">/* answer - 16 bytes */</span>
-            <span class="number">0xc0</span>, <span class="number">0x0c</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x5e</span>, <span class="number">0x00</span>, <span class="number">0x04</span>, <span class="number">0xc0</span>, <span class="number">0x00</span>,
+        <span class="kw">let </span>reply_bytes: Vec&lt;u8&gt; = reply.as_bytes().<span class="kw">await</span>.unwrap();
+        <span class="macro">debug!</span>(<span class="string">&quot;{:?}&quot;</span>, reply_bytes);
+        <span class="kw">let </span>expected_bytes = [
+            <span class="comment">/* header - 12 bytes */
+            </span><span class="number">0xa3</span>, <span class="number">0x70</span>, <span class="number">0x81</span>, <span class="number">0x80</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>,
+            <span class="comment">/* question - 14 bytes */
+            </span><span class="number">0x04</span>, <span class="number">0x69</span>, <span class="number">0x61</span>, <span class="number">0x6e</span>, <span class="number">0x61</span>, <span class="number">0x03</span>, <span class="number">0x6f</span>, <span class="number">0x72</span>, <span class="number">0x67</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>,
+            <span class="comment">/* answer - 16 bytes */
+            </span><span class="number">0xc0</span>, <span class="number">0x0c</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x5e</span>, <span class="number">0x00</span>, <span class="number">0x04</span>, <span class="number">0xc0</span>, <span class="number">0x00</span>,
             <span class="number">0x2b</span>, <span class="number">0x08</span>,
         ];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_block</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>;
-        <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">byte</span>) <span class="kw">in</span> <span class="ident">reply_bytes</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="kw">if</span> <span class="ident">index</span> <span class="op">&lt;</span> <span class="number">12</span> {
-                <span class="ident">current_block</span> <span class="op">=</span> <span class="string">&quot;Header &quot;</span>;
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">index</span> <span class="op">&lt;</span> <span class="number">26</span> {
-                <span class="ident">current_block</span> <span class="op">=</span> <span class="string">&quot;Question &quot;</span>;
-            } <span class="kw">else</span> {
-                <span class="ident">current_block</span> <span class="op">=</span> <span class="string">&quot;Answer   &quot;</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>current_block: <span class="kw-2">&amp;</span>str;
+        <span class="kw">for </span>(index, byte) <span class="kw">in </span>reply_bytes.iter().enumerate() {
+            <span class="kw">if </span>index &lt; <span class="number">12 </span>{
+                current_block = <span class="string">&quot;Header &quot;</span>;
+            } <span class="kw">else if </span>index &lt; <span class="number">26 </span>{
+                current_block = <span class="string">&quot;Question &quot;</span>;
+            } <span class="kw">else </span>{
+                current_block = <span class="string">&quot;Answer   &quot;</span>;
             }
-            <span class="kw">match</span> <span class="ident">expected_bytes</span>.<span class="ident">get</span>(<span class="ident">index</span>) {
-                <span class="prelude-val">Some</span>(<span class="ident">expected_byte</span>) =&gt; <span class="macro">debug!</span>(
+            <span class="kw">match </span>expected_bytes.get(index) {
+                <span class="prelude-val">Some</span>(expected_byte) =&gt; <span class="macro">debug!</span>(
                     <span class="string">&quot;{} \t {} us: {} ex: {} {}&quot;</span>,
-                    <span class="ident">current_block</span>,
-                    <span class="ident">index</span>,
-                    <span class="ident">byte</span>,
-                    <span class="ident">expected_byte</span>,
-                    (<span class="ident">byte</span> <span class="op">==</span> <span class="ident">expected_byte</span>)
+                    current_block,
+                    index,
+                    byte,
+                    expected_byte,
+                    (byte == expected_byte)
                 ),
-                <span class="prelude-val">None</span> =&gt; {
+                <span class="prelude-val">None </span>=&gt; {
                     <span class="macro">panic!</span>(<span class="string">&quot;Our reply is longer!&quot;</span>);
-                    <span class="comment">// break;</span>
-                }
+                    <span class="comment">// break;
+                </span>}
             }
-            <span class="macro">assert_eq!</span>(<span class="ident">byte</span>, <span class="kw-2">&amp;</span><span class="ident">expected_bytes</span>[<span class="ident">index</span>]);
+            <span class="macro">assert_eq!</span>(byte, <span class="kw-2">&amp;</span>expected_bytes[index]);
         }
-        <span class="macro">assert_eq!</span>([<span class="ident">reply_bytes</span>[<span class="number">0</span>], <span class="ident">reply_bytes</span>[<span class="number">1</span>]], [<span class="number">0xA3</span>, <span class="number">0x70</span>])
+        <span class="macro">assert_eq!</span>([reply_bytes[<span class="number">0</span>], reply_bytes[<span class="number">1</span>]], [<span class="number">0xA3</span>, <span class="number">0x70</span>])
     }
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_cloudflare_soa_reply</span>() {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::reply::Reply</span>;
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::resourcerecord::DomainName</span>;
-        <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Header</span>, <span class="ident">HEADER_BYTES</span>};
-        <span class="comment">//     /*</span>
-        <span class="comment">//     from: https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA</span>
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>test_cloudflare_soa_reply() {
+        <span class="kw">use </span><span class="kw">crate</span>::reply::Reply;
+        <span class="kw">use </span><span class="kw">crate</span>::resourcerecord::DomainName;
+        <span class="kw">use crate</span>::{Header, HEADER_BYTES};
+        <span class="comment">//     /*
+        //     from: https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA
 
-        <span class="comment">//     ;; Sending:</span>
-        <span class="comment">//     ;; QUERY: 8928010000010000000000000a636c6f7564666c61726503636f6d0000060001</span>
-        <span class="comment">//     ;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 35112</span>
-        <span class="comment">//     ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0</span>
-        <span class="comment">//     ;; QUESTION SECTION:</span>
-        <span class="comment">//     ;cloudflare.com.                IN      SOA</span>
+        //     ;; Sending:
+        //     ;; QUERY: 8928010000010000000000000a636c6f7564666c61726503636f6d0000060001
+        //     ;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 35112
+        //     ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+        //     ;; QUESTION SECTION:
+        //     ;cloudflare.com.                IN      SOA
 
-        <span class="comment">//     ;; Got answer:</span>
-        <span class="comment">//     ;; RESPONSE: 8928818000010001000000000a636c6f7564666c61726503636f6d0000060001c00c00060001000000ad0020036e7333c00c03646e73c00c7906ce18000027100000096000093a800000012c</span>
-        <span class="comment">//     ;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 35112</span>
-        <span class="comment">//     ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0</span>
-        <span class="comment">//     ;; QUESTION SECTION:</span>
-        <span class="comment">//     ;cloudflare.com.                IN      SOA</span>
-        <span class="comment">//     ;; ANSWER SECTION:</span>
-        <span class="comment">//     cloudflare.com.         173     IN      SOA     ns3.cloudflare.com. dns.cloudflare.com. 2030489112 10000 2400 604800 300</span>
+        //     ;; Got answer:
+        //     ;; RESPONSE: 8928818000010001000000000a636c6f7564666c61726503636f6d0000060001c00c00060001000000ad0020036e7333c00c03646e73c00c7906ce18000027100000096000093a800000012c
+        //     ;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 35112
+        //     ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        //     ;; QUESTION SECTION:
+        //     ;cloudflare.com.                IN      SOA
+        //     ;; ANSWER SECTION:
+        //     cloudflare.com.         173     IN      SOA     ns3.cloudflare.com. dns.cloudflare.com. 2030489112 10000 2400 604800 300
 
-        <span class="comment">//     */</span>
-        <span class="kw">let</span> <span class="ident">original_question</span>: [<span class="ident">u8</span>; <span class="number">32</span>] <span class="op">=</span> [
+        //     */
+        </span><span class="kw">let </span>original_question: [u8; <span class="number">32</span>] = [
             <span class="number">0x89</span>, <span class="number">0x28</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x0a</span>, <span class="number">0x63</span>,
             <span class="number">0x6c</span>, <span class="number">0x6f</span>, <span class="number">0x75</span>, <span class="number">0x64</span>, <span class="number">0x66</span>, <span class="number">0x6c</span>, <span class="number">0x61</span>, <span class="number">0x72</span>, <span class="number">0x65</span>, <span class="number">0x03</span>, <span class="number">0x63</span>, <span class="number">0x6f</span>, <span class="number">0x6d</span>, <span class="number">0x00</span>,
             <span class="number">0x00</span>, <span class="number">0x06</span>, <span class="number">0x00</span>, <span class="number">0x01</span>,
         ];
 
-        <span class="kw">let</span> <span class="ident">expected_bytes</span> <span class="op">=</span> [
-            <span class="comment">/* header - 12 bytes */</span>
-            <span class="number">0x89</span>, <span class="number">0x28</span>, <span class="number">0x81</span>, <span class="number">0x80</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>,
-            <span class="comment">/* question - 14 bytes */</span>
-            <span class="number">0x0a</span>, <span class="number">0x63</span>, <span class="number">0x6c</span>, <span class="number">0x6f</span>, <span class="number">0x75</span>, <span class="number">0x64</span>, <span class="number">0x66</span>, <span class="number">0x6c</span>, <span class="number">0x61</span>, <span class="comment">/* answer - 16 bytes */</span>
-            <span class="number">0x72</span>, <span class="number">0x65</span>, <span class="number">0x03</span>, <span class="number">0x63</span>, <span class="number">0x6f</span>, <span class="number">0x6d</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x06</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0xc0</span>, <span class="number">0x0c</span>, <span class="number">0x00</span>,
+        <span class="kw">let </span>expected_bytes = [
+            <span class="comment">/* header - 12 bytes */
+            </span><span class="number">0x89</span>, <span class="number">0x28</span>, <span class="number">0x81</span>, <span class="number">0x80</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>,
+            <span class="comment">/* question - 14 bytes */
+            </span><span class="number">0x0a</span>, <span class="number">0x63</span>, <span class="number">0x6c</span>, <span class="number">0x6f</span>, <span class="number">0x75</span>, <span class="number">0x64</span>, <span class="number">0x66</span>, <span class="number">0x6c</span>, <span class="number">0x61</span>, <span class="comment">/* answer - 16 bytes */
+            </span><span class="number">0x72</span>, <span class="number">0x65</span>, <span class="number">0x03</span>, <span class="number">0x63</span>, <span class="number">0x6f</span>, <span class="number">0x6d</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x06</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0xc0</span>, <span class="number">0x0c</span>, <span class="number">0x00</span>,
             <span class="number">0x06</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0xad</span>, <span class="number">0x00</span>, <span class="number">0x20</span>, <span class="number">0x03</span>, <span class="number">0x6e</span>, <span class="number">0x73</span>, <span class="number">0x33</span>, <span class="number">0xc0</span>,
             <span class="number">0x0c</span>, <span class="number">0x03</span>, <span class="number">0x64</span>, <span class="number">0x6e</span>, <span class="number">0x73</span>, <span class="number">0xc0</span>, <span class="number">0x0c</span>, <span class="number">0x79</span>, <span class="number">0x06</span>, <span class="number">0xce</span>, <span class="number">0x18</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x27</span>,
             <span class="number">0x10</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x09</span>, <span class="number">0x60</span>, <span class="number">0x00</span>, <span class="number">0x09</span>, <span class="number">0x3a</span>, <span class="number">0x80</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x2c</span>,
         ];
 
-        <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="ident">Header</span> {
-            <span class="ident">id</span>: <span class="number">35112</span>,
-            <span class="ident">qr</span>: <span class="ident">PacketType::Answer</span>,
-            <span class="ident">opcode</span>: <span class="ident"><span class="kw">crate</span>::OpCode::Query</span>,
-            <span class="ident">authoritative</span>: <span class="bool-val">false</span>,
-            <span class="ident">truncated</span>: <span class="bool-val">false</span>,
-            <span class="ident">recursion_desired</span>: <span class="bool-val">true</span>,
-            <span class="ident">recursion_available</span>: <span class="bool-val">false</span>,
-            <span class="ident">z</span>: <span class="bool-val">false</span>,
-            <span class="ident">ad</span>: <span class="bool-val">false</span>,
-            <span class="ident">cd</span>: <span class="bool-val">false</span>,
-            <span class="ident">rcode</span>: <span class="ident"><span class="kw">crate</span>::Rcode::NoError</span>,
-            <span class="ident">qdcount</span>: <span class="number">1</span>,
-            <span class="ident">ancount</span>: <span class="number">1</span>,
-            <span class="ident">arcount</span>: <span class="number">0</span>,
-            <span class="ident">nscount</span>: <span class="number">0</span>,
+        <span class="kw">let </span>header = Header {
+            id: <span class="number">35112</span>,
+            qr: PacketType::Answer,
+            opcode: <span class="kw">crate</span>::OpCode::Query,
+            authoritative: <span class="bool-val">false</span>,
+            truncated: <span class="bool-val">false</span>,
+            recursion_desired: <span class="bool-val">true</span>,
+            recursion_available: <span class="bool-val">false</span>,
+            z: <span class="bool-val">false</span>,
+            ad: <span class="bool-val">false</span>,
+            cd: <span class="bool-val">false</span>,
+            rcode: <span class="kw">crate</span>::Rcode::NoError,
+            qdcount: <span class="number">1</span>,
+            ancount: <span class="number">1</span>,
+            arcount: <span class="number">0</span>,
+            nscount: <span class="number">0</span>,
         };
-        <span class="kw">let</span> <span class="ident">qname</span> <span class="op">=</span> <span class="string">&quot;cloudflare.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-        <span class="kw">let</span> <span class="ident">question</span> <span class="op">=</span> <span class="ident">Question</span> {
-            <span class="ident">qname</span>: <span class="ident">qname</span>.<span class="ident">clone</span>(),
-            <span class="ident">qtype</span>: <span class="ident"><span class="kw">crate</span>::RecordType::SOA</span>,
-            <span class="ident">qclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
+        <span class="kw">let </span>qname = <span class="string">&quot;cloudflare.com&quot;</span>.as_bytes().to_vec();
+        <span class="kw">let </span>question = Question {
+            qname: qname.clone(),
+            qtype: <span class="kw">crate</span>::RecordType::SOA,
+            qclass: <span class="kw">crate</span>::RecordClass::Internet,
         };
-        <span class="kw">let</span> <span class="ident">question_length</span> <span class="op">=</span> <span class="ident">question</span>.<span class="ident">to_bytes</span>().<span class="ident">len</span>();
-        <span class="macro">debug!</span>(<span class="string">&quot;question byte length: {}&quot;</span>, <span class="ident">question_length</span>);
+        <span class="kw">let </span>question_length = question.to_bytes().len();
+        <span class="macro">debug!</span>(<span class="string">&quot;question byte length: {}&quot;</span>, question_length);
 
-        <span class="comment">// YOLO the  string conversions because it&#39;s a test</span>
-        <span class="kw">let</span> <span class="ident">rdata</span> <span class="op">=</span> <span class="ident">InternalResourceRecord::SOA</span> {
-            <span class="ident">zone</span>: <span class="ident">DomainName::from</span>(<span class="string">&quot;cloudflare.com&quot;</span>),
-            <span class="ident">mname</span>: <span class="ident">DomainName::from</span>(<span class="string">&quot;ns3.cloudflare.com&quot;</span>),
-            <span class="ident">rname</span>: <span class="ident">DomainName::from</span>(<span class="string">&quot;dns.cloudflare.com&quot;</span>),
-            <span class="ident">serial</span>: <span class="number">2030489112</span>,
-            <span class="ident">refresh</span>: <span class="number">10000</span>,
-            <span class="ident">retry</span>: <span class="number">2400</span>,
-            <span class="ident">expire</span>: <span class="number">604800</span>,
-            <span class="ident">minimum</span>: <span class="number">300</span>,
-            <span class="ident">rclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
+        <span class="comment">// YOLO the  string conversions because it&#39;s a test
+        </span><span class="kw">let </span>rdata = InternalResourceRecord::SOA {
+            zone: DomainName::from(<span class="string">&quot;cloudflare.com&quot;</span>),
+            mname: DomainName::from(<span class="string">&quot;ns3.cloudflare.com&quot;</span>),
+            rname: DomainName::from(<span class="string">&quot;dns.cloudflare.com&quot;</span>),
+            serial: <span class="number">2030489112</span>,
+            refresh: <span class="number">10000</span>,
+            retry: <span class="number">2400</span>,
+            expire: <span class="number">604800</span>,
+            minimum: <span class="number">300</span>,
+            rclass: <span class="kw">crate</span>::RecordClass::Internet,
         };
 
-        <span class="comment">// let rdata = rdata.as_bytes();</span>
-        <span class="kw">let</span> <span class="ident">answers</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">rdata</span>];
+        <span class="comment">// let rdata = rdata.as_bytes();
+        </span><span class="kw">let </span>answers = <span class="macro">vec!</span>[rdata];
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">reply</span> <span class="op">=</span> <span class="ident">Reply</span> {
-            <span class="ident">header</span>: <span class="ident">header</span>.<span class="ident">clone</span>(),
-            <span class="ident">question</span>: <span class="prelude-val">Some</span>(<span class="ident">question</span>),
-            <span class="ident">answers</span>,
-            <span class="ident">authorities</span>: <span class="macro">vec!</span>[],
-            <span class="ident">additional</span>: <span class="macro">vec!</span>[],
+        <span class="kw">let </span><span class="kw-2">mut </span>reply = Reply {
+            header: header.clone(),
+            question: <span class="prelude-val">Some</span>(question),
+            answers,
+            authorities: <span class="macro">vec!</span>[],
+            additional: <span class="macro">vec!</span>[],
         };
-        <span class="ident">reply</span>.<span class="ident">header</span>.<span class="ident">recursion_available</span> <span class="op">=</span> <span class="bool-val">true</span>;
-        <span class="macro">debug!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">reply</span>);
-        <span class="kw">let</span> <span class="ident">reply_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">reply</span>.<span class="ident">as_bytes</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="macro">debug!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">reply_bytes</span>);
+        reply.header.recursion_available = <span class="bool-val">true</span>;
+        <span class="macro">debug!</span>(<span class="string">&quot;{:?}&quot;</span>, reply);
+        <span class="kw">let </span>reply_bytes: Vec&lt;u8&gt; = reply.as_bytes().<span class="kw">await</span>.unwrap();
+        <span class="macro">debug!</span>(<span class="string">&quot;{:?}&quot;</span>, reply_bytes);
 
-        <span class="comment">// testing if I was parsing it right...</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">their_header</span> <span class="op">=</span>
-            <span class="ident">Header::unpack_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">original_question</span>[<span class="number">0</span>..<span class="ident">HEADER_BYTES</span>]).<span class="ident">unwrap</span>();
-        <span class="ident">their_header</span>.<span class="ident">ancount</span> <span class="op">=</span> <span class="number">1</span>;
-        <span class="macro">assert_eq!</span>(<span class="ident">header</span>, <span class="ident">their_header</span>.<span class="ident">as_answer</span>());
+        <span class="comment">// testing if I was parsing it right...
+        </span><span class="kw">let </span><span class="kw-2">mut </span>their_header =
+            Header::unpack_from_slice(<span class="kw-2">&amp;</span>original_question[<span class="number">0</span>..HEADER_BYTES]).unwrap();
+        their_header.ancount = <span class="number">1</span>;
+        <span class="macro">assert_eq!</span>(header, their_header.as_answer());
         <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed header matched!&quot;</span>);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_block</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>;
-        <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">byte</span>) <span class="kw">in</span> <span class="ident">reply_bytes</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="kw">if</span> <span class="ident">index</span> <span class="op">&lt;</span> <span class="ident">HEADER_BYTES</span> {
-                <span class="ident">current_block</span> <span class="op">=</span> <span class="string">&quot;Header &quot;</span>;
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">index</span> <span class="op">&lt;</span> <span class="ident">HEADER_BYTES</span> <span class="op">+</span> <span class="number">9</span> {
-                <span class="ident">current_block</span> <span class="op">=</span> <span class="string">&quot;Question &quot;</span>;
-            } <span class="kw">else</span> {
-                <span class="ident">current_block</span> <span class="op">=</span> <span class="string">&quot;Answer   &quot;</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>current_block: <span class="kw-2">&amp;</span>str;
+        <span class="kw">for </span>(index, byte) <span class="kw">in </span>reply_bytes.iter().enumerate() {
+            <span class="kw">if </span>index &lt; HEADER_BYTES {
+                current_block = <span class="string">&quot;Header &quot;</span>;
+            } <span class="kw">else if </span>index &lt; HEADER_BYTES + <span class="number">9 </span>{
+                current_block = <span class="string">&quot;Question &quot;</span>;
+            } <span class="kw">else </span>{
+                current_block = <span class="string">&quot;Answer   &quot;</span>;
             }
 
-            <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> [<span class="ident">byte</span>.<span class="ident">clone</span>()];
-            <span class="kw">let</span> <span class="ident">ascii_byte_us</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">byte</span>.<span class="ident">is_ascii_alphanumeric</span>() {
-                <span class="bool-val">true</span> =&gt; <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>).<span class="ident">unwrap_or</span>(<span class="string">&quot;-&quot;</span>),
-                <span class="bool-val">false</span> =&gt; <span class="string">&quot; &quot;</span>,
+            <span class="kw">let </span>b = [byte.clone()];
+            <span class="kw">let </span>ascii_byte_us = <span class="kw">match </span>byte.is_ascii_alphanumeric() {
+                <span class="bool-val">true </span>=&gt; std::str::from_utf8(<span class="kw-2">&amp;</span>b).unwrap_or(<span class="string">&quot;-&quot;</span>),
+                <span class="bool-val">false </span>=&gt; <span class="string">&quot; &quot;</span>,
             };
 
-            <span class="kw">match</span> <span class="ident">expected_bytes</span>.<span class="ident">get</span>(<span class="ident">index</span>) {
-                <span class="prelude-val">Some</span>(<span class="ident">expected_byte</span>) =&gt; {
-                    <span class="kw">let</span> <span class="ident">eb</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="ident">expected_byte</span>.<span class="ident">clone</span>();
-                    <span class="kw">let</span> <span class="ident">ascii_byte_them</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">eb</span>.<span class="ident">is_ascii_alphanumeric</span>() {
-                        <span class="bool-val">true</span> =&gt; <span class="ident">std::str::from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>).<span class="ident">unwrap_or</span>(<span class="string">&quot;-&quot;</span>),
-                        <span class="bool-val">false</span> =&gt; <span class="string">&quot; &quot;</span>,
+            <span class="kw">match </span>expected_bytes.get(index) {
+                <span class="prelude-val">Some</span>(expected_byte) =&gt; {
+                    <span class="kw">let </span>eb: u8 = expected_byte.clone();
+                    <span class="kw">let </span>ascii_byte_them = <span class="kw">match </span>eb.is_ascii_alphanumeric() {
+                        <span class="bool-val">true </span>=&gt; std::str::from_utf8(<span class="kw-2">&amp;</span>b).unwrap_or(<span class="string">&quot;-&quot;</span>),
+                        <span class="bool-val">false </span>=&gt; <span class="string">&quot; &quot;</span>,
                     };
                     <span class="macro">log::trace!</span>(
                         <span class="string">&quot;{current_block} \t {index} us: {}\t{:#010b}\tex: {expected_byte}\t{expected_byte:#010b} \tchars: {} {}\t matched: {}&quot;</span>,
-                        <span class="ident">byte</span>.<span class="ident">clone</span>(),
-                        <span class="ident">byte</span>.<span class="ident">clone</span>(),
-                        <span class="ident">ascii_byte_us</span>,
-                        <span class="ident">ascii_byte_them</span>,
-                        (<span class="ident">byte</span> <span class="op">==</span> <span class="ident">expected_byte</span>)
+                        byte.clone(),
+                        byte.clone(),
+                        ascii_byte_us,
+                        ascii_byte_them,
+                        (byte == expected_byte)
                     )
                 }
-                <span class="prelude-val">None</span> =&gt; {
+                <span class="prelude-val">None </span>=&gt; {
                     <span class="macro">panic!</span>(<span class="string">&quot;Our reply is longer!&quot;</span>);
-                    <span class="comment">// break;</span>
-                }
+                    <span class="comment">// break;
+                </span>}
             }
-            <span class="comment">// assert_eq!(byte, &amp;expected_bytes[index]);</span>
-        }
-        <span class="comment">// assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])</span>
-    }
+            <span class="comment">// assert_eq!(byte, &amp;expected_bytes[index]);
+        </span>}
+        <span class="comment">// assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
+    </span>}
 
-    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">test_build_ackcdn_allzeros</span>() {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::reply::Reply</span>;
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Header</span>;
+    <span class="attribute">#[tokio::test]
+    </span><span class="kw">async fn </span>test_build_ackcdn_allzeros() {
+        <span class="kw">use </span><span class="kw">crate</span>::reply::Reply;
+        <span class="kw">use </span><span class="kw">crate</span>::Header;
 
-        <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="ident">Header</span> {
-            <span class="ident">id</span>: <span class="number">0x3DE1</span>,
-            <span class="ident">qr</span>: <span class="ident">PacketType::Answer</span>,
-            <span class="ident">opcode</span>: <span class="ident"><span class="kw">crate</span>::OpCode::Query</span>,
-            <span class="ident">authoritative</span>: <span class="bool-val">true</span>,
-            <span class="ident">truncated</span>: <span class="bool-val">false</span>,
-            <span class="ident">recursion_desired</span>: <span class="bool-val">true</span>,
-            <span class="ident">recursion_available</span>: <span class="bool-val">true</span>,
-            <span class="ident">z</span>: <span class="bool-val">false</span>,
-            <span class="ident">ad</span>: <span class="bool-val">false</span>,
-            <span class="ident">cd</span>: <span class="bool-val">false</span>,
-            <span class="ident">rcode</span>: <span class="ident"><span class="kw">crate</span>::Rcode::NoError</span>,
-            <span class="ident">qdcount</span>: <span class="number">1</span>,
-            <span class="ident">ancount</span>: <span class="number">1</span>,
-            <span class="ident">arcount</span>: <span class="number">0</span>,
-            <span class="ident">nscount</span>: <span class="number">0</span>,
+        <span class="kw">let </span>header = Header {
+            id: <span class="number">0x3DE1</span>,
+            qr: PacketType::Answer,
+            opcode: <span class="kw">crate</span>::OpCode::Query,
+            authoritative: <span class="bool-val">true</span>,
+            truncated: <span class="bool-val">false</span>,
+            recursion_desired: <span class="bool-val">true</span>,
+            recursion_available: <span class="bool-val">true</span>,
+            z: <span class="bool-val">false</span>,
+            ad: <span class="bool-val">false</span>,
+            cd: <span class="bool-val">false</span>,
+            rcode: <span class="kw">crate</span>::Rcode::NoError,
+            qdcount: <span class="number">1</span>,
+            ancount: <span class="number">1</span>,
+            arcount: <span class="number">0</span>,
+            nscount: <span class="number">0</span>,
         };
-        <span class="kw">let</span> <span class="ident">qname</span> <span class="op">=</span> <span class="string">&quot;ackcdn.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-        <span class="kw">let</span> <span class="ident">question</span> <span class="op">=</span> <span class="ident">Question</span> {
-            <span class="ident">qname</span>: <span class="ident">qname</span>.<span class="ident">clone</span>(),
-            <span class="ident">qtype</span>: <span class="ident"><span class="kw">crate</span>::RecordType::A</span>,
-            <span class="ident">qclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
+        <span class="kw">let </span>qname = <span class="string">&quot;ackcdn.com&quot;</span>.as_bytes().to_vec();
+        <span class="kw">let </span>question = Question {
+            qname: qname.clone(),
+            qtype: <span class="kw">crate</span>::RecordType::A,
+            qclass: <span class="kw">crate</span>::RecordClass::Internet,
         };
-        <span class="kw">let</span> <span class="ident">question_length</span> <span class="op">=</span> <span class="ident">question</span>.<span class="ident">to_bytes</span>().<span class="ident">len</span>();
-        <span class="macro">debug!</span>(<span class="string">&quot;question byte length: {}&quot;</span>, <span class="ident">question_length</span>);
+        <span class="kw">let </span>question_length = question.to_bytes().len();
+        <span class="macro">debug!</span>(<span class="string">&quot;question byte length: {}&quot;</span>, question_length);
 
-        <span class="comment">// let rdata = IpAddr::try_from(&quot;0.0.0.0&quot;);</span>
-        <span class="comment">// let rdata: Ipv4Addr = &quot;0.0.0.0&quot;.parse().unwrap();</span>
-        <span class="comment">// let rdata: u32 = rdata.into();</span>
-        <span class="comment">// let rdata = rdata.octets();</span>
-        <span class="comment">// let rdlength: u16 = rdata.len() as u16;</span>
+        <span class="comment">// let rdata = IpAddr::try_from(&quot;0.0.0.0&quot;);
+        // let rdata: Ipv4Addr = &quot;0.0.0.0&quot;.parse().unwrap();
+        // let rdata: u32 = rdata.into();
+        // let rdata = rdata.octets();
+        // let rdlength: u16 = rdata.len() as u16;
 
-        <span class="kw">let</span> <span class="ident">answers</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident"><span class="kw">crate</span>::resourcerecord::InternalResourceRecord::A</span> {
-            <span class="comment">// name: vec![0xc0, 0x0c],</span>
-            <span class="comment">// name: &quot;ackcdn.com&quot;.as_bytes().to_vec(),</span>
-            <span class="comment">// record_type: crate::RecordType::A,</span>
-            <span class="comment">// class: crate::RecordClass::Internet,</span>
-            <span class="ident">ttl</span>: <span class="number">2u32</span>,
-            <span class="ident">address</span>: <span class="number">0u32</span>,
+        </span><span class="kw">let </span>answers = <span class="macro">vec!</span>[<span class="kw">crate</span>::resourcerecord::InternalResourceRecord::A {
+            <span class="comment">// name: vec![0xc0, 0x0c],
+            // name: &quot;ackcdn.com&quot;.as_bytes().to_vec(),
+            // record_type: crate::RecordType::A,
+            // class: crate::RecordClass::Internet,
+            </span>ttl: <span class="number">2u32</span>,
+            address: <span class="number">0u32</span>,
 
-            <span class="ident">rclass</span>: <span class="ident"><span class="kw">crate</span>::RecordClass::Internet</span>,
-            <span class="comment">// rdlength,</span>
-            <span class="comment">// rdata: rdata.into(),</span>
-            <span class="comment">// compression: true,</span>
-        }];
+            rclass: <span class="kw">crate</span>::RecordClass::Internet,
+            <span class="comment">// rdlength,
+            // rdata: rdata.into(),
+            // compression: true,
+        </span>}];
 
-        <span class="kw">let</span> <span class="ident">reply</span> <span class="op">=</span> <span class="ident">Reply</span> {
-            <span class="ident">header</span>,
-            <span class="ident">question</span>: <span class="prelude-val">Some</span>(<span class="ident">question</span>),
-            <span class="ident">answers</span>,
-            <span class="ident">authorities</span>: <span class="macro">vec!</span>[],
-            <span class="ident">additional</span>: <span class="macro">vec!</span>[],
+        <span class="kw">let </span>reply = Reply {
+            header,
+            question: <span class="prelude-val">Some</span>(question),
+            answers,
+            authorities: <span class="macro">vec!</span>[],
+            additional: <span class="macro">vec!</span>[],
         };
-        <span class="kw">let</span> <span class="ident">reply_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">reply</span>.<span class="ident">as_bytes</span>().<span class="kw">await</span>.<span class="ident">unwrap</span>();
-        <span class="macro">debug!</span>(<span class="string">&quot;{} bytes: {:?}&quot;</span>, <span class="ident">reply_bytes</span>.<span class="ident">len</span>(), <span class="ident">reply_bytes</span>);
+        <span class="kw">let </span>reply_bytes: Vec&lt;u8&gt; = reply.as_bytes().<span class="kw">await</span>.unwrap();
+        <span class="macro">debug!</span>(<span class="string">&quot;{} bytes: {:?}&quot;</span>, reply_bytes.len(), reply_bytes);
 
-        <span class="kw">let</span> <span class="ident">expected_bytes</span> <span class="op">=</span> [
-            <span class="comment">/* header - 12 bytes */</span>
-            <span class="number">0x3d</span>, <span class="number">0xe1</span>, <span class="number">0x85</span>, <span class="number">0x80</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>,
-            <span class="comment">/* question - 16 bytes */</span>
-            <span class="number">0x06</span>, <span class="number">0x61</span>, <span class="number">0x63</span>, <span class="number">0x6b</span>, <span class="number">0x63</span>, <span class="number">0x64</span>, <span class="number">0x6e</span>, <span class="number">0x03</span>, <span class="number">0x63</span>, <span class="number">0x6f</span>, <span class="number">0x6d</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>,
-            <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="comment">/* answer - 16 bytes  */</span>
-            <span class="number">0xC0</span>, <span class="number">0x0c</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x02</span>, <span class="number">0x00</span>, <span class="number">0x04</span>, <span class="number">0x00</span>, <span class="number">0x00</span>,
+        <span class="kw">let </span>expected_bytes = [
+            <span class="comment">/* header - 12 bytes */
+            </span><span class="number">0x3d</span>, <span class="number">0xe1</span>, <span class="number">0x85</span>, <span class="number">0x80</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>,
+            <span class="comment">/* question - 16 bytes */
+            </span><span class="number">0x06</span>, <span class="number">0x61</span>, <span class="number">0x63</span>, <span class="number">0x6b</span>, <span class="number">0x63</span>, <span class="number">0x64</span>, <span class="number">0x6e</span>, <span class="number">0x03</span>, <span class="number">0x63</span>, <span class="number">0x6f</span>, <span class="number">0x6d</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>,
+            <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="comment">/* answer - 16 bytes  */
+            </span><span class="number">0xC0</span>, <span class="number">0x0c</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x02</span>, <span class="number">0x00</span>, <span class="number">0x04</span>, <span class="number">0x00</span>, <span class="number">0x00</span>,
             <span class="number">0x00</span>, <span class="number">0x00</span>,
         ];
 
-        <span class="macro">log::trace!</span>(<span class="string">&quot;Our length: {}&quot;</span>, <span class="ident">reply_bytes</span>.<span class="ident">len</span>());
-        <span class="macro">log::trace!</span>(<span class="string">&quot;Exp length: {}&quot;</span>, <span class="ident">expected_bytes</span>.<span class="ident">len</span>());
+        <span class="macro">log::trace!</span>(<span class="string">&quot;Our length: {}&quot;</span>, reply_bytes.len());
+        <span class="macro">log::trace!</span>(<span class="string">&quot;Exp length: {}&quot;</span>, expected_bytes.len());
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_block</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>;
-        <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">byte</span>) <span class="kw">in</span> <span class="ident">reply_bytes</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="kw">if</span> <span class="ident">index</span> <span class="op">&lt;</span> <span class="number">12</span> {
-                <span class="ident">current_block</span> <span class="op">=</span> <span class="string">&quot;Header &quot;</span>;
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">index</span> <span class="op">&lt;</span> <span class="number">28</span> {
-                <span class="ident">current_block</span> <span class="op">=</span> <span class="string">&quot;Question &quot;</span>;
-            } <span class="kw">else</span> {
-                <span class="ident">current_block</span> <span class="op">=</span> <span class="string">&quot;Answer   &quot;</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>current_block: <span class="kw-2">&amp;</span>str;
+        <span class="kw">for </span>(index, byte) <span class="kw">in </span>reply_bytes.iter().enumerate() {
+            <span class="kw">if </span>index &lt; <span class="number">12 </span>{
+                current_block = <span class="string">&quot;Header &quot;</span>;
+            } <span class="kw">else if </span>index &lt; <span class="number">28 </span>{
+                current_block = <span class="string">&quot;Question &quot;</span>;
+            } <span class="kw">else </span>{
+                current_block = <span class="string">&quot;Answer   &quot;</span>;
             }
-            <span class="kw">match</span> <span class="ident">expected_bytes</span>.<span class="ident">get</span>(<span class="ident">index</span>) {
-                <span class="prelude-val">Some</span>(<span class="ident">expected_byte</span>) =&gt; <span class="macro">log::error!</span>(
+            <span class="kw">match </span>expected_bytes.get(index) {
+                <span class="prelude-val">Some</span>(expected_byte) =&gt; <span class="macro">log::error!</span>(
                     <span class="string">&quot;{} \t {} us: {} ex: {} {}&quot;</span>,
-                    <span class="ident">current_block</span>,
-                    <span class="ident">index</span>,
-                    <span class="ident">byte</span>,
-                    <span class="ident">expected_byte</span>,
-                    (<span class="ident">byte</span> <span class="op">==</span> <span class="ident">expected_byte</span>)
+                    current_block,
+                    index,
+                    byte,
+                    expected_byte,
+                    (byte == expected_byte)
                 ),
-                <span class="prelude-val">None</span> =&gt; {
+                <span class="prelude-val">None </span>=&gt; {
                     <span class="macro">panic!</span>(<span class="string">&quot;Our reply is longer!&quot;</span>);
-                    <span class="comment">// break;</span>
-                }
+                    <span class="comment">// break;
+                </span>}
             }
-            <span class="macro">assert_eq!</span>(<span class="ident">byte</span>, <span class="kw-2">&amp;</span><span class="ident">expected_bytes</span>[<span class="ident">index</span>]);
+            <span class="macro">assert_eq!</span>(byte, <span class="kw-2">&amp;</span>expected_bytes[index]);
         }
-        <span class="macro">assert_eq!</span>([<span class="ident">reply_bytes</span>[<span class="number">0</span>], <span class="ident">reply_bytes</span>[<span class="number">1</span>]], [<span class="number">0x3D</span>, <span class="number">0xE1</span>]);
+        <span class="macro">assert_eq!</span>([reply_bytes[<span class="number">0</span>], reply_bytes[<span class="number">1</span>]], [<span class="number">0x3D</span>, <span class="number">0xE1</span>]);
     }
 
-    <span class="comment">// #[tokio::test]</span>
-    <span class="comment">// async fn test_from_bytes() {</span>
-    <span class="comment">//     use crate::UDP_BUFFER_SIZE;</span>
-    <span class="comment">//     let input = [</span>
-    <span class="comment">//         0x9c, 0x58, 0x01, 0x20, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x79,</span>
-    <span class="comment">//         0x61, 0x6c, 0x65, 0x6d, 0x61, 0x6e, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, 0x00,</span>
-    <span class="comment">//         0x01,</span>
-    <span class="comment">//     ];</span>
+    <span class="comment">// #[tokio::test]
+    // async fn test_from_bytes() {
+    //     use crate::UDP_BUFFER_SIZE;
+    //     let input = [
+    //         0x9c, 0x58, 0x01, 0x20, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x79,
+    //         0x61, 0x6c, 0x65, 0x6d, 0x61, 0x6e, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, 0x00,
+    //         0x01,
+    //     ];
 
-    <span class="comment">//     let mut buf: [u8; UDP_BUFFER_SIZE] = [0; UDP_BUFFER_SIZE];</span>
-    <span class="comment">//     for (i, b) in input.iter().enumerate() {</span>
-    <span class="comment">//         buf[i] = *b as u8;</span>
-    <span class="comment">//     }</span>
+    //     let mut buf: [u8; UDP_BUFFER_SIZE] = [0; UDP_BUFFER_SIZE];
+    //     for (i, b) in input.iter().enumerate() {
+    //         buf[i] = *b as u8;
+    //     }
 
-    <span class="comment">//     let result = crate::parse_udp_query(crate::enums::Protocol::Udp, input.len(), buf, false)</span>
-    <span class="comment">//         .await</span>
-    <span class="comment">//         .unwrap();</span>
+    //     let result = crate::parse_udp_query(crate::enums::Protocol::Udp, input.len(), buf, false)
+    //         .await
+    //         .unwrap();
 
-    <span class="comment">//     assert_eq!(</span>
-    <span class="comment">//         result.question.as_ref().unwrap().qclass,</span>
-    <span class="comment">//         crate::enums::RecordClass::Internet</span>
-    <span class="comment">//     );</span>
-    <span class="comment">//     assert_eq!(</span>
-    <span class="comment">//         result.question.as_ref().unwrap().qname,</span>
-    <span class="comment">//         &quot;yaleman.org&quot;.as_bytes().to_vec()</span>
-    <span class="comment">//     );</span>
-    <span class="comment">//     // TODO: make sure *everything* is right here</span>
-    <span class="comment">// }</span>
+    //     assert_eq!(
+    //         result.question.as_ref().unwrap().qclass,
+    //         crate::enums::RecordClass::Internet
+    //     );
+    //     assert_eq!(
+    //         result.question.as_ref().unwrap().qname,
+    //         &quot;yaleman.org&quot;.as_bytes().to_vec()
+    //     );
+    //     // TODO: make sure *everything* is right here
+    // }
 
-    <span class="doccomment">/// turns a degrees-minutes-seconds input into a signed 32-bit integer.</span>
-    <span class="doccomment">/// when positive = true, you&#39;re North or West</span>
+    </span><span class="doccomment">/// turns a degrees-minutes-seconds input into a signed 32-bit integer.
+    /// when positive = true, you&#39;re North or West
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_dms_to_i32</span>() {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils::dms_to_u32</span>;
+    </span><span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_dms_to_i32() {
+        <span class="kw">use </span><span class="kw">crate</span>::utils::dms_to_u32;
 
-        <span class="kw">let</span> <span class="ident">equator</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">2u32</span>.<span class="ident">pow</span>(<span class="number">31</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">dms_to_u32</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0.0</span>, <span class="bool-val">true</span>), <span class="ident">equator</span>);
+        <span class="kw">let </span>equator: u32 = <span class="number">2u32</span>.pow(<span class="number">31</span>);
+        <span class="macro">assert_eq!</span>(dms_to_u32(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0.0</span>, <span class="bool-val">true</span>), equator);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">dms_to_u32</span>(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3.0</span>, <span class="bool-val">true</span>), <span class="number">2151206648</span>);
+        <span class="macro">assert_eq!</span>(dms_to_u32(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3.0</span>, <span class="bool-val">true</span>), <span class="number">2151206648</span>);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="doccomment">/// this is based on a record in a pcap in the examples directory -</span>
-    <span class="kw">fn</span> <span class="ident">test_loc_as_bytes</span>() {
-        <span class="comment">// pizza.yaleman.org.	69	IN	LOC	1 2 3.000 N 1 2 3.000 E 10.00m 10m 10m 10m</span>
-        <span class="comment">// compression header c00c</span>
-        <span class="comment">// LOC: 001d</span>
-        <span class="comment">// IN: 0001</span>
-        <span class="comment">// TTL: 00000045 (69)</span>
-        <span class="comment">// Length: 0010 (16)</span>
-        <span class="kw">let</span> <span class="ident">expected_bytes</span>: [<span class="ident">u8</span>; <span class="number">16</span>] <span class="op">=</span> [
-            <span class="number">0x00</span>, <span class="comment">// Version: 0</span>
-            <span class="number">0x13</span>, <span class="comment">// size 19 (10m)</span>
-            <span class="number">0x13</span>, <span class="comment">// hor pres 19 (10m)</span>
-            <span class="number">0x13</span>, <span class="comment">// ver pres 19 (10m)</span>
-            <span class="number">0x80</span>, <span class="number">0x38</span>, <span class="number">0xce</span>, <span class="number">0xf8</span>, <span class="comment">// Latitude: 2151206648 (1 deg 2 min 3.000 sec N)</span>
-            <span class="number">0x80</span>, <span class="number">0x38</span>, <span class="number">0xce</span>, <span class="number">0xf8</span>, <span class="comment">// Longitude: 2151206648 (1 deg 2 min 3.000 sec E)</span>
-            <span class="number">0x00</span>, <span class="number">0x98</span>, <span class="number">0x9a</span>, <span class="number">0x68</span>, <span class="comment">// Altitude: 10001000 (10 m)</span>
-        ];
+    <span class="attribute">#[test]
+    </span><span class="doccomment">/// this is based on a record in a pcap in the examples directory -
+    </span><span class="kw">fn </span>test_loc_as_bytes() {
+        <span class="comment">// pizza.yaleman.org.	69	IN	LOC	1 2 3.000 N 1 2 3.000 E 10.00m 10m 10m 10m
+        // compression header c00c
+        // LOC: 001d
+        // IN: 0001
+        // TTL: 00000045 (69)
+        // Length: 0010 (16)
+        </span><span class="kw">let </span>expected_bytes: [u8; <span class="number">16</span>] = [
+            <span class="number">0x00</span>, <span class="comment">// Version: 0
+            </span><span class="number">0x13</span>, <span class="comment">// size 19 (10m)
+            </span><span class="number">0x13</span>, <span class="comment">// hor pres 19 (10m)
+            </span><span class="number">0x13</span>, <span class="comment">// ver pres 19 (10m)
+            </span><span class="number">0x80</span>, <span class="number">0x38</span>, <span class="number">0xce</span>, <span class="number">0xf8</span>, <span class="comment">// Latitude: 2151206648 (1 deg 2 min 3.000 sec N)
+            </span><span class="number">0x80</span>, <span class="number">0x38</span>, <span class="number">0xce</span>, <span class="number">0xf8</span>, <span class="comment">// Longitude: 2151206648 (1 deg 2 min 3.000 sec E)
+            </span><span class="number">0x00</span>, <span class="number">0x98</span>, <span class="number">0x9a</span>, <span class="number">0x68</span>, <span class="comment">// Altitude: 10001000 (10 m)
+        </span>];
 
-        <span class="kw">let</span> <span class="ident">test_record</span> <span class="op">=</span> <span class="ident">LocRecord</span> {
-            <span class="ident">version</span>: <span class="number">0</span>,
-            <span class="ident">size</span>: <span class="number">0x13</span>,
-            <span class="ident">horiz_pre</span>: <span class="number">0x13</span>,
-            <span class="ident">vert_pre</span>: <span class="number">0x13</span>,
-            <span class="ident">latitude</span>: <span class="number">2151206648</span>,
-            <span class="ident">longitude</span>: <span class="number">2151206648</span>,
-            <span class="ident">altitude</span>: <span class="number">10001000</span>,
+        <span class="kw">let </span>test_record = LocRecord {
+            version: <span class="number">0</span>,
+            size: <span class="number">0x13</span>,
+            horiz_pre: <span class="number">0x13</span>,
+            vert_pre: <span class="number">0x13</span>,
+            latitude: <span class="number">2151206648</span>,
+            longitude: <span class="number">2151206648</span>,
+            altitude: <span class="number">10001000</span>,
         };
-        <span class="kw">let</span> <span class="ident">test_result</span> <span class="op">=</span> <span class="ident">test_record</span>.<span class="ident">pack</span>().<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">expected_bytes</span>, <span class="ident">test_result</span>);
+        <span class="kw">let </span>test_result = test_record.pack().unwrap();
+        <span class="macro">assert_eq!</span>(expected_bytes, test_result);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_loc_record_parser</span>() {
-        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::resourcerecord::FileLocRecord</span>;
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_loc_record_parser() {
+        <span class="kw">use </span><span class="kw">crate</span>::resourcerecord::FileLocRecord;
 
-        <span class="kw">let</span> <span class="ident">sample_data</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">FileLocRecord</span>)<span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[
+        <span class="kw">let </span>sample_data: Vec&lt;(<span class="kw-2">&amp;</span>str, FileLocRecord)&gt; = <span class="macro">vec!</span>[
             (
                 <span class="string">&quot;42 21 43.952 N 71 5 6.344 W -24m 1m 200m 15m&quot;</span>,
-                <span class="ident">FileLocRecord</span> {
-                    <span class="ident">d1</span>: <span class="number">42</span>,
-                    <span class="ident">m1</span>: <span class="number">21</span>,
-                    <span class="ident">s1</span>: <span class="number">43.952</span>,
-                    <span class="ident">d2</span>: <span class="number">71</span>,
-                    <span class="ident">m2</span>: <span class="number">5</span>,
-                    <span class="ident">s2</span>: <span class="number">6.344</span>,
-                    <span class="ident">lat_dir</span>: <span class="string">&quot;N&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">lon_dir</span>: <span class="string">&quot;W&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">alt</span>: (<span class="number">10000000</span> <span class="op">+</span> (<span class="op">-</span><span class="number">24</span> <span class="op">*</span> <span class="number">100</span>)),
-                    <span class="ident">size</span>: <span class="number">0x12</span>,
-                    <span class="ident">horiz_pre</span>: <span class="number">0x24</span>,
-                    <span class="ident">vert_pre</span>: <span class="number">0x23</span>,
+                FileLocRecord {
+                    d1: <span class="number">42</span>,
+                    m1: <span class="number">21</span>,
+                    s1: <span class="number">43.952</span>,
+                    d2: <span class="number">71</span>,
+                    m2: <span class="number">5</span>,
+                    s2: <span class="number">6.344</span>,
+                    lat_dir: <span class="string">&quot;N&quot;</span>.to_string(),
+                    lon_dir: <span class="string">&quot;W&quot;</span>.to_string(),
+                    alt: (<span class="number">10000000 </span>+ (-<span class="number">24 </span>* <span class="number">100</span>)),
+                    size: <span class="number">0x12</span>,
+                    horiz_pre: <span class="number">0x24</span>,
+                    vert_pre: <span class="number">0x23</span>,
                 },
             ),
             (
                 <span class="string">&quot;42 21 43.952 N 71 5 6.344 W -24m 1m 200m&quot;</span>,
-                <span class="ident">FileLocRecord</span> {
-                    <span class="ident">d1</span>: <span class="number">42</span>,
-                    <span class="ident">m1</span>: <span class="number">21</span>,
-                    <span class="ident">s1</span>: <span class="number">43.952</span>,
-                    <span class="ident">lat_dir</span>: <span class="string">&quot;N&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">d2</span>: <span class="number">71</span>,
-                    <span class="ident">m2</span>: <span class="number">5</span>,
-                    <span class="ident">s2</span>: <span class="number">6.344</span>,
-                    <span class="ident">lon_dir</span>: <span class="string">&quot;W&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">alt</span>: <span class="number">10000000</span> <span class="op">+</span> (<span class="op">-</span><span class="number">24</span> <span class="op">*</span> <span class="number">100</span>),
-                    <span class="ident">size</span>: <span class="number">0x12</span>,
-                    <span class="ident">horiz_pre</span>: <span class="number">0x24</span>,
-                    <span class="ident">vert_pre</span>: <span class="number">0x13</span>,
+                FileLocRecord {
+                    d1: <span class="number">42</span>,
+                    m1: <span class="number">21</span>,
+                    s1: <span class="number">43.952</span>,
+                    lat_dir: <span class="string">&quot;N&quot;</span>.to_string(),
+                    d2: <span class="number">71</span>,
+                    m2: <span class="number">5</span>,
+                    s2: <span class="number">6.344</span>,
+                    lon_dir: <span class="string">&quot;W&quot;</span>.to_string(),
+                    alt: <span class="number">10000000 </span>+ (-<span class="number">24 </span>* <span class="number">100</span>),
+                    size: <span class="number">0x12</span>,
+                    horiz_pre: <span class="number">0x24</span>,
+                    vert_pre: <span class="number">0x13</span>,
                 },
             ),
             (
                 <span class="string">&quot;32 S 116 E 10m&quot;</span>,
-                <span class="ident">FileLocRecord</span> {
-                    <span class="ident">d1</span>: <span class="number">32</span>,
-                    <span class="ident">lat_dir</span>: <span class="string">&quot;S&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">d2</span>: <span class="number">116</span>,
-                    <span class="ident">lon_dir</span>: <span class="string">&quot;E&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">alt</span>: <span class="number">10000000</span> <span class="op">+</span> (<span class="number">10</span> <span class="op">*</span> <span class="number">100</span>),
-                    ..<span class="ident">Default::default</span>()
+                FileLocRecord {
+                    d1: <span class="number">32</span>,
+                    lat_dir: <span class="string">&quot;S&quot;</span>.to_string(),
+                    d2: <span class="number">116</span>,
+                    lon_dir: <span class="string">&quot;E&quot;</span>.to_string(),
+                    alt: <span class="number">10000000 </span>+ (<span class="number">10 </span>* <span class="number">100</span>),
+                    ..Default::default()
                 },
             ),
             (
                 <span class="string">&quot;32 7 19 S 116 2 25 E 10m&quot;</span>,
-                <span class="ident">FileLocRecord</span> {
-                    <span class="ident">d1</span>: <span class="number">32</span>,
-                    <span class="ident">m1</span>: <span class="number">7</span>,
-                    <span class="ident">s1</span>: <span class="number">19.0</span>,
-                    <span class="ident">lat_dir</span>: <span class="string">&quot;S&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">d2</span>: <span class="number">116</span>,
-                    <span class="ident">m2</span>: <span class="number">2</span>,
-                    <span class="ident">s2</span>: <span class="number">25.0</span>,
-                    <span class="ident">lon_dir</span>: <span class="string">&quot;E&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">alt</span>: <span class="number">10000000</span> <span class="op">+</span> (<span class="number">10</span> <span class="op">*</span> <span class="number">100</span>),
-                    ..<span class="ident">FileLocRecord::default</span>()
+                FileLocRecord {
+                    d1: <span class="number">32</span>,
+                    m1: <span class="number">7</span>,
+                    s1: <span class="number">19.0</span>,
+                    lat_dir: <span class="string">&quot;S&quot;</span>.to_string(),
+                    d2: <span class="number">116</span>,
+                    m2: <span class="number">2</span>,
+                    s2: <span class="number">25.0</span>,
+                    lon_dir: <span class="string">&quot;E&quot;</span>.to_string(),
+                    alt: <span class="number">10000000 </span>+ (<span class="number">10 </span>* <span class="number">100</span>),
+                    ..FileLocRecord::default()
                 },
             ),
             (
                 <span class="string">&quot;42 21 54 N 71 06 18 W -24m 30m&quot;</span>,
-                <span class="ident">FileLocRecord</span> {
-                    <span class="ident">d1</span>: <span class="number">42</span>,
-                    <span class="ident">m1</span>: <span class="number">21</span>,
-                    <span class="ident">s1</span>: <span class="number">54.0</span>,
-                    <span class="ident">lat_dir</span>: <span class="string">&quot;N&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">d2</span>: <span class="number">71</span>,
-                    <span class="ident">m2</span>: <span class="number">6</span>,
-                    <span class="ident">s2</span>: <span class="number">18.0</span>,
-                    <span class="ident">lon_dir</span>: <span class="string">&quot;W&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">alt</span>: (<span class="op">-</span><span class="number">24</span> <span class="op">*</span> <span class="number">100</span>) <span class="op">+</span> <span class="number">10000000</span>,
-                    <span class="ident">size</span>: <span class="number">0x33</span>,
-                    ..<span class="ident">FileLocRecord::default</span>()
+                FileLocRecord {
+                    d1: <span class="number">42</span>,
+                    m1: <span class="number">21</span>,
+                    s1: <span class="number">54.0</span>,
+                    lat_dir: <span class="string">&quot;N&quot;</span>.to_string(),
+                    d2: <span class="number">71</span>,
+                    m2: <span class="number">6</span>,
+                    s2: <span class="number">18.0</span>,
+                    lon_dir: <span class="string">&quot;W&quot;</span>.to_string(),
+                    alt: (-<span class="number">24 </span>* <span class="number">100</span>) + <span class="number">10000000</span>,
+                    size: <span class="number">0x33</span>,
+                    ..FileLocRecord::default()
                 },
             ),
             (
                 <span class="string">&quot;52 14 05 N 00 08 50 E 10m&quot;</span>,
-                <span class="ident">FileLocRecord</span> {
-                    <span class="ident">d1</span>: <span class="number">52</span>,
-                    <span class="ident">m1</span>: <span class="number">14</span>,
-                    <span class="ident">s1</span>: <span class="number">5.0</span>,
-                    <span class="ident">lat_dir</span>: <span class="string">&quot;N&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">m2</span>: <span class="number">8</span>,
-                    <span class="ident">s2</span>: <span class="number">50.0</span>,
-                    <span class="ident">lon_dir</span>: <span class="string">&quot;E&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">alt</span>: (<span class="number">10</span> <span class="op">*</span> <span class="number">100</span>) <span class="op">+</span> <span class="number">10000000</span>,
-                    ..<span class="ident">FileLocRecord::default</span>()
+                FileLocRecord {
+                    d1: <span class="number">52</span>,
+                    m1: <span class="number">14</span>,
+                    s1: <span class="number">5.0</span>,
+                    lat_dir: <span class="string">&quot;N&quot;</span>.to_string(),
+                    m2: <span class="number">8</span>,
+                    s2: <span class="number">50.0</span>,
+                    lon_dir: <span class="string">&quot;E&quot;</span>.to_string(),
+                    alt: (<span class="number">10 </span>* <span class="number">100</span>) + <span class="number">10000000</span>,
+                    ..FileLocRecord::default()
                 },
             ),
             (
                 <span class="string">&quot;42 21 28.764 N 71 00 51.617 W -44m 2000m&quot;</span>,
-                <span class="ident">FileLocRecord</span> {
-                    <span class="ident">d1</span>: <span class="number">42</span>,
-                    <span class="ident">m1</span>: <span class="number">21</span>,
-                    <span class="ident">s1</span>: <span class="number">28.764</span>,
-                    <span class="ident">lat_dir</span>: <span class="string">&quot;N&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">d2</span>: <span class="number">71</span>,
-                    <span class="ident">m2</span>: <span class="number">0</span>,
-                    <span class="ident">s2</span>: <span class="number">51.617</span>,
-                    <span class="ident">lon_dir</span>: <span class="string">&quot;W&quot;</span>.<span class="ident">to_string</span>(),
-                    <span class="ident">alt</span>: (<span class="op">-</span><span class="number">44</span> <span class="op">*</span> <span class="number">100</span>) <span class="op">+</span> <span class="number">10000000</span>,
-                    <span class="ident">size</span>: <span class="number">0x25</span>,
-                    ..<span class="ident">FileLocRecord::default</span>()
+                FileLocRecord {
+                    d1: <span class="number">42</span>,
+                    m1: <span class="number">21</span>,
+                    s1: <span class="number">28.764</span>,
+                    lat_dir: <span class="string">&quot;N&quot;</span>.to_string(),
+                    d2: <span class="number">71</span>,
+                    m2: <span class="number">0</span>,
+                    s2: <span class="number">51.617</span>,
+                    lon_dir: <span class="string">&quot;W&quot;</span>.to_string(),
+                    alt: (-<span class="number">44 </span>* <span class="number">100</span>) + <span class="number">10000000</span>,
+                    size: <span class="number">0x25</span>,
+                    ..FileLocRecord::default()
                 },
             ),
         ];
-        <span class="kw">for</span> (<span class="ident">input</span>, <span class="ident">output</span>) <span class="kw">in</span> <span class="ident">sample_data</span> {
+        <span class="kw">for </span>(input, output) <span class="kw">in </span>sample_data {
             <span class="macro">eprintln!</span>(<span class="string">&quot;Testing {input}&quot;</span>);
-            <span class="kw">let</span> <span class="ident">record</span> <span class="op">=</span> <span class="ident">FileLocRecord::try_from</span>(<span class="ident">input</span>);
-            <span class="macro">assert!</span>(<span class="ident">record</span>.<span class="ident">is_ok</span>());
-            <span class="macro">assert_eq!</span>(<span class="ident">record</span>.<span class="ident">unwrap</span>(), <span class="ident">output</span>);
+            <span class="kw">let </span>record = FileLocRecord::try_from(input);
+            <span class="macro">assert!</span>(record.is_ok());
+            <span class="macro">assert_eq!</span>(record.unwrap(), output);
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

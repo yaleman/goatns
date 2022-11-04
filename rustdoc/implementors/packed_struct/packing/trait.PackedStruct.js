@@ -1,3 +1,3 @@
-(function() {var implementors = {};
-implementors["goatns"] = [{"text":"impl PackedStruct for <a class=\"struct\" href=\"goatns/resourcerecord/struct.LocRecord.html\" title=\"struct goatns::resourcerecord::LocRecord\">LocRecord</a>","synthetic":false,"types":["goatns::resourcerecord::LocRecord"]},{"text":"impl PackedStruct for <a class=\"struct\" href=\"goatns/struct.Header.html\" title=\"struct goatns::Header\">Header</a>","synthetic":false,"types":["goatns::Header"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {var implementors = {
+"goatns":[["impl PackedStruct for <a class=\"struct\" href=\"goatns/resourcerecord/struct.LocRecord.html\" title=\"struct goatns::resourcerecord::LocRecord\">LocRecord</a>"],["impl PackedStruct for <a class=\"struct\" href=\"goatns/struct.Header.html\" title=\"struct goatns::Header\">Header</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

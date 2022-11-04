@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goatns/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goatns/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -579,98 +579,98 @@
 <span id="579">579</span>
 <span id="580">580</span>
 <span id="581">581</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums::SystemState</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::reply::Reply</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Header</span>, <span class="ident">PacketType</span>, <span class="ident">Rcode</span>, <span class="ident">HEADER_BYTES</span>};
-<span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">arg</span>, <span class="ident">command</span>, <span class="ident">value_parser</span>, <span class="ident">Arg</span>, <span class="ident">ArgMatches</span>};
-<span class="kw">use</span> <span class="ident">log</span>::{<span class="ident">debug</span>, <span class="ident">trace</span>};
-<span class="kw">use</span> <span class="ident">std::str::from_utf8</span>;
-<span class="kw">use</span> <span class="ident">tokio::io::AsyncWriteExt</span>;
-<span class="kw">use</span> <span class="ident">tokio::time::sleep</span>;
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::SystemState;
+<span class="kw">use </span><span class="kw">crate</span>::reply::Reply;
+<span class="kw">use crate</span>::{Header, PacketType, Rcode, HEADER_BYTES};
+<span class="kw">use </span>clap::{arg, command, value_parser, Arg, ArgMatches};
+<span class="kw">use </span>log::{debug, trace};
+<span class="kw">use </span>std::str::from_utf8;
+<span class="kw">use </span>tokio::io::AsyncWriteExt;
+<span class="kw">use </span>tokio::time::sleep;
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vec_find</span>(<span class="ident">item</span>: <span class="ident">u8</span>, <span class="ident">search</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">curr_byte</span>) <span class="kw">in</span> <span class="ident">search</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-        <span class="kw">if</span> <span class="kw-2">&amp;</span>(<span class="ident">item</span> <span class="kw">as</span> <span class="ident">u8</span>) <span class="op">==</span> <span class="ident">curr_byte</span> {
-            <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">index</span>);
+<span class="kw">pub fn </span>vec_find(item: u8, search: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+    <span class="kw">for </span>(index, curr_byte) <span class="kw">in </span>search.iter().enumerate() {
+        <span class="kw">if </span><span class="kw-2">&amp;</span>(item <span class="kw">as </span>u8) == curr_byte {
+            <span class="kw">return </span><span class="prelude-val">Some</span>(index);
         }
     }
-    <span class="prelude-val">None</span>
-}
+    <span class="prelude-val">None
+</span>}
 
-<span class="doccomment">/// does the conversion from &quot;example.com&quot; to &quot;7example3com&quot; BUT DOES NOT DO THE TRAILING NULL BECAUSE REASONS</span>
-<span class="kw">fn</span> <span class="ident">seven_dot_three_conversion</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-    <span class="macro">trace!</span>(<span class="string">&quot;7.3 conversion for {name:?} {:?}&quot;</span>, <span class="ident">from_utf8</span>(<span class="ident">name</span>));
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+<span class="doccomment">/// does the conversion from &quot;example.com&quot; to &quot;7example3com&quot; BUT DOES NOT DO THE TRAILING NULL BECAUSE REASONS
+</span><span class="kw">fn </span>seven_dot_three_conversion(name: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt; {
+    <span class="macro">trace!</span>(<span class="string">&quot;7.3 conversion for {name:?} {:?}&quot;</span>, from_utf8(name));
+    <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
 
-    <span class="comment">// TODO: reimplement this with slices and stuff</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">next_dot</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">vec_find</span>(<span class="number">46</span>, <span class="ident">name</span>) {
-        <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-        <span class="prelude-val">None</span> =&gt; {
-            <span class="comment">// if there&#39;s no dots, then just push a length on the front and include the data. then bail</span>
-            <span class="ident">result</span>.<span class="ident">push</span>(<span class="ident">name</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>);
-            <span class="ident">result</span>.<span class="ident">extend</span>(<span class="ident">name</span>);
-            <span class="kw">return</span> <span class="ident">result</span>;
+    <span class="comment">// TODO: reimplement this with slices and stuff
+    </span><span class="kw">let </span><span class="kw-2">mut </span>next_dot: usize = <span class="kw">match </span>vec_find(<span class="number">46</span>, name) {
+        <span class="prelude-val">Some</span>(value) =&gt; value,
+        <span class="prelude-val">None </span>=&gt; {
+            <span class="comment">// if there&#39;s no dots, then just push a length on the front and include the data. then bail
+            </span>result.push(name.len() <span class="kw">as </span>u8);
+            result.extend(name);
+            <span class="kw">return </span>result;
         }
     };
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">name_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">keep_looping</span> <span class="op">=</span> <span class="bool-val">true</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_position</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
-    <span class="comment">// add the first segment length</span>
-    <span class="ident">result</span>.<span class="ident">push</span>(<span class="ident">next_dot</span> <span class="kw">as</span> <span class="ident">u8</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>name_bytes: Vec&lt;u8&gt; = name.to_vec();
+    <span class="kw">let </span><span class="kw-2">mut </span>keep_looping = <span class="bool-val">true</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>current_position: usize = <span class="number">0</span>;
+    <span class="comment">// add the first segment length
+    </span>result.push(next_dot <span class="kw">as </span>u8);
 
-    <span class="kw">while</span> <span class="ident">keep_looping</span> {
-        <span class="kw">if</span> <span class="ident">next_dot</span> <span class="op">==</span> <span class="ident">current_position</span> {
-            <span class="ident">name_bytes</span> <span class="op">=</span> <span class="ident">name_bytes</span>.<span class="ident">to_vec</span>()[<span class="ident">current_position</span> <span class="op">+</span> <span class="number">1</span>..].<span class="ident">into</span>();
-            <span class="ident">next_dot</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">vec_find</span>(<span class="number">46</span>, <span class="kw-2">&amp;</span><span class="ident">name_bytes</span>) {
-                <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                <span class="prelude-val">None</span> =&gt; <span class="ident">name_bytes</span>.<span class="ident">len</span>(),
+    <span class="kw">while </span>keep_looping {
+        <span class="kw">if </span>next_dot == current_position {
+            name_bytes = name_bytes.to_vec()[current_position + <span class="number">1</span>..].into();
+            next_dot = <span class="kw">match </span>vec_find(<span class="number">46</span>, <span class="kw-2">&amp;</span>name_bytes) {
+                <span class="prelude-val">Some</span>(value) =&gt; value,
+                <span class="prelude-val">None </span>=&gt; name_bytes.len(),
             };
-            <span class="ident">current_position</span> <span class="op">=</span> <span class="number">0</span>;
-            <span class="comment">// this should be the</span>
-            <span class="comment">// debug!(&quot;. - {:?} ({:?})&quot;, next_dot, name_bytes);</span>
-            <span class="kw">if</span> <span class="ident">next_dot</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-                <span class="ident">result</span>.<span class="ident">push</span>(<span class="ident">next_dot</span> <span class="kw">as</span> <span class="ident">u8</span>);
-                <span class="macro">trace!</span>(<span class="string">&quot;pushing next_dot {}&quot;</span>, <span class="ident">next_dot</span> <span class="kw">as</span> <span class="ident">u8</span>);
+            current_position = <span class="number">0</span>;
+            <span class="comment">// this should be the
+            // debug!(&quot;. - {:?} ({:?})&quot;, next_dot, name_bytes);
+            </span><span class="kw">if </span>next_dot != <span class="number">0 </span>{
+                result.push(next_dot <span class="kw">as </span>u8);
+                <span class="macro">trace!</span>(<span class="string">&quot;pushing next_dot {}&quot;</span>, next_dot <span class="kw">as </span>u8);
             }
-        } <span class="kw">else</span> {
-            <span class="comment">// we are processing bytes</span>
-            <span class="macro">trace!</span>(<span class="string">&quot;pushing {}&quot;</span>, <span class="ident">name_bytes</span>[<span class="ident">current_position</span>]);
-            <span class="ident">result</span>.<span class="ident">push</span>(<span class="ident">name_bytes</span>[<span class="ident">current_position</span>]);
-            <span class="comment">// debug!(&quot;{:?} {:?}&quot;, current_position, name_bytes.as_bytes()[current_position]);</span>
-            <span class="ident">current_position</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        } <span class="kw">else </span>{
+            <span class="comment">// we are processing bytes
+            </span><span class="macro">trace!</span>(<span class="string">&quot;pushing {}&quot;</span>, name_bytes[current_position]);
+            result.push(name_bytes[current_position]);
+            <span class="comment">// debug!(&quot;{:?} {:?}&quot;, current_position, name_bytes.as_bytes()[current_position]);
+            </span>current_position += <span class="number">1</span>;
         }
-        <span class="kw">if</span> <span class="ident">current_position</span> <span class="op">==</span> <span class="ident">name_bytes</span>.<span class="ident">len</span>() {
-            <span class="ident">keep_looping</span> <span class="op">=</span> <span class="bool-val">false</span>;
+        <span class="kw">if </span>current_position == name_bytes.len() {
+            keep_looping = <span class="bool-val">false</span>;
         }
     }
-    <span class="ident">result</span>
+    result
 }
 
-<span class="doccomment">/// If you have a `name` and a `target` and want to see if you can find a chunk of the `target` that the `name` ends with, this is your function!</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_tail_match</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">target</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">usize</span> {
-    <span class="comment">// #[cfg(debug)]</span>
-    <span class="comment">// {</span>
-    <span class="kw">let</span> <span class="ident">name_str</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{name:?}&quot;</span>);
-    <span class="kw">let</span> <span class="ident">target_str</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{target:?}&quot;</span>);
-    <span class="kw">let</span> <span class="ident">longest</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">name_str</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">target_str</span>.<span class="ident">len</span>() {
-        <span class="bool-val">true</span> =&gt; <span class="ident">name_str</span>.<span class="ident">len</span>(),
-        <span class="bool-val">false</span> =&gt; <span class="ident">target_str</span>.<span class="ident">len</span>(),
+<span class="doccomment">/// If you have a `name` and a `target` and want to see if you can find a chunk of the `target` that the `name` ends with, this is your function!
+</span><span class="kw">pub fn </span>find_tail_match(name: <span class="kw-2">&amp;</span>[u8], target: <span class="kw-2">&amp;</span>Vec&lt;u8&gt;) -&gt; usize {
+    <span class="comment">// #[cfg(debug)]
+    // {
+    </span><span class="kw">let </span>name_str = <span class="macro">format!</span>(<span class="string">&quot;{name:?}&quot;</span>);
+    <span class="kw">let </span>target_str = <span class="macro">format!</span>(<span class="string">&quot;{target:?}&quot;</span>);
+    <span class="kw">let </span>longest = <span class="kw">match </span>name_str.len() &gt; target_str.len() {
+        <span class="bool-val">true </span>=&gt; name_str.len(),
+        <span class="bool-val">false </span>=&gt; target_str.len(),
     };
     <span class="macro">trace!</span>(<span class="string">&quot;find_tail_match(\n  name={name_str:&gt;longest$}, \ntarget={target_str:&gt;longest$}\n)&quot;</span>,);
-    <span class="comment">// }</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tail_index</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">0</span>;
-    <span class="kw">for</span> (<span class="ident">i</span>, <span class="kw">_</span>) <span class="kw">in</span> <span class="ident">target</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+    <span class="comment">// }
+    </span><span class="kw">let </span><span class="kw-2">mut </span>tail_index: usize = <span class="number">0</span>;
+    <span class="kw">for </span>(i, <span class="kw">_</span>) <span class="kw">in </span>target.iter().enumerate() {
         <span class="macro">trace!</span>(<span class="string">&quot;Tail index={i}&quot;</span>);
-        <span class="kw">let</span> <span class="ident">tail</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">target</span>[<span class="ident">i</span>..];
-        <span class="kw">if</span> <span class="ident">name</span>.<span class="ident">ends_with</span>(<span class="ident">tail</span>) {
+        <span class="kw">let </span>tail = <span class="kw-2">&amp;</span>target[i..];
+        <span class="kw">if </span>name.ends_with(tail) {
             <span class="macro">trace!</span>(<span class="string">&quot;Found a tail at index {i}&quot;</span>);
-            <span class="ident">tail_index</span> <span class="op">=</span> <span class="ident">i</span>;
+            tail_index = i;
             <span class="kw">break</span>;
-        } <span class="kw">else</span> {
-            <span class="macro">trace!</span>(<span class="string">&quot;Didn&#39;t match: name / target \n{name:?}\n{:?}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">target</span>[<span class="ident">i</span>..]);
+        } <span class="kw">else </span>{
+            <span class="macro">trace!</span>(<span class="string">&quot;Didn&#39;t match: name / target \n{name:?}\n{:?}&quot;</span>, <span class="kw-2">&amp;</span>target[i..]);
         }
     }
-    <span class="ident">tail_index</span>
+    tail_index
 }
 
 <span class="comment">/*
@@ -689,476 +689,476 @@ name_as_bytes(
     Some(12),
     Some(&quot;example.com&quot;.as_bytes().to_vec())
 )
-*/</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">name_as_bytes</span>(
-    <span class="ident">name</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="ident">compress_target</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-    <span class="ident">compress_reference</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+*/
+</span><span class="kw">pub fn </span>name_as_bytes(
+    name: Vec&lt;u8&gt;,
+    compress_target: <span class="prelude-ty">Option</span>&lt;u16&gt;,
+    compress_reference: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;u8&gt;&gt;,
+) -&gt; Vec&lt;u8&gt; {
     <span class="macro">trace!</span>(<span class="string">&quot;################################&quot;</span>);
-    <span class="kw">match</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>) {
-        <span class="prelude-val">Ok</span>(<span class="ident">nstr</span>) =&gt; <span class="macro">trace!</span>(<span class="string">&quot;name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}&quot;</span>),
+    <span class="kw">match </span>from_utf8(<span class="kw-2">&amp;</span>name) {
+        <span class="prelude-val">Ok</span>(nstr) =&gt; <span class="macro">trace!</span>(<span class="string">&quot;name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}&quot;</span>),
         <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt;  <span class="macro">trace!</span>(<span class="string">&quot;failed to utf-8 name name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}&quot;</span>),
     };
 
-    <span class="comment">// if we&#39;re given a compression target and no reference just compress it and return</span>
-    <span class="kw">if</span> <span class="kw">let</span> (<span class="prelude-val">Some</span>(<span class="ident">target</span>), <span class="prelude-val">None</span>) <span class="op">=</span> (<span class="ident">compress_target</span>, <span class="ident">compress_reference</span>) {
+    <span class="comment">// if we&#39;re given a compression target and no reference just compress it and return
+    </span><span class="kw">if let </span>(<span class="prelude-val">Some</span>(target), <span class="prelude-val">None</span>) = (compress_target, compress_reference) {
         <span class="macro">trace!</span>(<span class="string">&quot;we got a compress target ({target}) but no reference we&#39;re just going to compress&quot;</span>);
-        <span class="comment">// we need the first two bits to be 1, to mark it as compressed</span>
-        <span class="comment">// 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4</span>
-        <span class="kw">let</span> <span class="ident">result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0b1100000000000000</span> <span class="op">|</span> <span class="ident">target</span> <span class="kw">as</span> <span class="ident">u16</span>).<span class="ident">to_be_bytes</span>().<span class="ident">into</span>();
+        <span class="comment">// we need the first two bits to be 1, to mark it as compressed
+        // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
+        </span><span class="kw">let </span>result: Vec&lt;u8&gt; = (<span class="number">0b1100000000000000 </span>| target <span class="kw">as </span>u16).to_be_bytes().into();
         <span class="macro">trace!</span>(<span class="string">&quot;result of name_as_bytes {result:?}&quot;</span>);
-        <span class="kw">return</span> <span class="ident">result</span>;
+        <span class="kw">return </span>result;
     };
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="comment">// if somehow it&#39;s a weird bare domain then we don&#39;t have to do much it</span>
-    <span class="kw">if</span> <span class="op">!</span><span class="ident">name</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="number">46</span>) {
-        <span class="ident">result</span>.<span class="ident">push</span>(<span class="ident">name</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>);
-        <span class="ident">result</span>.<span class="ident">extend</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>);
-        <span class="ident">result</span>.<span class="ident">push</span>(<span class="number">0</span>); <span class="comment">// null pad the name</span>
-        <span class="kw">return</span> <span class="ident">result</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
+    <span class="comment">// if somehow it&#39;s a weird bare domain then we don&#39;t have to do much it
+    </span><span class="kw">if </span>!name.contains(<span class="kw-2">&amp;</span><span class="number">46</span>) {
+        result.push(name.len() <span class="kw">as </span>u8);
+        result.extend(<span class="kw-2">&amp;</span>name);
+        result.push(<span class="number">0</span>); <span class="comment">// null pad the name
+        </span><span class="kw">return </span>result;
     }
-    <span class="ident">result</span> <span class="op">=</span> <span class="ident">seven_dot_three_conversion</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>);
+    result = seven_dot_three_conversion(<span class="kw-2">&amp;</span>name);
 
-    <span class="kw">if</span> <span class="ident">compress_target</span>.<span class="ident">is_none</span>() {
+    <span class="kw">if </span>compress_target.is_none() {
         <span class="macro">trace!</span>(<span class="string">&quot;no compression target, adding the trailing null and returning!&quot;</span>);
-        <span class="ident">result</span>.<span class="ident">push</span>(<span class="number">0</span>);
-        <span class="kw">return</span> <span class="ident">result</span>;
+        result.push(<span class="number">0</span>);
+        <span class="kw">return </span>result;
     };
 
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">ct</span>) <span class="op">=</span> <span class="ident">compress_reference</span> {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(ct) = compress_reference {
         <span class="macro">trace!</span>(<span class="string">&quot;you gave me {ct:?} as a compression reference&quot;</span>);
 
-        <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">name</span> <span class="op">==</span> <span class="ident">ct</span> {
+        <span class="kw">if </span><span class="kw-2">&amp;</span>name == ct {
             <span class="macro">trace!</span>(<span class="string">&quot;The thing we&#39;re converting is the same as the compression reference!&quot;</span>);
-            <span class="comment">// return a pointer to the target_byte (probably the name in the header)</span>
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">target</span>) <span class="op">=</span> <span class="ident">compress_target</span> {
-                <span class="kw">let</span> <span class="ident">result</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0b1100000000000000</span> <span class="op">|</span> <span class="ident">target</span> <span class="kw">as</span> <span class="ident">u16</span>;
-                <span class="kw">return</span> <span class="ident">result</span>.<span class="ident">to_be_bytes</span>().<span class="ident">to_vec</span>();
-            } <span class="kw">else</span> {
+            <span class="comment">// return a pointer to the target_byte (probably the name in the header)
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(target) = compress_target {
+                <span class="kw">let </span>result: u16 = <span class="number">0b1100000000000000 </span>| target <span class="kw">as </span>u16;
+                <span class="kw">return </span>result.to_be_bytes().to_vec();
+            } <span class="kw">else </span>{
                 <span class="macro">panic!</span>(<span class="string">&quot;you didn&#39;t give us a target, dude!&quot;</span>)
             }
         }
-        <span class="kw">if</span> <span class="ident">name</span>.<span class="ident">ends_with</span>(<span class="ident">ct</span>) {
+        <span class="kw">if </span>name.ends_with(ct) {
             <span class="macro">trace!</span>(<span class="string">&quot;the name ends with the target! woo!&quot;</span>);
-            <span class="comment">// Ok, we&#39;ve gotten this far. We need to slice off the &quot;front&quot; of the string and return that.</span>
-            <span class="ident">result</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">clone</span>();
-            <span class="ident">result</span>.<span class="ident">truncate</span>(<span class="ident">name</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">ct</span>.<span class="ident">len</span>());
-            <span class="macro">trace!</span>(<span class="string">&quot;The result is trimmed and now {:?}&quot;</span>, <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>));
+            <span class="comment">// Ok, we&#39;ve gotten this far. We need to slice off the &quot;front&quot; of the string and return that.
+            </span>result = name.clone();
+            result.truncate(name.len() - ct.len());
+            <span class="macro">trace!</span>(<span class="string">&quot;The result is trimmed and now {:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>result));
 
-            <span class="comment">// do the 7.3 conversion</span>
-            <span class="ident">result</span> <span class="op">=</span> <span class="ident">seven_dot_three_conversion</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>);
-            <span class="macro">trace!</span>(<span class="string">&quot;7.3converted: {:?}&quot;</span>, <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>));
+            <span class="comment">// do the 7.3 conversion
+            </span>result = seven_dot_three_conversion(<span class="kw-2">&amp;</span>result);
+            <span class="macro">trace!</span>(<span class="string">&quot;7.3converted: {:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>result));
 
-            <span class="comment">// then we need to return the pointer to the tail</span>
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">target</span>) <span class="op">=</span> <span class="ident">compress_target</span> {
-                <span class="kw">let</span> <span class="ident">pointer_bytes</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0b1100000000000000</span> <span class="op">|</span> <span class="ident">target</span> <span class="kw">as</span> <span class="ident">u16</span>;
-                <span class="ident">result</span>.<span class="ident">extend</span>(<span class="ident">pointer_bytes</span>.<span class="ident">to_be_bytes</span>());
-            } <span class="kw">else</span> {
-                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">debug</span>)]</span>
-                <span class="macro">panic!</span>(<span class="string">&quot;No compression target and we totally could have compressed this.&quot;</span>)
+            <span class="comment">// then we need to return the pointer to the tail
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(target) = compress_target {
+                <span class="kw">let </span>pointer_bytes: u16 = <span class="number">0b1100000000000000 </span>| target <span class="kw">as </span>u16;
+                result.extend(pointer_bytes.to_be_bytes());
+            } <span class="kw">else </span>{
+                <span class="attribute">#[cfg(debug)]
+                </span><span class="macro">panic!</span>(<span class="string">&quot;No compression target and we totally could have compressed this.&quot;</span>)
             }
 
-            <span class="macro">trace!</span>(<span class="string">&quot;The result is trimmed and now {:?}&quot;</span>, <span class="ident">result</span>);
-        } <span class="kw">else</span> {
-            <span class="comment">// dropped into tail-finding mode where we&#39;re looking for a sub-string of the parent to target a compression pointer</span>
-            <span class="macro">trace!</span>(<span class="string">&quot;trying to find a sub-part of {ct:?} in {name:?}&quot;</span>);
+            <span class="macro">trace!</span>(<span class="string">&quot;The result is trimmed and now {:?}&quot;</span>, result);
+        } <span class="kw">else </span>{
+            <span class="comment">// dropped into tail-finding mode where we&#39;re looking for a sub-string of the parent to target a compression pointer
+            </span><span class="macro">trace!</span>(<span class="string">&quot;trying to find a sub-part of {ct:?} in {name:?}&quot;</span>);
 
-            <span class="kw">let</span> <span class="ident">tail_index</span> <span class="op">=</span> <span class="ident">find_tail_match</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>, <span class="ident">ct</span>);
+            <span class="kw">let </span>tail_index = find_tail_match(<span class="kw-2">&amp;</span>name, ct);
             <span class="macro">trace!</span>(<span class="string">&quot;tail_index: {tail_index}&quot;</span>);
-            <span class="comment">// if we get to here and the tail_index is 0 then we haven&#39;t set it - because we&#39;d have caught the whole thing in the ends_with matcher earlier.</span>
-            <span class="kw">if</span> <span class="ident">tail_index</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
+            <span class="comment">// if we get to here and the tail_index is 0 then we haven&#39;t set it - because we&#39;d have caught the whole thing in the ends_with matcher earlier.
+            </span><span class="kw">if </span>tail_index != <span class="number">0 </span>{
                 <span class="macro">trace!</span>(<span class="string">&quot;Found a tail-match: {tail_index}&quot;</span>);
-                <span class="comment">// slice the tail off the name</span>
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">name_copy</span> <span class="op">=</span> <span class="ident">name</span>.<span class="ident">to_vec</span>();
-                <span class="comment">// the amount of the tail that matched to the name, ie abc, bc = 2, aab, bbb = 1</span>
-                <span class="kw">let</span> <span class="ident">matched_length</span> <span class="op">=</span> <span class="ident">ct</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">tail_index</span>;
-                <span class="ident">name_copy</span>.<span class="ident">truncate</span>(<span class="ident">name</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">matched_length</span>);
+                <span class="comment">// slice the tail off the name
+                </span><span class="kw">let </span><span class="kw-2">mut </span>name_copy = name.to_vec();
+                <span class="comment">// the amount of the tail that matched to the name, ie abc, bc = 2, aab, bbb = 1
+                </span><span class="kw">let </span>matched_length = ct.len() - tail_index;
+                name_copy.truncate(name.len() - matched_length);
                 <span class="macro">trace!</span>(<span class="string">&quot;sliced name down to {name_copy:?}&quot;</span>);
-                <span class="comment">// put the pointer on there</span>
-                <span class="ident">result</span> <span class="op">=</span> <span class="ident">seven_dot_three_conversion</span>(<span class="kw-2">&amp;</span><span class="ident">name_copy</span>);
+                <span class="comment">// put the pointer on there
+                </span>result = seven_dot_three_conversion(<span class="kw-2">&amp;</span>name_copy);
                 <span class="macro">trace!</span>(<span class="string">&quot;converted result to {result:?}&quot;</span>);
-                <span class="kw">let</span> <span class="ident">pointer</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">0b1100000000000000</span> <span class="op">|</span> (<span class="ident">HEADER_BYTES</span> <span class="op">+</span> <span class="ident">tail_index</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u16</span>;
-                <span class="ident">result</span>.<span class="ident">extend</span>(<span class="ident">pointer</span>.<span class="ident">to_be_bytes</span>());
+                <span class="kw">let </span>pointer: u16 = <span class="number">0b1100000000000000 </span>| (HEADER_BYTES + tail_index + <span class="number">1</span>) <span class="kw">as </span>u16;
+                result.extend(pointer.to_be_bytes());
             }
         }
 
-        <span class="comment">// TODO: try and find a sub-slice to make test_name_bytes_with_tail_compression pass</span>
-    }
+        <span class="comment">// TODO: try and find a sub-slice to make test_name_bytes_with_tail_compression pass
+    </span>}
     <span class="macro">trace!</span>(<span class="string">&quot;Final result {result:?}&quot;</span>);
-    <span class="ident">result</span>
+    result
 }
 
-<span class="doccomment">/// Want a generic empty reply with an ID and an RCODE? Here&#39;s your function.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reply_builder</span>(<span class="ident">id</span>: <span class="ident">u16</span>, <span class="ident">rcode</span>: <span class="ident">Rcode</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Reply</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">header</span> <span class="op">=</span> <span class="ident">Header</span> {
-        <span class="ident">id</span>,
-        <span class="ident">qr</span>: <span class="ident">PacketType::Answer</span>,
-        <span class="ident">rcode</span>,
-        ..<span class="ident">Default::default</span>()
+<span class="doccomment">/// Want a generic empty reply with an ID and an RCODE? Here&#39;s your function.
+</span><span class="kw">pub fn </span>reply_builder(id: u16, rcode: Rcode) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, String&gt; {
+    <span class="kw">let </span>header = Header {
+        id,
+        qr: PacketType::Answer,
+        rcode,
+        ..Default::default()
     };
-    <span class="prelude-val">Ok</span>(<span class="ident">Reply</span> {
-        <span class="ident">header</span>,
-        <span class="ident">question</span>: <span class="prelude-val">None</span>,
-        <span class="ident">answers</span>: <span class="macro">vec!</span>[],
-        <span class="ident">authorities</span>: <span class="macro">vec!</span>[],
-        <span class="ident">additional</span>: <span class="macro">vec!</span>[],
+    <span class="prelude-val">Ok</span>(Reply {
+        header,
+        question: <span class="prelude-val">None</span>,
+        answers: <span class="macro">vec!</span>[],
+        authorities: <span class="macro">vec!</span>[],
+        additional: <span class="macro">vec!</span>[],
     })
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reply_nxdomain</span>(<span class="ident">id</span>: <span class="ident">u16</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Reply</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="ident">reply_builder</span>(<span class="ident">id</span>, <span class="ident">Rcode::NameError</span>)
+<span class="kw">pub fn </span>reply_nxdomain(id: u16) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, String&gt; {
+    reply_builder(id, Rcode::NameError)
 }
 
-<span class="comment">// lazy_static!{</span>
-<span class="comment">//     static ref GOATNS_VERSION: DNSCharString = DNSCharString::from(format!(&quot;GoatNS {}&quot;, env!(&quot;CARGO_PKG_VERSION&quot;)).as_str());</span>
-<span class="comment">// }</span>
+<span class="comment">// lazy_static!{
+//     static ref GOATNS_VERSION: DNSCharString = DNSCharString::from(format!(&quot;GoatNS {}&quot;, env!(&quot;CARGO_PKG_VERSION&quot;)).as_str());
+// }
 
-<span class="comment">// lazy_static!{</span>
-<span class="comment">//     static ref VERSION_RESPONSE: Vec&lt;InternalResourceRecord&gt; = vec![InternalResourceRecord::TXT {</span>
-<span class="comment">//         class: RecordClass::Chaos,</span>
-<span class="comment">//         ttl: 1,</span>
-<span class="comment">//         txtdata: GOATNS_VERSION.to_owned(),</span>
-<span class="comment">//     }];</span>
-<span class="comment">// }</span>
+// lazy_static!{
+//     static ref VERSION_RESPONSE: Vec&lt;InternalResourceRecord&gt; = vec![InternalResourceRecord::TXT {
+//         class: RecordClass::Chaos,
+//         ttl: 1,
+//         txtdata: GOATNS_VERSION.to_owned(),
+//     }];
+// }
 
-<span class="comment">// pub fn reply_version(id: &amp;u16, question: &amp;Option&lt;crate::Question&gt;) -&gt; Result&lt;Reply, String&gt; {</span>
-<span class="comment">//     let mut reply = reply_builder(id.to_owned(), Rcode::NoError)?;</span>
-<span class="comment">//     reply.question = question.to_owned();</span>
-<span class="comment">//     reply.answers = VERSION_RESPONSE.clone();</span>
-<span class="comment">//     reply.header.ancount = 1;</span>
-<span class="comment">//     debug!(&quot;Version: {reply:?}&quot;);</span>
-<span class="comment">//     debug!(&quot;Goatns version: {:?}&quot;, GOATNS_VERSION.to_owned());</span>
-<span class="comment">//     Ok(reply)</span>
-<span class="comment">// }</span>
+// pub fn reply_version(id: &amp;u16, question: &amp;Option&lt;crate::Question&gt;) -&gt; Result&lt;Reply, String&gt; {
+//     let mut reply = reply_builder(id.to_owned(), Rcode::NoError)?;
+//     reply.question = question.to_owned();
+//     reply.answers = VERSION_RESPONSE.clone();
+//     reply.header.ancount = 1;
+//     debug!(&quot;Version: {reply:?}&quot;);
+//     debug!(&quot;Goatns version: {:?}&quot;, GOATNS_VERSION.to_owned());
+//     Ok(reply)
+// }
 
-<span class="doccomment">/// dumps the bytes out as if you were using some kind of fancy packet-dumper</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hexdump</span>(<span class="ident">bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) {
-    <span class="kw">for</span> <span class="ident">byte</span> <span class="kw">in</span> <span class="ident">bytes</span>.<span class="ident">chunks</span>(<span class="number">2</span>) {
-        <span class="kw">let</span> <span class="ident">byte0_alpha</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">byte</span>[<span class="number">0</span>].<span class="ident">is_ascii_alphanumeric</span>() {
-            <span class="bool-val">true</span> =&gt; <span class="ident">from_utf8</span>(<span class="ident">byte</span>[<span class="number">0</span>..<span class="number">1</span>].<span class="ident">into</span>()).<span class="ident">expect</span>(<span class="string">&quot;Failed to decode bytes&quot;</span>),
-            <span class="bool-val">false</span> =&gt; <span class="string">&quot; &quot;</span>,
+</span><span class="doccomment">/// dumps the bytes out as if you were using some kind of fancy packet-dumper
+</span><span class="kw">pub fn </span>hexdump(bytes: Vec&lt;u8&gt;) {
+    <span class="kw">for </span>byte <span class="kw">in </span>bytes.chunks(<span class="number">2</span>) {
+        <span class="kw">let </span>byte0_alpha = <span class="kw">match </span>byte[<span class="number">0</span>].is_ascii_alphanumeric() {
+            <span class="bool-val">true </span>=&gt; from_utf8(byte[<span class="number">0</span>..<span class="number">1</span>].into()).expect(<span class="string">&quot;Failed to decode bytes&quot;</span>),
+            <span class="bool-val">false </span>=&gt; <span class="string">&quot; &quot;</span>,
         };
-        <span class="kw">match</span> <span class="ident">byte</span>.<span class="ident">len</span>() {
-            <span class="number">2</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">byte1_alpha</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">byte</span>[<span class="number">1</span>].<span class="ident">is_ascii_alphanumeric</span>() {
-                    <span class="bool-val">true</span> =&gt; <span class="ident">from_utf8</span>(<span class="ident">byte</span>[<span class="number">1</span>..<span class="number">2</span>].<span class="ident">into</span>()).<span class="ident">unwrap</span>(),
-                    <span class="bool-val">false</span> =&gt; <span class="string">&quot; &quot;</span>,
+        <span class="kw">match </span>byte.len() {
+            <span class="number">2 </span>=&gt; {
+                <span class="kw">let </span>byte1_alpha = <span class="kw">match </span>byte[<span class="number">1</span>].is_ascii_alphanumeric() {
+                    <span class="bool-val">true </span>=&gt; from_utf8(byte[<span class="number">1</span>..<span class="number">2</span>].into()).unwrap(),
+                    <span class="bool-val">false </span>=&gt; <span class="string">&quot; &quot;</span>,
                 };
 
                 <span class="macro">debug!</span>(
                     <span class="string">&quot;{:02x} {:02x} {:#010b} {:#010b} {:3} {:3} {byte0_alpha} {byte1_alpha}&quot;</span>,
-                    <span class="ident">byte</span>[<span class="number">0</span>], <span class="ident">byte</span>[<span class="number">1</span>], <span class="ident">byte</span>[<span class="number">0</span>], <span class="ident">byte</span>[<span class="number">1</span>], <span class="ident">byte</span>[<span class="number">0</span>], <span class="ident">byte</span>[<span class="number">1</span>],
+                    byte[<span class="number">0</span>], byte[<span class="number">1</span>], byte[<span class="number">0</span>], byte[<span class="number">1</span>], byte[<span class="number">0</span>], byte[<span class="number">1</span>],
                 );
             }
-            <span class="kw">_</span> =&gt; {
+            <span class="kw">_ </span>=&gt; {
                 <span class="macro">debug!</span>(
                     <span class="string">&quot;{:02x}    {:#010b}    {:3} {byte0_alpha}&quot;</span>,
-                    <span class="ident">byte</span>[<span class="number">0</span>], <span class="ident">byte</span>[<span class="number">0</span>], <span class="ident">byte</span>[<span class="number">0</span>],
+                    byte[<span class="number">0</span>], byte[<span class="number">0</span>], byte[<span class="number">0</span>],
                 );
             }
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_find_tail_match</span>() {
-    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;foo.example.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="ident">target</span> <span class="op">=</span> <span class="string">&quot;zot.example.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">find_tail_match</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="ident">target</span>);
+<span class="attribute">#[test]
+</span><span class="kw">pub fn </span>test_find_tail_match() {
+    <span class="kw">let </span>name = <span class="string">&quot;foo.example.com&quot;</span>.as_bytes().to_vec();
+    <span class="kw">let </span>target = <span class="string">&quot;zot.example.com&quot;</span>.as_bytes().to_vec();
+    <span class="kw">let </span>result = find_tail_match(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>target);
 
-    <span class="macro">assert_eq!</span>(<span class="ident">result</span>, <span class="number">3</span>);
-    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="string">&quot;foo.yeanah.xyz&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="ident">target</span> <span class="op">=</span> <span class="string">&quot;zot.example.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">find_tail_match</span>(<span class="kw-2">&amp;</span><span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="ident">target</span>);
+    <span class="macro">assert_eq!</span>(result, <span class="number">3</span>);
+    <span class="kw">let </span>name = <span class="string">&quot;foo.yeanah.xyz&quot;</span>.as_bytes().to_vec();
+    <span class="kw">let </span>target = <span class="string">&quot;zot.example.com&quot;</span>.as_bytes().to_vec();
+    <span class="kw">let </span>result = find_tail_match(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>target);
 
-    <span class="macro">assert_eq!</span>(<span class="ident">result</span>, <span class="number">0</span>)
+    <span class="macro">assert_eq!</span>(result, <span class="number">0</span>)
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_name_bytes_simple_compress</span>() {
-    <span class="kw">let</span> <span class="ident">expected_result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">192</span>, <span class="number">12</span>];
+<span class="attribute">#[test]
+</span><span class="kw">pub fn </span>test_name_bytes_simple_compress() {
+    <span class="kw">let </span>expected_result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">192</span>, <span class="number">12</span>];
 
-    <span class="kw">let</span> <span class="ident">test_result</span> <span class="op">=</span> <span class="ident">name_as_bytes</span>(<span class="string">&quot;example.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>(), <span class="prelude-val">Some</span>(<span class="number">12</span>), <span class="prelude-val">None</span>);
-    <span class="macro">assert_eq!</span>(<span class="ident">expected_result</span>, <span class="ident">test_result</span>);
+    <span class="kw">let </span>test_result = name_as_bytes(<span class="string">&quot;example.com&quot;</span>.as_bytes().to_vec(), <span class="prelude-val">Some</span>(<span class="number">12</span>), <span class="prelude-val">None</span>);
+    <span class="macro">assert_eq!</span>(expected_result, test_result);
 }
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_name_bytes_no_compress</span>() {
-    <span class="kw">let</span> <span class="ident">expected_result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">7</span>, <span class="number">101</span>, <span class="number">120</span>, <span class="number">97</span>, <span class="number">109</span>, <span class="number">112</span>, <span class="number">108</span>, <span class="number">101</span>, <span class="number">3</span>, <span class="number">99</span>, <span class="number">111</span>, <span class="number">109</span>, <span class="number">0</span>];
+<span class="attribute">#[test]
+</span><span class="kw">pub fn </span>test_name_bytes_no_compress() {
+    <span class="kw">let </span>expected_result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">7</span>, <span class="number">101</span>, <span class="number">120</span>, <span class="number">97</span>, <span class="number">109</span>, <span class="number">112</span>, <span class="number">108</span>, <span class="number">101</span>, <span class="number">3</span>, <span class="number">99</span>, <span class="number">111</span>, <span class="number">109</span>, <span class="number">0</span>];
 
-    <span class="kw">let</span> <span class="ident">test_result</span> <span class="op">=</span> <span class="ident">name_as_bytes</span>(<span class="string">&quot;example.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-    <span class="macro">assert_eq!</span>(<span class="ident">expected_result</span>, <span class="ident">test_result</span>);
-}
-
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_name_bytes_with_compression</span>() {
-    <span class="kw">let</span> <span class="ident">example_com</span> <span class="op">=</span> <span class="string">&quot;example.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="ident">test_input</span> <span class="op">=</span> <span class="string">&quot;lol.example.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-
-    <span class="kw">let</span> <span class="ident">expected_result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">108</span>, <span class="number">111</span>, <span class="number">108</span>, <span class="number">192</span>, <span class="number">12</span>];
-
-    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">example_com</span>));
-    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">test_input</span>));
-
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">name_as_bytes</span>(<span class="ident">test_input</span>, <span class="prelude-val">Some</span>(<span class="number">12</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">example_com</span>));
-
-    <span class="macro">assert_eq!</span>(<span class="ident">result</span>, <span class="ident">expected_result</span>);
+    <span class="kw">let </span>test_result = name_as_bytes(<span class="string">&quot;example.com&quot;</span>.as_bytes().to_vec(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
+    <span class="macro">assert_eq!</span>(expected_result, test_result);
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_name_bytes_with_tail_compression</span>() {
-    <span class="kw">let</span> <span class="ident">example_com</span> <span class="op">=</span> <span class="string">&quot;ns1.example.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="ident">test_input</span> <span class="op">=</span> <span class="string">&quot;lol.example.com&quot;</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
+<span class="attribute">#[test]
+</span><span class="kw">pub fn </span>test_name_bytes_with_compression() {
+    <span class="kw">let </span>example_com = <span class="string">&quot;example.com&quot;</span>.as_bytes().to_vec();
+    <span class="kw">let </span>test_input = <span class="string">&quot;lol.example.com&quot;</span>.as_bytes().to_vec();
 
-    <span class="kw">let</span> <span class="ident">expected_result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">108</span>, <span class="number">111</span>, <span class="number">108</span>, <span class="number">192</span>, <span class="number">16</span>];
+    <span class="kw">let </span>expected_result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">108</span>, <span class="number">111</span>, <span class="number">108</span>, <span class="number">192</span>, <span class="number">12</span>];
 
-    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">example_com</span>));
-    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="ident">test_input</span>));
+    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>example_com));
+    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>test_input));
 
-    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">name_as_bytes</span>(<span class="ident">test_input</span>, <span class="prelude-val">Some</span>(<span class="number">12</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">example_com</span>));
+    <span class="kw">let </span>result = name_as_bytes(test_input, <span class="prelude-val">Some</span>(<span class="number">12</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>example_com));
 
-    <span class="macro">assert_eq!</span>(<span class="ident">result</span>, <span class="ident">expected_result</span>);
+    <span class="macro">assert_eq!</span>(result, expected_result);
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">clap_parser</span>() -&gt; <span class="ident">ArgMatches</span> {
-    <span class="macro">command!</span>() <span class="comment">// requires `cargo` feature</span>
-        <span class="comment">// .arg(arg!([name] &quot;Optional name to operate on&quot;))</span>
-        .<span class="ident">arg</span>(
+<span class="attribute">#[test]
+</span><span class="kw">pub fn </span>test_name_bytes_with_tail_compression() {
+    <span class="kw">let </span>example_com = <span class="string">&quot;ns1.example.com&quot;</span>.as_bytes().to_vec();
+    <span class="kw">let </span>test_input = <span class="string">&quot;lol.example.com&quot;</span>.as_bytes().to_vec();
+
+    <span class="kw">let </span>expected_result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">108</span>, <span class="number">111</span>, <span class="number">108</span>, <span class="number">192</span>, <span class="number">16</span>];
+
+    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>example_com));
+    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>test_input));
+
+    <span class="kw">let </span>result = name_as_bytes(test_input, <span class="prelude-val">Some</span>(<span class="number">12</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>example_com));
+
+    <span class="macro">assert_eq!</span>(result, expected_result);
+}
+
+<span class="kw">pub fn </span>clap_parser() -&gt; ArgMatches {
+    <span class="macro">command!</span>() <span class="comment">// requires `cargo` feature
+        // .arg(arg!([name] &quot;Optional name to operate on&quot;))
+        </span>.arg(
             <span class="macro">arg!</span>(
-                <span class="op">-</span><span class="ident">c</span> <span class="op">-</span><span class="op">-</span><span class="ident">config</span> <span class="op">&lt;</span><span class="ident">FILE</span><span class="op">&gt;</span> <span class="string">&quot;Sets a custom config file&quot;</span>
-            )
-            .<span class="ident">required</span>(<span class="bool-val">false</span>)
-            .<span class="ident">value_parser</span>(<span class="macro">value_parser!</span>(<span class="ident">String</span>)),
+                -c --config &lt;FILE&gt; <span class="string">&quot;Sets a custom config file&quot;
+            </span>)
+            .required(<span class="bool-val">false</span>)
+            .value_parser(<span class="macro">value_parser!</span>(String)),
         )
-        .<span class="ident">arg</span>(
-            <span class="ident">Arg::new</span>(<span class="string">&quot;configcheck&quot;</span>)
-                .<span class="ident">short</span>(<span class="string">&#39;t&#39;</span>)
-                .<span class="ident">long</span>(<span class="string">&quot;configcheck&quot;</span>)
-                .<span class="ident">help</span>(<span class="string">&quot;Check the config file, show it and then quit.&quot;</span>)
-                .<span class="ident">action</span>(<span class="ident">clap::ArgAction::SetTrue</span>),
+        .arg(
+            Arg::new(<span class="string">&quot;configcheck&quot;</span>)
+                .short(<span class="string">&#39;t&#39;</span>)
+                .long(<span class="string">&quot;configcheck&quot;</span>)
+                .help(<span class="string">&quot;Check the config file, show it and then quit.&quot;</span>)
+                .action(clap::ArgAction::SetTrue),
         )
-        .<span class="ident">arg</span>(
-            <span class="ident">Arg::new</span>(<span class="string">&quot;export_zone&quot;</span>)
-                .<span class="ident">short</span>(<span class="string">&#39;e&#39;</span>)
-                .<span class="ident">long</span>(<span class="string">&quot;export-zone&quot;</span>)
-                .<span class="ident">help</span>(<span class="string">&quot;Export a single zone.&quot;</span>)
-                .<span class="ident">value_parser</span>(<span class="macro">value_parser!</span>(<span class="ident">String</span>)),
+        .arg(
+            Arg::new(<span class="string">&quot;export_zone&quot;</span>)
+                .short(<span class="string">&#39;e&#39;</span>)
+                .long(<span class="string">&quot;export-zone&quot;</span>)
+                .help(<span class="string">&quot;Export a single zone.&quot;</span>)
+                .value_parser(<span class="macro">value_parser!</span>(String)),
         )
-        .<span class="ident">arg</span>(
-            <span class="ident">Arg::new</span>(<span class="string">&quot;import_zones&quot;</span>)
-                .<span class="ident">short</span>(<span class="string">&#39;i&#39;</span>)
-                .<span class="ident">long</span>(<span class="string">&quot;import-zones&quot;</span>)
-                .<span class="ident">help</span>(<span class="string">&quot;Import a single zone file.&quot;</span>)
-                .<span class="ident">action</span>(<span class="ident">clap::ArgAction::SetTrue</span>),
+        .arg(
+            Arg::new(<span class="string">&quot;import_zones&quot;</span>)
+                .short(<span class="string">&#39;i&#39;</span>)
+                .long(<span class="string">&quot;import-zones&quot;</span>)
+                .help(<span class="string">&quot;Import a single zone file.&quot;</span>)
+                .action(clap::ArgAction::SetTrue),
         )
-        .<span class="ident">arg</span>(
-            <span class="ident">Arg::new</span>(<span class="string">&quot;import_zone&quot;</span>)
-                .<span class="ident">long</span>(<span class="string">&quot;import-zone&quot;</span>)
-                .<span class="ident">help</span>(<span class="string">&quot;Import a single zone from a file.&quot;</span>)
-                .<span class="ident">value_parser</span>(<span class="macro">value_parser!</span>(<span class="ident">String</span>)),
+        .arg(
+            Arg::new(<span class="string">&quot;import_zone&quot;</span>)
+                .long(<span class="string">&quot;import-zone&quot;</span>)
+                .help(<span class="string">&quot;Import a single zone from a file.&quot;</span>)
+                .value_parser(<span class="macro">value_parser!</span>(String)),
         )
-        .<span class="ident">arg</span>(
-            <span class="ident">Arg::new</span>(<span class="string">&quot;filename&quot;</span>)
-                .<span class="ident">short</span>(<span class="string">&#39;f&#39;</span>)
-                .<span class="ident">long</span>(<span class="string">&quot;filename&quot;</span>)
-                .<span class="ident">help</span>(<span class="string">&quot;Filename to save to (used in other commands).&quot;</span>)
-                .<span class="ident">value_parser</span>(<span class="macro">value_parser!</span>(<span class="ident">String</span>)),
+        .arg(
+            Arg::new(<span class="string">&quot;filename&quot;</span>)
+                .short(<span class="string">&#39;f&#39;</span>)
+                .long(<span class="string">&quot;filename&quot;</span>)
+                .help(<span class="string">&quot;Filename to save to (used in other commands).&quot;</span>)
+                .value_parser(<span class="macro">value_parser!</span>(String)),
         )
-        <span class="comment">// .arg(arg!(</span>
-        <span class="comment">//     -d --debug ... &quot;Turn debugging information on&quot;</span>
-        <span class="comment">// ))</span>
-        <span class="comment">// .subcommand(</span>
-        <span class="comment">//     Command::new(&quot;test&quot;)</span>
-        <span class="comment">//         .about(&quot;does testing things&quot;)</span>
-        <span class="comment">//         .arg(arg!(-l --list &quot;lists test values&quot;).action(ArgAction::SetTrue)),</span>
-        <span class="comment">// )</span>
-        .<span class="ident">get_matches</span>()
+        <span class="comment">// .arg(arg!(
+        //     -d --debug ... &quot;Turn debugging information on&quot;
+        // ))
+        // .subcommand(
+        //     Command::new(&quot;test&quot;)
+        //         .about(&quot;does testing things&quot;)
+        //         .arg(arg!(-l --list &quot;lists test values&quot;).action(ArgAction::SetTrue)),
+        // )
+        </span>.get_matches()
 }
 
-<span class="doccomment">/// turn a degrees/minutes/seconds format into unsigned 32-bit integer matching the format</span>
-<span class="doccomment">/// required for a DNS LOC record</span>
-<span class="doccomment">///</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dms_to_u32</span>(<span class="ident">deg</span>: <span class="ident">u8</span>, <span class="ident">min</span>: <span class="ident">u8</span>, <span class="ident">sec</span>: <span class="ident">f32</span>, <span class="ident">positive</span>: <span class="ident">bool</span>) -&gt; <span class="ident">u32</span> {
-    <span class="kw">let</span> <span class="ident">secsfrac</span> <span class="op">=</span> <span class="ident">sec</span> <span class="op">%</span> <span class="number">1f32</span>;
+<span class="doccomment">/// turn a degrees/minutes/seconds format into unsigned 32-bit integer matching the format
+/// required for a DNS LOC record
+///
+</span><span class="kw">pub fn </span>dms_to_u32(deg: u8, min: u8, sec: f32, positive: bool) -&gt; u32 {
+    <span class="kw">let </span>secsfrac = sec % <span class="number">1f32</span>;
 
-    <span class="kw">let</span> <span class="ident">dms_multiplied</span>: <span class="ident">u32</span> <span class="op">=</span> (((((<span class="ident">deg</span> <span class="kw">as</span> <span class="ident">u32</span> <span class="op">*</span> <span class="number">60</span>) <span class="op">+</span> <span class="ident">min</span> <span class="kw">as</span> <span class="ident">u32</span>) <span class="op">*</span> <span class="number">60</span>) <span class="op">+</span> <span class="ident">sec</span> <span class="kw">as</span> <span class="ident">u32</span>) <span class="op">*</span> <span class="number">1000</span>)
-        <span class="op">+</span> (<span class="ident">secsfrac</span> <span class="op">*</span> <span class="number">1000.0</span>) <span class="kw">as</span> <span class="ident">u32</span>;
+    <span class="kw">let </span>dms_multiplied: u32 = (((((deg <span class="kw">as </span>u32 * <span class="number">60</span>) + min <span class="kw">as </span>u32) * <span class="number">60</span>) + sec <span class="kw">as </span>u32) * <span class="number">1000</span>)
+        + (secsfrac * <span class="number">1000.0</span>) <span class="kw">as </span>u32;
 
-    <span class="kw">match</span> <span class="ident">positive</span> {
-        <span class="bool-val">true</span> =&gt; <span class="number">2u32</span>.<span class="ident">pow</span>(<span class="number">31</span>) <span class="op">+</span> <span class="ident">dms_multiplied</span>,
-        <span class="bool-val">false</span> =&gt; <span class="number">2u32</span>.<span class="ident">pow</span>(<span class="number">31</span>) <span class="op">-</span> <span class="ident">dms_multiplied</span>,
+    <span class="kw">match </span>positive {
+        <span class="bool-val">true </span>=&gt; <span class="number">2u32</span>.pow(<span class="number">31</span>) + dms_multiplied,
+        <span class="bool-val">false </span>=&gt; <span class="number">2u32</span>.pow(<span class="number">31</span>) - dms_multiplied,
     }
 }
 
-<span class="doccomment">/// converts size/precision X * 10**Y(cm) to 0xXY</span>
-<span class="doccomment">/// This code is ported from the C code in RFC1876 (Appendix A, precsize_aton)</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">loc_size_to_u8</span>(<span class="ident">input</span>: <span class="ident">f32</span>) -&gt; <span class="ident">u8</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mantissa</span>: <span class="ident">u8</span>;
+<span class="doccomment">/// converts size/precision X * 10**Y(cm) to 0xXY
+/// This code is ported from the C code in RFC1876 (Appendix A, precsize_aton)
+</span><span class="attribute">#[allow(dead_code)]
+</span><span class="kw">pub fn </span>loc_size_to_u8(input: f32) -&gt; u8 {
+    <span class="kw">let </span><span class="kw-2">mut </span>mantissa: u8;
 
-    <span class="kw">let</span> <span class="ident">cmval</span> <span class="op">=</span> <span class="ident">input</span> <span class="op">*</span> <span class="number">100.0</span>;
+    <span class="kw">let </span>cmval = input * <span class="number">100.0</span>;
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">exponent</span> <span class="op">=</span> <span class="number">0</span>;
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">10</span> {
-        <span class="kw">if</span> (<span class="ident">cmval</span> <span class="kw">as</span> <span class="ident">f64</span>) <span class="op">&lt;</span> (<span class="number">10u64</span>.<span class="ident">pow</span>(<span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">f64</span>) {
-            <span class="ident">exponent</span> <span class="op">=</span> <span class="ident">i</span>;
-            <span class="comment">// eprintln!(&quot;CMVAL: {cmval} Exponent #{i} {}&quot;, (poweroften[i+1] as u64));</span>
-            <span class="kw">break</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>exponent = <span class="number">0</span>;
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">10 </span>{
+        <span class="kw">if </span>(cmval <span class="kw">as </span>f64) &lt; (<span class="number">10u64</span>.pow(i + <span class="number">1</span>) <span class="kw">as </span>f64) {
+            exponent = i;
+            <span class="comment">// eprintln!(&quot;CMVAL: {cmval} Exponent #{i} {}&quot;, (poweroften[i+1] as u64));
+            </span><span class="kw">break</span>;
         }
     }
-    <span class="comment">// eprintln!(&quot;{:?}&quot;, ((cmval as f64) / (poweroften[exponent] as f64) ).ceil());</span>
-    <span class="ident">mantissa</span> <span class="op">=</span> ((<span class="ident">cmval</span> <span class="kw">as</span> <span class="ident">f64</span>) <span class="op">/</span> (<span class="number">10u64</span>.<span class="ident">pow</span>(<span class="ident">exponent</span>) <span class="kw">as</span> <span class="ident">f64</span>)).<span class="ident">ceil</span>() <span class="kw">as</span> <span class="ident">u8</span>;
-    <span class="kw">if</span> <span class="ident">mantissa</span> <span class="op">&gt;</span> <span class="number">9u8</span> {
-        <span class="ident">mantissa</span> <span class="op">=</span> <span class="number">9u8</span>;
+    <span class="comment">// eprintln!(&quot;{:?}&quot;, ((cmval as f64) / (poweroften[exponent] as f64) ).ceil());
+    </span>mantissa = ((cmval <span class="kw">as </span>f64) / (<span class="number">10u64</span>.pow(exponent) <span class="kw">as </span>f64)).ceil() <span class="kw">as </span>u8;
+    <span class="kw">if </span>mantissa &gt; <span class="number">9u8 </span>{
+        mantissa = <span class="number">9u8</span>;
     }
-    <span class="comment">// eprintln!(&quot;mantissa: {mantissa}, exponent: {exponent}&quot;);</span>
-    <span class="comment">// turn it into the magic ugly numbers</span>
-    <span class="kw">let</span> <span class="ident">retval</span>: <span class="ident">u8</span> <span class="op">=</span> (<span class="ident">mantissa</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>) <span class="op">|</span> (<span class="ident">exponent</span> <span class="kw">as</span> <span class="ident">u8</span>);
-    <span class="ident">retval</span>
+    <span class="comment">// eprintln!(&quot;mantissa: {mantissa}, exponent: {exponent}&quot;);
+    // turn it into the magic ugly numbers
+    </span><span class="kw">let </span>retval: u8 = (mantissa &lt;&lt; <span class="number">4</span>) | (exponent <span class="kw">as </span>u8);
+    retval
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_loc_size_to_u8</span>() {
-    <span class="comment">// let test = &quot;10&quot;;</span>
-    <span class="comment">// let res = loc_size_to_u8(&amp;test).unwrap();</span>
-    <span class="comment">// eprintln!(&quot;res: {res:3x}&quot;);</span>
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_loc_size_to_u8() {
+    <span class="comment">// let test = &quot;10&quot;;
+    // let res = loc_size_to_u8(&amp;test).unwrap();
+    // eprintln!(&quot;res: {res:3x}&quot;);
 
-    <span class="comment">// assert_eq!(1,2);</span>
-    <span class="macro">assert_eq!</span>(<span class="ident">loc_size_to_u8</span>(<span class="number">10.0</span>), <span class="number">0x13</span>);
-    <span class="macro">assert_eq!</span>(<span class="ident">loc_size_to_u8</span>(<span class="number">100.0</span>), <span class="number">0x14</span>);
+    // assert_eq!(1,2);
+    </span><span class="macro">assert_eq!</span>(loc_size_to_u8(<span class="number">10.0</span>), <span class="number">0x13</span>);
+    <span class="macro">assert_eq!</span>(loc_size_to_u8(<span class="number">100.0</span>), <span class="number">0x14</span>);
     <span class="macro">eprintln!</span>(<span class="string">&quot;testing 90000000.0 = 0x99&quot;</span>);
-    <span class="macro">assert_eq!</span>(<span class="ident">loc_size_to_u8</span>(<span class="number">90000000.0</span>), <span class="number">0x99</span>);
-    <span class="macro">eprintln!</span>(<span class="string">&quot;{:3x}&quot;</span>, <span class="ident">loc_size_to_u8</span>(<span class="number">20000000.0</span>));
-    <span class="comment">// assert_eq!(loc_size_to_u8(20000000.0), Ok(0x29));</span>
-}
+    <span class="macro">assert_eq!</span>(loc_size_to_u8(<span class="number">90000000.0</span>), <span class="number">0x99</span>);
+    <span class="macro">eprintln!</span>(<span class="string">&quot;{:3x}&quot;</span>, loc_size_to_u8(<span class="number">20000000.0</span>));
+    <span class="comment">// assert_eq!(loc_size_to_u8(20000000.0), Ok(0x29));
+</span>}
 
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">cli_commands</span>(
-    <span class="ident">tx</span>: <span class="ident">tokio::sync::mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Command</span><span class="op">&gt;</span>,
-    <span class="ident">clap_results</span>: <span class="kw-2">&amp;</span><span class="ident">ArgMatches</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SystemState</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">zone_name</span>) <span class="op">=</span> <span class="ident">clap_results</span>.<span class="ident">get_one</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(<span class="string">&quot;export_zone&quot;</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">output_filename</span>) <span class="op">=</span> <span class="ident">clap_results</span>.<span class="ident">get_one</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(<span class="string">&quot;filename&quot;</span>) {
+<span class="kw">pub async fn </span>cli_commands(
+    tx: tokio::sync::mpsc::Sender&lt;Command&gt;,
+    clap_results: <span class="kw-2">&amp;</span>ArgMatches,
+) -&gt; <span class="prelude-ty">Result</span>&lt;SystemState, String&gt; {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(zone_name) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;export_zone&quot;</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(output_filename) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;filename&quot;</span>) {
             <span class="macro">log::info!</span>(<span class="string">&quot;Exporting zone {zone_name} to {output_filename}&quot;</span>);
-            <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">export_zone_file</span>(<span class="ident">tx</span>, <span class="ident">zone_name</span>, <span class="ident">output_filename</span>).<span class="kw">await</span>;
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">res</span> {
+            <span class="kw">let </span>res = export_zone_file(tx, zone_name, output_filename).<span class="kw">await</span>;
+            <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = res {
                 <span class="macro">log::error!</span>(<span class="string">&quot;{err}&quot;</span>);
             }
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">SystemState::Export</span>);
-        } <span class="kw">else</span> {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::Export);
+        } <span class="kw">else </span>{
             <span class="macro">log::error!</span>(<span class="string">&quot;You need to specify a a filename to save to.&quot;</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">SystemState::ShuttingDown</span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
         }
     };
 
-    <span class="kw">if</span> <span class="ident">clap_results</span>.<span class="ident">get_flag</span>(<span class="string">&quot;import_zones&quot;</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">filename</span>) <span class="op">=</span> <span class="ident">clap_results</span>.<span class="ident">get_one</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(<span class="string">&quot;filename&quot;</span>) {
+    <span class="kw">if </span>clap_results.get_flag(<span class="string">&quot;import_zones&quot;</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;filename&quot;</span>) {
             <span class="macro">log::info!</span>(<span class="string">&quot;Importing zones from {filename}&quot;</span>);
-            <span class="ident">import_zones</span>(<span class="ident">tx</span>, <span class="ident">filename</span>.<span class="ident">to_owned</span>(), <span class="prelude-val">None</span>)
-                .<span class="kw">await</span>
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Error importing {filename}: {e:?}&quot;</span>))<span class="question-mark">?</span>;
+            import_zones(tx, filename.to_owned(), <span class="prelude-val">None</span>)
+                .<span class="kw">await
+                </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Error importing {filename}: {e:?}&quot;</span>))<span class="question-mark">?</span>;
 
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">SystemState::Import</span>);
-        } <span class="kw">else</span> {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::Import);
+        } <span class="kw">else </span>{
             <span class="macro">log::error!</span>(<span class="string">&quot;You need to specify a a filename to save to.&quot;</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">SystemState::ShuttingDown</span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
         }
     };
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">zone_name</span>) <span class="op">=</span> <span class="ident">clap_results</span>.<span class="ident">get_one</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(<span class="string">&quot;import_zone&quot;</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">filename</span>) <span class="op">=</span> <span class="ident">clap_results</span>.<span class="ident">get_one</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(<span class="string">&quot;filename&quot;</span>) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(zone_name) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;import_zone&quot;</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;filename&quot;</span>) {
             <span class="macro">log::info!</span>(<span class="string">&quot;Importing zones from {filename}&quot;</span>);
-            <span class="ident">import_zones</span>(<span class="ident">tx</span>, <span class="ident">filename</span>.<span class="ident">to_owned</span>(), <span class="prelude-val">Some</span>(<span class="ident">zone_name</span>.<span class="ident">to_owned</span>()))
-                .<span class="kw">await</span>
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Error importing {filename}: {e:?}&quot;</span>))<span class="question-mark">?</span>;
+            import_zones(tx, filename.to_owned(), <span class="prelude-val">Some</span>(zone_name.to_owned()))
+                .<span class="kw">await
+                </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Error importing {filename}: {e:?}&quot;</span>))<span class="question-mark">?</span>;
 
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">SystemState::Import</span>);
-        } <span class="kw">else</span> {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::Import);
+        } <span class="kw">else </span>{
             <span class="macro">log::error!</span>(<span class="string">&quot;You need to specify a a filename to save to.&quot;</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">SystemState::ShuttingDown</span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
         }
     };
-    <span class="prelude-val">Ok</span>(<span class="ident">SystemState::Server</span>)
+    <span class="prelude-val">Ok</span>(SystemState::Server)
 }
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::datastore::Command</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::zones::FileZone</span>;
-<span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>;
-<span class="kw">use</span> <span class="ident">tokio::sync::oneshot</span>;
-<span class="doccomment">/// dump a zone to a file</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">export_zone_file</span>(
-    <span class="ident">tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Command</span><span class="op">&gt;</span>,
-    <span class="ident">zone_name</span>: <span class="kw-2">&amp;</span><span class="ident">String</span>,
-    <span class="ident">filename</span>: <span class="kw-2">&amp;</span><span class="ident">String</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="comment">// make a channel</span>
+<span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
+<span class="kw">use </span><span class="kw">crate</span>::zones::FileZone;
+<span class="kw">use </span>tokio::sync::mpsc;
+<span class="kw">use </span>tokio::sync::oneshot;
+<span class="doccomment">/// dump a zone to a file
+</span><span class="kw">pub async fn </span>export_zone_file(
+    tx: mpsc::Sender&lt;Command&gt;,
+    zone_name: <span class="kw-2">&amp;</span>String,
+    filename: <span class="kw-2">&amp;</span>String,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+    <span class="comment">// make a channel
 
-    <span class="kw">let</span> (<span class="ident">tx_oneshot</span>, <span class="ident">rx_oneshot</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>();
-    <span class="kw">let</span> <span class="ident">ds_req</span>: <span class="ident">Command</span> <span class="op">=</span> <span class="ident">Command::GetZone</span> {
-        <span class="ident">name</span>: <span class="ident">zone_name</span>.<span class="ident">to_owned</span>(),
-        <span class="ident">resp</span>: <span class="ident">tx_oneshot</span>,
+    </span><span class="kw">let </span>(tx_oneshot, rx_oneshot) = oneshot::channel();
+    <span class="kw">let </span>ds_req: Command = Command::GetZone {
+        name: zone_name.to_owned(),
+        resp: tx_oneshot,
     };
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">ds_req</span>).<span class="kw">await</span> {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-            <span class="string">&quot;failed to send to datastore from export_zone_file {error:?}&quot;</span>
-        ));
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = tx.send(ds_req).<span class="kw">await </span>{
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+            <span class="string">&quot;failed to send to datastore from export_zone_file {error:?}&quot;
+        </span>));
     };
 
-    <span class="kw">let</span> <span class="ident">zone</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FileZone</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">rx_oneshot</span>.<span class="kw">await</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-        <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;rx from ds failed {err:?}&quot;</span>)),
+    <span class="kw">let </span>zone: <span class="prelude-ty">Option</span>&lt;FileZone&gt; = <span class="kw">match </span>rx_oneshot.<span class="kw">await </span>{
+        <span class="prelude-val">Ok</span>(value) =&gt; value,
+        <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;rx from ds failed {err:?}&quot;</span>)),
     };
     <span class="macro">eprintln!</span>(<span class="string">&quot;Got filezone: {zone:?}&quot;</span>);
 
-    <span class="kw">if</span> <span class="ident">zone</span>.<span class="ident">is_none</span>() {
+    <span class="kw">if </span>zone.is_none() {
         <span class="macro">log::warn!</span>(<span class="string">&quot;Couldn&#39;t find the zone {zone_name}&quot;</span>);
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     }
 
-    <span class="comment">// dump the zone</span>
-    <span class="kw">let</span> <span class="ident">zone_bytes</span> <span class="op">=</span> <span class="ident">serde_json::to_string_pretty</span>(<span class="kw-2">&amp;</span><span class="ident">zone</span>.<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
+    <span class="comment">// dump the zone
+    </span><span class="kw">let </span>zone_bytes = serde_json::to_string_pretty(<span class="kw-2">&amp;</span>zone.unwrap()).unwrap();
 
-    <span class="comment">// open the file</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">tokio::fs::File::create</span>(<span class="ident">filename</span>)
-        .<span class="kw">await</span>
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Failed to open file {e:?}&quot;</span>))
-        .<span class="ident">unwrap</span>();
-    <span class="comment">// write the thing</span>
-    <span class="ident">file</span>.<span class="ident">write_all</span>(<span class="ident">zone_bytes</span>.<span class="ident">as_bytes</span>())
-        .<span class="kw">await</span>
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Failed to write file: {e:?}&quot;</span>))
-        .<span class="ident">unwrap</span>();
-    <span class="comment">// make some cake</span>
+    <span class="comment">// open the file
+    </span><span class="kw">let </span><span class="kw-2">mut </span>file = tokio::fs::File::create(filename)
+        .<span class="kw">await
+        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to open file {e:?}&quot;</span>))
+        .unwrap();
+    <span class="comment">// write the thing
+    </span>file.write_all(zone_bytes.as_bytes())
+        .<span class="kw">await
+        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to write file: {e:?}&quot;</span>))
+        .unwrap();
+    <span class="comment">// make some cake
 
-    <span class="prelude-val">Ok</span>(())
+    </span><span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">import_zones</span>(
-    <span class="ident">tx</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span><span class="ident">Command</span><span class="op">&gt;</span>,
-    <span class="ident">filename</span>: <span class="ident">String</span>,
-    <span class="ident">zone_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">String</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> (<span class="ident">tx_oneshot</span>, <span class="kw-2">mut</span> <span class="ident">rx_oneshot</span>) <span class="op">=</span> <span class="ident">oneshot::channel</span>();
-    <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">Command::ImportFile</span> {
-        <span class="ident">filename</span>,
-        <span class="ident">resp</span>: <span class="ident">tx_oneshot</span>,
-        <span class="ident">zone_name</span>,
+<span class="kw">pub async fn </span>import_zones(
+    tx: mpsc::Sender&lt;Command&gt;,
+    filename: String,
+    zone_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+    <span class="kw">let </span>(tx_oneshot, <span class="kw-2">mut </span>rx_oneshot) = oneshot::channel();
+    <span class="kw">let </span>msg = Command::ImportFile {
+        filename,
+        resp: tx_oneshot,
+        zone_name,
     };
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">msg</span>).<span class="kw">await</span> {
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = tx.send(msg).<span class="kw">await </span>{
         <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send message to datastore: {err:?}&quot;</span>);
     }
-    <span class="kw">loop</span> {
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">rx_oneshot</span>.<span class="ident">try_recv</span>();
-        <span class="kw">match</span> <span class="ident">res</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="ident">oneshot::error::TryRecvError::Closed</span> <span class="op">=</span> <span class="ident">error</span> {
+    <span class="kw">loop </span>{
+        <span class="kw">let </span>res = rx_oneshot.try_recv();
+        <span class="kw">match </span>res {
+            <span class="prelude-val">Err</span>(error) =&gt; {
+                <span class="kw">if let </span>oneshot::error::TryRecvError::Closed = error {
                     <span class="kw">break</span>;
                 }
             }
             <span class="prelude-val">Ok</span>(()) =&gt; <span class="kw">break</span>,
         };
-        <span class="ident">sleep</span>(<span class="ident">std::time::Duration::from_micros</span>(<span class="number">500</span>)).<span class="kw">await</span>;
+        sleep(std::time::Duration::from_micros(<span class="number">500</span>)).<span class="kw">await</span>;
     }
     <span class="prelude-val">Ok</span>(())
-    <span class="comment">// rx_oneshot.await.map_err(|e| format!(&quot;Failed to receive result: {e:?}&quot;))</span>
-}
+    <span class="comment">// rx_oneshot.await.map_err(|e| format!(&quot;Failed to receive result: {e:?}&quot;))
+</span>}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

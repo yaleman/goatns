@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/tests/e2e_test.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>e2e_test.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../goatns/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/tests/e2e_test.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>e2e_test.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../goatns/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -93,100 +93,100 @@
 <span id="93">93</span>
 <span id="94">94</span>
 <span id="95">95</span>
-</pre><pre class="rust"><code><span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">log::info</span>;
-    <span class="kw">use</span> <span class="ident">std::env</span>;
-    <span class="kw">use</span> <span class="ident">std::net</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">std::thread::sleep</span>;
-    <span class="kw">use</span> <span class="ident">trust_dns_resolver::config</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">trust_dns_resolver::Resolver</span>;
+</pre><pre class="rust"><code><span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>log::info;
+    <span class="kw">use </span>std::env;
+    <span class="kw">use </span>std::net::<span class="kw-2">*</span>;
+    <span class="kw">use </span>std::thread::sleep;
+    <span class="kw">use </span>trust_dns_resolver::config::<span class="kw-2">*</span>;
+    <span class="kw">use </span>trust_dns_resolver::Resolver;
 
-    <span class="kw">fn</span> <span class="ident">in_github_actions</span>() -&gt; <span class="ident">bool</span> {
-        <span class="ident">env::var</span>(<span class="string">&quot;GITHUB_ACTIONS&quot;</span>).<span class="ident">is_ok</span>()
+    <span class="kw">fn </span>in_github_actions() -&gt; bool {
+        env::var(<span class="string">&quot;GITHUB_ACTIONS&quot;</span>).is_ok()
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_full_run</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">std::io::Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">in_github_actions</span>() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_full_run() -&gt; <span class="prelude-ty">Result</span>&lt;(), std::io::Error&gt; {
+        <span class="kw">if </span>in_github_actions() {
             <span class="macro">eprintln!</span>(<span class="string">&quot;Skipping this test because it won&#39;t work in GHA&quot;</span>);
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
-        <span class="comment">// YOLO some certs</span>
-        <span class="ident">std::process::Command::new</span>(<span class="string">&quot;./insecure_generate_tls.sh&quot;</span>).<span class="ident">spawn</span>()<span class="question-mark">?</span>;
-        <span class="ident">sleep</span>(<span class="ident">std::time::Duration::from_secs</span>(<span class="number">1</span>));
-        <span class="comment">// start the server</span>
-        <span class="kw">let</span> <span class="ident">goat</span> <span class="op">=</span> <span class="ident">std::process::Command::new</span>(<span class="string">&quot;cargo&quot;</span>)
-            .<span class="ident">args</span>([
+        <span class="comment">// YOLO some certs
+        </span>std::process::Command::new(<span class="string">&quot;./insecure_generate_tls.sh&quot;</span>).spawn()<span class="question-mark">?</span>;
+        sleep(std::time::Duration::from_secs(<span class="number">1</span>));
+        <span class="comment">// start the server
+        </span><span class="kw">let </span>goat = std::process::Command::new(<span class="string">&quot;cargo&quot;</span>)
+            .args([
                 <span class="string">&quot;run&quot;</span>,
                 <span class="string">&quot;--&quot;</span>,
                 <span class="string">&quot;--config&quot;</span>,
                 <span class="string">&quot;./examples/test_config/goatns-test.json&quot;</span>,
             ])
-            .<span class="ident">spawn</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">goat</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">child</span>) =&gt; <span class="ident">child</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+            .spawn();
+        <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="kw">match </span>goat {
+            <span class="prelude-val">Ok</span>(child) =&gt; child,
+            <span class="prelude-val">Err</span>(error) =&gt; {
                 <span class="macro">log::trace!</span>(<span class="string">&quot;Failed to start: {error:?}&quot;</span>);
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(error);
             }
         };
 
-        <span class="comment">// Construct a new Resolver pointing at localhost</span>
-        <span class="kw">let</span> <span class="ident">localhost</span>: <span class="ident">std::net::IpAddr</span> <span class="op">=</span> <span class="string">&quot;127.0.0.1&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">ResolverConfig::new</span>();
-        <span class="ident">config</span>.<span class="ident">add_name_server</span>(<span class="ident">NameServerConfig::new</span>(
-            <span class="ident">SocketAddr::new</span>(<span class="ident">localhost</span>, <span class="number">25353</span>),
-            <span class="ident">Protocol::Udp</span>,
+        <span class="comment">// Construct a new Resolver pointing at localhost
+        </span><span class="kw">let </span>localhost: std::net::IpAddr = <span class="string">&quot;127.0.0.1&quot;</span>.parse().unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>config = ResolverConfig::new();
+        config.add_name_server(NameServerConfig::new(
+            SocketAddr::new(localhost, <span class="number">25353</span>),
+            Protocol::Udp,
         ));
-        <span class="kw">let</span> <span class="ident">resolver</span> <span class="op">=</span> <span class="ident">Resolver::new</span>(<span class="ident">config</span>, <span class="ident">ResolverOpts::default</span>()).<span class="ident">unwrap</span>();
+        <span class="kw">let </span>resolver = Resolver::new(config, ResolverOpts::default()).unwrap();
 
-        <span class="comment">// On Unix/Posix systems, this will read the /etc/resolv.conf</span>
-        <span class="comment">// let mut resolver = Resolver::from_system_conf().unwrap();</span>
+        <span class="comment">// On Unix/Posix systems, this will read the /etc/resolv.conf
+        // let mut resolver = Resolver::from_system_conf().unwrap();
 
-        <span class="comment">// Lookup the IP addresses associated with a name.</span>
-        <span class="comment">// log::trace!(</span>
-        <span class="comment">//     &quot;{:?}&quot;,</span>
-        <span class="comment">//     resolver.lookup(&quot;hello.goat&quot;, trust_dns_resolver::proto::rr::RecordType::A)</span>
-        <span class="comment">// );</span>
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">resolver</span>.<span class="ident">lookup_ip</span>(<span class="string">&quot;hello.goat&quot;</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                <span class="ident">res</span>.<span class="ident">kill</span>()<span class="question-mark">?</span>;
+        // Lookup the IP addresses associated with a name.
+        // log::trace!(
+        //     &quot;{:?}&quot;,
+        //     resolver.lookup(&quot;hello.goat&quot;, trust_dns_resolver::proto::rr::RecordType::A)
+        // );
+        </span><span class="kw">let </span>response = <span class="kw">match </span>resolver.lookup_ip(<span class="string">&quot;hello.goat&quot;</span>) {
+            <span class="prelude-val">Ok</span>(value) =&gt; value,
+            <span class="prelude-val">Err</span>(error) =&gt; {
+                res.kill()<span class="question-mark">?</span>;
                 <span class="macro">panic!</span>(<span class="string">&quot;Error resolving hello.goat A {error:?}&quot;</span>);
             }
         };
 
-        <span class="comment">// There can be many addresses associated with the name,</span>
-        <span class="comment">//  this can return IPv4 and/or IPv6 addresses</span>
-        <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">response</span>.<span class="ident">iter</span>().<span class="ident">next</span>().<span class="ident">expect</span>(<span class="string">&quot;no addresses returned!&quot;</span>);
-        <span class="kw">if</span> <span class="ident">address</span>.<span class="ident">is_ipv4</span>() {
-            <span class="macro">assert_eq!</span>(<span class="ident">address</span>, <span class="ident">IpAddr::V4</span>(<span class="ident">Ipv4Addr::new</span>(<span class="number">6</span>, <span class="number">6</span>, <span class="number">6</span>, <span class="number">6</span>)));
-        } <span class="kw">else</span> {
+        <span class="comment">// There can be many addresses associated with the name,
+        //  this can return IPv4 and/or IPv6 addresses
+        </span><span class="kw">let </span>address = response.iter().next().expect(<span class="string">&quot;no addresses returned!&quot;</span>);
+        <span class="kw">if </span>address.is_ipv4() {
+            <span class="macro">assert_eq!</span>(address, IpAddr::V4(Ipv4Addr::new(<span class="number">6</span>, <span class="number">6</span>, <span class="number">6</span>, <span class="number">6</span>)));
+        } <span class="kw">else </span>{
             <span class="macro">assert_eq!</span>(
-                <span class="ident">address</span>,
-                <span class="ident">IpAddr::V6</span>(<span class="ident">Ipv6Addr::new</span>(
-                    <span class="number">0x2606</span>, <span class="number">0x2800</span>, <span class="number">0x220</span>, <span class="number">0x1</span>, <span class="number">0x248</span>, <span class="number">0x1893</span>, <span class="number">0x25c8</span>, <span class="number">0x1946</span>
-                ))
+                address,
+                IpAddr::V6(Ipv6Addr::new(
+                    <span class="number">0x2606</span>, <span class="number">0x2800</span>, <span class="number">0x220</span>, <span class="number">0x1</span>, <span class="number">0x248</span>, <span class="number">0x1893</span>, <span class="number">0x25c8</span>, <span class="number">0x1946
+                </span>))
             );
         }
 
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">resolver</span>.<span class="ident">lookup</span>(
+        <span class="kw">let </span>response = <span class="kw">match </span>resolver.lookup(
             <span class="string">&quot;_mqtt._http.hello.goat&quot;</span>,
-            <span class="ident">trust_dns_resolver::proto::rr::RecordType::Unknown</span>(<span class="number">256</span>),
+            trust_dns_resolver::proto::rr::RecordType::Unknown(<span class="number">256</span>),
         ) {
-            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;{error:?}&quot;</span>),
+            <span class="prelude-val">Ok</span>(value) =&gt; value,
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;{error:?}&quot;</span>),
         };
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">response</span>.<span class="ident">records</span>().<span class="ident">is_empty</span>());
+        <span class="macro">assert!</span>(!response.records().is_empty());
         <span class="macro">eprintln!</span>(<span class="string">&quot;URL response: {response:?}&quot;</span>);
 
-        <span class="comment">// clean up</span>
-        <span class="macro">info!</span>(<span class="string">&quot;Killing goatns&quot;</span>);
-        <span class="ident">res</span>.<span class="ident">kill</span>()<span class="question-mark">?</span>;
+        <span class="comment">// clean up
+        </span><span class="macro">info!</span>(<span class="string">&quot;Killing goatns&quot;</span>);
+        res.kill()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/resourcerecord.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>resourcerecord.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goatns/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/resourcerecord.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>resourcerecord.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../goatns/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../goatns/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -1050,205 +1050,205 @@
 <span id="1050">1050</span>
 <span id="1051">1051</span>
 <span id="1052">1052</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums</span>::{<span class="ident">RecordClass</span>, <span class="ident">RecordType</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils</span>::{<span class="ident">dms_to_u32</span>, <span class="ident">hexdump</span>, <span class="ident">name_as_bytes</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::zones::FileZoneRecord</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::HEADER_BYTES</span>;
-<span class="kw">use</span> <span class="ident">core::fmt::Debug</span>;
-<span class="kw">use</span> <span class="ident">num_traits::Num</span>;
-<span class="kw">use</span> <span class="ident">packed_struct::prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">regex::Regex</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>, <span class="ident">Serializer</span>};
-<span class="kw">use</span> <span class="ident">std::env::consts</span>;
-<span class="kw">use</span> <span class="ident">std::str</span>::{<span class="ident">from_utf8</span>, <span class="ident">FromStr</span>};
-<span class="kw">use</span> <span class="ident">std::string::FromUtf8Error</span>;
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::{RecordClass, RecordType};
+<span class="kw">use </span><span class="kw">crate</span>::utils::{dms_to_u32, hexdump, name_as_bytes};
+<span class="kw">use </span><span class="kw">crate</span>::zones::FileZoneRecord;
+<span class="kw">use </span><span class="kw">crate</span>::HEADER_BYTES;
+<span class="kw">use </span>core::fmt::Debug;
+<span class="kw">use </span>num_traits::Num;
+<span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>regex::Regex;
+<span class="kw">use </span>serde::{Deserialize, Serialize, Serializer};
+<span class="kw">use </span>std::env::consts;
+<span class="kw">use </span>std::str::{from_utf8, FromStr};
+<span class="kw">use </span>std::string::FromUtf8Error;
 
-<span class="macro">lazy_static!</span> {
-    <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">CAA_TAG_VALIDATOR</span>: <span class="ident">Regex</span> <span class="op">=</span> <span class="ident">Regex::new</span>(<span class="string">r&quot;[a-zA-Z0-9]&quot;</span>).<span class="ident">unwrap</span>();
-    <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">URI_RECORD</span>: <span class="ident">Regex</span> <span class="op">=</span>
-        <span class="ident">Regex::new</span>(<span class="string">r#&quot;^(?P&lt;priority&gt;\d+) (?P&lt;weight&gt;\d+) (?P&lt;target&gt;.*)&quot;#</span>).<span class="ident">unwrap</span>();
+<span class="macro">lazy_static! </span>{
+    <span class="kw">static </span><span class="kw-2">ref </span>CAA_TAG_VALIDATOR: Regex = Regex::new(<span class="string">r&quot;[a-zA-Z0-9]&quot;</span>).unwrap();
+    <span class="kw">static </span><span class="kw-2">ref </span>URI_RECORD: Regex =
+        Regex::new(<span class="string">r#&quot;^(?P&lt;priority&gt;\d+) (?P&lt;weight&gt;\d+) (?P&lt;target&gt;.*)&quot;#</span>).unwrap();
 }
 
-<span class="kw">const</span> <span class="ident">DEFAULT_LOC_HORIZ_PRE</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">10000</span>;
-<span class="kw">const</span> <span class="ident">DEFAULT_LOC_VERT_PRE</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">10</span>;
-<span class="kw">const</span> <span class="ident">DEFAULT_LOC_SIZE</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="kw">const </span>DEFAULT_LOC_HORIZ_PRE: u32 = <span class="number">10000</span>;
+<span class="kw">const </span>DEFAULT_LOC_VERT_PRE: u32 = <span class="number">10</span>;
+<span class="kw">const </span>DEFAULT_LOC_SIZE: u32 = <span class="number">1</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DomainName</span> {
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
+<span class="attribute">#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+</span><span class="kw">pub struct </span>DomainName {
+    <span class="kw">pub </span>name: String,
 }
 
-<span class="kw">impl</span> <span class="ident">DomainName</span> {
-    <span class="doccomment">/// Push the DomainName through the name_as_bytes function</span>
-    <span class="comment">// TODO:</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_bytes</span>(
+<span class="kw">impl </span>DomainName {
+    <span class="doccomment">/// Push the DomainName through the name_as_bytes function
+    </span><span class="comment">// TODO:
+    </span><span class="kw">pub fn </span>as_bytes(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">compress_target</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-        <span class="ident">compress_reference</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="ident">name_as_bytes</span>(
-            <span class="self">self</span>.<span class="ident">name</span>.<span class="ident">to_owned</span>().<span class="ident">into_bytes</span>(),
-            <span class="ident">compress_target</span>,
-            <span class="ident">compress_reference</span>,
+        compress_target: <span class="prelude-ty">Option</span>&lt;u16&gt;,
+        compress_reference: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;u8&gt;&gt;,
+    ) -&gt; Vec&lt;u8&gt; {
+        name_as_bytes(
+            <span class="self">self</span>.name.to_owned().into_bytes(),
+            compress_target,
+            compress_reference,
         )
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DomainName</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">input</span>.<span class="ident">contains</span>(<span class="string">&#39;@&#39;</span>) {
-            <span class="bool-val">false</span> =&gt; <span class="ident">String::from</span>(<span class="ident">input</span>),
-            <span class="bool-val">true</span> =&gt; <span class="ident">input</span>.<span class="ident">replace</span>(<span class="string">&#39;@&#39;</span>, <span class="string">&quot;.&quot;</span>),
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>DomainName {
+    <span class="kw">fn </span>from(input: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>name = <span class="kw">match </span>input.contains(<span class="string">&#39;@&#39;</span>) {
+            <span class="bool-val">false </span>=&gt; String::from(input),
+            <span class="bool-val">true </span>=&gt; input.replace(<span class="string">&#39;@&#39;</span>, <span class="string">&quot;.&quot;</span>),
         };
-        <span class="ident">DomainName</span> { <span class="ident">name</span> }
+        DomainName { name }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DomainName</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">name</span>: <span class="ident">String</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">DomainName</span> { <span class="ident">name</span> }
+<span class="kw">impl </span>From&lt;String&gt; <span class="kw">for </span>DomainName {
+    <span class="kw">fn </span>from(name: String) -&gt; <span class="self">Self </span>{
+        DomainName { name }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DomainName</span> {
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">FromUtf8Error</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">String::from_utf8</span>(<span class="ident">input</span>.<span class="ident">to_owned</span>()) {
-            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="ident">DomainName</span> { <span class="ident">name</span>: <span class="ident">value</span> }),
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">error</span>),
+<span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>Vec&lt;u8&gt;&gt; <span class="kw">for </span>DomainName {
+    <span class="kw">fn </span>try_from(input: <span class="kw-2">&amp;</span>Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, FromUtf8Error&gt; {
+        <span class="kw">match </span>String::from_utf8(input.to_owned()) {
+            <span class="prelude-val">Ok</span>(value) =&gt; <span class="prelude-val">Ok</span>(DomainName { name: value }),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(error),
         }
     }
 
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">FromUtf8Error</span>;
+    <span class="kw">type </span>Error = FromUtf8Error;
 }
 
-<span class="doccomment">/// Turn this into the domain-name value</span>
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">DomainName</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">dn</span>: <span class="kw-2">&amp;</span><span class="ident">DomainName</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">name_as_bytes</span>(<span class="ident">dn</span>.<span class="ident">name</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
+<span class="doccomment">/// Turn this into the domain-name value
+</span><span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>DomainName&gt; <span class="kw">for </span>Vec&lt;u8&gt; {
+    <span class="kw">fn </span>from(dn: <span class="kw-2">&amp;</span>DomainName) -&gt; <span class="self">Self </span>{
+        name_as_bytes(dn.name.as_bytes().to_vec(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PackedStruct</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">packed_struct</span>(<span class="ident">bit_numbering</span> <span class="op">=</span> <span class="string">&quot;msb0&quot;</span>, <span class="ident">size_bytes</span> <span class="op">=</span> <span class="string">&quot;16&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LocRecord</span> {
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;0..8&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">u8</span>,
-    <span class="comment">// #[packed_field(bits = &quot;9..13&quot;, endian = &quot;msb&quot;)]</span>
-    <span class="comment">// pub size_higher: u8,</span>
-    <span class="comment">// #[packed_field(bits = &quot;13..16&quot;, endian = &quot;msb&quot;)]</span>
-    <span class="comment">// pub size_lower: u8,</span>
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;9..16&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">size</span>: <span class="ident">u8</span>,
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;16..24&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">horiz_pre</span>: <span class="ident">u8</span>,
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;24..32&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">vert_pre</span>: <span class="ident">u8</span>,
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;32..64&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">latitude</span>: <span class="ident">u32</span>,
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;64..96&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">longitude</span>: <span class="ident">u32</span>,
-    <span class="attribute">#[<span class="ident">packed_field</span>(<span class="ident">bits</span> <span class="op">=</span> <span class="string">&quot;96..128&quot;</span>, <span class="ident">endian</span> <span class="op">=</span> <span class="string">&quot;msb&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">altitude</span>: <span class="ident">i32</span>,
+<span class="attribute">#[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
+#[packed_struct(bit_numbering = <span class="string">&quot;msb0&quot;</span>, size_bytes = <span class="string">&quot;16&quot;</span>)]
+</span><span class="kw">pub struct </span>LocRecord {
+    <span class="attribute">#[packed_field(bits = <span class="string">&quot;0..8&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="kw">pub </span>version: u8,
+    <span class="comment">// #[packed_field(bits = &quot;9..13&quot;, endian = &quot;msb&quot;)]
+    // pub size_higher: u8,
+    // #[packed_field(bits = &quot;13..16&quot;, endian = &quot;msb&quot;)]
+    // pub size_lower: u8,
+    </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;9..16&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="kw">pub </span>size: u8,
+    <span class="attribute">#[packed_field(bits = <span class="string">&quot;16..24&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="kw">pub </span>horiz_pre: u8,
+    <span class="attribute">#[packed_field(bits = <span class="string">&quot;24..32&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="kw">pub </span>vert_pre: u8,
+    <span class="attribute">#[packed_field(bits = <span class="string">&quot;32..64&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="kw">pub </span>latitude: u32,
+    <span class="attribute">#[packed_field(bits = <span class="string">&quot;64..96&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="kw">pub </span>longitude: u32,
+    <span class="attribute">#[packed_field(bits = <span class="string">&quot;96..128&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="kw">pub </span>altitude: i32,
 }
 
-<span class="doccomment">/// &lt;character-string&gt; is a single length octet followed by that number of characters.  &lt;character-string&gt; is treated as binary information, and can be up to 256 characters in length (including the length octet).</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DNSCharString</span> {
-    <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+<span class="doccomment">/// &lt;character-string&gt; is a single length octet followed by that number of characters.  &lt;character-string&gt; is treated as binary information, and can be up to 256 characters in length (including the length octet).
+</span><span class="attribute">#[derive(Eq, PartialEq, Debug, Clone)]
+</span><span class="kw">pub struct </span>DNSCharString {
+    <span class="kw">pub </span>data: Vec&lt;u8&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">DNSCharString</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S::Ok</span>, <span class="ident">S::Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="ident">Serializer</span>,
+<span class="kw">impl </span>Serialize <span class="kw">for </span>DNSCharString {
+    <span class="kw">fn </span>serialize&lt;S&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, serializer: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
+    <span class="kw">where
+        </span>S: Serializer,
     {
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">from_utf8</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>).<span class="ident">expect</span>(<span class="string">&quot;This shouldn&#39;t ever fail&quot;</span>);
-        <span class="ident">serializer</span>.<span class="ident">serialize_str</span>(<span class="ident">res</span>)
+        <span class="kw">let </span>res = from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.data).expect(<span class="string">&quot;This shouldn&#39;t ever fail&quot;</span>);
+        serializer.serialize_str(res)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DNSCharString</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">DNSCharString</span> { <span class="ident">data</span>: <span class="ident">input</span>.<span class="ident">into</span>() }
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>DNSCharString {
+    <span class="kw">fn </span>from(input: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        DNSCharString { data: input.into() }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">DNSCharString</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">input</span>: <span class="ident">DNSCharString</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">input</span>.<span class="ident">data</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>];
-        <span class="ident">data</span>.<span class="ident">extend</span>(<span class="ident">input</span>.<span class="ident">data</span>);
-        <span class="ident">data</span>
+<span class="kw">impl </span>From&lt;DNSCharString&gt; <span class="kw">for </span>Vec&lt;u8&gt; {
+    <span class="kw">fn </span>from(input: DNSCharString) -&gt; Vec&lt;u8&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>data: Vec&lt;u8&gt; = <span class="macro">vec!</span>[input.data.len() <span class="kw">as </span>u8];
+        data.extend(input.data);
+        data
     }
 }
 
-<span class="kw">impl</span> <span class="ident">DNSCharString</span> {
-    <span class="doccomment">/// Returns the bytes for a packet, ie - the length and then the string (automagically truncated to 255 bytes)</span>
-    <span class="kw">fn</span> <span class="ident">as_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="self">self</span>.<span class="ident">data</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>];
-        <span class="ident">res</span>.<span class="ident">extend</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span>);
-        <span class="comment">// &lt;character-string&gt; is a single length octet followed by that number of characters.  &lt;character-string&gt; is treated as binary information, and can be up to 256 characters in length (including the length octet).</span>
-        <span class="ident">res</span>.<span class="ident">truncate</span>(<span class="number">257</span>);
+<span class="kw">impl </span>DNSCharString {
+    <span class="doccomment">/// Returns the bytes for a packet, ie - the length and then the string (automagically truncated to 255 bytes)
+    </span><span class="kw">fn </span>as_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>res: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="self">self</span>.data.len() <span class="kw">as </span>u8];
+        res.extend(<span class="kw-2">&amp;</span><span class="self">self</span>.data);
+        <span class="comment">// &lt;character-string&gt; is a single length octet followed by that number of characters.  &lt;character-string&gt; is treated as binary information, and can be up to 256 characters in length (including the length octet).
+        </span>res.truncate(<span class="number">257</span>);
 
-        <span class="comment">// TODO: I wonder if we can automagically split this and return it as individual records? it&#39;d have to happen up the stack.</span>
-        <span class="ident">res</span>
+        <span class="comment">// TODO: I wonder if we can automagically split this and return it as individual records? it&#39;d have to happen up the stack.
+        </span>res
     }
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::upper_case_acronyms</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">InternalResourceRecord</span> {
-    <span class="doccomment">/// A single host address</span>
-    <span class="ident">A</span> {
-        <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">serialize_with</span> <span class="op">=</span> <span class="string">&quot;crate::serializers::a_to_ip&quot;</span>)]</span>
-        <span class="ident">address</span>: <span class="ident">u32</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
+<span class="attribute">#[allow(clippy::upper_case_acronyms)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+</span><span class="kw">pub enum </span>InternalResourceRecord {
+    <span class="doccomment">/// A single host address
+    </span>A {
+        <span class="attribute">#[serde(serialize_with = <span class="string">&quot;crate::serializers::a_to_ip&quot;</span>)]
+        </span>address: u32,
+        ttl: u32,
+        rclass: RecordClass,
     },
-    <span class="ident">AAAA</span> {
-        <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">serialize_with</span> <span class="op">=</span> <span class="string">&quot;crate::serializers::aaaa_to_ip&quot;</span>)]</span>
-        <span class="ident">address</span>: <span class="ident">u128</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1</span>
-    <span class="ident">AXFR</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 252 A request for a transfer of an entire zone</span>
+    AAAA {
+        <span class="attribute">#[serde(serialize_with = <span class="string">&quot;crate::serializers::aaaa_to_ip&quot;</span>)]
+        </span>address: u128,
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 28 https://www.rfc-editor.org/rfc/rfc3596#section-2.1
+    </span>AXFR {
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 252 A request for a transfer of an entire zone
 
-    <span class="comment">// [RFC8659](https://www.rfc-editor.org/rfc/rfc8659) - CAA Record</span>
-    <span class="ident">CAA</span> {
-        <span class="ident">flag</span>: <span class="ident">u8</span>,
-        <span class="doccomment">/// Tags MAY contain ASCII characters &quot;a&quot; through &quot;z&quot;, &quot;A&quot; through &quot;Z&quot;, and the numbers 0 through 9. Tags MUST NOT contain any other characters. Matching of tags is case insensitive.</span>
-        <span class="ident">tag</span>: <span class="ident">DNSCharString</span>,
-        <span class="doccomment">/// A sequence of octets representing the Property Value. Property Values are encoded as binary values and MAY employ sub‑formats.</span>
-        <span class="ident">value</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
+    // [RFC8659](https://www.rfc-editor.org/rfc/rfc8659) - CAA Record
+    </span>CAA {
+        flag: u8,
+        <span class="doccomment">/// Tags MAY contain ASCII characters &quot;a&quot; through &quot;z&quot;, &quot;A&quot; through &quot;Z&quot;, and the numbers 0 through 9. Tags MUST NOT contain any other characters. Matching of tags is case insensitive.
+        </span>tag: DNSCharString,
+        <span class="doccomment">/// A sequence of octets representing the Property Value. Property Values are encoded as binary values and MAY employ sub‑formats.
+        </span>value: Vec&lt;u8&gt;,
+        ttl: u32,
+        rclass: RecordClass,
     },
-    <span class="ident">CNAME</span> {
-        <span class="ident">cname</span>: <span class="ident">DomainName</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 5 the canonical name for an alias</span>
-    <span class="ident">LOC</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-        <span class="doccomment">/// Version number of the representation.  This must be zero. Implementations are required to check this field and make no assumptions about the format of unrecognized versions.</span>
-        <span class="ident">version</span>: <span class="ident">u8</span>,
-        <span class="ident">size</span>: <span class="ident">u8</span>,
-        <span class="ident">horiz_pre</span>: <span class="ident">u8</span>,
-        <span class="ident">vert_pre</span>: <span class="ident">u8</span>,
-        <span class="ident">latitude</span>: <span class="ident">u32</span>,
-        <span class="ident">longitude</span>: <span class="ident">u32</span>,
-        <span class="ident">altitude</span>: <span class="ident">i32</span>,
+    CNAME {
+        cname: DomainName,
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 5 the canonical name for an alias
+    </span>LOC {
+        ttl: u32,
+        rclass: RecordClass,
+        <span class="doccomment">/// Version number of the representation.  This must be zero. Implementations are required to check this field and make no assumptions about the format of unrecognized versions.
+        </span>version: u8,
+        size: u8,
+        horiz_pre: u8,
+        vert_pre: u8,
+        latitude: u32,
+        longitude: u32,
+        altitude: i32,
     },
-    <span class="ident">NAPTR</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-        <span class="doccomment">///     Domain - The domain name to which this resource record refers.  This is the &#39;key&#39; for this entry in the rule database.  This value will either be the first well known key (&lt;something&gt;.uri.arpa for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements.</span>
-        <span class="ident">domain</span>: <span class="ident">DomainName</span>,
-        <span class="comment">// A 16-bit unsigned integer specifying the order in which the NAPTR records MUST be processed to ensure the correct ordering of rules.  Low numbers are processed before high numbers, and once a NAPTR is found whose rule &quot;matches&quot; the target, the client MUST NOT consider any NAPTRs with a higher value for order (except as noted below for the Flags field).</span>
-        <span class="ident">order</span>: <span class="ident">u16</span>,
+    NAPTR {
+        ttl: u32,
+        rclass: RecordClass,
+        <span class="doccomment">///     Domain - The domain name to which this resource record refers.  This is the &#39;key&#39; for this entry in the rule database.  This value will either be the first well known key (&lt;something&gt;.uri.arpa for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements.
+        </span>domain: DomainName,
+        <span class="comment">// A 16-bit unsigned integer specifying the order in which the NAPTR records MUST be processed to ensure the correct ordering of rules.  Low numbers are processed before high numbers, and once a NAPTR is found whose rule &quot;matches&quot; the target, the client MUST NOT consider any NAPTRs with a higher value for order (except as noted below for the Flags field).
+        </span>order: u16,
 
         <span class="comment">/* A 16-bit unsigned integer that specifies the order in which NAPTR
         records with equal &quot;order&quot; values SHOULD be processed, low
@@ -1264,843 +1264,843 @@
         different Order but they MAY process records with the same Order
         but different Preferences.  I.e., Preference is used to give weight
         to rules that are considered the same from an authority
-        standpoint but not from a simple load balancing standpoint.*/</span>
-        <span class="ident">preference</span>: <span class="ident">u16</span>,
+        standpoint but not from a simple load balancing standpoint.*/
+        </span>preference: u16,
 
-        <span class="comment">// A &lt;character-string&gt; containing flags to control aspects of the</span>
-        <span class="comment">// rewriting and interpretation of the fields in the record.  Flags</span>
-        <span class="comment">// are single characters from the set [A-Z0-9].  The case of the</span>
-        <span class="comment">// alphabetic characters is not significant.</span>
+        <span class="comment">// A &lt;character-string&gt; containing flags to control aspects of the
+        // rewriting and interpretation of the fields in the record.  Flags
+        // are single characters from the set [A-Z0-9].  The case of the
+        // alphabetic characters is not significant.
 
-        <span class="comment">// At this time only four flags, &quot;S&quot;, &quot;A&quot;, &quot;U&quot;, and &quot;P&quot;, are</span>
-        <span class="comment">// defined.  The &quot;S&quot;, &quot;A&quot; and &quot;U&quot; flags denote a terminal lookup.</span>
-        <span class="comment">// This means that this NAPTR record is the last one and that the</span>
-        <span class="comment">// flag determines what the next stage should be.  The &quot;S&quot; flag</span>
-        <span class="comment">// means that the next lookup should be for SRV records [4].  See</span>
-        <span class="comment">// Section 5 for additional information on how NAPTR uses the SRV</span>
-        <span class="comment">// record type.  &quot;A&quot; means that the next lookup should be for either</span>
-        <span class="comment">// an A, AAAA, or A6 record.  The &quot;U&quot; flag means that the next step</span>
-        <span class="comment">// is not a DNS lookup but that the output of the Regexp field is an</span>
-        <span class="comment">// URI that adheres to the &#39;absoluteURI&#39; production found in the</span>
-        <span class="comment">// ABNF of RFC 2396 [9].  Since there may be applications that use</span>
-        <span class="comment">// NAPTR to also lookup aspects of URIs, implementors should be</span>
-        <span class="comment">// aware that this may cause loop conditions and should act</span>
-        <span class="comment">// accordingly.</span>
-        <span class="ident">flags</span>: <span class="ident">String</span>,
+        // At this time only four flags, &quot;S&quot;, &quot;A&quot;, &quot;U&quot;, and &quot;P&quot;, are
+        // defined.  The &quot;S&quot;, &quot;A&quot; and &quot;U&quot; flags denote a terminal lookup.
+        // This means that this NAPTR record is the last one and that the
+        // flag determines what the next stage should be.  The &quot;S&quot; flag
+        // means that the next lookup should be for SRV records [4].  See
+        // Section 5 for additional information on how NAPTR uses the SRV
+        // record type.  &quot;A&quot; means that the next lookup should be for either
+        // an A, AAAA, or A6 record.  The &quot;U&quot; flag means that the next step
+        // is not a DNS lookup but that the output of the Regexp field is an
+        // URI that adheres to the &#39;absoluteURI&#39; production found in the
+        // ABNF of RFC 2396 [9].  Since there may be applications that use
+        // NAPTR to also lookup aspects of URIs, implementors should be
+        // aware that this may cause loop conditions and should act
+        // accordingly.
+        </span>flags: String,
     },
-    <span class="ident">NS</span> {
-        <span class="ident">nsdname</span>: <span class="ident">DomainName</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 2 an authoritative name server</span>
-    <span class="ident">SOA</span> {
-        <span class="comment">// The zone that this SOA record is for - eg hello.goat or example.com</span>
-        <span class="ident">zone</span>: <span class="ident">DomainName</span>,
-        <span class="doccomment">/// The &lt;domain-name&gt; of the name server that was the original or primary source of data for this zone.</span>
-        <span class="ident">mname</span>: <span class="ident">DomainName</span>,
-        <span class="doccomment">/// A &lt;domain-name&gt; which specifies the mailbox of the person responsible for this zone. eg: `dns.example.com` is actually `dns@example.com`</span>
-        <span class="ident">rname</span>: <span class="ident">DomainName</span>,
-        <span class="ident">serial</span>: <span class="ident">u32</span>,
-        <span class="ident">refresh</span>: <span class="ident">u32</span>,
-        <span class="ident">retry</span>: <span class="ident">u32</span>,
-        <span class="ident">expire</span>: <span class="ident">u32</span>,
-        <span class="ident">minimum</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 6 marks the start of a zone of authority</span>
+    NS {
+        nsdname: DomainName,
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 2 an authoritative name server
+    </span>SOA {
+        <span class="comment">// The zone that this SOA record is for - eg hello.goat or example.com
+        </span>zone: DomainName,
+        <span class="doccomment">/// The &lt;domain-name&gt; of the name server that was the original or primary source of data for this zone.
+        </span>mname: DomainName,
+        <span class="doccomment">/// A &lt;domain-name&gt; which specifies the mailbox of the person responsible for this zone. eg: `dns.example.com` is actually `dns@example.com`
+        </span>rname: DomainName,
+        serial: u32,
+        refresh: u32,
+        retry: u32,
+        expire: u32,
+        minimum: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 6 marks the start of a zone of authority
 
-    <span class="ident">MB</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 7 a mailbox domain name (EXPERIMENTAL)</span>
-    <span class="ident">MG</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 8 a mail group member (EXPERIMENTAL)</span>
-    <span class="ident">MR</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 9 a mail rename domain name (EXPERIMENTAL)</span>
-    <span class="ident">NULL</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 10 a null RR (EXPERIMENTAL)</span>
-    <span class="ident">WKS</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 11 a well known service description</span>
-    <span class="ident">PTR</span> {
-        <span class="ident">ptrdname</span>: <span class="ident">DomainName</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 12 a domain name pointer</span>
-    <span class="ident">HINFO</span> {
-        <span class="ident">cpu</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DNSCharString</span><span class="op">&gt;</span>,
-        <span class="ident">os</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DNSCharString</span><span class="op">&gt;</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 13 host information</span>
-    <span class="ident">MINFO</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 14 mailbox or mail list information</span>
-    <span class="ident">MX</span> {
-        <span class="ident">preference</span>: <span class="ident">u16</span>,
-        <span class="ident">exchange</span>: <span class="ident">DomainName</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 15 mail exchange</span>
-    <span class="ident">TXT</span> {
-        <span class="ident">txtdata</span>: <span class="ident">DNSCharString</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">class</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 16 text strings</span>
-    <span class="ident">URI</span> {
-        <span class="ident">priority</span>: <span class="ident">u16</span>,
-        <span class="ident">weight</span>: <span class="ident">u16</span>,
-        <span class="ident">target</span>: <span class="ident">DNSCharString</span>,
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
+    </span>MB {
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 7 a mailbox domain name (EXPERIMENTAL)
+    </span>MG {
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 8 a mail group member (EXPERIMENTAL)
+    </span>MR {
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 9 a mail rename domain name (EXPERIMENTAL)
+    </span>NULL {
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 10 a null RR (EXPERIMENTAL)
+    </span>WKS {
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 11 a well known service description
+    </span>PTR {
+        ptrdname: DomainName,
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 12 a domain name pointer
+    </span>HINFO {
+        cpu: <span class="prelude-ty">Option</span>&lt;DNSCharString&gt;,
+        os: <span class="prelude-ty">Option</span>&lt;DNSCharString&gt;,
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 13 host information
+    </span>MINFO {
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 14 mailbox or mail list information
+    </span>MX {
+        preference: u16,
+        exchange: DomainName,
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 15 mail exchange
+    </span>TXT {
+        txtdata: DNSCharString,
+        ttl: u32,
+        class: RecordClass,
+    }, <span class="comment">// 16 text strings
+    </span>URI {
+        priority: u16,
+        weight: u16,
+        target: DNSCharString,
+        ttl: u32,
+        rclass: RecordClass,
     },
 
-    <span class="ident">MAILB</span> {
-        <span class="ident">ttl</span>: <span class="ident">u32</span>,
-        <span class="ident">rclass</span>: <span class="ident">RecordClass</span>,
-    }, <span class="comment">// 253 A request for mailbox-related records (MB, MG or MR)</span>
+    MAILB {
+        ttl: u32,
+        rclass: RecordClass,
+    }, <span class="comment">// 253 A request for mailbox-related records (MB, MG or MR)
 
-    <span class="comment">// MAILA {</span>
-    <span class="comment">//     ttl: u32,</span>
-    <span class="comment">// }, // 254 A request for mail agent RRs (Obsolete - see MX)</span>
-    <span class="ident">ALL</span> {}, <span class="comment">// 255 A request for all records (*)</span>
-    <span class="ident">InvalidType</span>,
+    // MAILA {
+    //     ttl: u32,
+    // }, // 254 A request for mail agent RRs (Obsolete - see MX)
+    </span>ALL {}, <span class="comment">// 255 A request for all records (*)
+    </span>InvalidType,
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">FileZoneRecord</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">InternalResourceRecord</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">String</span>;
-    <span class="comment">// TODO: This should be a try_into because we&#39;re parsing text</span>
-    <span class="doccomment">/// This is where we convert from the JSON blob in the file to an internal representation of the data.</span>
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">record</span>: <span class="ident">FileZoneRecord</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">check_long_labels</span>(<span class="kw-2">&amp;</span><span class="ident">record</span>.<span class="ident">name</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;At least one label is of length over 63 in name {}! I&#39;m refusing to serve this record.&quot;</span>, <span class="ident">record</span>.<span class="ident">name</span>));
+<span class="kw">impl </span>TryFrom&lt;FileZoneRecord&gt; <span class="kw">for </span>InternalResourceRecord {
+    <span class="kw">type </span>Error = String;
+    <span class="comment">// TODO: This should be a try_into because we&#39;re parsing text
+    </span><span class="doccomment">/// This is where we convert from the JSON blob in the file to an internal representation of the data.
+    </span><span class="kw">fn </span>try_from(record: FileZoneRecord) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, String&gt; {
+        <span class="kw">if </span>check_long_labels(<span class="kw-2">&amp;</span>record.name) {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;At least one label is of length over 63 in name {}! I&#39;m refusing to serve this record.&quot;</span>, record.name));
         };
 
-        <span class="kw">if</span> <span class="ident">record</span>.<span class="ident">name</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">255</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;The length of name ({}) is over 255 octets! ({}) I&#39;m refusing to serve this record.&quot;</span>, <span class="ident">record</span>.<span class="ident">name</span>,
-            <span class="ident">record</span>.<span class="ident">name</span>.<span class="ident">len</span>()));
+        <span class="kw">if </span>record.name.len() &gt; <span class="number">255 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;The length of name ({}) is over 255 octets! ({}) I&#39;m refusing to serve this record.&quot;</span>, record.name,
+            record.name.len()));
         };
 
-        <span class="kw">match</span> <span class="ident">record</span>.<span class="ident">rrtype</span>.<span class="ident">as_str</span>() {
-            <span class="string">&quot;A&quot;</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">address</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">std::net::Ipv4Addr::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">record</span>.<span class="ident">rdata</span>) {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">into</span>(),
-                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+        <span class="kw">match </span>record.rrtype.as_str() {
+            <span class="string">&quot;A&quot; </span>=&gt; {
+                <span class="kw">let </span>address: u32 = <span class="kw">match </span>std::net::Ipv4Addr::from_str(<span class="kw-2">&amp;</span>record.rdata) {
+                    <span class="prelude-val">Ok</span>(value) =&gt; value.into(),
+                    <span class="prelude-val">Err</span>(error) =&gt; {
                         <span class="macro">log::error!</span>(
                             <span class="string">&quot;Failed to parse {:?} into an IPv4 address: {:?}&quot;</span>,
-                            <span class="ident">record</span>.<span class="ident">rdata</span>,
-                            <span class="ident">error</span>
+                            record.rdata,
+                            error
                         );
-                        <span class="number">0u32</span>
-                    }
+                        <span class="number">0u32
+                    </span>}
                 };
-                <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::A</span> {
-                    <span class="ident">address</span>,
-                    <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
+                <span class="prelude-val">Ok</span>(InternalResourceRecord::A {
+                    address,
+                    ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
-            <span class="string">&quot;AAAA&quot;</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">address</span>: <span class="ident">u128</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">std::net::Ipv6Addr::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">record</span>.<span class="ident">rdata</span>) {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
-                        <span class="kw">let</span> <span class="ident">res</span>: <span class="ident">u128</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">into</span>();
-                        <span class="macro">log::trace!</span>(<span class="string">&quot;Encoding {:?} as {:?}&quot;</span>, <span class="ident">value</span>, <span class="ident">res</span>);
-                        <span class="ident">res</span>
+            <span class="string">&quot;AAAA&quot; </span>=&gt; {
+                <span class="kw">let </span>address: u128 = <span class="kw">match </span>std::net::Ipv6Addr::from_str(<span class="kw-2">&amp;</span>record.rdata) {
+                    <span class="prelude-val">Ok</span>(value) =&gt; {
+                        <span class="kw">let </span>res: u128 = value.into();
+                        <span class="macro">log::trace!</span>(<span class="string">&quot;Encoding {:?} as {:?}&quot;</span>, value, res);
+                        res
                     }
-                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+                    <span class="prelude-val">Err</span>(error) =&gt; {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                             <span class="string">&quot;Failed to parse {:?} into an IPv6 address: {:?}&quot;</span>,
-                            <span class="ident">record</span>.<span class="ident">rdata</span>, <span class="ident">error</span>
+                            record.rdata, error
                         ));
                     }
                 };
 
-                <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::AAAA</span> {
-                    <span class="ident">address</span>,
-                    <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
+                <span class="prelude-val">Ok</span>(InternalResourceRecord::AAAA {
+                    address,
+                    ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
-            <span class="string">&quot;CNAME&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::CNAME</span> {
-                <span class="ident">cname</span>: <span class="ident">DomainName::from</span>(<span class="ident">record</span>.<span class="ident">rdata</span>),
-                <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
+            <span class="string">&quot;CNAME&quot; </span>=&gt; <span class="prelude-val">Ok</span>(InternalResourceRecord::CNAME {
+                cname: DomainName::from(record.rdata),
+                ttl: record.ttl,
+                rclass: record.class,
             }),
-            <span class="string">&quot;PTR&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::PTR</span> {
-                <span class="ident">ptrdname</span>: <span class="ident">DomainName::from</span>(<span class="ident">record</span>.<span class="ident">rdata</span>),
-                <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
+            <span class="string">&quot;PTR&quot; </span>=&gt; <span class="prelude-val">Ok</span>(InternalResourceRecord::PTR {
+                ptrdname: DomainName::from(record.rdata),
+                ttl: record.ttl,
+                rclass: record.class,
             }),
-            <span class="string">&quot;TXT&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::TXT</span> {
-                <span class="ident">txtdata</span>: <span class="ident">DNSCharString</span> {
-                    <span class="ident">data</span>: <span class="ident">record</span>.<span class="ident">rdata</span>.<span class="ident">into_bytes</span>(),
+            <span class="string">&quot;TXT&quot; </span>=&gt; <span class="prelude-val">Ok</span>(InternalResourceRecord::TXT {
+                txtdata: DNSCharString {
+                    data: record.rdata.into_bytes(),
                 },
-                <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                <span class="ident">class</span>: <span class="ident">record</span>.<span class="ident">class</span>,
+                ttl: record.ttl,
+                class: record.class,
             }),
-            <span class="string">&quot;MX&quot;</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">split_bit</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">record</span>.<span class="ident">rdata</span>.<span class="ident">split</span>(<span class="string">&#39; &#39;</span>).<span class="ident">collect</span>();
-                <span class="kw">if</span> <span class="ident">split_bit</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+            <span class="string">&quot;MX&quot; </span>=&gt; {
+                <span class="kw">let </span>split_bit: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = record.rdata.split(<span class="string">&#39; &#39;</span>).collect();
+                <span class="kw">if </span>split_bit.len() != <span class="number">2 </span>{
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                         <span class="string">&quot;While trying to parse MX record, got &#39;{:?}&#39; which is wrong.&quot;</span>,
-                        <span class="ident">split_bit</span>
+                        split_bit
                     ));
                 };
-                <span class="kw">let</span> <span class="ident">pref</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">u16::from_str</span>(<span class="ident">split_bit</span>[<span class="number">0</span>]) {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+                <span class="kw">let </span>pref = <span class="kw">match </span>u16::from_str(split_bit[<span class="number">0</span>]) {
+                    <span class="prelude-val">Ok</span>(value) =&gt; value,
+                    <span class="prelude-val">Err</span>(error) =&gt; {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                             <span class="string">&quot;Failed to parse {} into number: {:?}&quot;</span>,
-                            <span class="ident">split_bit</span>[<span class="number">0</span>], <span class="ident">error</span>
+                            split_bit[<span class="number">0</span>], error
                         ))
                     }
                 };
-                <span class="macro">log::trace!</span>(<span class="string">&quot;got pref {}, now {pref}&quot;</span>, <span class="ident">split_bit</span>[<span class="number">0</span>]);
-                <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::MX</span> {
-                    <span class="ident">preference</span>: <span class="ident">pref</span>,
-                    <span class="ident">exchange</span>: <span class="ident">DomainName::from</span>(<span class="ident">split_bit</span>[<span class="number">1</span>]),
-                    <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
+                <span class="macro">log::trace!</span>(<span class="string">&quot;got pref {}, now {pref}&quot;</span>, split_bit[<span class="number">0</span>]);
+                <span class="prelude-val">Ok</span>(InternalResourceRecord::MX {
+                    preference: pref,
+                    exchange: DomainName::from(split_bit[<span class="number">1</span>]),
+                    ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
-            <span class="string">&quot;NS&quot;</span> =&gt; <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::NS</span> {
-                <span class="ident">nsdname</span>: <span class="ident">DomainName::from</span>(<span class="ident">record</span>.<span class="ident">rdata</span>),
-                <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
+            <span class="string">&quot;NS&quot; </span>=&gt; <span class="prelude-val">Ok</span>(InternalResourceRecord::NS {
+                nsdname: DomainName::from(record.rdata),
+                ttl: record.ttl,
+                rclass: record.class,
             }),
-            <span class="string">&quot;CAA&quot;</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">split_bit</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">record</span>.<span class="ident">rdata</span>.<span class="ident">split</span>(<span class="string">&#39; &#39;</span>).<span class="ident">collect</span>();
-                <span class="kw">if</span> <span class="ident">split_bit</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="number">3</span> {
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+            <span class="string">&quot;CAA&quot; </span>=&gt; {
+                <span class="kw">let </span>split_bit: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = record.rdata.split(<span class="string">&#39; &#39;</span>).collect();
+                <span class="kw">if </span>split_bit.len() &lt; <span class="number">3 </span>{
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                         <span class="string">&quot;While trying to parse CAA record, got &#39;{:?}&#39; which is wrong.&quot;</span>,
-                        <span class="ident">split_bit</span>
+                        split_bit
                     ));
                 };
-                <span class="kw">let</span> <span class="ident">flag</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">u8::from_str</span>(<span class="ident">split_bit</span>[<span class="number">0</span>]) {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
-                        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+                <span class="kw">let </span>flag = <span class="kw">match </span>u8::from_str(split_bit[<span class="number">0</span>]) {
+                    <span class="prelude-val">Ok</span>(value) =&gt; value,
+                    <span class="prelude-val">Err</span>(error) =&gt; {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                             <span class="string">&quot;Failed to parse {} into number: {:?}&quot;</span>,
-                            <span class="ident">split_bit</span>[<span class="number">0</span>], <span class="ident">error</span>
+                            split_bit[<span class="number">0</span>], error
                         ))
                     }
                 };
-                <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">DNSCharString::from</span>(<span class="ident">split_bit</span>[<span class="number">1</span>]);
-                <span class="comment">// validate that the tag is valid.</span>
-                <span class="kw">if</span> <span class="op">!</span><span class="ident">CAA_TAG_VALIDATOR</span>.<span class="ident">is_match</span>(<span class="ident">split_bit</span>[<span class="number">1</span>]) {
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+                <span class="kw">let </span>tag = DNSCharString::from(split_bit[<span class="number">1</span>]);
+                <span class="comment">// validate that the tag is valid.
+                </span><span class="kw">if </span>!CAA_TAG_VALIDATOR.is_match(split_bit[<span class="number">1</span>]) {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
                         <span class="string">&quot;Invalid tag value {:?} for {}&quot;</span>,
-                        <span class="ident">split_bit</span>[<span class="number">1</span>], <span class="ident">record</span>.<span class="ident">name</span>
+                        split_bit[<span class="number">1</span>], record.name
                     ));
                 };
-                <span class="comment">// take the rest of the data as the thing.</span>
-                <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">split_bit</span>[<span class="number">2</span>..].<span class="ident">to_vec</span>().<span class="ident">join</span>(<span class="string">&quot; &quot;</span>).<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-                <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::CAA</span> {
-                    <span class="ident">flag</span>,
-                    <span class="ident">tag</span>,
-                    <span class="ident">value</span>,
-                    <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
+                <span class="comment">// take the rest of the data as the thing.
+                </span><span class="kw">let </span>value = split_bit[<span class="number">2</span>..].to_vec().join(<span class="string">&quot; &quot;</span>).as_bytes().to_vec();
+                <span class="prelude-val">Ok</span>(InternalResourceRecord::CAA {
+                    flag,
+                    tag,
+                    value,
+                    ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
-            <span class="string">&quot;LOC&quot;</span> =&gt; {
-                <span class="comment">// we do this here because the conversion process is *so* big.</span>
-                <span class="kw">let</span> <span class="ident">res</span>: <span class="ident">FileLocRecord</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">FileLocRecord::try_from</span>(<span class="ident">record</span>.<span class="ident">rdata</span>.<span class="ident">as_str</span>()) {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>),
+            <span class="string">&quot;LOC&quot; </span>=&gt; {
+                <span class="comment">// we do this here because the conversion process is *so* big.
+                </span><span class="kw">let </span>res: FileLocRecord = <span class="kw">match </span>FileLocRecord::try_from(record.rdata.as_str()) {
+                    <span class="prelude-val">Ok</span>(value) =&gt; value,
+                    <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(err),
                 };
 
-                <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::LOC</span> {
-                    <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
-                    <span class="ident">version</span>: <span class="number">0</span>,
-                    <span class="ident">size</span>: <span class="ident">res</span>.<span class="ident">size</span>,
-                    <span class="ident">horiz_pre</span>: <span class="ident">res</span>.<span class="ident">horiz_pre</span>,
-                    <span class="ident">vert_pre</span>: <span class="ident">res</span>.<span class="ident">vert_pre</span>,
-                    <span class="ident">latitude</span>: <span class="ident">dms_to_u32</span>(<span class="ident">res</span>.<span class="ident">d1</span>, <span class="ident">res</span>.<span class="ident">m1</span>, <span class="ident">res</span>.<span class="ident">s1</span>, <span class="ident">res</span>.<span class="ident">lat_dir</span> <span class="op">==</span> <span class="kw-2">*</span><span class="string">&quot;N&quot;</span>),
-                    <span class="ident">longitude</span>: <span class="ident">dms_to_u32</span>(<span class="ident">res</span>.<span class="ident">d2</span>, <span class="ident">res</span>.<span class="ident">m2</span>, <span class="ident">res</span>.<span class="ident">s2</span>, <span class="ident">res</span>.<span class="ident">lon_dir</span> <span class="op">==</span> <span class="kw-2">*</span><span class="string">&quot;E&quot;</span>),
-                    <span class="ident">altitude</span>: <span class="ident">res</span>.<span class="ident">alt</span>,
+                <span class="prelude-val">Ok</span>(InternalResourceRecord::LOC {
+                    ttl: record.ttl,
+                    rclass: record.class,
+                    version: <span class="number">0</span>,
+                    size: res.size,
+                    horiz_pre: res.horiz_pre,
+                    vert_pre: res.vert_pre,
+                    latitude: dms_to_u32(res.d1, res.m1, res.s1, res.lat_dir == <span class="kw-2">*</span><span class="string">&quot;N&quot;</span>),
+                    longitude: dms_to_u32(res.d2, res.m2, res.s2, res.lon_dir == <span class="kw-2">*</span><span class="string">&quot;E&quot;</span>),
+                    altitude: res.alt,
                 })
-                <span class="comment">// Err(&quot;LOC not finished!&quot;.to_string())</span>
-            }
-            <span class="string">&quot;URI&quot;</span> =&gt; {
-                <span class="kw">let</span> <span class="ident">matches</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">URI_RECORD</span>.<span class="ident">captures</span>(<span class="kw-2">&amp;</span><span class="ident">record</span>.<span class="ident">rdata</span>) {
-                    <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                    <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Failed to parse URL record!&quot;</span>.<span class="ident">to_string</span>()),
+                <span class="comment">// Err(&quot;LOC not finished!&quot;.to_string())
+            </span>}
+            <span class="string">&quot;URI&quot; </span>=&gt; {
+                <span class="kw">let </span>matches = <span class="kw">match </span>URI_RECORD.captures(<span class="kw-2">&amp;</span>record.rdata) {
+                    <span class="prelude-val">Some</span>(value) =&gt; value,
+                    <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Failed to parse URL record!&quot;</span>.to_string()),
                 };
 
-                <span class="kw">let</span> <span class="ident">priority</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">matches</span>.<span class="ident">name</span>(<span class="string">&quot;priority&quot;</span>) {
-                    <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>() {
-                        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                        <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse priority into u16: {err:?}&quot;</span>))
+                <span class="kw">let </span>priority = <span class="kw">match </span>matches.name(<span class="string">&quot;priority&quot;</span>) {
+                    <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;u16&gt;() {
+                        <span class="prelude-val">Ok</span>(value) =&gt; value,
+                        <span class="prelude-val">Err</span>(err) =&gt; {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse priority into u16: {err:?}&quot;</span>))
                         }
                     },
-                    <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;No target found in record?&quot;</span>.<span class="ident">to_string</span>()),
+                    <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;No target found in record?&quot;</span>.to_string()),
                 };
-                <span class="kw">let</span> <span class="ident">weight</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">matches</span>.<span class="ident">name</span>(<span class="string">&quot;weight&quot;</span>) {
-                    <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>() {
-                        <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                        <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
-                            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse weight into u16: {err:?}&quot;</span>))
+                <span class="kw">let </span>weight = <span class="kw">match </span>matches.name(<span class="string">&quot;weight&quot;</span>) {
+                    <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;u16&gt;() {
+                        <span class="prelude-val">Ok</span>(value) =&gt; value,
+                        <span class="prelude-val">Err</span>(err) =&gt; {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse weight into u16: {err:?}&quot;</span>))
                         }
                     },
-                    <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;No target found in record?&quot;</span>.<span class="ident">to_string</span>()),
+                    <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;No target found in record?&quot;</span>.to_string()),
                 };
-                <span class="kw">let</span> <span class="ident">target</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">matches</span>.<span class="ident">name</span>(<span class="string">&quot;target&quot;</span>) {
-                    <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="ident">DNSCharString::from</span>(<span class="ident">value</span>.<span class="ident">as_str</span>()),
-                    <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;No target found in record?&quot;</span>.<span class="ident">to_string</span>()),
+                <span class="kw">let </span>target = <span class="kw">match </span>matches.name(<span class="string">&quot;target&quot;</span>) {
+                    <span class="prelude-val">Some</span>(value) =&gt; DNSCharString::from(value.as_str()),
+                    <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;No target found in record?&quot;</span>.to_string()),
                 };
 
-                <span class="prelude-val">Ok</span>(<span class="ident">InternalResourceRecord::URI</span> {
-                    <span class="ident">priority</span>,
-                    <span class="ident">weight</span>,
-                    <span class="ident">target</span>,
-                    <span class="ident">ttl</span>: <span class="ident">record</span>.<span class="ident">ttl</span>,
-                    <span class="ident">rclass</span>: <span class="ident">record</span>.<span class="ident">class</span>,
+                <span class="prelude-val">Ok</span>(InternalResourceRecord::URI {
+                    priority,
+                    weight,
+                    target,
+                    ttl: record.ttl,
+                    rclass: record.class,
                 })
             }
-            <span class="kw">_</span> =&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Invalid type specified!&quot;</span>.<span class="ident">to_string</span>()),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Invalid type specified!&quot;</span>.to_string()),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">PartialEq</span><span class="op">&lt;</span><span class="ident">RecordClass</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">InternalResourceRecord</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">RecordClass</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">InternalResourceRecord::TXT</span> { <span class="ident">class</span>, .. } =&gt; <span class="ident">class</span> <span class="op">==</span> <span class="ident">other</span>,
-            <span class="kw">_</span> =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordClass::Internet</span>, <span class="comment">// TODO: we only support IN records outside TXT records</span>
+<span class="kw">impl </span>PartialEq&lt;RecordClass&gt; <span class="kw">for </span>InternalResourceRecord {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>RecordClass) -&gt; bool {
+        <span class="kw">match </span><span class="self">self </span>{
+            InternalResourceRecord::TXT { class, .. } =&gt; class == other,
+            <span class="kw">_ </span>=&gt; other == <span class="kw-2">&amp;</span>RecordClass::Internet, <span class="comment">// TODO: we only support IN records outside TXT records
+        </span>}
+    }
+}
+
+<span class="kw">impl </span>PartialEq&lt;RecordType&gt; <span class="kw">for </span>InternalResourceRecord {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>RecordType) -&gt; bool {
+        <span class="kw">match </span><span class="self">self </span>{
+            InternalResourceRecord::A { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::A,
+            InternalResourceRecord::AAAA { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::AAAA,
+            InternalResourceRecord::ALL { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::ALL,
+            InternalResourceRecord::AXFR { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::AXFR,
+            InternalResourceRecord::CAA { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::CAA,
+            InternalResourceRecord::CNAME { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::CNAME,
+            InternalResourceRecord::HINFO { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::HINFO,
+            InternalResourceRecord::InvalidType =&gt; other == <span class="kw-2">&amp;</span>RecordType::InvalidType,
+            InternalResourceRecord::MAILB { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MAILB,
+            InternalResourceRecord::LOC { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::LOC,
+            InternalResourceRecord::MB { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MB,
+            InternalResourceRecord::MG { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MG,
+            InternalResourceRecord::MINFO { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MINFO,
+            InternalResourceRecord::MR { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MR,
+            InternalResourceRecord::MX { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MX,
+            InternalResourceRecord::NAPTR { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::NAPTR,
+            InternalResourceRecord::NS { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::NS,
+            InternalResourceRecord::NULL { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::NULL,
+            InternalResourceRecord::PTR { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::PTR,
+            InternalResourceRecord::SOA { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::SOA,
+            InternalResourceRecord::TXT { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::TXT,
+            InternalResourceRecord::URI { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::URI,
+            InternalResourceRecord::WKS { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::WKS,
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">PartialEq</span><span class="op">&lt;</span><span class="ident">RecordType</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">InternalResourceRecord</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">RecordType</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">InternalResourceRecord::A</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::A</span>,
-            <span class="ident">InternalResourceRecord::AAAA</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::AAAA</span>,
-            <span class="ident">InternalResourceRecord::ALL</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::ALL</span>,
-            <span class="ident">InternalResourceRecord::AXFR</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::AXFR</span>,
-            <span class="ident">InternalResourceRecord::CAA</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::CAA</span>,
-            <span class="ident">InternalResourceRecord::CNAME</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::CNAME</span>,
-            <span class="ident">InternalResourceRecord::HINFO</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::HINFO</span>,
-            <span class="ident">InternalResourceRecord::InvalidType</span> =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::InvalidType</span>,
-            <span class="ident">InternalResourceRecord::MAILB</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::MAILB</span>,
-            <span class="ident">InternalResourceRecord::LOC</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::LOC</span>,
-            <span class="ident">InternalResourceRecord::MB</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::MB</span>,
-            <span class="ident">InternalResourceRecord::MG</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::MG</span>,
-            <span class="ident">InternalResourceRecord::MINFO</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::MINFO</span>,
-            <span class="ident">InternalResourceRecord::MR</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::MR</span>,
-            <span class="ident">InternalResourceRecord::MX</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::MX</span>,
-            <span class="ident">InternalResourceRecord::NAPTR</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::NAPTR</span>,
-            <span class="ident">InternalResourceRecord::NS</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::NS</span>,
-            <span class="ident">InternalResourceRecord::NULL</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::NULL</span>,
-            <span class="ident">InternalResourceRecord::PTR</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::PTR</span>,
-            <span class="ident">InternalResourceRecord::SOA</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::SOA</span>,
-            <span class="ident">InternalResourceRecord::TXT</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::TXT</span>,
-            <span class="ident">InternalResourceRecord::URI</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::URI</span>,
-            <span class="ident">InternalResourceRecord::WKS</span> { .. } =&gt; <span class="ident">other</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">RecordType::WKS</span>,
-        }
-    }
-}
+<span class="kw">impl </span>InternalResourceRecord {
+    <span class="kw">pub fn </span>as_bytes(<span class="self">self</span>: <span class="kw-2">&amp;</span>InternalResourceRecord, question: <span class="kw-2">&amp;</span>Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt; {
+        <span class="kw">match </span><span class="self">self </span>{
+            InternalResourceRecord::A { address, .. } =&gt; address.to_be_bytes().to_vec(),
+            InternalResourceRecord::AAAA { address, .. } =&gt; address.to_be_bytes().to_vec(),
 
-<span class="kw">impl</span> <span class="ident">InternalResourceRecord</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_bytes</span>(<span class="self">self</span>: <span class="kw-2">&amp;</span><span class="ident">InternalResourceRecord</span>, <span class="ident">question</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">InternalResourceRecord::A</span> { <span class="ident">address</span>, .. } =&gt; <span class="ident">address</span>.<span class="ident">to_be_bytes</span>().<span class="ident">to_vec</span>(),
-            <span class="ident">InternalResourceRecord::AAAA</span> { <span class="ident">address</span>, .. } =&gt; <span class="ident">address</span>.<span class="ident">to_be_bytes</span>().<span class="ident">to_vec</span>(),
-
-            <span class="ident">InternalResourceRecord::CNAME</span> { <span class="ident">cname</span>, .. } =&gt; {
+            InternalResourceRecord::CNAME { cname, .. } =&gt; {
                 <span class="macro">log::trace!</span>(<span class="string">&quot;turning CNAME {cname:?} into bytes&quot;</span>);
-                <span class="ident">cname</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="ident">question</span>))
+                cname.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(question))
             }
-            <span class="comment">// InternalResourceRecord::MD {  } =&gt; todo!(),</span>
-            <span class="comment">// InternalResourceRecord::MF {  } =&gt; todo!(),</span>
-            <span class="ident">InternalResourceRecord::LOC</span> {
-                <span class="ident">ttl</span>,
-                <span class="ident">version</span>,
-                <span class="ident">size</span>,
-                <span class="ident">horiz_pre</span>,
-                <span class="ident">vert_pre</span>,
-                <span class="ident">latitude</span>,
-                <span class="ident">longitude</span>,
-                <span class="ident">altitude</span>,
+            <span class="comment">// InternalResourceRecord::MD {  } =&gt; todo!(),
+            // InternalResourceRecord::MF {  } =&gt; todo!(),
+            </span>InternalResourceRecord::LOC {
+                ttl,
+                version,
+                size,
+                horiz_pre,
+                vert_pre,
+                latitude,
+                longitude,
+                altitude,
                 ..
             } =&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;LOC {:?} - TTL={ttl}&quot;</span>, <span class="ident">from_utf8</span>(<span class="ident">question</span>));
-                <span class="kw">let</span> <span class="ident">record</span> <span class="op">=</span> <span class="ident">LocRecord</span> {
-                    <span class="ident">version</span>: <span class="kw-2">*</span><span class="ident">version</span>,
-                    <span class="ident">size</span>: <span class="kw-2">*</span><span class="ident">size</span>,
-                    <span class="ident">horiz_pre</span>: <span class="kw-2">*</span><span class="ident">horiz_pre</span>,
-                    <span class="ident">vert_pre</span>: <span class="kw-2">*</span><span class="ident">vert_pre</span>,
-                    <span class="ident">latitude</span>: <span class="kw-2">*</span><span class="ident">latitude</span>,
-                    <span class="ident">longitude</span>: <span class="kw-2">*</span><span class="ident">longitude</span>,
-                    <span class="ident">altitude</span>: <span class="kw-2">*</span><span class="ident">altitude</span>,
+                <span class="macro">log::error!</span>(<span class="string">&quot;LOC {:?} - TTL={ttl}&quot;</span>, from_utf8(question));
+                <span class="kw">let </span>record = LocRecord {
+                    version: <span class="kw-2">*</span>version,
+                    size: <span class="kw-2">*</span>size,
+                    horiz_pre: <span class="kw-2">*</span>horiz_pre,
+                    vert_pre: <span class="kw-2">*</span>vert_pre,
+                    latitude: <span class="kw-2">*</span>latitude,
+                    longitude: <span class="kw-2">*</span>longitude,
+                    altitude: <span class="kw-2">*</span>altitude,
                 }
-                .<span class="ident">pack_to_vec</span>();
-                <span class="kw">match</span> <span class="ident">record</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                    <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; {
+                .pack_to_vec();
+                <span class="kw">match </span>record {
+                    <span class="prelude-val">Ok</span>(value) =&gt; value,
+                    <span class="prelude-val">Err</span>(error) =&gt; {
                         <span class="macro">log::error!</span>(<span class="string">&quot;Failed to pack this: {self:?} {error:?}&quot;</span>);
                         <span class="macro">vec!</span>[]
                     }
                 }
             }
-            <span class="ident">InternalResourceRecord::NS</span> { <span class="ident">nsdname</span>, .. } =&gt; {
-                <span class="ident">nsdname</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="ident">question</span>))
+            InternalResourceRecord::NS { nsdname, .. } =&gt; {
+                nsdname.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(question))
             }
-            <span class="ident">InternalResourceRecord::PTR</span> { <span class="ident">ptrdname</span>, .. } =&gt; {
-                <span class="ident">ptrdname</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="ident">question</span>))
+            InternalResourceRecord::PTR { ptrdname, .. } =&gt; {
+                ptrdname.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(question))
             }
-            <span class="ident">InternalResourceRecord::SOA</span> {
-                <span class="ident">zone</span>,
-                <span class="ident">mname</span>,
-                <span class="ident">rname</span>,
-                <span class="ident">serial</span>,
-                <span class="ident">refresh</span>,
-                <span class="ident">retry</span>,
-                <span class="ident">expire</span>,
-                <span class="ident">minimum</span>,
+            InternalResourceRecord::SOA {
+                zone,
+                mname,
+                rname,
+                serial,
+                refresh,
+                retry,
+                expire,
+                minimum,
                 ..
             } =&gt; {
-                <span class="comment">// TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff</span>
-                <span class="kw">let</span> <span class="ident">zone_as_bytes</span> <span class="op">=</span> <span class="ident">zone</span>.<span class="ident">name</span>.<span class="ident">as_bytes</span>().<span class="ident">to_vec</span>();
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span>
-                    <span class="ident">mname</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">zone_as_bytes</span>));
-                <span class="comment">// TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff</span>
-                <span class="ident">res</span>.<span class="ident">extend</span>(<span class="ident">rname</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">zone_as_bytes</span>)));
-                <span class="ident">res</span>.<span class="ident">extend</span>(<span class="ident">serial</span>.<span class="ident">to_be_bytes</span>());
-                <span class="ident">res</span>.<span class="ident">extend</span>(<span class="ident">refresh</span>.<span class="ident">to_be_bytes</span>());
-                <span class="ident">res</span>.<span class="ident">extend</span>(<span class="ident">retry</span>.<span class="ident">to_be_bytes</span>());
-                <span class="ident">res</span>.<span class="ident">extend</span>(<span class="ident">expire</span>.<span class="ident">to_be_bytes</span>());
-                <span class="ident">res</span>.<span class="ident">extend</span>(<span class="ident">minimum</span>.<span class="ident">to_be_bytes</span>());
-                <span class="ident">res</span>
+                <span class="comment">// TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
+                </span><span class="kw">let </span>zone_as_bytes = zone.name.as_bytes().to_vec();
+                <span class="kw">let </span><span class="kw-2">mut </span>res: Vec&lt;u8&gt; =
+                    mname.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>zone_as_bytes));
+                <span class="comment">// TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
+                </span>res.extend(rname.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>zone_as_bytes)));
+                res.extend(serial.to_be_bytes());
+                res.extend(refresh.to_be_bytes());
+                res.extend(retry.to_be_bytes());
+                res.extend(expire.to_be_bytes());
+                res.extend(minimum.to_be_bytes());
+                res
             }
-            <span class="ident">InternalResourceRecord::TXT</span> { <span class="ident">txtdata</span>, .. } =&gt; <span class="ident">txtdata</span>.<span class="ident">as_bytes</span>(),
-            <span class="ident">InternalResourceRecord::URI</span> {
-                <span class="ident">priority</span>,
-                <span class="ident">weight</span>,
-                <span class="ident">target</span>,
+            InternalResourceRecord::TXT { txtdata, .. } =&gt; txtdata.as_bytes(),
+            InternalResourceRecord::URI {
+                priority,
+                weight,
+                target,
                 ..
             } =&gt; {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-                <span class="ident">res</span>.<span class="ident">extend</span>(<span class="ident">priority</span>.<span class="ident">to_be_bytes</span>());
-                <span class="ident">res</span>.<span class="ident">extend</span>(<span class="ident">weight</span>.<span class="ident">to_be_bytes</span>());
-                <span class="ident">res</span>.<span class="ident">extend</span>(<span class="kw-2">&amp;</span><span class="ident">target</span>.<span class="ident">data</span>);
-                <span class="ident">res</span>
+                <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="macro">vec!</span>[];
+                res.extend(priority.to_be_bytes());
+                res.extend(weight.to_be_bytes());
+                res.extend(<span class="kw-2">&amp;</span>target.data);
+                res
             }
-            <span class="comment">// InternalResourceRecord::MB {  } =&gt; todo!(),</span>
-            <span class="comment">// InternalResourceRecord::MG {  } =&gt; todo!(),</span>
-            <span class="comment">// InternalResourceRecord::MR {  } =&gt; todo!(),</span>
-            <span class="comment">// InternalResourceRecord::NULL {  } =&gt; todo!(),</span>
-            <span class="comment">// InternalResourceRecord::WKS {  } =&gt; todo!(),</span>
-            <span class="ident">InternalResourceRecord::HINFO</span> { <span class="ident">cpu</span>, <span class="ident">os</span>, .. } =&gt; {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hinfo_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-                <span class="kw">match</span> <span class="ident">cpu</span> {
-                    <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; {
-                        <span class="ident">hinfo_bytes</span>.<span class="ident">extend</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>.<span class="ident">as_bytes</span>());
+            <span class="comment">// InternalResourceRecord::MB {  } =&gt; todo!(),
+            // InternalResourceRecord::MG {  } =&gt; todo!(),
+            // InternalResourceRecord::MR {  } =&gt; todo!(),
+            // InternalResourceRecord::NULL {  } =&gt; todo!(),
+            // InternalResourceRecord::WKS {  } =&gt; todo!(),
+            </span>InternalResourceRecord::HINFO { cpu, os, .. } =&gt; {
+                <span class="kw">let </span><span class="kw-2">mut </span>hinfo_bytes: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
+                <span class="kw">match </span>cpu {
+                    <span class="prelude-val">Some</span>(value) =&gt; {
+                        hinfo_bytes.extend(<span class="kw-2">&amp;</span>value.as_bytes());
                     }
-                    <span class="prelude-val">None</span> =&gt; {
-                        <span class="ident">hinfo_bytes</span>.<span class="ident">extend</span>([<span class="ident">consts::ARCH</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>]);
-                        <span class="ident">hinfo_bytes</span>.<span class="ident">extend</span>(<span class="ident">consts::ARCH</span>.<span class="ident">as_bytes</span>());
+                    <span class="prelude-val">None </span>=&gt; {
+                        hinfo_bytes.extend([consts::ARCH.len() <span class="kw">as </span>u8]);
+                        hinfo_bytes.extend(consts::ARCH.as_bytes());
                     }
                 };
 
-                <span class="kw">match</span> <span class="ident">os</span> {
-                    <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; {
-                        <span class="ident">hinfo_bytes</span>.<span class="ident">extend</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>.<span class="ident">as_bytes</span>());
+                <span class="kw">match </span>os {
+                    <span class="prelude-val">Some</span>(value) =&gt; {
+                        hinfo_bytes.extend(<span class="kw-2">&amp;</span>value.as_bytes());
                     }
-                    <span class="prelude-val">None</span> =&gt; {
-                        <span class="ident">hinfo_bytes</span>.<span class="ident">extend</span>([<span class="ident">consts::OS</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>]);
-                        <span class="ident">hinfo_bytes</span>.<span class="ident">extend</span>(<span class="ident">consts::OS</span>.<span class="ident">as_bytes</span>());
+                    <span class="prelude-val">None </span>=&gt; {
+                        hinfo_bytes.extend([consts::OS.len() <span class="kw">as </span>u8]);
+                        hinfo_bytes.extend(consts::OS.as_bytes());
                     }
                 };
-                <span class="ident">hinfo_bytes</span>
+                hinfo_bytes
             }
-            <span class="comment">// InternalResourceRecord::MINFO {  } =&gt; todo!(),</span>
-            <span class="ident">InternalResourceRecord::MX</span> {
-                <span class="ident">preference</span>,
-                <span class="ident">exchange</span>,
+            <span class="comment">// InternalResourceRecord::MINFO {  } =&gt; todo!(),
+            </span>InternalResourceRecord::MX {
+                preference,
+                exchange,
                 ..
             } =&gt; {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mx_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">preference</span>.<span class="ident">to_be_bytes</span>().<span class="ident">into</span>();
-                <span class="ident">mx_bytes</span>.<span class="ident">extend</span>(<span class="ident">exchange</span>.<span class="ident">as_bytes</span>(<span class="prelude-val">Some</span>(<span class="ident">HEADER_BYTES</span> <span class="kw">as</span> <span class="ident">u16</span>), <span class="prelude-val">Some</span>(<span class="ident">question</span>)));
-                <span class="ident">mx_bytes</span>
+                <span class="kw">let </span><span class="kw-2">mut </span>mx_bytes: Vec&lt;u8&gt; = preference.to_be_bytes().into();
+                mx_bytes.extend(exchange.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(question)));
+                mx_bytes
             }
-            <span class="ident">InternalResourceRecord::AXFR</span> { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="ident">InternalResourceRecord::MAILB</span> { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="ident">InternalResourceRecord::ALL</span> {} =&gt; <span class="macro">todo!</span>(),
-            <span class="ident">InternalResourceRecord::InvalidType</span> =&gt; <span class="macro">todo!</span>(),
-            <span class="ident">InternalResourceRecord::CAA</span> {
-                <span class="ident">flag</span>, <span class="ident">tag</span>, <span class="ident">value</span>, ..
+            InternalResourceRecord::AXFR { .. } =&gt; <span class="macro">todo!</span>(),
+            InternalResourceRecord::MAILB { .. } =&gt; <span class="macro">todo!</span>(),
+            InternalResourceRecord::ALL {} =&gt; <span class="macro">todo!</span>(),
+            InternalResourceRecord::InvalidType =&gt; <span class="macro">todo!</span>(),
+            InternalResourceRecord::CAA {
+                flag, tag, value, ..
             } =&gt; {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="kw-2">*</span><span class="ident">flag</span>];
-                <span class="comment">// add the tag</span>
-                <span class="ident">result</span>.<span class="ident">extend</span>(<span class="ident">tag</span>.<span class="ident">as_bytes</span>());
-                <span class="comment">// add the value</span>
-                <span class="ident">result</span>.<span class="ident">extend</span>(<span class="ident">value</span>);
+                <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="kw-2">*</span>flag];
+                <span class="comment">// add the tag
+                </span>result.extend(tag.as_bytes());
+                <span class="comment">// add the value
+                </span>result.extend(value);
 
-                <span class="ident">result</span>
+                result
             }
-            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::NAPTR</span> {
-                <span class="ident">domain</span>,
-                <span class="ident">order</span>,
-                <span class="ident">preference</span>,
-                <span class="ident">flags</span>,
+            <span class="attribute">#[allow(unused_variables)]
+            </span>InternalResourceRecord::NAPTR {
+                domain,
+                order,
+                preference,
+                flags,
                 ..
             } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::MB</span> { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::MG</span> { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::MR</span> { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::NULL</span> { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::WKS</span> { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_variables</span>)]</span>
-            <span class="ident">InternalResourceRecord::MINFO</span> { .. } =&gt; <span class="macro">todo!</span>(),
+            <span class="attribute">#[allow(unused_variables)]
+            </span>InternalResourceRecord::MB { .. } =&gt; <span class="macro">todo!</span>(),
+            <span class="attribute">#[allow(unused_variables)]
+            </span>InternalResourceRecord::MG { .. } =&gt; <span class="macro">todo!</span>(),
+            <span class="attribute">#[allow(unused_variables)]
+            </span>InternalResourceRecord::MR { .. } =&gt; <span class="macro">todo!</span>(),
+            <span class="attribute">#[allow(unused_variables)]
+            </span>InternalResourceRecord::NULL { .. } =&gt; <span class="macro">todo!</span>(),
+            <span class="attribute">#[allow(unused_variables)]
+            </span>InternalResourceRecord::WKS { .. } =&gt; <span class="macro">todo!</span>(),
+            <span class="attribute">#[allow(unused_variables)]
+            </span>InternalResourceRecord::MINFO { .. } =&gt; <span class="macro">todo!</span>(),
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hexdump</span>(<span class="self">self</span>) {
-        <span class="ident">hexdump</span>(<span class="self">self</span>.<span class="ident">as_bytes</span>(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[]));
+    <span class="kw">pub fn </span>hexdump(<span class="self">self</span>) {
+        hexdump(<span class="self">self</span>.as_bytes(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[]));
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">std::net::Ipv6Addr</span>;
-    <span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>std::net::Ipv6Addr;
+    <span class="kw">use </span>std::str::FromStr;
 
-    <span class="kw">use</span> <span class="ident">log::debug</span>;
+    <span class="kw">use </span>log::debug;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::enums::RecordType</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::zones::FileZoneRecord</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::RecordClass</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::enums::RecordType;
+    <span class="kw">use </span><span class="kw">crate</span>::zones::FileZoneRecord;
+    <span class="kw">use </span><span class="kw">crate</span>::RecordClass;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">DNSCharString</span>, <span class="ident">InternalResourceRecord</span>};
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_eq_resourcerecord</span>() {
+    <span class="kw">use super</span>::{DNSCharString, InternalResourceRecord};
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_eq_resourcerecord() {
         <span class="macro">assert_eq!</span>(
-            <span class="ident">InternalResourceRecord::A</span> {
-                <span class="ident">address</span>: <span class="number">12345</span>,
-                <span class="ident">ttl</span>: <span class="number">1</span>,
-                <span class="ident">rclass</span>: <span class="ident">RecordClass::Internet</span>
+            InternalResourceRecord::A {
+                address: <span class="number">12345</span>,
+                ttl: <span class="number">1</span>,
+                rclass: RecordClass::Internet
             },
-            <span class="ident">RecordType::A</span>
+            RecordType::A
         );
         <span class="macro">assert_eq!</span>(
-            <span class="ident">InternalResourceRecord::AAAA</span> {
-                <span class="ident">address</span>: <span class="number">12345</span>,
-                <span class="ident">ttl</span>: <span class="number">1</span>,
-                <span class="ident">rclass</span>: <span class="ident">RecordClass::Internet</span>
+            InternalResourceRecord::AAAA {
+                address: <span class="number">12345</span>,
+                ttl: <span class="number">1</span>,
+                rclass: RecordClass::Internet
             },
-            <span class="ident">RecordType::AAAA</span>
+            RecordType::AAAA
         );
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_resourcerecord_from_ipv6_string</span>() {
-        <span class="kw">let</span> <span class="ident">fzr</span> <span class="op">=</span> <span class="ident">FileZoneRecord</span> {
-            <span class="ident">name</span>: <span class="string">&quot;test&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">rrtype</span>: <span class="string">&quot;AAAA&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">rdata</span>: <span class="ident">String::from</span>(<span class="string">&quot;1234:5678:cafe:beef:ca75:0:4b9:e94d&quot;</span>),
-            <span class="ident">ttl</span>: <span class="number">160u32</span>,
-            <span class="ident">class</span>: <span class="ident">RecordClass::Internet</span>,
-            <span class="ident">zoneid</span>: <span class="number">1</span>,
-            <span class="ident">id</span>: <span class="number">1</span>,
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_resourcerecord_from_ipv6_string() {
+        <span class="kw">let </span>fzr = FileZoneRecord {
+            name: <span class="string">&quot;test&quot;</span>.to_string(),
+            rrtype: <span class="string">&quot;AAAA&quot;</span>.to_string(),
+            rdata: String::from(<span class="string">&quot;1234:5678:cafe:beef:ca75:0:4b9:e94d&quot;</span>),
+            ttl: <span class="number">160u32</span>,
+            class: RecordClass::Internet,
+            zoneid: <span class="number">1</span>,
+            id: <span class="number">1</span>,
         };
         <span class="macro">debug!</span>(<span class="string">&quot;fzr: {fzr}&quot;</span>);
-        <span class="kw">let</span> <span class="ident">converted</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">Ipv6Addr::from_str</span>(<span class="kw-2">&amp;</span><span class="ident">fzr</span>.<span class="ident">rdata</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to convert rdata to string: {err:?}&quot;</span>),
+        <span class="kw">let </span>converted = <span class="kw">match </span>Ipv6Addr::from_str(<span class="kw-2">&amp;</span>fzr.rdata) {
+            <span class="prelude-val">Ok</span>(value) =&gt; value,
+            <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to convert rdata to string: {err:?}&quot;</span>),
         };
-        <span class="macro">debug!</span>(<span class="string">&quot;conversion: {:?}&quot;</span>, <span class="ident">converted</span>);
-        <span class="kw">let</span> <span class="ident">rr</span>: <span class="ident">InternalResourceRecord</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">fzr</span>.<span class="ident">try_into</span>() {
-            <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">error</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to get resource record: {:?}&quot;</span>, <span class="ident">error</span>),
+        <span class="macro">debug!</span>(<span class="string">&quot;conversion: {:?}&quot;</span>, converted);
+        <span class="kw">let </span>rr: InternalResourceRecord = <span class="kw">match </span>fzr.try_into() {
+            <span class="prelude-val">Ok</span>(value) =&gt; value,
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Failed to get resource record: {:?}&quot;</span>, error),
         };
 
         <span class="macro">debug!</span>(<span class="string">&quot;fzr-&gt;rr = {rr:?}&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">rr</span>, <span class="ident">RecordType::AAAA</span>);
+        <span class="macro">assert_eq!</span>(rr, RecordType::AAAA);
         <span class="macro">assert_eq!</span>(
-            <span class="ident">rr</span>.<span class="ident">as_bytes</span>(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[]),
-            [<span class="number">18</span>, <span class="number">52</span>, <span class="number">86</span>, <span class="number">120</span>, <span class="number">202</span>, <span class="number">254</span>, <span class="number">190</span>, <span class="number">239</span>, <span class="number">202</span>, <span class="number">117</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">4</span>, <span class="number">185</span>, <span class="number">233</span>, <span class="number">77</span>].<span class="ident">to_vec</span>()
+            rr.as_bytes(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[]),
+            [<span class="number">18</span>, <span class="number">52</span>, <span class="number">86</span>, <span class="number">120</span>, <span class="number">202</span>, <span class="number">254</span>, <span class="number">190</span>, <span class="number">239</span>, <span class="number">202</span>, <span class="number">117</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">4</span>, <span class="number">185</span>, <span class="number">233</span>, <span class="number">77</span>].to_vec()
         );
     }
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_dnscharstring</span>() {
-        <span class="kw">let</span> <span class="ident">test</span>: <span class="ident">DNSCharString</span> <span class="op">=</span> <span class="string">&quot;hello world&quot;</span>.<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">testbytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">test</span>.<span class="ident">into</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">testbytes</span>[<span class="number">0</span>], <span class="number">11</span>);
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_dnscharstring() {
+        <span class="kw">let </span>test: DNSCharString = <span class="string">&quot;hello world&quot;</span>.into();
+        <span class="kw">let </span>testbytes: Vec&lt;u8&gt; = test.into();
+        <span class="macro">assert_eq!</span>(testbytes[<span class="number">0</span>], <span class="number">11</span>);
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">resourcerecord_txt</span>() {
-        <span class="kw">let</span> <span class="ident">foo</span> <span class="op">=</span> <span class="ident">InternalResourceRecord::TXT</span> {
-            <span class="ident">txtdata</span>: <span class="ident">DNSCharString::from</span>(<span class="string">&quot;Hello world&quot;</span>),
-            <span class="ident">ttl</span>: <span class="number">1</span>,
-            <span class="ident">class</span>: <span class="ident">RecordClass::Internet</span>,
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>resourcerecord_txt() {
+        <span class="kw">let </span>foo = InternalResourceRecord::TXT {
+            txtdata: DNSCharString::from(<span class="string">&quot;Hello world&quot;</span>),
+            ttl: <span class="number">1</span>,
+            class: RecordClass::Internet,
         };
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">InternalResourceRecord::TXT</span> { <span class="ident">txtdata</span>, .. } <span class="op">=</span> <span class="ident">foo</span> {
-            <span class="kw">let</span> <span class="ident">foo_bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">txtdata</span>.<span class="ident">into</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">foo_bytes</span>[<span class="number">0</span>], <span class="number">11</span>);
+        <span class="kw">if let </span>InternalResourceRecord::TXT { txtdata, .. } = foo {
+            <span class="kw">let </span>foo_bytes: Vec&lt;u8&gt; = txtdata.into();
+            <span class="macro">assert_eq!</span>(foo_bytes[<span class="number">0</span>], <span class="number">11</span>);
         };
     }
 }
 
-<span class="macro">lazy_static!</span> {
-    <span class="comment">// Thanks to the folks from #regex on Liberachat</span>
-    <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">LOC_REGEX</span>: <span class="ident">Regex</span> <span class="op">=</span> <span class="ident">Regex::new</span>(
+<span class="macro">lazy_static! </span>{
+    <span class="comment">// Thanks to the folks from #regex on Liberachat
+    </span><span class="kw">static </span><span class="kw-2">ref </span>LOC_REGEX: Regex = Regex::new(
         <span class="string">r&quot;^(?P&lt;d1&gt;\d+)(?:[ ](?P&lt;m1&gt;\d+)(?:[ ](?P&lt;s1&gt;\d+(?:[.]\d+)?))?)?[ ](?P&lt;lat_dir&gt;[NS])[ ](?P&lt;d2&gt;\d+)(?:[ ](?P&lt;m2&gt;\d+)(?:[ ](?P&lt;s2&gt;\d+(?:[.]\d+)?))?)?[ ](?P&lt;lon_dir&gt;[EW])[ ](?P&lt;alt&gt;-?\d+(?:[.]\d+)?)m(?:[ ](?P&lt;size&gt;\d+(?:[.]\d+)?)m(?:[ ](?P&lt;hp&gt;\d+(?:[.]\d+)?)m(?:[ ](?P&lt;vp&gt;\d+(?:[.]\d+)?)m)?)?)?&quot;</span>,
-    ).<span class="ident">unwrap</span>();
+    ).unwrap();
 
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>)]</span>
-<span class="doccomment">/// This represents a LOC record in a zone file</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FileLocRecord</span> {
-    <span class="kw">pub</span> <span class="ident">d1</span>: <span class="ident">u8</span>,
-    <span class="kw">pub</span> <span class="ident">d2</span>: <span class="ident">u8</span>,
-    <span class="kw">pub</span> <span class="ident">m1</span>: <span class="ident">u8</span>,
-    <span class="kw">pub</span> <span class="ident">m2</span>: <span class="ident">u8</span>,
-    <span class="kw">pub</span> <span class="ident">s1</span>: <span class="ident">f32</span>,
-    <span class="kw">pub</span> <span class="ident">s2</span>: <span class="ident">f32</span>,
-    <span class="kw">pub</span> <span class="ident">lat_dir</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">lon_dir</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">alt</span>: <span class="ident">i32</span>,
-    <span class="kw">pub</span> <span class="ident">size</span>: <span class="ident">u8</span>,
-    <span class="kw">pub</span> <span class="ident">horiz_pre</span>: <span class="ident">u8</span>,
-    <span class="kw">pub</span> <span class="ident">vert_pre</span>: <span class="ident">u8</span>,
+<span class="attribute">#[derive(PartialEq)]
+</span><span class="doccomment">/// This represents a LOC record in a zone file
+</span><span class="kw">pub struct </span>FileLocRecord {
+    <span class="kw">pub </span>d1: u8,
+    <span class="kw">pub </span>d2: u8,
+    <span class="kw">pub </span>m1: u8,
+    <span class="kw">pub </span>m2: u8,
+    <span class="kw">pub </span>s1: f32,
+    <span class="kw">pub </span>s2: f32,
+    <span class="kw">pub </span>lat_dir: String,
+    <span class="kw">pub </span>lon_dir: String,
+    <span class="kw">pub </span>alt: i32,
+    <span class="kw">pub </span>size: u8,
+    <span class="kw">pub </span>horiz_pre: u8,
+    <span class="kw">pub </span>vert_pre: u8,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">FileLocRecord</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">d1</span>: <span class="number">0</span>,
-            <span class="ident">m1</span>: <span class="number">0</span>,
-            <span class="ident">s1</span>: <span class="number">0.0</span>,
-            <span class="ident">d2</span>: <span class="number">0</span>,
-            <span class="ident">m2</span>: <span class="number">0</span>,
-            <span class="ident">s2</span>: <span class="number">0.0</span>,
-            <span class="ident">lat_dir</span>: <span class="ident">Default::default</span>(),
-            <span class="ident">lon_dir</span>: <span class="ident">Default::default</span>(),
-            <span class="ident">alt</span>: <span class="ident">Default::default</span>(),
-            <span class="ident">size</span>: <span class="number">0x12</span>,      <span class="comment">// 1m (100cm)</span>
-            <span class="ident">horiz_pre</span>: <span class="number">0x16</span>, <span class="comment">// 10000m (1,000,000 cm)</span>
-            <span class="ident">vert_pre</span>: <span class="number">0x13</span>,  <span class="comment">// 10m (1,000cm)</span>
-        }
+<span class="kw">impl </span>Default <span class="kw">for </span>FileLocRecord {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            d1: <span class="number">0</span>,
+            m1: <span class="number">0</span>,
+            s1: <span class="number">0.0</span>,
+            d2: <span class="number">0</span>,
+            m2: <span class="number">0</span>,
+            s2: <span class="number">0.0</span>,
+            lat_dir: Default::default(),
+            lon_dir: Default::default(),
+            alt: Default::default(),
+            size: <span class="number">0x12</span>,      <span class="comment">// 1m (100cm)
+            </span>horiz_pre: <span class="number">0x16</span>, <span class="comment">// 10000m (1,000,000 cm)
+            </span>vert_pre: <span class="number">0x13</span>,  <span class="comment">// 10m (1,000cm)
+        </span>}
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">FileLocRecord</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">std::fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">std::fmt::Result</span> {
-        <span class="ident">f</span>.<span class="ident">debug_struct</span>(<span class="string">&quot;FileLocRecord&quot;</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;d1&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">d1</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;m1&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">m1</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;s1&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">s1</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;lat_dir&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lat_dir</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;d2&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">d2</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;m2&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">m2</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;s2&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">s2</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;lon_dir&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lon_dir</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;alt&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">alt</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;size&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">&quot;0x{:2x}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">size</span>))
-            .<span class="ident">field</span>(<span class="string">&quot;horiz_pre&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">&quot;0x{:2x}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">horiz_pre</span>))
-            .<span class="ident">field</span>(<span class="string">&quot;vert_pre&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">&quot;0x{:2x}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">vert_pre</span>))
-            .<span class="ident">finish</span>()
+<span class="kw">impl </span>Debug <span class="kw">for </span>FileLocRecord {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">&quot;FileLocRecord&quot;</span>)
+            .field(<span class="string">&quot;d1&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.d1)
+            .field(<span class="string">&quot;m1&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.m1)
+            .field(<span class="string">&quot;s1&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.s1)
+            .field(<span class="string">&quot;lat_dir&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.lat_dir)
+            .field(<span class="string">&quot;d2&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.d2)
+            .field(<span class="string">&quot;m2&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.m2)
+            .field(<span class="string">&quot;s2&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.s2)
+            .field(<span class="string">&quot;lon_dir&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.lon_dir)
+            .field(<span class="string">&quot;alt&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.alt)
+            .field(<span class="string">&quot;size&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">&quot;0x{:2x}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.size))
+            .field(<span class="string">&quot;horiz_pre&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">&quot;0x{:2x}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.horiz_pre))
+            .field(<span class="string">&quot;vert_pre&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format_args!</span>(<span class="string">&quot;0x{:2x}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.vert_pre))
+            .finish()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FileLocRecord</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">String</span>;
+<span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>FileLocRecord {
+    <span class="kw">type </span>Error = String;
 
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">input_string</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">FileLocRecord</span>, <span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">LOC_REGEX</span>.<span class="ident">captures</span>(<span class="ident">input_string</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-            <span class="prelude-val">None</span> =&gt; {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Failed to match input to expected format!&quot;</span>.<span class="ident">to_string</span>());
+    <span class="kw">fn </span>try_from(input_string: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;FileLocRecord, String&gt; {
+        <span class="kw">let </span>result = <span class="kw">match </span>LOC_REGEX.captures(input_string) {
+            <span class="prelude-val">Some</span>(value) =&gt; value,
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Failed to match input to expected format!&quot;</span>.to_string());
             }
         };
         <span class="macro">log::trace!</span>(<span class="string">&quot;{result:?}&quot;</span>);
 
-        <span class="kw">let</span> <span class="ident">d1</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;d1&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
+        <span class="kw">let </span>d1: u8 = <span class="kw">match </span>result.name(<span class="string">&quot;d1&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;u8&gt;() {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
+                <span class="prelude-val">Err</span>(err) =&gt; {
                     <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse d1: {err:?}&quot;</span>);
-                    <span class="number">0</span>
-                }
+                    <span class="number">0
+                </span>}
             },
-            <span class="prelude-val">None</span> =&gt; <span class="number">0</span>,
+            <span class="prelude-val">None </span>=&gt; <span class="number">0</span>,
         };
-        <span class="kw">let</span> <span class="ident">d2</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;d2&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
+        <span class="kw">let </span>d2: u8 = <span class="kw">match </span>result.name(<span class="string">&quot;d2&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;u8&gt;() {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
+                <span class="prelude-val">Err</span>(err) =&gt; {
                     <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse d2: {err:?}&quot;</span>);
-                    <span class="number">0</span>
-                }
+                    <span class="number">0
+                </span>}
             },
-            <span class="prelude-val">None</span> =&gt; <span class="number">0</span>,
+            <span class="prelude-val">None </span>=&gt; <span class="number">0</span>,
         };
 
-        <span class="kw">let</span> <span class="ident">m1</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;m1&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
+        <span class="kw">let </span>m1: u8 = <span class="kw">match </span>result.name(<span class="string">&quot;m1&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;u8&gt;() {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
+                <span class="prelude-val">Err</span>(err) =&gt; {
                     <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse m1: {err:?}&quot;</span>);
-                    <span class="ident">FileLocRecord::default</span>().<span class="ident">m1</span>
+                    FileLocRecord::default().m1
                 }
             },
-            <span class="prelude-val">None</span> =&gt; <span class="ident">FileLocRecord::default</span>().<span class="ident">m1</span>,
+            <span class="prelude-val">None </span>=&gt; FileLocRecord::default().m1,
         };
-        <span class="kw">let</span> <span class="ident">m2</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;m2&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
+        <span class="kw">let </span>m2: u8 = <span class="kw">match </span>result.name(<span class="string">&quot;m2&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;u8&gt;() {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
+                <span class="prelude-val">Err</span>(err) =&gt; {
                     <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse m2: {err:?}&quot;</span>);
-                    <span class="ident">FileLocRecord::default</span>().<span class="ident">m2</span>
+                    FileLocRecord::default().m2
                 }
             },
-            <span class="prelude-val">None</span> =&gt; <span class="ident">FileLocRecord::default</span>().<span class="ident">m2</span>,
+            <span class="prelude-val">None </span>=&gt; FileLocRecord::default().m2,
         };
-        <span class="kw">let</span> <span class="ident">s1</span>: <span class="ident">f32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;s1&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">f32::from_str_radix</span>(<span class="ident">value</span>.<span class="ident">as_str</span>(), <span class="number">10</span>) {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
+        <span class="kw">let </span>s1: f32 = <span class="kw">match </span>result.name(<span class="string">&quot;s1&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>f32::from_str_radix(value.as_str(), <span class="number">10</span>) {
+                <span class="prelude-val">Ok</span>(value) =&gt; {
                     <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed s1 as {value} from string&quot;</span>);
-                    <span class="ident">value</span>
+                    value
                 }
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
+                <span class="prelude-val">Err</span>(err) =&gt; {
                     <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse s1: {err:?}&quot;</span>);
-                    <span class="number">0.0</span>
-                }
+                    <span class="number">0.0
+                </span>}
             },
-            <span class="prelude-val">None</span> =&gt; <span class="number">0f32</span>,
+            <span class="prelude-val">None </span>=&gt; <span class="number">0f32</span>,
         };
-        <span class="kw">let</span> <span class="ident">s2</span>: <span class="ident">f32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;s2&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">f32::from_str_radix</span>(<span class="ident">value</span>.<span class="ident">as_str</span>(), <span class="number">10</span>) {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; {
+        <span class="kw">let </span>s2: f32 = <span class="kw">match </span>result.name(<span class="string">&quot;s2&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>f32::from_str_radix(value.as_str(), <span class="number">10</span>) {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
+                <span class="prelude-val">Err</span>(err) =&gt; {
                     <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse s2: {err:?}&quot;</span>);
-                    <span class="number">0.0</span>
-                }
+                    <span class="number">0.0
+                </span>}
             },
-            <span class="prelude-val">None</span> =&gt; <span class="number">0f32</span>,
+            <span class="prelude-val">None </span>=&gt; <span class="number">0f32</span>,
         };
-        <span class="kw">let</span> <span class="ident">lat_dir</span>: <span class="ident">String</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;lat_dir&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">into</span>(),
-            <span class="prelude-val">None</span> =&gt; {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Couldn&#39;t match lat_dir in this string!&quot;</span>.<span class="ident">to_string</span>());
+        <span class="kw">let </span>lat_dir: String = <span class="kw">match </span>result.name(<span class="string">&quot;lat_dir&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; value.as_str().into(),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Couldn&#39;t match lat_dir in this string!&quot;</span>.to_string());
             }
         };
 
-        <span class="kw">let</span> <span class="ident">lon_dir</span>: <span class="ident">String</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;lon_dir&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">into</span>(),
-            <span class="prelude-val">None</span> =&gt; {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Couldn&#39;t match lon_dir in this string!&quot;</span>.<span class="ident">to_string</span>());
+        <span class="kw">let </span>lon_dir: String = <span class="kw">match </span>result.name(<span class="string">&quot;lon_dir&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; value.as_str().into(),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Couldn&#39;t match lon_dir in this string!&quot;</span>.to_string());
             }
         };
 
-        <span class="kw">let</span> <span class="ident">alt</span>: <span class="ident">i32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;alt&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Error parsing altitude: {err:?}&quot;</span>)),
+        <span class="kw">let </span>alt: i32 = <span class="kw">match </span>result.name(<span class="string">&quot;alt&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;i32&gt;() {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Error parsing altitude: {err:?}&quot;</span>)),
             },
-            <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="string">&quot;Error finding altitude!&quot;</span>.<span class="ident">to_string</span>()),
+            <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Error finding altitude!&quot;</span>.to_string()),
         };
-        <span class="comment">// here we work out the final value for the altitude</span>
-        <span class="comment">// let altfrac = alt_num % 100;</span>
-        <span class="comment">// let altmeters = alt_num ;</span>
-        <span class="kw">let</span> <span class="ident">alt</span> <span class="op">=</span> <span class="number">10000000</span> <span class="op">+</span> (<span class="ident">alt</span> <span class="op">*</span> <span class="number">100</span>);
+        <span class="comment">// here we work out the final value for the altitude
+        // let altfrac = alt_num % 100;
+        // let altmeters = alt_num ;
+        </span><span class="kw">let </span>alt = <span class="number">10000000 </span>+ (alt * <span class="number">100</span>);
 
-        <span class="kw">let</span> <span class="ident">size</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;size&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; {
+        <span class="kw">let </span>size: u32 = <span class="kw">match </span>result.name(<span class="string">&quot;size&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;u32&gt;() {
+                <span class="prelude-val">Ok</span>(value) =&gt; {
                     <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed size as {value} from string&quot;</span>);
-                    <span class="ident">value</span>
+                    value
                 }
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse size: {value:?}, {err:?}&quot;</span>)),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse size: {value:?}, {err:?}&quot;</span>)),
             },
-            <span class="prelude-val">None</span> =&gt; {
+            <span class="prelude-val">None </span>=&gt; {
                 <span class="macro">log::trace!</span>(<span class="string">&quot;defaulting to size of 1&quot;</span>);
-                <span class="ident">DEFAULT_LOC_SIZE</span>
+                DEFAULT_LOC_SIZE
             }
         };
-        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::utils::loc_size_to_u8</span>(<span class="ident">size</span> <span class="kw">as</span> <span class="ident">f32</span>);
+        <span class="kw">let </span>size = <span class="kw">crate</span>::utils::loc_size_to_u8(size <span class="kw">as </span>f32);
 
-        <span class="kw">let</span> <span class="ident">horiz_pre</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;hp&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
+        <span class="kw">let </span>horiz_pre: u32 = <span class="kw">match </span>result.name(<span class="string">&quot;hp&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;u32&gt;() {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
                 <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                     <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to parse {value:?} as horizontal precision, using default&quot;</span>);
-                    <span class="ident">DEFAULT_LOC_HORIZ_PRE</span>
+                    DEFAULT_LOC_HORIZ_PRE
                 }
             },
-            <span class="prelude-val">None</span> =&gt; {
+            <span class="prelude-val">None </span>=&gt; {
                 <span class="macro">log::trace!</span>(<span class="string">&quot;Using horiz_pre default as it wasn&#39;t specified&quot;</span>);
-                <span class="ident">DEFAULT_LOC_HORIZ_PRE</span>
+                DEFAULT_LOC_HORIZ_PRE
             }
         };
-        <span class="kw">let</span> <span class="ident">horiz_pre</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::utils::loc_size_to_u8</span>(<span class="ident">horiz_pre</span> <span class="kw">as</span> <span class="ident">f32</span>);
-        <span class="kw">let</span> <span class="ident">vert_pre</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">result</span>.<span class="ident">name</span>(<span class="string">&quot;vp&quot;</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) =&gt; <span class="kw">match</span> <span class="ident">value</span>.<span class="ident">as_str</span>().<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>() {
-                <span class="prelude-val">Ok</span>(<span class="ident">value</span>) =&gt; <span class="ident">value</span>,
+        <span class="kw">let </span>horiz_pre = <span class="kw">crate</span>::utils::loc_size_to_u8(horiz_pre <span class="kw">as </span>f32);
+        <span class="kw">let </span>vert_pre: u32 = <span class="kw">match </span>result.name(<span class="string">&quot;vp&quot;</span>) {
+            <span class="prelude-val">Some</span>(value) =&gt; <span class="kw">match </span>value.as_str().parse::&lt;u32&gt;() {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
                 <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                     <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to parse {value:?} as vertical precision, using default&quot;</span>);
-                    <span class="ident">DEFAULT_LOC_VERT_PRE</span>
+                    DEFAULT_LOC_VERT_PRE
                 }
             },
 
-            <span class="prelude-val">None</span> =&gt; {
+            <span class="prelude-val">None </span>=&gt; {
                 <span class="macro">log::trace!</span>(<span class="string">&quot;Using vert_pre default as it wasn&#39;t specified&quot;</span>);
-                <span class="ident">DEFAULT_LOC_VERT_PRE</span>
+                DEFAULT_LOC_VERT_PRE
             }
         };
-        <span class="kw">let</span> <span class="ident">vert_pre</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::utils::loc_size_to_u8</span>(<span class="ident">vert_pre</span> <span class="kw">as</span> <span class="ident">f32</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">FileLocRecord</span> {
-            <span class="ident">d1</span>,
-            <span class="ident">d2</span>,
-            <span class="ident">m1</span>,
-            <span class="ident">m2</span>,
-            <span class="ident">s1</span>,
-            <span class="ident">s2</span>,
-            <span class="ident">lat_dir</span>,
-            <span class="ident">lon_dir</span>,
-            <span class="ident">alt</span>,
-            <span class="ident">size</span>,
-            <span class="ident">horiz_pre</span>,
-            <span class="ident">vert_pre</span>,
+        <span class="kw">let </span>vert_pre = <span class="kw">crate</span>::utils::loc_size_to_u8(vert_pre <span class="kw">as </span>f32);
+        <span class="prelude-val">Ok</span>(FileLocRecord {
+            d1,
+            d2,
+            m1,
+            m2,
+            s1,
+            s2,
+            lat_dir,
+            lon_dir,
+            alt,
+            size,
+            horiz_pre,
+            vert_pre,
         })
     }
 }
 
-<span class="doccomment">/// tests to ensure that no label in the name is longer than 63 octets (bytes)</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">check_long_labels</span>(<span class="ident">testval</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">bool</span> {
-    <span class="kw">return</span> <span class="ident">testval</span>.<span class="ident">split</span>(<span class="string">&#39;.&#39;</span>).<span class="ident">into_iter</span>().<span class="ident">any</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">63</span>);
+<span class="doccomment">/// tests to ensure that no label in the name is longer than 63 octets (bytes)
+</span><span class="kw">pub fn </span>check_long_labels(testval: <span class="kw-2">&amp;</span>str) -&gt; bool {
+    <span class="kw">return </span>testval.split(<span class="string">&#39;.&#39;</span>).into_iter().any(|x| x.len() &gt; <span class="number">63</span>);
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_check_long_labels</span>() {
-    <span class="macro">assert_eq!</span>(<span class="bool-val">false</span>, <span class="ident">check_long_labels</span>(<span class="kw-2">&amp;</span><span class="string">&quot;hello.&quot;</span>.<span class="ident">to_string</span>()));
-    <span class="macro">assert_eq!</span>(<span class="bool-val">false</span>, <span class="ident">check_long_labels</span>(<span class="kw-2">&amp;</span><span class="string">&quot;hello.world&quot;</span>.<span class="ident">to_string</span>()));
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_check_long_labels() {
+    <span class="macro">assert_eq!</span>(<span class="bool-val">false</span>, check_long_labels(<span class="kw-2">&amp;</span><span class="string">&quot;hello.&quot;</span>.to_string()));
+    <span class="macro">assert_eq!</span>(<span class="bool-val">false</span>, check_long_labels(<span class="kw-2">&amp;</span><span class="string">&quot;hello.world&quot;</span>.to_string()));
     <span class="macro">assert_eq!</span>(
         <span class="bool-val">true</span>,
-        <span class="ident">check_long_labels</span>(
-            <span class="kw-2">&amp;</span><span class="string">&quot;foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890&quot;</span>
-                .<span class="ident">to_string</span>()
+        check_long_labels(
+            <span class="kw-2">&amp;</span><span class="string">&quot;foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890&quot;
+                </span>.to_string()
         )
     );
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
