@@ -3,9 +3,8 @@ use std::str::from_utf8;
 use crate::config::ConfigFile;
 use crate::db;
 use crate::enums::{RecordClass, RecordType};
-use crate::resourcerecord::InternalResourceRecord;
-use crate::zones::{empty_zones, load_zones_to_tree, FileZone, ZoneRecord};
-use log::{debug, error};
+use crate::zones::{FileZone, ZoneRecord};
+use log::debug;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -44,7 +43,7 @@ async fn handle_get_command(
     // database pool
     conn: &Pool<Sqlite>,
     // this is the result from the things in memory
-    zone_get: Option<&ZoneRecord>,
+    // zone_get: Option<&ZoneRecord>,
     name: Vec<u8>,
     rrtype: RecordType,
     rclass: RecordClass,
@@ -72,16 +71,16 @@ async fn handle_get_command(
         }
     };
 
-    if let Some(value) = zone_get {
-        // check if the type we want is in there, and only return the matching records
-        let res: Vec<InternalResourceRecord> = value
-            .to_owned()
-            .typerecords
-            .into_iter()
-            .filter(|r| r == &rrtype && r == &rclass)
-            .collect();
-        zr.typerecords.extend(res);
-    };
+    // if let Some(value) = zone_get {
+    //     // check if the type we want is in there, and only return the matching records
+    //     let res: Vec<InternalResourceRecord> = value
+    //         .to_owned()
+    //         .typerecords
+    //         .into_iter()
+    //         .filter(|r| r == &rrtype && r == &rclass)
+    //         .collect();
+    //     zr.typerecords.extend(res);
+    // };
 
     let result = match zr.typerecords.is_empty() {
         true => None,
@@ -117,7 +116,9 @@ async fn handle_import_file(
     }
 
     for zone in zones {
-        crate::db::load_zone_with_txn(&mut txn, &zone)
+        use crate::db::DBEntity;
+
+        zone.save_with_txn(&mut txn)
             .await
             .map_err(|e| format!("Failed to load zone {}: {e:?}", zone.name))?;
         log::info!("Imported {}", zone.name);
@@ -148,16 +149,16 @@ pub async fn manager(
     config: ConfigFile,
 ) -> Result<(), String> {
     // if they specified a static zone file in the config, then load it
-    let zones = match config.zone_file {
-        Some(_) => match load_zones_to_tree(&config) {
-            Ok(value) => value,
-            Err(error) => {
-                error!("{}", error);
-                empty_zones()
-            }
-        },
-        None => empty_zones(),
-    };
+    // let zones = match config.zone_file {
+    //     Some(_) => match load_zones_to_tree(&config) {
+    //         Ok(value) => value,
+    //         Err(error) => {
+    //             error!("{}", error);
+    //             empty_zones()
+    //         }
+    //     },
+    //     None => empty_zones(),
+    // };
 
     let connpool = match db::get_conn(&config).await {
         Ok(value) => value,
@@ -208,12 +209,8 @@ pub async fn manager(
                 resp,
             } => {
                 let res = handle_get_command(
-                    &connpool,
-                    zones.get(name.to_ascii_lowercase()),
-                    name,
-                    rrtype,
-                    rclass,
-                    resp,
+                    &connpool, // zones.get(name.to_ascii_lowercase()),
+                    name, rrtype, rclass, resp,
                 )
                 .await;
                 if let Err(e) = res {

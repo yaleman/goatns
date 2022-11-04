@@ -1,7 +1,8 @@
 [package]
 name = "goatns"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
+rust-version = "1.64"
 
 [lib]
 bench=false
@@ -37,6 +38,7 @@ tokio-util = { version = "0.7.4", features = ["full"] }
 tide = "0.16.0"
 tide-rustls = "0.3.0"
 driftwood = "0.0.6"
+async-trait = "0.1.58"
 
 [dev-dependencies]
 criterion = "^0.4"

@@ -1,8 +1,6 @@
-use crate::config::ConfigFile;
 use crate::enums::{RecordClass, RecordType};
-use crate::resourcerecord::{DomainName, InternalResourceRecord};
-use log::{debug, error, info};
-use patricia_tree::PatriciaMap;
+use crate::resourcerecord::InternalResourceRecord;
+use log::*;
 
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteRow;
@@ -104,7 +102,10 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
         let zoneid: i64 = row.get("zoneid");
         let id: i64 = row.get("id");
         let name: String = row.get("name");
-        let rrtype: u16 = row.get("rrtype");
+        let rrtype: i32 = row.get("rrtype");
+        let rrtype = RecordType::from(&(rrtype as u16));
+        #[cfg(test)]
+        eprintln!("rrtype: {rrtype:?}");
         let class: u16 = row.get("rclass");
         let rdata: String = row.get("rdata");
         let ttl: u32 = row.get("ttl");
@@ -113,7 +114,7 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
             zoneid: zoneid as u64,
             id: id as u64,
             name,
-            rrtype: RecordType::from(&rrtype).to_string(),
+            rrtype: rrtype.to_string(),
             class: RecordClass::from(&class),
             rdata,
             ttl,
@@ -140,10 +141,10 @@ impl Display for ZoneRecord {
     }
 }
 
-pub fn empty_zones() -> PatriciaMap<ZoneRecord> {
-    let tree: PatriciaMap<ZoneRecord> = PatriciaMap::new();
-    tree
-}
+// pub fn empty_zones() -> PatriciaMap<ZoneRecord> {
+//     let tree: PatriciaMap<ZoneRecord> = PatriciaMap::new();
+//     tree
+// }
 
 pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, String> {
     let mut file = match File::open(filename) {
@@ -188,95 +189,95 @@ pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, String> {
     jsonstruct
 }
 
-/// Load the data from a JSON file on disk
-pub fn load_zones_to_tree(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String> {
-    let zone_filename = match &config.zone_file {
-        Some(filename) => filename,
-        None => return Err("No zone file specified".to_string()),
-    };
+// / Load the data from a JSON file on disk
+// pub fn load_zones_to_tree(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String> {
+//     let zone_filename = match &config.zone_file {
+//         Some(filename) => filename,
+//         None => return Err("No zone file specified".to_string()),
+//     };
 
-    let jsonstruct = match load_zones(zone_filename) {
-        Ok(value) => value,
-        Err(err) => return Err(format!("Error loading file {zone_filename}: {err}")),
-    };
-    debug!("{:?}", jsonstruct);
+//     let jsonstruct = match load_zones(zone_filename) {
+//         Ok(value) => value,
+//         Err(err) => return Err(format!("Error loading file {zone_filename}: {err}")),
+//     };
+//     debug!("{:?}", jsonstruct);
 
-    let mut tree = empty_zones();
-    if config.enable_hinfo {
-        info!("Enabling HINFO response on hinfo.goat");
-        let hinfo_name = String::from("hinfo.goat");
-        tree.insert(
-            hinfo_name.clone(),
-            ZoneRecord {
-                name: hinfo_name.into_bytes(),
-                typerecords: vec![InternalResourceRecord::HINFO {
-                    cpu: None,
-                    os: None,
-                    ttl: 1,
-                    rclass: crate::RecordClass::Chaos,
-                }],
-            },
-        );
-    };
+//     let mut tree = empty_zones();
+//     if config.enable_hinfo {
+//         info!("Enabling HINFO response on hinfo.goat");
+//         let hinfo_name = String::from("hinfo.goat");
+//         tree.insert(
+//             hinfo_name.clone(),
+//             ZoneRecord {
+//                 name: hinfo_name.into_bytes(),
+//                 typerecords: vec![InternalResourceRecord::HINFO {
+//                     cpu: None,
+//                     os: None,
+//                     ttl: 1,
+//                     rclass: crate::RecordClass::Chaos,
+//                 }],
+//             },
+//         );
+//     };
 
-    for zone in jsonstruct {
-        // here we add the SOA
-        let soa = InternalResourceRecord::SOA {
-            mname: DomainName::from("server.lol"), // TODO: get our hostname, or configure it in the config
-            zone: DomainName::from(zone.name.as_str()),
-            rname: DomainName::from(zone.rname.as_str()),
-            serial: zone.serial,
-            refresh: zone.refresh,
-            retry: zone.retry,
-            expire: zone.expire,
-            minimum: zone.minimum,
+//     for zone in jsonstruct {
+//         // here we add the SOA
+//         let soa = InternalResourceRecord::SOA {
+//             mname: DomainName::from("server.lol"), // TODO: get our hostname, or configure it in the config
+//             zone: DomainName::from(zone.name.as_str()),
+//             rname: DomainName::from(zone.rname.as_str()),
+//             serial: zone.serial,
+//             refresh: zone.refresh,
+//             retry: zone.retry,
+//             expire: zone.expire,
+//             minimum: zone.minimum,
 
-            rclass: crate::RecordClass::Internet,
-        };
-        debug!("{soa:?}");
-        tree.insert(
-            &zone.name,
-            ZoneRecord {
-                name: zone.name.as_bytes().to_vec(),
-                typerecords: vec![soa],
-            },
-        );
+//             rclass: crate::RecordClass::Internet,
+//         };
+//         debug!("{soa:?}");
+//         tree.insert(
+//             &zone.name,
+//             ZoneRecord {
+//                 name: zone.name.as_bytes().to_vec(),
+//                 typerecords: vec![soa],
+//             },
+//         );
 
-        for record in zone.records {
-            debug!("fzr: {:?}", record);
+//         for record in zone.records {
+//             debug!("fzr: {:?}", record);
 
-            // mush the record name and the zone name together
-            let name = match record.name.as_str() {
-                "@" => zone.name.clone(),
-                _ => {
-                    let res = format!("{}.{}", record.clone().name, zone.name);
-                    res
-                }
-            };
+//             // mush the record name and the zone name together
+//             let name = match record.name.as_str() {
+//                 "@" => zone.name.clone(),
+//                 _ => {
+//                     let res = format!("{}.{}", record.clone().name, zone.name);
+//                     res
+//                 }
+//             };
 
-            let record_data: InternalResourceRecord = match record.try_into() {
-                Ok(value) => value,
-                Err(error) => {
-                    error!("Error loading record: {error:?}");
-                    continue;
-                }
-            };
+//             let record_data: InternalResourceRecord = match record.try_into() {
+//                 Ok(value) => value,
+//                 Err(error) => {
+//                     error!("Error loading record: {error:?}");
+//                     continue;
+//                 }
+//             };
 
-            if tree.contains_key(&name) {
-                let existing_value = tree.get_mut(&name).unwrap();
-                existing_value.typerecords.push(record_data);
-                let toinsert = existing_value.clone();
-                tree.insert(name, toinsert);
-            } else {
-                tree.insert(
-                    &name,
-                    ZoneRecord {
-                        name: name.clone().into_bytes(),
-                        typerecords: vec![record_data],
-                    },
-                );
-            }
-        }
-    }
-    Ok(tree)
-}
+//             if tree.contains_key(&name) {
+//                 let existing_value = tree.get_mut(&name).unwrap();
+//                 existing_value.typerecords.push(record_data);
+//                 let toinsert = existing_value.clone();
+//                 tree.insert(name, toinsert);
+//             } else {
+//                 tree.insert(
+//                     &name,
+//                     ZoneRecord {
+//                         name: name.clone().into_bytes(),
+//                         typerecords: vec![record_data],
+//                     },
+//                 );
+//             }
+//         }
+//     }
+//     Ok(tree)
+// }
