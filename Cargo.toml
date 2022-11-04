@@ -15,7 +15,7 @@ opt-level = 3
 bit-vec = "0.6.3"
 bytes = "1.2.1"
 chrono = "0.4.22"
-clap = { version="4.0.18", features=["cargo"]}
+clap = { version="4.0.19", features=["cargo"]}
 config = { version = "0.13", features = ["json"] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"
