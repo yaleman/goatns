@@ -11,6 +11,7 @@ use crate::config::ConfigFile;
 use crate::datastore::Command;
 use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass};
 use crate::reply::Reply;
+use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::utils::*;
 use crate::zones::ZoneRecord;
 use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
@@ -22,30 +23,45 @@ lazy_static! {
 }
 
 /// this handles a shutdown CHAOS request
-async fn check_for_shutdown(r: &Reply, addr: &SocketAddr, config: &ConfigFile) -> Result<(), ()> {
+async fn check_for_shutdown(
+    r: &Reply,
+    addr: &SocketAddr,
+    config: &ConfigFile,
+) -> Result<Reply, Option<Reply>> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
     if let Some(q) = &r.question {
         if q.qclass == RecordClass::Chaos {
-            if let Ok(qname) = from_utf8(&q.qname) {
-                // Just don't do this on UDP, because we can't really tell who it's coming from.
-                if qname == "shutdown" {
-                    match config.ip_allow_lists.shutdown.contains(&addr.ip()) {
-                        true => {
-                            log::info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
-                            return Ok(());
-                        }
-                        false => log::warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip()),
+            let qname = from_utf8(&q.qname)
+                .map_err(|e| {
+                    log::error!(
+                        "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
+                        q.qname
+                    );
+                })
+                .unwrap();
+            // Just don't do this on UDP, because we can't really tell who it's coming from.
+            if qname == "shutdown" {
+                // when we get a request, we update the response to say if we're going to do it or not
+                match config.ip_allow_lists.shutdown.contains(&addr.ip()) {
+                    true => {
+                        log::info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
+                        let mut chaos_reply = r.clone();
+                        chaos_reply.answers.push(CHAOS_OK.clone());
+                        return Ok(chaos_reply);
                     }
-                }
-            } else {
-                log::error!(
-                    "Failed to parse qname from {:?}, this shouldn't be able to happen!",
-                    q.qname
-                );
+                    false => {
+                        // get lost!  🤣
+                        log::warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip());
+                        let mut chaos_reply = r.clone();
+                        chaos_reply.answers.push(CHAOS_NO.clone());
+                        chaos_reply.header.rcode = Rcode::Refused;
+                        return Err(Some(chaos_reply));
+                    }
+                };
             }
         }
     };
-    Err(())
+    Err(None)
 }
 
 /// this handles a version CHAOS request
@@ -236,18 +252,24 @@ pub async fn tcp_server(
                 log::debug!("TCP Result: {r:?}");
 
                 // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
-                if check_for_shutdown(&r, &addr, &config).await.is_ok() {
-                    if let Err(error) = agent_tx.send(AgentState::Stopped {
-                        agent: Agent::TCPServer,
-                    }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-                    };
-                    if let Err(error) = tx.send(Command::Shutdown).await {
-                        eprintln!("Failed to send shutdown command to datastore.. {error:?}");
-                    };
-
-                    return Ok(());
-                }
+                let r = match check_for_shutdown(&r, &addr, &config).await {
+                    // no change here
+                    Err(reply) => match reply {
+                        None => r,
+                        Some(response) => response,
+                    },
+                    Ok(reply) => {
+                        if let Err(error) = agent_tx.send(AgentState::Stopped {
+                            agent: Agent::TCPServer,
+                        }) {
+                            eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                        };
+                        if let Err(error) = tx.send(Command::Shutdown).await {
+                            eprintln!("Failed to send shutdown command to datastore.. {error:?}");
+                        };
+                        reply
+                    }
+                };
 
                 let reply_bytes: Vec<u8> = match r.as_bytes().await {
                     Ok(value) => value,
@@ -317,6 +339,19 @@ pub async fn parse_query(
     log::trace!("Buffer length: {}", len);
     log::trace!("Parsed header: {:?}", header);
     get_result(header, len, buf, datastore).await
+}
+
+lazy_static! {
+    static ref CHAOS_OK: InternalResourceRecord = InternalResourceRecord::TXT {
+        txtdata: DNSCharString::from("OK"),
+        ttl: 0,
+        class: RecordClass::Chaos,
+    };
+    static ref CHAOS_NO: InternalResourceRecord = InternalResourceRecord::TXT {
+        txtdata: DNSCharString::from("NO"),
+        ttl: 0,
+        class: RecordClass::Chaos,
+    };
 }
 
 /// The generic handler for the packets once they've been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y'know?

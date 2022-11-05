@@ -5,9 +5,6 @@
 	"capture_packets" :false,
 	"enable_hinfo" : true,
 	"ip_allow_lists" : {
-		"version" : [
-			"127.0.0.1"
-		],
 		"shutdown" : [
 			"127.0.0.1"
 		]

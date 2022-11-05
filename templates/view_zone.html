@@ -1,0 +1,36 @@
+{% extends "dashboard.html" %}
+{% block content %}
+<h1>Zone: {{zone.name}}</h1>
+
+<p><a href="/ui/zones/list">Back to zones list</a></p>
+
+<table>
+    <thead>
+        <th>Name</th>
+        <th>RName</th>
+    </thead>
+    <tr>
+        <td class="text-truncate">{{zone.name}}</td>
+        <td>{{zone.rname}}</td>
+    </tr>
+</table>
+
+<table>
+    <thead>
+        <th>Type</th>
+        <th>Name</th>
+        <th>TTL</th>
+        <th>Class</th>
+    </thead>
+    {% for record in zone.records %}
+
+    <tr>
+        <td>{{record.rrtype}}</td>
+        <td class="text-truncate">{{record.name}}</td>
+        <td>{{record.ttl}}</td>
+        <td>{{record.class}}</td>
+        </tr>
+    {% endfor %}
+</table>
+</ul>
+{% endblock content %}

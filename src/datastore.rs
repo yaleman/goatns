@@ -23,6 +23,9 @@ pub enum Command {
         name: String,
         resp: Responder<Option<FileZone>>,
     },
+    GetZoneNames {
+        resp: Responder<Vec<FileZone>>,
+    },
     ImportFile {
         filename: String,
         zone_name: Option<String>,
@@ -143,6 +146,19 @@ async fn handle_get_zone(
     tx.send(zone).map_err(|e| format!("{e:?}"))
 }
 
+async fn handle_get_zone_names(
+    tx: oneshot::Sender<Vec<FileZone>>,
+    pool: &Pool<Sqlite>,
+) -> Result<(), String> {
+    let mut txn = pool.begin().await.map_err(|e| format!("{e:?}"))?;
+
+    let zones = crate::db::get_zones_with_txn(&mut txn, 100, 0)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+
+    tx.send(zones).map_err(|e| format!("{e:?}"))
+}
+
 /// Manages the datastore, waits for signals from the server instances and responds with data
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
@@ -178,6 +194,12 @@ pub async fn manager(
         match cmd {
             Command::GetZone { name, resp } => {
                 let res = handle_get_zone(resp, &connpool, name).await;
+                if let Err(e) = res {
+                    log::error!("{e:?}")
+                };
+            }
+            Command::GetZoneNames { resp } => {
+                let res = handle_get_zone_names(resp, &connpool).await;
                 if let Err(e) = res {
                     log::error!("{e:?}")
                 };

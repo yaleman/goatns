@@ -1,20 +1,18 @@
+use crate::config::ConfigFile;
 use crate::datastore;
 use crate::enums::RecordType;
 use tide::{self, Response, StatusCode};
 
 use tokio::sync::mpsc::Sender;
 
-// #[get("/")]
-async fn index(_req: tide::Request<State>) -> tide::Result {
-    tide::Result::Ok(Response::builder(200).body("Hello world").build())
-}
+#[macro_use]
+pub mod macros;
+pub mod ui;
 
-// #[get("/status")]
 async fn status(_req: tide::Request<State>) -> tide::Result {
     tide::Result::Ok(Response::builder(200).body("Ok").build())
 }
 
-// #[get("/query/<qname>/<qtype>")]
 async fn api_query(req: tide::Request<State>) -> tide::Result {
     let qname = req.param("qname")?;
     let qtype = req.param("qtype")?;
@@ -90,12 +88,24 @@ pub struct State {
     tx: Sender<datastore::Command>,
 }
 
-pub async fn build(tx: Sender<datastore::Command>) -> Result<tide::Server<State>, tide::Error> {
+pub async fn build(
+    tx: Sender<datastore::Command>,
+    config: &ConfigFile,
+) -> Result<tide::Server<State>, tide::Error> {
     let mut app = tide::with_state(State { tx });
 
-    app.at("/").get(index);
-    app.at("/status").get(status);
+    app.at("/").get(ui::index);
     app.at("/query/:qname/:qtype").get(api_query);
+    app.at("/status").get(status);
+    app.at("/ui/zones/list").get(ui::zones_list);
+    app.at("/ui/zones/:id").get(ui::zone_view);
+    if let Err(error) = app.at("/ui/static").serve_dir(&config.api_static_dir) {
+        log::error!(
+            "Failed to find static file dir ({})! {error:?}",
+            &config.api_static_dir.to_string_lossy()
+        )
+    };
+
     app.with(driftwood::ApacheCombinedLogger);
 
     Ok(app)

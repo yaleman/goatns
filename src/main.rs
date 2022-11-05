@@ -72,7 +72,7 @@ async fn main() -> io::Result<()> {
     let system_state = match goatns::utils::cli_commands(tx.clone(), &clap_results).await {
         Ok(value) => value,
         Err(error) => {
-            eprintln!("{error}");
+            log::trace!("{error}");
             SystemState::ShuttingDown
         }
     };
@@ -117,7 +117,7 @@ async fn main() -> io::Result<()> {
                     return Ok(());
                 }
             };
-            let api = match goatns::api::build(tx.clone()).await {
+            let api = match goatns::api::build(tx.clone(), &config.clone()).await {
                 Ok(value) => value,
                 Err(err) => {
                     // TODO: need to clean-shutdown the server here
@@ -143,26 +143,25 @@ async fn main() -> io::Result<()> {
                     if let Err(error) = agent_tx.send(AgentState::Stopped {
                         agent: Agent::TCPServer,
                     }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-                    };
-                    return Ok(());
-                };
-                if datastore_manager.is_finished() {
-                    log::info!("Datastore manager shut down");
-                    if let Err(error) = agent_tx.send(AgentState::Stopped {
-                        agent: Agent::Datastore,
-                    }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                        eprintln!("Failed to send TCPServer shutdown message: {error:?}");
                     };
                     return Ok(());
                 };
                 if apiserver.is_finished() {
                     log::info!("API manager shut down");
                     if let Err(error) = agent_tx.send(AgentState::Stopped { agent: Agent::API }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                        eprintln!("Failed to send API Server shutdown message: {error:?}");
                     };
-                    // return Ok(());
                 }
+                if datastore_manager.is_finished() {
+                    log::info!("Datastore manager shut down!");
+                    if let Err(error) = agent_tx.send(AgentState::Stopped {
+                        agent: Agent::Datastore,
+                    }) {
+                        eprintln!("Failed to send Datastore shutdown message: {error:?}");
+                    };
+                    return Ok(());
+                };
 
                 if udpserver.is_finished()
                     & tcpserver.is_finished()
@@ -175,7 +174,6 @@ async fn main() -> io::Result<()> {
             }
         }
     }
-
     logger.flush();
     sleep(std::time::Duration::from_secs(1)).await;
     logger.flush();

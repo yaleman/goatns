@@ -39,6 +39,8 @@ pub struct ConfigFile {
     pub api_tls_cert: PathBuf,
     /// TLS key path
     pub api_tls_key: PathBuf,
+    /// Static File Directory for api things
+    pub api_static_dir: PathBuf,
 }
 
 impl ConfigFile {
@@ -66,6 +68,7 @@ impl Default for ConfigFile {
             api_port: 9000,
             api_tls_cert: PathBuf::from("./certificates/cert.pem"),
             api_tls_key: PathBuf::from("./certificates/key.pem"),
+            api_static_dir: PathBuf::from("./static_files/"),
         }
     }
 }
@@ -106,6 +109,9 @@ impl From<Config> for ConfigFile {
             api_tls_key: config
                 .get("api_tls_key")
                 .unwrap_or(Self::default().api_tls_key),
+            api_static_dir: config
+                .get("api_static_dir")
+                .unwrap_or(Self::default().api_static_dir),
         }
     }
 }

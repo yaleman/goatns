@@ -49,7 +49,7 @@ pub async fn start_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 }
 
 pub async fn create_users_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    log::info!("Ensuring DB Users table exists");
+    log::debug!("Ensuring DB Users table exists");
     sqlx::query(
         r#"CREATE TABLE IF NOT EXISTS
         users (
@@ -161,7 +161,7 @@ pub async fn create_ownership_table(pool: &SqlitePool) -> Result<(), sqlx::Error
 
     #[cfg(test)]
     eprintln!("Ensuring DB Ownership table exists");
-    log::info!("Ensuring DB Ownership table exists");
+    log::debug!("Ensuring DB Ownership table exists");
     sqlx::query(
         r#"CREATE TABLE IF NOT EXISTS
         ownership (
@@ -177,6 +177,7 @@ pub async fn create_ownership_table(pool: &SqlitePool) -> Result<(), sqlx::Error
 
     #[cfg(test)]
     eprintln!("Ensuring DB Ownership index exists");
+    log::debug!("Ensuring DB Ownership index exists");
     sqlx::query(
         "CREATE UNIQUE INDEX
         IF NOT EXISTS
@@ -195,7 +196,7 @@ pub async fn create_ownership_table(pool: &SqlitePool) -> Result<(), sqlx::Error
 pub async fn create_zones_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await.unwrap();
 
-    log::info!("Ensuring DB Zones table exists");
+    log::debug!("Ensuring DB Zones table exists");
     sqlx::query(
         r#"CREATE TABLE IF NOT EXISTS
         zones (
@@ -213,7 +214,7 @@ pub async fn create_zones_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .await?;
 
     // .execute(tx).await;
-    log::info!("Ensuring DB Records index exists");
+    log::debug!("Ensuring DB Records index exists");
     sqlx::query(
         "CREATE UNIQUE INDEX
         IF NOT EXISTS
@@ -229,7 +230,7 @@ pub async fn create_zones_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 }
 
 pub async fn create_records_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    log::info!("Ensuring DB Records table exists");
+    log::debug!("Ensuring DB Records table exists");
 
     let mut tx = pool.begin().await.unwrap();
 
@@ -248,7 +249,7 @@ pub async fn create_records_table(pool: &SqlitePool) -> Result<(), sqlx::Error> 
     )
     .execute(&mut tx)
     .await?;
-    log::info!("Ensuring DB Records index exists");
+    log::debug!("Ensuring DB Records index exists");
     sqlx::query(
         "CREATE UNIQUE INDEX
         IF NOT EXISTS
@@ -259,7 +260,7 @@ pub async fn create_records_table(pool: &SqlitePool) -> Result<(), sqlx::Error> 
     )
     .execute(&mut tx)
     .await?;
-    log::info!("Ensuring DB Records view exists");
+    log::debug!("Ensuring DB Records view exists");
     // this view lets us query based on the full name
     sqlx::query(
         &format!("CREATE VIEW IF NOT EXISTS {} ( record_id, zone_id, rrtype, rclass, rdata, name, ttl ) as
@@ -357,6 +358,7 @@ pub async fn create_records_table(pool: &SqlitePool) -> Result<(), sqlx::Error> 
 // }
 
 /// Query the zones table, name_or_id can be the zoneid or the name - if they match then you're bad and you should feel bacd.
+
 pub async fn get_zone_with_txn(
     txn: &mut Transaction<'_, Sqlite>,
     name_or_id: &str,
@@ -871,4 +873,61 @@ impl DBEntity for FileZoneRecord {
             .await?;
         Ok(res.rows_affected())
     }
+}
+
+pub async fn get_zones_with_txn(
+    txn: &mut Transaction<'_, Sqlite>,
+    lim: i64,
+    offset: i64,
+) -> Result<Vec<FileZone>, sqlx::Error> {
+    let result = sqlx::query(
+        "SELECT
+        id, name, rname, serial, refresh, retry, expire, minimum
+        FROM zones
+        LIMIT ? OFFSET ? ",
+    )
+    .bind(lim)
+    .bind(offset)
+    .fetch_all(&mut *txn)
+    .await?;
+
+    let rows: Vec<FileZone> = result
+        .iter()
+        .map(|row| {
+            let id: i64 = row.get(0);
+            #[cfg(test)]
+            eprintln!("Building FileZone");
+            FileZone {
+                id: id as u64,
+                name: row.get(1),
+                rname: row.get(2),
+                serial: row.get(3),
+                refresh: row.get(4),
+                retry: row.get(5),
+                expire: row.get(6),
+                minimum: row.get(7),
+                records: vec![],
+            }
+        })
+        .collect();
+    Ok(rows)
+
+    // let result = sqlx::query(
+    //     "SELECT
+    //     id, zoneid, name, ttl, rrtype, rclass, rdata
+    //     FROM records
+    //     WHERE zoneid = ?",
+    // )
+    // .bind(zone.id as i64)
+    // .fetch_all(&mut *txn)
+    // .await?;
+
+    // zone.records = result
+    //     .into_iter()
+    //     .filter_map(|r| match FileZoneRecord::try_from(r) {
+    //         Ok(val) => Some(val),
+    //         Err(_) => None,
+    //     })
+    //     .collect();
+    // Ok(Some(zone))
 }
