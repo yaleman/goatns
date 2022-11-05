@@ -86,7 +86,6 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
     - [x] import from json
     - [x] export to json (file-per-zone)
   - [ ] API things
-    - [x] move to another web framework (tide-rs)
     - [ ] Oauth for management/UI things
   - [ ] support all record-classes
   - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data

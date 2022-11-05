@@ -53,7 +53,7 @@ impl ConfigFile {
 impl Default for ConfigFile {
     fn default() -> Self {
         Self {
-            address: "0.0.0.0".to_string(),
+            address: "127.0.0.1".to_string(),
             port: 15353,
             capture_packets: false,
             log_level: "INFO".to_string(),
