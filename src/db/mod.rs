@@ -801,13 +801,17 @@ impl DBEntity for FileZoneRecord {
         txn: &mut Transaction<'t, Sqlite>,
     ) -> Result<u64, sqlx::Error> {
         #[cfg(test)]
-        eprintln!("Starting save_with_txn");
-
-        // TODO: check if there's an existing one
+        eprintln!("Starting save_with_txn for {self:?}");
+        log::trace!("Starting save_with_txn for {self:?}");
         let record_name = match self.name.len() {
             0 => None,
             _ => Some(self.to_owned().name),
         };
+        eprintln!(
+            "save_with_txn rtype: {} => {}",
+            self.rrtype.clone(),
+            RecordType::from(self.rrtype.clone())
+        );
         let existing_record = sqlx::query("SELECT id, zoneid, name, ttl, rrtype, rclass, rdata from records WHERE
         id = ? AND  zoneid = ? AND  name = ? AND  ttl = ? AND  rrtype = ? AND  rclass = ? AND rdata = ? LIMIT 1")
             .bind(self.id as i64)

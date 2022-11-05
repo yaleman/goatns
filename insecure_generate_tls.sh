@@ -17,7 +17,7 @@ CERT_LIFETIME=91
 
 #ensure it's got a trailing slash by stripping it then adding it again for great justice.
 CERT_DIR="${CERT_DIR%/}/"
-echo "CERT DIR: ${CERT_DIR}"
+# echo "CERT DIR: ${CERT_DIR}"
 
 ALTNAME_FILE="${CERT_DIR}altnames.cnf"
 CANAME_FILE="${CERT_DIR}ca.cnf"
@@ -178,29 +178,40 @@ if [ ! -f "${CACERT}" ]; then
         -nodes || { echo "Failed to sign the CA cert..."; exit 1 ;}
 fi
 
-echo "Generating the server private key..."
-# openssl ecparam -genkey -name prime256v1 -noout -out "${KEYFILE}"
-openssl genrsa -out "${KEYFILE}" || { echo "Failed to generate the key..."; exit 1 ;}
+gen_certs () {
+    echo "Generating the server private key..."
+    # openssl ecparam -genkey -name prime256v1 -noout -out "${KEYFILE}"
+    openssl genrsa -out "${KEYFILE}" || { echo "Failed to generate the key..."; exit 1 ;}
 
-echo "Generating the certficate signing request..."
-openssl req -sha256 -new \
-    -batch \
-    -config "${ALTNAME_FILE}" -extensions v3_req \
-    -key "${KEYFILE}"\
-    -nodes \
-    -out "${CSRFILE}" || { echo "Failed to gen the cert req..."; exit 1 ;}
+    echo "Generating the certficate signing request..."
+    openssl req -sha256 -new \
+        -batch \
+        -config "${ALTNAME_FILE}" -extensions v3_req \
+        -key "${KEYFILE}"\
+        -nodes \
+        -out "${CSRFILE}" || { echo "Failed to gen the cert req..."; exit 1 ;}
 
-echo "Signing the certificate..."
-openssl ca -config "${ALTNAME_FILE}" \
-    -batch \
-    -extensions v3_req \
-    -days ${CERT_LIFETIME} -notext -md sha256 \
-    -in "${CSRFILE}" \
-    -out "${CERTFILE}" || { echo "Failed to sign the cert..."; exit 1 ;}
+    echo "Signing the certificate..."
+    openssl ca -config "${ALTNAME_FILE}" \
+        -batch \
+        -extensions v3_req \
+        -days ${CERT_LIFETIME} -notext -md sha256 \
+        -in "${CSRFILE}" \
+        -out "${CERTFILE}" || { echo "Failed to sign the cert..."; exit 1 ;}
 
-# Create the chain
-cat "${CERTFILE}" "${CACERT}" > "${CHAINFILE}"
+    # Create the chain
+    cat "${CERTFILE}" "${CACERT}" > "${CHAINFILE}"
 
-echo "####################################"
-echo "Successfully created certs!"
-echo "####################################"
+    echo "####################################"
+    echo "Successfully created certs!"
+    echo "####################################"
+}
+
+if [ ! -f "${CERTFILE}" ] || [ ! -f "${CERTFILE}" ] || [ ! -f "${CHAINFILE}" ]; then
+    echo "Can't find certs, generating them..."
+    gen_certs
+else
+    # echo "Checking cafile=${CACERT} chainfile=${CHAINFILE}"
+    openssl verify -CAfile "${CACERT}" -purpose sslserver "${CHAINFILE}" || gen_certs
+fi
+echo "Done with cert checks!"

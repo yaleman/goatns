@@ -4,6 +4,7 @@ use crate::config::ConfigFile;
 use crate::db;
 use crate::enums::{RecordClass, RecordType};
 use crate::zones::{FileZone, ZoneRecord};
+use clap::ArgMatches;
 use log::debug;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
@@ -163,19 +164,8 @@ async fn handle_get_zone_names(
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
     config: ConfigFile,
+    clap_results: ArgMatches,
 ) -> Result<(), String> {
-    // if they specified a static zone file in the config, then load it
-    // let zones = match config.zone_file {
-    //     Some(_) => match load_zones_to_tree(&config) {
-    //         Ok(value) => value,
-    //         Err(error) => {
-    //             error!("{}", error);
-    //             empty_zones()
-    //         }
-    //     },
-    //     None => empty_zones(),
-    // };
-
     let connpool = match db::get_conn(&config).await {
         Ok(value) => value,
         Err(err) => {
@@ -189,6 +179,14 @@ pub async fn manager(
         log::error!("{err}");
         return Err(format!("Failed to start DB: {err:?}"));
     };
+
+    if clap_results.get_flag("use_zonefile") && config.zone_file.is_some() {
+        let zone_file = config.zone_file.unwrap();
+        if let Err(err) = handle_import_file(&connpool, zone_file.to_string(), None).await {
+            log::error!("Failed to import {zone_file}: {err:?}");
+            return Ok(());
+        };
+    }
 
     while let Some(cmd) = rx.recv().await {
         match cmd {

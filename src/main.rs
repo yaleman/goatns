@@ -67,7 +67,8 @@ async fn main() -> io::Result<()> {
     (tx, rx) = mpsc::channel(MAX_IN_FLIGHT);
 
     // start all the things!
-    let datastore_manager = tokio::spawn(datastore::manager(rx, config.clone()));
+    let datastore_manager =
+        tokio::spawn(datastore::manager(rx, config.clone(), clap_results.clone()));
 
     let system_state = match goatns::utils::cli_commands(tx.clone(), &clap_results).await {
         Ok(value) => value,

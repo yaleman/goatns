@@ -1,10 +1,14 @@
+use crate::datastore::Command;
 use crate::enums::SystemState;
 use crate::reply::Reply;
+use crate::zones::FileZone;
 use crate::{Header, PacketType, Rcode, HEADER_BYTES};
 use clap::{arg, command, value_parser, Arg, ArgMatches};
 use log::{debug, trace};
 use std::str::from_utf8;
 use tokio::io::AsyncWriteExt;
+use tokio::sync::mpsc;
+use tokio::sync::oneshot;
 use tokio::time::sleep;
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
@@ -384,6 +388,12 @@ pub fn clap_parser() -> ArgMatches {
                 .help("Filename to save to (used in other commands).")
                 .value_parser(value_parser!(String)),
         )
+        .arg(
+            Arg::new("use_zonefile")
+                .long("using-zonefile")
+                .help("Load the zone file into the DB on startup, typically used for testing.")
+                .action(clap::ArgAction::SetTrue),
+        )
         // .arg(arg!(
         //     -d --debug ... "Turn debugging information on"
         // ))
@@ -498,10 +508,6 @@ pub async fn cli_commands(
     };
     Ok(SystemState::Server)
 }
-use crate::datastore::Command;
-use crate::zones::FileZone;
-use tokio::sync::mpsc;
-use tokio::sync::oneshot;
 /// dump a zone to a file
 pub async fn export_zone_file(
     tx: mpsc::Sender<Command>,

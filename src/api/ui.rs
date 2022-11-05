@@ -9,7 +9,7 @@ use super::State;
 
 #[derive(Template)]
 #[template(path = "index.html")]
-struct HelloTemplate/*<'a>*/ {
+struct HelloTemplate /*<'a>*/ {
     // name: &'a str,
 }
 
@@ -24,7 +24,6 @@ struct TemplateViewZones {
 struct TemplateViewZone {
     zone: FileZone,
 }
-
 
 pub async fn zones_list(req: tide::Request<State>) -> tide::Result {
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
@@ -49,7 +48,6 @@ pub async fn zones_list(req: tide::Request<State>) -> tide::Result {
     let context = TemplateViewZones { zones };
     tide_result_html!(context, 200)
 }
-
 
 pub async fn index(_req: tide::Request<State>) -> tide::Result {
     let hello = HelloTemplate {};

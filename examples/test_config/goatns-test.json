@@ -1,7 +1,7 @@
 {
 	"addr" : "127.0.0.1",
 	"port" : 25353,
-	"log_level" : "DEBUG",
+	"log_level" : "TRACE",
 	"capture_packets" :false,
 	"enable_hinfo" : true,
 	"shutdown_ip_allow_list" : [

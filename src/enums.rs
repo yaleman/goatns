@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use enum_iterator::Sequence;
 use packed_struct::prelude::*;
 use serde::{Deserialize, Serialize, Serializer};
 use sqlx::encode::IsNull;
@@ -82,7 +83,7 @@ pub enum Rcode {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
 /// RRType, eg A, NS, MX, etc
 pub enum RecordType {
     /// A host address
@@ -163,6 +164,7 @@ impl From<&str> for RecordType {
             "AAAA" => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
             "ALL" => Self::ALL,
             "AXFR" => Self::AXFR,
+            "CAA" => Self::CAA,
             "CNAME" => Self::CNAME,
             "HINFO" => Self::HINFO,
             "LOC" => Self::LOC,
@@ -178,6 +180,7 @@ impl From<&str> for RecordType {
             "PTR" => Self::PTR,
             "SOA" => Self::SOA,
             "TXT" => Self::TXT,
+            "URI" => Self::URI,
             "WKS" => Self::WKS,
             _ => Self::InvalidType,
         }
@@ -285,7 +288,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for RecordType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Sequence)]
 /// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
     /// IN - Internet
@@ -328,8 +331,8 @@ impl Display for RecordClass {
     }
 }
 
-impl From<&'static str> for RecordClass {
-    fn from(value: &'static str) -> Self {
+impl From<&str> for RecordClass {
+    fn from(value: &str) -> Self {
         match value {
             "IN" => RecordClass::Internet,
             "CS" => RecordClass::CsNet,

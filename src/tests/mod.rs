@@ -2,6 +2,7 @@ mod e2e_test;
 
 #[cfg(test)]
 mod tests {
+    use crate::enums::{RecordClass, RecordType};
     use crate::resourcerecord::{InternalResourceRecord, LocRecord};
     use crate::utils::name_as_bytes;
     use crate::{PacketType, Question};
@@ -557,5 +558,49 @@ mod tests {
             assert!(record.is_ok());
             assert_eq!(record.unwrap(), output);
         }
+    }
+
+    #[test]
+    fn test_all_record_type_conversions() {
+        for record_type in enum_iterator::all::<RecordType>().collect::<Vec<_>>() {
+            eprintln!("Testing {record_type:?}");
+            if record_type != RecordType::InvalidType {
+                let string_version = record_type.to_string();
+                assert_ne!(string_version, "".to_string());
+
+                let from_string_version = RecordType::from(string_version);
+
+                assert_eq!(record_type, from_string_version);
+                let _: u16 = record_type as u16;
+            } else {
+                let garbled = String::from("asdfasdfasdflq23423l4kj23h4l23jk4");
+                assert_eq!(record_type, RecordType::from(garbled));
+                assert_eq!(record_type, RecordType::from(&12345u16));
+            }
+        }
+        // panic!();
+    }
+    #[test]
+    fn test_all_record_class_conversions() {
+        for record_class in enum_iterator::all::<RecordClass>().collect::<Vec<_>>() {
+            eprintln!("Testing {record_class:?}");
+            let fail_string: &'static str = "";
+            if record_class != RecordClass::InvalidType {
+                let string_version = record_class.to_owned().to_string();
+                assert_ne!(string_version, fail_string);
+
+                let str_version = string_version.as_str();
+
+                let from_string_version = RecordClass::from(str_version);
+
+                assert_eq!(record_class, from_string_version);
+                let _: u16 = record_class as u16;
+            } else {
+                let garbled = "asdfasdfasdflq23423l4kj23h4l23jk4";
+                assert_eq!(record_class, RecordClass::from(garbled));
+                assert_eq!(record_class, RecordClass::from(&12345u16));
+            }
+        }
+        // panic!();
     }
 }

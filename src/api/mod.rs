@@ -9,8 +9,10 @@ use tokio::sync::mpsc::Sender;
 pub mod macros;
 pub mod ui;
 
+pub const STATUS_OK: &str = "Ok";
+
 async fn status(_req: tide::Request<State>) -> tide::Result {
-    tide::Result::Ok(Response::builder(200).body("Ok").build())
+    tide::Result::Ok(Response::builder(200).body(STATUS_OK).build())
 }
 
 async fn api_query(req: tide::Request<State>) -> tide::Result {
