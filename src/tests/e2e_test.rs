@@ -25,7 +25,7 @@ mod tests {
                     eprintln!("OK: {value:?}");
                     if let Ok(text) = value.text() {
                         eprintln!("Server response: {text}");
-                        if text == crate::api::STATUS_OK.to_string() {
+                        if text == crate::web::STATUS_OK.to_string() {
                             println!("API is up!");
                             break;
                         }

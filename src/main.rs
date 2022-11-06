@@ -16,34 +16,39 @@ use tokio::time::sleep;
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let clap_results = clap_parser();
-    let config: ConfigFile = get_config(clap_results.get_one::<String>("config"));
+    let mut config: ConfigFile = get_config(clap_results.get_one::<String>("config"));
 
     let logger = match setup_logging(&config, &clap_results) {
         Ok(logger) => logger,
         Err(_) => return Ok(()),
     };
 
-    let config_check_result = check_config(&config);
+    let config = check_config(&mut config);
 
     if clap_results.get_flag("configcheck") {
         log::info!("{:#?}", config);
-        match config_check_result {
+        match config {
             Ok(_) => log::info!("Checking config... [OK!]"),
             Err(_) => log::error!("Checking config... [ERR!]"),
         };
     }
 
     // sometimes you just have to print some errors
-    if let Err(errors) = config_check_result {
-        for error in errors {
-            log::error!("{error:}")
+    let config = match config {
+        Err(errors) => {
+            for error in errors {
+                log::error!("{error:}")
+            }
+            log::error!("Shutting down!");
+            return Ok(());
         }
-        log::error!("Shutting down!");
-        return Ok(());
+        Ok(c) => {
+            if clap_results.get_flag("configcheck") {
+                return Ok(());
+            };
+            c
+        }
     };
-    if clap_results.get_flag("configcheck") {
-        return Ok(());
-    }
 
     info!("Configuration: {}", config);
 
@@ -106,7 +111,9 @@ async fn main() -> io::Result<()> {
                 agent_tx.subscribe(),
             ));
 
-            let api_listener = match TlsListener::build()
+            // let _apiserver: tokio::task::JoinHandle<Result<(),std::io::Error>>;
+            if config.enable_api {
+                let api_listener = match TlsListener::build()
                 .addrs(config.api_listener_address())
                 .cert(&config.api_tls_cert)
                 .key(&config.api_tls_key)
@@ -118,7 +125,7 @@ async fn main() -> io::Result<()> {
                     return Ok(());
                 }
             };
-            let api = match goatns::api::build(tx.clone(), &config.clone()).await {
+            let api = match goatns::web::build(tx.clone(), &config.clone()).await {
                 Ok(value) => value,
                 Err(err) => {
                     // TODO: need to clean-shutdown the server here
@@ -126,7 +133,9 @@ async fn main() -> io::Result<()> {
                     return Ok(());
                 }
             };
-            let apiserver = tokio::spawn(api.listen(api_listener));
+            let _apiserver = tokio::spawn(api.listen(api_listener));
+
+            }
 
             loop {
                 // if any of the servers bail, the server does too.
@@ -148,12 +157,15 @@ async fn main() -> io::Result<()> {
                     };
                     return Ok(());
                 };
-                if apiserver.is_finished() {
-                    log::info!("API manager shut down");
-                    if let Err(error) = agent_tx.send(AgentState::Stopped { agent: Agent::API }) {
-                        eprintln!("Failed to send API Server shutdown message: {error:?}");
-                    };
-                }
+                // if config.enable_api {
+                //     if apiserver.is_finished() {
+                //         log::info!("API manager shut down");
+                //         if let Err(error) = agent_tx.send(AgentState::Stopped { agent: Agent::API }) {
+                //             eprintln!("Failed to send API Server shutdown message: {error:?}");
+                //         };
+                //     }
+                // }
+
                 if datastore_manager.is_finished() {
                     log::info!("Datastore manager shut down!");
                     if let Err(error) = agent_tx.send(AgentState::Stopped {
@@ -166,7 +178,6 @@ async fn main() -> io::Result<()> {
 
                 if udpserver.is_finished()
                     & tcpserver.is_finished()
-                    & apiserver.is_finished()
                     & datastore_manager.is_finished()
                 {
                     break;

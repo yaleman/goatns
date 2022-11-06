@@ -1,5 +1,5 @@
 {
-	"addr" : "0.0.0.0",
+	"hostname" : "ns1.dotgoat.net",
 	"port" : 15353,
 	"log_level" : "DEBUG",
 	"capture_packets" :false,
@@ -8,5 +8,8 @@
 		"shutdown" : [
 			"127.0.0.1"
 		]
-	}
+	},
+	"enable_api" : true,
+	"api_tls_key" : "~/Nextcloud/dotfiles/letsencrypt/live/m1.housenet.yaleman.org/privkey.pem",
+	"api_tls_cert" : "~/Nextcloud/dotfiles/letsencrypt/live/m1.housenet.yaleman.org/fullchain.pem"
 }

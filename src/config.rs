@@ -1,12 +1,13 @@
 use clap::ArgMatches;
 use config::{Config, File};
 use flexi_logger::LoggerHandle;
+use gethostname::gethostname;
 use ipnet::IpNet;
+use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::net::IpAddr;
 use std::path::PathBuf;
-
 
 /// Allow-listing ranges for making particular kinds of requests
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
@@ -22,6 +23,8 @@ pub struct IPAllowList {
 
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Serialize)]
 pub struct ConfigFile {
+    /// The server's hostname when generating an SOA record, defaults to the results of gethostname()
+    pub hostname: String,
     /// Listen address, default is 0.0.0.0
     pub address: String,
     /// Listen on this port, default is 15353
@@ -39,6 +42,8 @@ pub struct ConfigFile {
     pub zone_file: Option<String>,
     /// IP Allow lists
     pub ip_allow_lists: IPAllowList,
+    /// Do you really want an API?
+    pub enable_api: bool,
     /// API / Web UI Port
     pub api_port: u16,
     /// Certificate path
@@ -47,6 +52,13 @@ pub struct ConfigFile {
     pub api_tls_key: PathBuf,
     /// Static File Directory for api things
     pub api_static_dir: PathBuf,
+    /// Secret for cookie storage - don't hard code this, it'll randomly generate on startup
+    #[serde(default = "generate_cookie_secret")]
+    pub api_cookie_secret: String,
+}
+
+fn generate_cookie_secret() -> String {
+    Alphanumeric.sample_string(&mut rand::thread_rng(), 64)
 }
 
 impl ConfigFile {
@@ -58,7 +70,10 @@ impl ConfigFile {
 
 impl Default for ConfigFile {
     fn default() -> Self {
+        let hostname = gethostname();
+        let hostname = hostname.into_string().unwrap();
         Self {
+            hostname,
             address: "127.0.0.1".to_string(),
             port: 15353,
             capture_packets: false,
@@ -71,10 +86,12 @@ impl Default for ConfigFile {
             },
             sqlite_path: String::from("~/.cache/goatns.sqlite"),
             zone_file: None,
+            enable_api: false,
             api_port: 9000,
             api_tls_cert: PathBuf::from("./certificates/cert.pem"),
             api_tls_key: PathBuf::from("./certificates/key.pem"),
             api_static_dir: PathBuf::from("./static_files/"),
+            api_cookie_secret: generate_cookie_secret(),
         }
     }
 }
@@ -82,8 +99,8 @@ impl Default for ConfigFile {
 impl Display for ConfigFile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "listening_address=\"{}:{}\" api_endpoint=\"https://{}\" capturing_pcaps={} Log_level={}",
-            self.address, self.port, self.api_listener_address(), self.capture_packets, self.log_level
+            "hostname=\"{}\" listening_address=\"{}:{}\" api_endpoint=\"https://{}\" capturing_pcaps={} Log_level={}",
+            self.hostname, self.address, self.port, self.api_listener_address(), self.capture_packets, self.log_level
         ))
     }
 }
@@ -91,7 +108,8 @@ impl Display for ConfigFile {
 impl From<Config> for ConfigFile {
     fn from(config: Config) -> Self {
         ConfigFile {
-            address: config.get("addr").unwrap_or(Self::default().address),
+            hostname: config.get("hostname").unwrap_or(Self::default().hostname),
+            address: config.get("address").unwrap_or(Self::default().address),
             port: config.get("port").unwrap_or_default(),
             capture_packets: config.get("capture_packets").unwrap_or_default(),
             log_level: config.get("log_level").unwrap_or(Self::default().log_level),
@@ -108,6 +126,9 @@ impl From<Config> for ConfigFile {
                 .get("sqlite_path")
                 .unwrap_or(Self::default().sqlite_path),
             zone_file: config.get("zone_file").unwrap_or(Self::default().zone_file),
+            enable_api: config
+                .get("enable_api")
+                .unwrap_or(Self::default().enable_api),
             api_port: config.get("api_port").unwrap_or(Self::default().api_port),
             api_tls_cert: config
                 .get("api_tls_cert")
@@ -118,6 +139,7 @@ impl From<Config> for ConfigFile {
             api_static_dir: config
                 .get("api_static_dir")
                 .unwrap_or(Self::default().api_static_dir),
+            api_cookie_secret: generate_cookie_secret(),
         }
     }
 }
@@ -163,9 +185,19 @@ pub fn get_config(config_path: Option<&String>) -> ConfigFile {
     ConfigFile::default()
 }
 
-pub fn check_config(config: &ConfigFile) -> Result<(), Vec<String>> {
+pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> {
     let mut config_ok: bool = true;
     let mut errors: Vec<String> = vec![];
+
+    if config.api_tls_cert.starts_with("~") {
+        config.api_tls_cert =
+            PathBuf::from(shellexpand::tilde(&config.api_tls_cert.to_str().unwrap()).to_string());
+    }
+    if config.api_tls_key.starts_with("~") {
+        config.api_tls_key =
+            PathBuf::from(shellexpand::tilde(&config.api_tls_key.to_str().unwrap()).to_string());
+    }
+
     if !config.api_tls_key.exists() {
         errors.push(format!(
             "Failed to find API TLS Key file: {:?}",
@@ -183,7 +215,7 @@ pub fn check_config(config: &ConfigFile) -> Result<(), Vec<String>> {
     };
 
     match config_ok {
-        true => Ok(()),
+        true => Ok(config.to_owned()),
         false => Err(errors),
     }
 }

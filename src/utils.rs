@@ -285,65 +285,6 @@ pub fn hexdump(bytes: Vec<u8>) {
     }
 }
 
-#[test]
-pub fn test_find_tail_match() {
-    let name = "foo.example.com".as_bytes().to_vec();
-    let target = "zot.example.com".as_bytes().to_vec();
-    let result = find_tail_match(&name, &target);
-
-    assert_eq!(result, 3);
-    let name = "foo.yeanah.xyz".as_bytes().to_vec();
-    let target = "zot.example.com".as_bytes().to_vec();
-    let result = find_tail_match(&name, &target);
-
-    assert_eq!(result, 0)
-}
-
-#[test]
-pub fn test_name_bytes_simple_compress() {
-    let expected_result: Vec<u8> = vec![192, 12];
-
-    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), Some(12), None);
-    assert_eq!(expected_result, test_result);
-}
-#[test]
-pub fn test_name_bytes_no_compress() {
-    let expected_result: Vec<u8> = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
-
-    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), None, None);
-    assert_eq!(expected_result, test_result);
-}
-
-#[test]
-pub fn test_name_bytes_with_compression() {
-    let example_com = "example.com".as_bytes().to_vec();
-    let test_input = "lol.example.com".as_bytes().to_vec();
-
-    let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 12];
-
-    trace!("{:?}", from_utf8(&example_com));
-    trace!("{:?}", from_utf8(&test_input));
-
-    let result = name_as_bytes(test_input, Some(12), Some(&example_com));
-
-    assert_eq!(result, expected_result);
-}
-
-#[test]
-pub fn test_name_bytes_with_tail_compression() {
-    let example_com = "ns1.example.com".as_bytes().to_vec();
-    let test_input = "lol.example.com".as_bytes().to_vec();
-
-    let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 16];
-
-    trace!("{:?}", from_utf8(&example_com));
-    trace!("{:?}", from_utf8(&test_input));
-
-    let result = name_as_bytes(test_input, Some(12), Some(&example_com));
-
-    assert_eq!(result, expected_result);
-}
-
 pub fn clap_parser() -> ArgMatches {
     command!() // requires `cargo` feature
         // .arg(arg!([name] "Optional name to operate on"))
@@ -394,14 +335,6 @@ pub fn clap_parser() -> ArgMatches {
                 .help("Load the zone file into the DB on startup, typically used for testing.")
                 .action(clap::ArgAction::SetTrue),
         )
-        // .arg(arg!(
-        //     -d --debug ... "Turn debugging information on"
-        // ))
-        // .subcommand(
-        //     Command::new("test")
-        //         .about("does testing things")
-        //         .arg(arg!(-l --list "lists test values").action(ArgAction::SetTrue)),
-        // )
         .get_matches()
 }
 
@@ -445,21 +378,6 @@ pub fn loc_size_to_u8(input: f32) -> u8 {
     // turn it into the magic ugly numbers
     let retval: u8 = (mantissa << 4) | (exponent as u8);
     retval
-}
-
-#[test]
-fn test_loc_size_to_u8() {
-    // let test = "10";
-    // let res = loc_size_to_u8(&test).unwrap();
-    // eprintln!("res: {res:3x}");
-
-    // assert_eq!(1,2);
-    assert_eq!(loc_size_to_u8(10.0), 0x13);
-    assert_eq!(loc_size_to_u8(100.0), 0x14);
-    eprintln!("testing 90000000.0 = 0x99");
-    assert_eq!(loc_size_to_u8(90000000.0), 0x99);
-    eprintln!("{:3x}", loc_size_to_u8(20000000.0));
-    // assert_eq!(loc_size_to_u8(20000000.0), Ok(0x29));
 }
 
 pub async fn cli_commands(

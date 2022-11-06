@@ -4,10 +4,12 @@
 
 <p><a href="/ui/zones/list">Back to zones list</a></p>
 
-<table>
+<table class="table">
     <thead>
-        <th>Name</th>
-        <th>RName</th>
+        <tr>
+        <th scope="col">Name</th>
+        <th scope="col">RName</th>
+    </tr>
     </thead>
     <tr>
         <td class="text-truncate">{{zone.name}}</td>
@@ -15,22 +17,25 @@
     </tr>
 </table>
 
-<table>
+<div class="table-responsive">
+<table class="table">
     <thead>
+        <tr>
         <th>Type</th>
-        <th>Name</th>
         <th>TTL</th>
+        <th>Name</th>
         <th>Class</th>
+    </tr>
     </thead>
     {% for record in zone.records %}
 
     <tr>
         <td>{{record.rrtype}}</td>
-        <td class="text-truncate">{{record.name}}</td>
         <td>{{record.ttl}}</td>
+        <td class="col-2 text-truncate">{{record.name}}</td>
         <td>{{record.class}}</td>
         </tr>
     {% endfor %}
 </table>
-</ul>
+</div>
 {% endblock content %}

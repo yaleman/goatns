@@ -22,14 +22,14 @@ config = { version = "0.13", features = ["json"] }
 driftwood = "0.0.6"
 enum-iterator = "1.2.0"
 flexi_logger = { version = "0.24", features = ["async", "default"] }
+gethostname = "0.4.0"
 ipnet = { version = "2.5.0", features = [ "json", "serde" ] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"
 log = "0.4.17"
 num-traits = "0.2.15"
 packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
-patricia_tree = "0.4.0"
-flexi_logger = { version = "0.24", features = ["async", "default"] }
+rand = "0.8.5"
 regex = "1.6.0"
 serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
@@ -46,7 +46,6 @@ tokio-util = { version = "0.7.4", features = ["full"] }
 
 [dev-dependencies]
 criterion = "^0.4"
-rand = "0.8.5"
 reqwest = { version = "0.11.12", features = ["blocking", "json", "rustls-tls"] }
 scopeguard = "1.1.0"
 trust-dns-resolver = "0.22.0"

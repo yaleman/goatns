@@ -5,6 +5,7 @@ use tide::{self, Response, StatusCode};
 
 use tokio::sync::mpsc::Sender;
 
+pub mod api;
 #[macro_use]
 pub mod macros;
 pub mod ui;
@@ -94,7 +95,15 @@ pub async fn build(
     tx: Sender<datastore::Command>,
     config: &ConfigFile,
 ) -> Result<tide::Server<State>, tide::Error> {
-    let mut app = tide::with_state(State { tx });
+    let mut app = tide::with_state(State { tx: tx.clone() });
+
+    app.with(
+        tide::sessions::SessionMiddleware::new(
+            tide::sessions::MemoryStore::new(),
+            "supersekretasdf1234asdfasdfdsfasdf".as_bytes(),
+        )
+        .with_same_site_policy(tide::http::cookies::SameSite::Strict),
+    );
 
     app.at("/").get(ui::index);
     app.at("/query/:qname/:qtype").get(api_query);
@@ -108,7 +117,12 @@ pub async fn build(
         )
     };
 
+
+
+    app.at("/api").nest(api::new(tx.clone()));
+
     app.with(driftwood::ApacheCombinedLogger);
 
     Ok(app)
 }
+
