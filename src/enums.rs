@@ -115,7 +115,7 @@ pub enum RecordType {
     MAILB = 253,
     URI = 256,
     /// 255 A request for all records (*)
-    ALL = 255,
+    ANY = 255,
     /// Certification Authority Restriction - <https://www.rfc-editor.org/rfc/rfc6844.txt>
     CAA = 257,
     InvalidType,
@@ -143,7 +143,7 @@ impl From<&u16> for RecordType {
             35 => Self::NAPTR, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
             252 => Self::AXFR,
             253 => Self::MAILB,
-            255 => Self::ALL,
+            255 => Self::ANY,
             256 => Self::URI,
             257 => Self::CAA,
             _ => Self::InvalidType,
@@ -162,7 +162,7 @@ impl From<&str> for RecordType {
         match input {
             "A" => Self::A,
             "AAAA" => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
-            "ALL" => Self::ALL,
+            "ANY" => Self::ANY,
             "AXFR" => Self::AXFR,
             "CAA" => Self::CAA,
             "CNAME" => Self::CNAME,
@@ -192,7 +192,7 @@ impl From<RecordType> for &'static str {
         match input {
             RecordType::A => "A",
             RecordType::AAAA => "AAAA",
-            RecordType::ALL => "ALL",
+            RecordType::ANY => "ANY",
             RecordType::AXFR => "AXFR",
             RecordType::CAA => "CAA",
             RecordType::CNAME => "CNAME",
@@ -229,7 +229,6 @@ impl From<InternalResourceRecord> for RecordType {
         match input {
             InternalResourceRecord::A { .. } => RecordType::A,
             InternalResourceRecord::AAAA { .. } => RecordType::AAAA,
-            InternalResourceRecord::ALL { .. } => RecordType::ALL,
             InternalResourceRecord::AXFR { .. } => RecordType::AXFR,
             InternalResourceRecord::CAA { .. } => RecordType::CAA,
             InternalResourceRecord::CNAME { .. } => RecordType::CNAME,

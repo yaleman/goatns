@@ -162,7 +162,6 @@ pub enum InternalResourceRecord {
         ttl: u32,
         rclass: RecordClass,
     }, // 252 A request for a transfer of an entire zone
-
     // [RFC8659](https://www.rfc-editor.org/rfc/rfc8659) - CAA Record
     CAA {
         flag: u8,
@@ -318,7 +317,7 @@ pub enum InternalResourceRecord {
     // MAILA {
     //     ttl: u32,
     // }, // 254 A request for mail agent RRs (Obsolete - see MX)
-    ALL {}, // 255 A request for all records (*)
+    // ALL {}, // 255 A request for all records (*)
     InvalidType,
 }
 
@@ -534,7 +533,6 @@ impl PartialEq<RecordType> for InternalResourceRecord {
         match self {
             InternalResourceRecord::A { .. } => other == &RecordType::A,
             InternalResourceRecord::AAAA { .. } => other == &RecordType::AAAA,
-            InternalResourceRecord::ALL { .. } => other == &RecordType::ALL,
             InternalResourceRecord::AXFR { .. } => other == &RecordType::AXFR,
             InternalResourceRecord::CAA { .. } => other == &RecordType::CAA,
             InternalResourceRecord::CNAME { .. } => other == &RecordType::CNAME,
@@ -569,8 +567,6 @@ impl InternalResourceRecord {
                 log::trace!("turning CNAME {cname:?} into bytes");
                 cname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
             }
-            // InternalResourceRecord::MD {  } => todo!(),
-            // InternalResourceRecord::MF {  } => todo!(),
             InternalResourceRecord::LOC {
                 ttl,
                 version,
@@ -684,7 +680,6 @@ impl InternalResourceRecord {
             }
             InternalResourceRecord::AXFR { .. } => todo!(),
             InternalResourceRecord::MAILB { .. } => todo!(),
-            InternalResourceRecord::ALL {} => todo!(),
             InternalResourceRecord::InvalidType => todo!(),
             InternalResourceRecord::CAA {
                 flag, tag, value, ..

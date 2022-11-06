@@ -36,7 +36,6 @@ impl Reply {
                 let ttl: &u32 = match answer {
                     InternalResourceRecord::A { ttl, .. } => ttl,
                     InternalResourceRecord::AAAA { ttl, .. } => ttl,
-                    InternalResourceRecord::ALL {} => &1u32,
                     InternalResourceRecord::AXFR { ttl, .. } => ttl,
                     InternalResourceRecord::CAA { ttl, .. } => ttl,
                     InternalResourceRecord::CNAME { ttl, .. } => ttl,
