@@ -12,8 +12,6 @@ use packed_struct::prelude::*;
 use std::fmt::{Debug, Display};
 use std::str::from_utf8;
 
-/// Configuration and management API
-pub mod web;
 /// Configuration handling for the server
 pub mod config;
 /// The data-storing backend for zone information and (eventually) caching.
@@ -28,6 +26,8 @@ pub mod servers;
 #[cfg(test)]
 mod tests;
 pub mod utils;
+/// Configuration and management API
+pub mod web;
 pub mod zones;
 
 /// Internal limit of in-flight requests

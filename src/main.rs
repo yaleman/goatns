@@ -114,27 +114,26 @@ async fn main() -> io::Result<()> {
             // let _apiserver: tokio::task::JoinHandle<Result<(),std::io::Error>>;
             if config.enable_api {
                 let api_listener = match TlsListener::build()
-                .addrs(config.api_listener_address())
-                .cert(&config.api_tls_cert)
-                .key(&config.api_tls_key)
-                .finish()
-            {
-                Ok(value) => value,
-                Err(error) => {
-                    log::error!("Failed to start API TLS Listener: {error:?}");
-                    return Ok(());
-                }
-            };
-            let api = match goatns::web::build(tx.clone(), &config.clone()).await {
-                Ok(value) => value,
-                Err(err) => {
-                    // TODO: need to clean-shutdown the server here
-                    log::error!("Failed to build API server: {err:?}");
-                    return Ok(());
-                }
-            };
-            let _apiserver = tokio::spawn(api.listen(api_listener));
-
+                    .addrs(config.api_listener_address())
+                    .cert(&config.api_tls_cert)
+                    .key(&config.api_tls_key)
+                    .finish()
+                {
+                    Ok(value) => value,
+                    Err(error) => {
+                        log::error!("Failed to start API TLS Listener: {error:?}");
+                        return Ok(());
+                    }
+                };
+                let api = match goatns::web::build(tx.clone(), &config.clone()).await {
+                    Ok(value) => value,
+                    Err(err) => {
+                        // TODO: need to clean-shutdown the server here
+                        log::error!("Failed to build API server: {err:?}");
+                        return Ok(());
+                    }
+                };
+                let _apiserver = tokio::spawn(api.listen(api_listener));
             }
 
             loop {

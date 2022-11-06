@@ -117,12 +117,9 @@ pub async fn build(
         )
     };
 
-
-
-    app.at("/api").nest(api::new(tx.clone()));
+    app.at("/api").nest(api::new(tx));
 
     app.with(driftwood::ApacheCombinedLogger);
 
     Ok(app)
 }
-
