@@ -1,5 +1,6 @@
-/// this takes three patterns <template> [<http_status> [<mime type>]]
-/// and makes a tide res
+
+/// this takes patterns <template> [<http_status>]
+/// and makes a tide result with a HTML mime type
 macro_rules! tide_result_html {
     ($template:tt) => {
         tide_result_html!($template, 200, (mime::HTML))
@@ -16,3 +17,23 @@ macro_rules! tide_result_html {
         )
     };
 }
+
+/// this takes patterns <template> [<http_status>]
+/// and makes a tide result with a HTML mime type
+macro_rules! tide_result_json {
+    ($body:tt) => {
+        tide_result_json!($body, 200, (mime::JSON))
+    };
+    ($body:tt, $status:tt) => {
+        tide_result_json!($body, $status, (mime::JSON))
+    };
+    ($body:tt, $status:tt, $mimetype:tt) => {
+        tide::Result::Ok(
+            Response::builder($status)
+                .body($body)
+                .content_type($mimetype)
+                .build(),
+        )
+    }
+}
+

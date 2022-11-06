@@ -5,9 +5,10 @@ use tide::{self, Response, StatusCode};
 
 use tokio::sync::mpsc::Sender;
 
-pub mod api;
 #[macro_use]
 pub mod macros;
+
+pub mod api;
 pub mod ui;
 
 pub const STATUS_OK: &str = "Ok";
