@@ -6,10 +6,24 @@ mod tests {
     use crate::resourcerecord::{InternalResourceRecord, LocRecord};
     use crate::utils::name_as_bytes;
     use crate::{PacketType, Question};
+    use ipnet::IpNet;
+    use std::net::IpAddr;
     use packed_struct::prelude::*;
     use std::str::FromStr;
 
     use log::debug;
+
+    #[test]
+    /// test my assumptions about ipnet things
+    fn test_ip_in_ipnet() {
+        let net = IpNet::from_str("10.0.0.0/24").unwrap();
+
+        let addr: IpAddr = "10.0.0.69".parse().unwrap();
+        let noaddr: IpAddr = "69.0.0.69".parse().unwrap();
+
+        assert!(net.contains(&addr));
+        assert!(!net.contains(&noaddr));
+    }
 
     #[test]
     fn test_resourcerecord_name_to_bytes() {

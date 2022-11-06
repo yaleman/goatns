@@ -1,16 +1,22 @@
 use clap::ArgMatches;
 use config::{Config, File};
 use flexi_logger::LoggerHandle;
+use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::net::IpAddr;
 use std::path::PathBuf;
 
+
+/// Allow-listing ranges for making particular kinds of requests
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct IPAllowList {
     // Allow CH TXT VERSION.BIND or VERSION requests
     // pub version: Vec<IpAddr>,
-    /// A list of allowed IPs to send a shutdown record from
+    /// IPs allowed to make AXFR requests
+    pub axfr: Vec<IpNet>,
+    // TODO: Change shutdown from IpAddr to ipnet
+    /// A list of allowed IPs which can send a "shutdown CH" request
     pub shutdown: Vec<IpAddr>,
 }
 
@@ -60,7 +66,7 @@ impl Default for ConfigFile {
             tcp_client_timeout: 15,
             enable_hinfo: false,
             ip_allow_lists: IPAllowList {
-                // version: vec![],
+                axfr: vec![],
                 shutdown: vec![],
             },
             sqlite_path: String::from("~/.cache/goatns.sqlite"),
