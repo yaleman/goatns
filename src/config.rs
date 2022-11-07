@@ -1,18 +1,19 @@
 use clap::ArgMatches;
 use config::{Config, File};
-use flexi_logger::LoggerHandle;
+use flexi_logger::filter::{LogLineFilter, LogLineWriter};
+use flexi_logger::{DeferredNow, LoggerHandle};
 use gethostname::gethostname;
 // use ipnet::IpNet;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
 use std::fmt::Display;
 use std::net::IpAddr;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 /// Allow-listing ranges for making particular kinds of requests
-#[derive(Deserialize,Serialize, Debug, Eq, PartialEq, Clone, Default)]
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct IPAllowList {
     // Allow CH TXT VERSION.BIND or VERSION requests
     // pub version: Vec<IpAddr>,
@@ -23,7 +24,7 @@ pub struct IPAllowList {
     pub shutdown: Vec<IpAddr>,
 }
 
-#[derive(Debug,Deserialize, Eq, PartialEq, Clone, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Clone, Serialize)]
 pub struct ConfigFile {
     /// The server's hostname when generating an SOA record, defaults to the results of gethostname()
     pub hostname: String,
@@ -56,13 +57,12 @@ pub struct ConfigFile {
     /// Static File Directory for api things
     pub api_static_dir: PathBuf,
     /// Secret for cookie storage - don't hard code this, it'll randomly generate on startup
-    #[serde(default = "generate_cookie_secret",skip)]
+    #[serde(default = "generate_cookie_secret", skip)]
     api_cookie_secret: String,
 }
 
 fn generate_cookie_secret() -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), 64)
-
 }
 
 impl ConfigFile {
@@ -75,7 +75,6 @@ impl ConfigFile {
         self.api_cookie_secret
     }
 }
-
 
 impl Default for ConfigFile {
     fn default() -> Self {
@@ -107,9 +106,21 @@ impl Default for ConfigFile {
 
 impl Display for ConfigFile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let api_details = match self.enable_api {
+            false => format!("enable_api={}", self.enable_api),
+            true => {
+                format!(
+                    "enable_api={}  api_endpoint=\"https://{}\" tls_cert={:?} tls_key={:?}",
+                    self.enable_api,
+                    self.api_listener_address(),
+                    self.api_tls_cert,
+                    self.api_tls_key
+                )
+            }
+        };
         f.write_fmt(format_args!(
-            "hostname=\"{}\" listening_address=\"{}:{}\" api_endpoint=\"https://{}\" capturing_pcaps={} Log_level={}",
-            self.hostname, self.address, self.port, self.api_listener_address(), self.capture_packets, self.log_level
+            "hostname=\"{}\" listening_address=\"{}:{}\" capturing_pcaps={} Log_level={}, {api_details}",
+            self.hostname, self.address, self.port, self.capture_packets, self.log_level
         ))
     }
 }
@@ -229,6 +240,30 @@ pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> 
     }
 }
 
+pub struct LogFilter {
+    filters: Vec<&'static str>,
+}
+
+impl LogLineFilter for LogFilter {
+    fn write(
+        &self,
+        now: &mut DeferredNow,
+        record: &log::Record,
+        log_line_writer: &dyn LogLineWriter,
+    ) -> std::io::Result<()> {
+        // eprintln!("{:?}", record.metadata());
+        if self
+            .filters
+            .iter()
+            .any(|r| record.metadata().target().starts_with(r))
+        {
+            return Ok(());
+        }
+        log_line_writer.write(now, record)?;
+        Ok(())
+    }
+}
+
 pub fn setup_logging(
     config: &ConfigFile,
     clap_results: &ArgMatches,
@@ -242,6 +277,9 @@ pub fn setup_logging(
     match flexi_logger::Logger::try_with_str(&log_level).map_err(|e| format!("{e:?}")) {
         Ok(logger) => logger
             .write_mode(flexi_logger::WriteMode::Async)
+            .filter(Box::new(LogFilter {
+                filters: vec!["h2", "hyper::proto"],
+            }))
             .set_palette("b1;3;2;6;5".to_string())
             .start()
             .map_err(|e| format!("{e:?}")),

@@ -5,8 +5,8 @@ use crate::datastore;
 use crate::enums::RecordType;
 use crate::resourcerecord::InternalResourceRecord;
 use axum::extract::MatchedPath;
-use axum::routing::{get};
-use axum::{Router, Extension, Json};
+use axum::routing::get;
+use axum::{Extension, Json, Router};
 use axum_extra::routing::SpaRouter;
 use sqlx::{Pool, Sqlite};
 
@@ -22,8 +22,11 @@ pub mod ui;
 
 pub const STATUS_OK: &str = "Ok";
 
-async fn api_query(qname: MatchedPath, qtype: MatchedPath, state: Extension<Arc<SharedState>>) -> Result<Json<Vec<InternalResourceRecord>>,&'static str> {
-
+async fn api_query(
+    qname: MatchedPath,
+    qtype: MatchedPath,
+    state: Extension<Arc<SharedState>>,
+) -> Result<Json<Vec<InternalResourceRecord>>, &'static str> {
     let rrtype: RecordType = qtype.as_str().into();
     if let RecordType::InvalidType = rrtype {
         // return Err(tide::BadRequest(
@@ -66,7 +69,7 @@ async fn api_query(qname: MatchedPath, qtype: MatchedPath, state: Extension<Arc<
 
     match record {
         None => Err(""), // TODO: 404
-        Some(value) => Ok(Json::from(value.typerecords))
+        Some(value) => Ok(Json::from(value.typerecords)),
     }
 }
 
@@ -77,27 +80,29 @@ pub struct SharedState {
     // TODO: ensure we actually need to use the connpool, lulz
     #[allow(dead_code)]
     connpool: Pool<Sqlite>,
+    config: ConfigFile,
 }
-
 
 pub async fn build(
     tx: Sender<datastore::Command>,
-    config: &ConfigFile,
+    config: ConfigFile,
     connpool: Pool<Sqlite>,
-) -> axum::Router<> {
+) -> axum::Router {
     // from https://docs.rs/axum/0.5.17/axum/index.html#using-request-extensions
     let shared_state = Arc::new(SharedState {
-        tx: tx.clone(),
-        connpool: connpool.clone(),
+        tx,
+        connpool,
+        config,
     });
 
     Router::new()
-    .route("/", get(ui::index))
-    .merge(SpaRouter::new("/ui/static", &config.api_static_dir))
-    .route("/status",get(generic::status))
-    .route("/query/:qname/:qtype",get(api_query))
-    .route("/ui/zones/list", get(ui::zones_list)).layer(Extension(shared_state.clone()))
-    .route("/ui/zones/:id",get(ui::zone_view)).layer(Extension(shared_state.clone()))
-    .nest("/api", api::new(tx, connpool))
-
+        .route("/", get(generic::index))
+        .route("/status", get(generic::status))
+        .route("/query/:qname/:qtype", get(api_query))
+        .merge(SpaRouter::new(
+            "/ui/static",
+            shared_state.config.api_static_dir.clone(),
+        ))
+        .nest("/ui", ui::new(shared_state.clone()))
+        .nest("/api", api::new(shared_state))
 }

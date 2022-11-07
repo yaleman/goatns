@@ -1,9 +1,9 @@
-use crate::datastore::Command;
-use crate::db::{ZoneOwnership};
-use axum::extract::Path;
-use axum::extract::Extension;
-use axum::routing::{get, post, delete, patch};
 use super::*;
+use crate::datastore::Command;
+use crate::db::ZoneOwnership;
+use axum::extract::Extension;
+use axum::extract::Path;
+use axum::routing::{delete, get, patch, post};
 use axum::Json;
 use serde::Serialize;
 use tokio::sync::oneshot;
@@ -50,7 +50,10 @@ pub async fn record_post() -> Json<NotImplemented> {
 pub async fn ownership_delete() -> Json<NotImplemented> {
     Json::from(NotImplemented::default())
 }
-pub async fn ownership_get(Path(userid): Path<String>, Path(zoneid): Path<String>) -> Result<Json<ZoneOwnership>,String> {
+pub async fn ownership_get(
+    Path(userid): Path<String>,
+    Path(zoneid): Path<String>,
+) -> Result<Json<ZoneOwnership>, String> {
     let userid: i64 = userid.parse().unwrap_or(-1);
     let zoneid: i64 = zoneid.parse().unwrap_or(-1);
 
@@ -65,7 +68,10 @@ pub async fn ownership_get(Path(userid): Path<String>, Path(zoneid): Path<String
     // tide_result_json!(response, 403)
     // Json::from<None>
 }
-pub async fn ownership_get_user(Path(userid) : Path<String>, state: SharedState) -> Result<Json<Vec<Arc<ZoneOwnership>>>,String> {
+pub async fn ownership_get_user(
+    Path(userid): Path<String>,
+    state: SharedState,
+) -> Result<Json<Vec<Arc<ZoneOwnership>>>, String> {
     log::debug!("starting ownership_get_user");
     let userid: i64 = userid.parse().unwrap();
     log::debug!("got userid: {userid:?}");
@@ -95,7 +101,7 @@ pub async fn ownership_get_zone() -> Json<NotImplemented> {
     Json::from(NotImplemented::default())
 }
 
-pub async fn ownership_post(Json(payload): Json<ZoneOwnership>) -> Result<Json<ZoneOwnership>,()> {
+pub async fn ownership_post(Json(payload): Json<ZoneOwnership>) -> Result<Json<ZoneOwnership>, ()> {
     todo!("{payload:?}");
     // let req_json: String = match req.body_json().await {
     //     Ok(json) => json,
@@ -148,29 +154,26 @@ pub async fn version_get() -> Json<GoatNSVersion> {
     Json::from(GoatNSVersion::default())
 }
 
-pub fn new(tx: Sender<datastore::Command>, connpool: Pool<Sqlite>) -> Router {
-    Router::new().layer(Extension(SharedState { tx, connpool }))
+pub fn new(shared_state: Arc<SharedState>) -> Router {
+    Router::new()
+        .layer(Extension(shared_state))
+        // just zone things
         .route("/zone/:id", get(zone_get))
         .route("/zone/:id", delete(zone_delete))
         .route("/zone", post(zone_post))
         .route("/zone/:id", patch(zone_patch))
-
-
+        // zone ownership
+        .route("/ownership/:id", get(ownership_get))
+        .route("/ownership/:id", delete(ownership_delete))
+        .route("/ownership/", post(ownership_post))
+        // record related
         .route("/record/:id", get(record_get))
         .route("/record/:id", delete(record_delete))
         .route("/record", post(record_post))
         .route("/record/:id", patch(record_patch))
-
+        // user things
         .route("/user/:id", get(user_get))
         .route("/user/:id", delete(user_delete))
         .route("/user/", post(user_post))
         .route("/user/:id", patch(user_patch))
-
-
-        .route("/ownership/:id", get(ownership_get))
-        .route("/ownership/:id", delete(ownership_delete))
-        .route("/ownership/", post(ownership_post))
-
-    // api.at("/version").get(version_get);
-
 }

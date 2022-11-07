@@ -28,7 +28,7 @@ async fn main() -> io::Result<()> {
     let config = check_config(&mut config);
 
     if clap_results.get_flag("configcheck") {
-        log::info!("{}",serde_json::to_string_pretty(&config).unwrap());
+        log::info!("{}", serde_json::to_string_pretty(&config).unwrap());
         match config {
             Ok(_) => log::info!("Checking config... [OK!]"),
             Err(_) => log::error!("Checking config... [ERR!]"),
@@ -132,22 +132,29 @@ async fn main() -> io::Result<()> {
 
             let _apiserver = match config.enable_api {
                 true => {
-                let tls_config = RustlsConfig::from_pem_file(
-                    &config.api_tls_cert,
-                    &config.api_tls_key,
-                )
-                .await
-                .unwrap();
+                    let tls_config =
+                        RustlsConfig::from_pem_file(&config.api_tls_cert, &config.api_tls_key)
+                            .await
+                            .unwrap();
 
-                log::info!("tls config: {tls_config:?} cert={:?} key={:?}", &config.api_tls_cert,&config.api_tls_key );
+                    log::trace!(
+                        "tls config: {tls_config:?} cert={:?} key={:?}",
+                        &config.api_tls_cert,
+                        &config.api_tls_key
+                    );
 
-
-                let api = goatns::web::build(tx.clone(), &config.clone(), connpool.clone()).await;
-                let apiserver = Some(tokio::spawn(axum_server::bind_rustls(config.api_listener_address(), tls_config)
-                .serve(api.into_make_service())));
-                log::info!("Started Web/API server on https://{}",config.api_listener_address());
-                apiserver
-            },
+                    let api =
+                        goatns::web::build(tx.clone(), config.clone(), connpool.clone()).await;
+                    let apiserver = Some(tokio::spawn(
+                        axum_server::bind_rustls(config.api_listener_address(), tls_config)
+                            .serve(api.into_make_service()),
+                    ));
+                    log::info!(
+                        "Started Web/API server on https://{}",
+                        config.api_listener_address()
+                    );
+                    apiserver
+                }
                 false => None,
             };
 

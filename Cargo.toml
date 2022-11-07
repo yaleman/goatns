@@ -16,6 +16,7 @@ askama = { version="0.11.1"}
 async-trait = "0.1.58"
 axum = { version="0.5.17", features=["http2", "headers"] }
 axum-extra = { version = "0.3.7", features = ["spa"] }
+axum-macros = "0.2.3"
 axum-server = { version = "0.4.3", features = [ "tls-rustls"] }
 bit-vec = "0.6.3"
 bytes = "1.2.1"

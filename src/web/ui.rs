@@ -1,22 +1,14 @@
 use std::sync::Arc;
 
-use askama::Template;
-use axum::Extension;
-use axum::extract::Path;
-use axum::response::Html;
-
-
-
 use crate::datastore::Command;
 use crate::zones::FileZone;
+use askama::Template;
+use axum::extract::Path;
+use axum::response::Html;
+use axum::routing::get;
+use axum::{Extension, Router};
 
 use super::SharedState;
-
-#[derive(Template)]
-#[template(path = "index.html")]
-struct HelloTemplate /*<'a>*/ {
-    // name: &'a str,
-}
 
 #[derive(Template)]
 #[template(path = "view_zones.html")]
@@ -30,14 +22,12 @@ struct TemplateViewZone {
     zone: FileZone,
 }
 
-pub async fn zones_list(Extension(req): Extension<Arc<SharedState>>) -> Result<Html<String>, &'static str> {
+pub async fn zones_list(
+    Extension(req): Extension<Arc<SharedState>>,
+) -> Result<Html<String>, &'static str> {
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
 
-    if let Err(err) = req
-        .tx
-        .send(Command::GetZoneNames { resp: os_tx })
-        .await
-    {
+    if let Err(err) = req.tx.send(Command::GetZoneNames { resp: os_tx }).await {
         eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
         log::error!("failed to send GetZoneNames command to datastore: {err:?}");
         return Err("Failed to send request to backend");
@@ -49,14 +39,10 @@ pub async fn zones_list(Extension(req): Extension<Arc<SharedState>>) -> Result<H
     Ok(Html::from(context.render().unwrap()))
 }
 
-pub async fn index() -> Result<Html<String>,()> {
-    let context = HelloTemplate {};
-    Ok(Html::from(context.render().unwrap()))
-}
-
-pub async fn zone_view(Path(name_or_id): Path<i64>, Extension(state): Extension<Arc<SharedState>>) -> Result<Html<String>,&'static str> {
-
-
+pub async fn zone_view(
+    Path(name_or_id): Path<i64>,
+    Extension(state): Extension<Arc<SharedState>>,
+) -> Result<Html<String>, &'static str> {
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     // TODO: fix this one
     let cmd = Command::GetZone {
@@ -65,10 +51,7 @@ pub async fn zone_view(Path(name_or_id): Path<i64>, Extension(state): Extension<
         name: None,
     };
     log::debug!("{cmd:?}");
-    if let Err(err) = state.tx
-        .send(cmd)
-        .await
-    {
+    if let Err(err) = state.tx.send(cmd).await {
         eprintln!("failed to send GetZone command to datastore: {err:?}");
         log::error!("failed to send GetZone command to datastore: {err:?}");
         return Err("Failed to send request to backend");
@@ -82,4 +65,31 @@ pub async fn zone_view(Path(name_or_id): Path<i64>, Extension(state): Extension<
     log::trace!("Returning zone: {zone:?}");
     let context = TemplateViewZone { zone };
     Ok(Html::from(context.render().unwrap()))
+}
+
+// #[axum_macros::debug_handler]
+pub async fn logout() -> Result<Html<String>, &'static str> {
+    Ok(Html::from("Logout page coming soon".to_string()))
+}
+
+#[derive(Template)]
+#[template(path = "dashboard.html")]
+struct DashboardTemplate /*<'a>*/ {
+    // name: &'a str,
+}
+
+pub async fn dashboard() -> Result<Html<String>, ()> {
+    let context = DashboardTemplate {};
+    Ok(Html::from(context.render().unwrap()))
+}
+
+pub fn new(shared_state: Arc<SharedState>) -> Router {
+    Router::new()
+        .route("/", get(dashboard))
+        .route("/logout", get(logout))
+        .route("/zones/list", get(zones_list))
+        .layer(Extension(shared_state.clone()))
+        .layer(Extension(shared_state.clone()))
+        .route("/zones/:id", get(zone_view))
+        .layer(Extension(shared_state))
 }
