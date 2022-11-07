@@ -2,26 +2,28 @@ use clap::ArgMatches;
 use config::{Config, File};
 use flexi_logger::LoggerHandle;
 use gethostname::gethostname;
-use ipnet::IpNet;
+// use ipnet::IpNet;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 use std::fmt::Display;
 use std::net::IpAddr;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 /// Allow-listing ranges for making particular kinds of requests
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
+#[derive(Deserialize,Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct IPAllowList {
     // Allow CH TXT VERSION.BIND or VERSION requests
     // pub version: Vec<IpAddr>,
     /// IPs allowed to make AXFR requests
-    pub axfr: Vec<IpNet>,
+    // pub axfr: Vec<IpNet>,
     // TODO: Change shutdown from IpAddr to ipnet
     /// A list of allowed IPs which can send a "shutdown CH" request
     pub shutdown: Vec<IpAddr>,
 }
 
-#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Serialize)]
+#[derive(Debug,Deserialize, Eq, PartialEq, Clone, Serialize)]
 pub struct ConfigFile {
     /// The server's hostname when generating an SOA record, defaults to the results of gethostname()
     pub hostname: String,
@@ -41,6 +43,7 @@ pub struct ConfigFile {
     /// Where the JSON zone file is
     pub zone_file: Option<String>,
     /// IP Allow lists
+    #[serde(flatten)]
     pub ip_allow_lists: IPAllowList,
     /// Do you really want an API?
     pub enable_api: bool,
@@ -53,20 +56,26 @@ pub struct ConfigFile {
     /// Static File Directory for api things
     pub api_static_dir: PathBuf,
     /// Secret for cookie storage - don't hard code this, it'll randomly generate on startup
-    #[serde(default = "generate_cookie_secret")]
-    pub api_cookie_secret: String,
+    #[serde(default = "generate_cookie_secret",skip)]
+    api_cookie_secret: String,
 }
 
 fn generate_cookie_secret() -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), 64)
+
 }
 
 impl ConfigFile {
     /// get a string version of the listener address
-    pub fn api_listener_address(&self) -> String {
-        format!("{}:{}", self.address, self.api_port)
+    pub fn api_listener_address(&self) -> SocketAddr {
+        SocketAddr::from_str(&format!("{}:{}", self.address, self.api_port)).unwrap()
+    }
+
+    pub fn api_cookie_secret(self) -> String {
+        self.api_cookie_secret
     }
 }
+
 
 impl Default for ConfigFile {
     fn default() -> Self {
@@ -81,7 +90,7 @@ impl Default for ConfigFile {
             tcp_client_timeout: 15,
             enable_hinfo: false,
             ip_allow_lists: IPAllowList {
-                axfr: vec![],
+                // axfr: vec![],
                 shutdown: vec![],
             },
             sqlite_path: String::from("~/.cache/goatns.sqlite"),

@@ -436,7 +436,8 @@ pub async fn export_zone_file(
 
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
     let ds_req: Command = Command::GetZone {
-        name: zone_name.to_owned(),
+        id: None,
+        name: Some(zone_name.clone()),
         resp: tx_oneshot,
     };
     if let Err(error) = tx.send(ds_req).await {

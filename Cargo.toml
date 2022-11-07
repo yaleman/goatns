@@ -1,6 +1,6 @@
 [package]
 name = "goatns"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 rust-version = "1.64"
 
@@ -14,12 +14,14 @@ opt-level = 3
 [dependencies]
 askama = { version="0.11.1"}
 async-trait = "0.1.58"
+axum = { version="0.5.17", features=["http2", "headers"] }
+axum-extra = { version = "0.3.7", features = ["spa"] }
+axum-server = { version = "0.4.3", features = [ "tls-rustls"] }
 bit-vec = "0.6.3"
 bytes = "1.2.1"
 chrono = "0.4.22"
 clap = { version="4.0.19", features=["cargo"]}
 config = { version = "0.13", features = ["json"] }
-driftwood = "0.0.6"
 enum-iterator = "1.2.0"
 flexi_logger = { version = "0.24", features = ["async", "default"] }
 gethostname = "0.4.0"
@@ -38,11 +40,11 @@ serde_json = "1.0.86"
 shellexpand = "2.1.2"
 sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "sqlite" ] }
 sqlx-core = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite"] }
-tide = "0.16.0"
-tide-rustls = "0.3.0"
 tokio = { version = "1.21.2", features = ["full"] }
 tokio-stream = { version = "0.1.11", features = ["net"] }
 tokio-util = { version = "0.7.4", features = ["full"] }
+
+
 
 [dev-dependencies]
 criterion = "^0.4"

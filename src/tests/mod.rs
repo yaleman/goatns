@@ -1,3 +1,4 @@
+mod db;
 mod e2e_test;
 mod resourcerecord;
 mod utils;

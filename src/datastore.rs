@@ -1,7 +1,8 @@
 use std::str::from_utf8;
+use std::sync::Arc;
 
 use crate::config::ConfigFile;
-use crate::db;
+use crate::db::{self, DBEntity, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
 use crate::zones::{FileZone, ZoneRecord};
 use clap::ArgMatches;
@@ -9,6 +10,7 @@ use log::debug;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
+
 type Responder<T> = oneshot::Sender<T>;
 
 #[derive(Debug)]
@@ -21,7 +23,8 @@ pub enum Command {
         resp: Responder<Option<ZoneRecord>>,
     },
     GetZone {
-        name: String,
+        id: Option<i64>,
+        name: Option<String>,
         resp: Responder<Option<FileZone>>,
     },
     GetZoneNames {
@@ -33,6 +36,35 @@ pub enum Command {
         resp: Responder<()>,
     },
     Shutdown,
+
+    PostZone,
+    DeleteZone,
+    PatchZone,
+
+    DeleteUser,
+    GetUser {
+        id: Option<i64>,
+        username: Option<String>,
+        resp: Responder<()>,
+    },
+    PostUser,
+    PatchUser,
+
+    DeleteOwnership {
+        zoneid: Option<i64>,
+        userid: Option<i64>,
+        resp: Responder<()>,
+    },
+    GetOwnership {
+        zoneid: Option<i64>,
+        userid: Option<i64>,
+        resp: Responder<Vec<Arc<ZoneOwnership>>>,
+    },
+    PostOwnership {
+        zoneid: i64,
+        userid: i64,
+        resp: Responder<ZoneOwnership>,
+    },
     // TODO: create a setter when we're ready to accept updates
     // Set {
     //     name: Vec<u8>,
@@ -120,8 +152,6 @@ async fn handle_import_file(
     }
 
     for zone in zones {
-        use crate::db::DBEntity;
-
         zone.save_with_txn(&mut txn)
             .await
             .map_err(|e| format!("Failed to load zone {}: {e:?}", zone.name))?;
@@ -136,11 +166,12 @@ async fn handle_import_file(
 async fn handle_get_zone(
     tx: oneshot::Sender<Option<FileZone>>,
     pool: &Pool<Sqlite>,
-    name: String,
+    id: Option<i64>,
+    name: Option<String>,
 ) -> Result<(), String> {
     let mut txn = pool.begin().await.map_err(|e| format!("{e:?}"))?;
 
-    let zone = crate::db::get_zone_with_txn(&mut txn, &name)
+    let zone = crate::db::get_zone_with_txn(&mut txn, id, name)
         .await
         .map_err(|e| format!("{e:?}"))?;
 
@@ -165,21 +196,9 @@ pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
     config: ConfigFile,
     clap_results: ArgMatches,
+    connpool: Pool<Sqlite>,
 ) -> Result<(), String> {
-    let connpool = match db::get_conn(&config).await {
-        Ok(value) => value,
-        Err(err) => {
-            log::error!("{err}");
-            return Err(err);
-        }
-    };
-
-    // start up the DB
-    if let Err(err) = db::start_db(&connpool).await {
-        log::error!("{err}");
-        return Err(format!("Failed to start DB: {err:?}"));
-    };
-
+    // Load the specified zone file on startup
     if clap_results.get_flag("use_zonefile") && config.zone_file.is_some() {
         let zone_file = config.zone_file.unwrap();
         if let Err(err) = handle_import_file(&connpool, zone_file.to_string(), None).await {
@@ -190,8 +209,8 @@ pub async fn manager(
 
     while let Some(cmd) = rx.recv().await {
         match cmd {
-            Command::GetZone { name, resp } => {
-                let res = handle_get_zone(resp, &connpool, name).await;
+            Command::GetZone { id, name, resp } => {
+                let res = handle_get_zone(resp, &connpool, id, name).await;
                 if let Err(e) = res {
                     log::error!("{e:?}")
                 };
@@ -237,6 +256,45 @@ pub async fn manager(
                     log::error!("{e:?}")
                 };
             }
+            Command::PostZone => todo!(),
+            Command::DeleteZone => todo!(),
+            Command::PatchZone => todo!(),
+            Command::DeleteUser => todo!(),
+            Command::GetUser {
+                username: _,
+                id: _,
+                resp: _,
+            } => todo!(),
+            Command::PostUser => todo!(),
+            Command::PatchUser => todo!(),
+            Command::DeleteOwnership {
+                zoneid: _,
+                userid: _,
+                resp: _,
+            } => todo!(),
+            Command::GetOwnership {
+                zoneid: _,
+                userid,
+                resp,
+            } => {
+                if let Some(userid) = userid {
+                    match ZoneOwnership::get_all_user(&connpool, userid).await {
+                        Ok(zone) => {
+                            if let Err(err) = resp.send(zone) {
+                                log::error!("Failed to send zone_ownership response: {err:?}")
+                            };
+                        }
+                        Err(_) => todo!(),
+                    }
+                } else {
+                    log::error!("Unmatched arm in getownership")
+                }
+            }
+            Command::PostOwnership {
+                zoneid: _,
+                userid: _,
+                resp: _,
+            } => todo!(),
         }
     }
 

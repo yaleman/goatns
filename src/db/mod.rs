@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::config::ConfigFile;
@@ -119,10 +120,10 @@ impl User {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ZoneOwnership {
-    #[serde(default)]
-    id: u64,
-    pub userid: u64,
-    pub zoneid: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<i64>,
+    pub userid: i64,
+    pub zoneid: i64,
 }
 
 impl ZoneOwnership {
@@ -361,7 +362,8 @@ pub async fn create_records_table(pool: &SqlitePool) -> Result<(), sqlx::Error> 
 
 pub async fn get_zone_with_txn(
     txn: &mut Transaction<'_, Sqlite>,
-    name_or_id: &str,
+    id: Option<i64>,
+    name: Option<String>,
 ) -> Result<Option<FileZone>, sqlx::Error> {
     // let mut args = SqliteArguments::default();
     // args.add(name);
@@ -372,8 +374,8 @@ pub async fn get_zone_with_txn(
         FROM zones
         WHERE name = ? or id = ? LIMIT 1",
     )
-    .bind(name_or_id)
-    .bind(name_or_id)
+    .bind(name)
+    .bind(id)
     .fetch_optional(&mut *txn)
     .await?;
     let mut zone = match result {
@@ -419,7 +421,7 @@ pub async fn get_zone_with_txn(
 pub async fn get_zone(pool: &SqlitePool, name: String) -> Result<Option<FileZone>, sqlx::Error> {
     let mut txn = pool.begin().await?;
 
-    get_zone_with_txn(&mut txn, &name).await
+    get_zone_with_txn(&mut txn, None, Some(name)).await
 }
 
 #[allow(dead_code)]
@@ -563,13 +565,13 @@ impl FileZone {
 /// export a zone!
 pub async fn export_zone(
     mut conn: PoolConnection<Sqlite>,
-    zone_id: u64,
+    zone_id: i64,
 ) -> Result<FileZone, sqlx::Error> {
     #[cfg(test)]
     println!("Started export_zone");
     let mut txn = conn.begin().await?;
 
-    let mut zone = match get_zone_with_txn(&mut txn, &zone_id.to_string()).await? {
+    let mut zone = match get_zone_with_txn(&mut txn, Some(zone_id), None).await? {
         None => {
             #[cfg(test)]
             println!("Couldn't find zone with id: {zone_id}");
@@ -586,7 +588,7 @@ pub async fn export_zone(
 
 pub async fn export_zone_json(
     conn: PoolConnection<Sqlite>,
-    zone_id: u64,
+    zone_id: i64,
 ) -> Result<String, String> {
     let zone = export_zone(conn, zone_id)
         .await
@@ -596,9 +598,54 @@ pub async fn export_zone_json(
 }
 
 #[async_trait]
+pub trait DBEntity: Send {
+    fn table_name(&self) -> &str;
+
+    /// Get the entity
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error>;
+
+    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error>;
+
+    /// save the entity to the database
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<u64, sqlx::Error>;
+    /// save the entity to the database, but you're in a transaction
+    async fn save_with_txn<'t>(
+        &self,
+        txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<u64, sqlx::Error>;
+
+    /// delete the entity from the database
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<u64, sqlx::Error>;
+    /// delete the entity from the database, but you're in a transaction
+    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<u64, sqlx::Error>;
+
+    fn json(&self) -> Result<String, String>
+    where
+        Self: Serialize,
+    {
+        serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
+    }
+}
+
+#[async_trait]
 impl DBEntity for FileZone {
     fn table_name(&self) -> &str {
         "zones"
+    }
+
+    /// Get by id
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error> {
+        let res = get_zone(pool, id.to_string()).await?;
+        match res {
+            Some(value) => Ok(Arc::new(value)),
+            None => Err(sqlx::Error::RowNotFound),
+        }
+    }
+    async fn get_all_user(
+        _pool: &Pool<Sqlite>,
+        _userid: i64,
+    ) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+        todo!()
     }
 
     /// save the entity to the database
@@ -615,7 +662,7 @@ impl DBEntity for FileZone {
         txn: &mut Transaction<'t, Sqlite>,
     ) -> Result<u64, sqlx::Error> {
         // check the zone exists
-        let find_zone = match get_zone_with_txn(txn, &self.name).await {
+        let find_zone = match get_zone_with_txn(txn, None, Some(self.name.clone())).await {
             Ok(val) => {
                 log::trace!("Found existing zone");
                 val
@@ -662,7 +709,9 @@ impl DBEntity for FileZone {
 
                 #[cfg(test)]
                 eprintln!("Done creating zone");
-                get_zone_with_txn(txn, &self.name).await?.unwrap()
+                get_zone_with_txn(txn, None, Some(self.name.clone()))
+                    .await?
+                    .unwrap()
             }
             Some(ez) => {
                 if !self.matching_data(&ez) {
@@ -679,7 +728,10 @@ impl DBEntity for FileZone {
                     eprintln!("Updated: {:?} record", updated);
                     log::debug!("Updated: {:?} record", updated);
                 }
-                get_zone_with_txn(txn, &self.name).await.unwrap().unwrap()
+                get_zone_with_txn(txn, None, Some(self.name.clone()))
+                    .await
+                    .unwrap()
+                    .unwrap()
             }
         };
         #[cfg(test)]
@@ -744,41 +796,21 @@ impl DBEntity for FileZone {
 }
 
 #[async_trait]
-pub trait DBEntity: Send {
-    fn table_name(&self) -> &str;
-
-    /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<u64, sqlx::Error>;
-    /// save the entity to the database, but you're in a transaction
-    async fn save_with_txn<'t>(
-        &self,
-        txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<u64, sqlx::Error>;
-
-    /// delete the entity from the database
-    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<u64, sqlx::Error>;
-    /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<u64, sqlx::Error>;
-
-    fn json(&self) -> Result<String, String>
-    where
-        Self: Serialize,
-    {
-        serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
-    }
-}
-
-#[async_trait]
 impl DBEntity for FileZoneRecord {
-    fn json(&self) -> Result<String, String>
-    where
-        Self: Serialize,
-    {
-        serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
-    }
-
     fn table_name(&self) -> &str {
         "records"
+    }
+
+    /// Get by id
+    async fn get(_pool: &Pool<Sqlite>, _id: i64) -> Result<Arc<Self>, sqlx::Error> {
+        todo!();
+        // get_records(conn, name, rrtype, rclass)
+    }
+    async fn get_all_user(
+        _pool: &Pool<Sqlite>,
+        _userid: i64,
+    ) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+        todo!()
     }
 
     async fn save(&self, pool: &Pool<Sqlite>) -> Result<u64, sqlx::Error> {
@@ -877,6 +909,13 @@ impl DBEntity for FileZoneRecord {
             .await?;
         Ok(res.rows_affected())
     }
+
+    fn json(&self) -> Result<String, String>
+    where
+        Self: Serialize,
+    {
+        serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
+    }
 }
 
 pub async fn get_zones_with_txn(
@@ -934,4 +973,85 @@ pub async fn get_zones_with_txn(
     //     })
     //     .collect();
     // Ok(Some(zone))
+}
+
+impl From<SqliteRow> for ZoneOwnership {
+    fn from(row: SqliteRow) -> Self {
+        let id: i64 = row.get("id");
+        let userid: i64 = row.get("userid");
+        let zoneid: i64 = row.get("zoneid");
+
+        ZoneOwnership {
+            id: Some(id),
+            zoneid,
+            userid,
+        }
+    }
+}
+
+#[async_trait]
+impl DBEntity for ZoneOwnership {
+    fn table_name(&self) -> &str {
+        "ownership"
+    }
+
+    /// Get an ownership record by its id
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error> {
+        let mut conn = pool.acquire().await?;
+
+        let res: ZoneOwnership =
+            sqlx::query("SELECT id, zoneid, userid from ownership where id = ?")
+                .bind(id)
+                .fetch_one(&mut conn)
+                .await?
+                .into();
+        Ok(Arc::new(res))
+    }
+    /// Get an ownership record by its id
+    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+        let mut conn = pool.acquire().await?;
+
+        let res = sqlx::query("SELECT id, zoneid, userid from ownership where id = ?")
+            .bind(id)
+            .fetch_all(&mut conn)
+            .await?;
+        let result: Vec<Arc<ZoneOwnership>> = res.into_iter().map(|z| Arc::new(z.into())).collect();
+        Ok(result)
+    }
+
+    /// save the entity to the database
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<u64, sqlx::Error> {
+        let mut txn = pool.begin().await?;
+        let res = self.save_with_txn(&mut txn).await?;
+        txn.commit().await?;
+        Ok(res)
+    }
+
+    /// save the entity to the database, but you're in a transaction
+    async fn save_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<u64, sqlx::Error> {
+        todo!();
+    }
+
+    /// delete the entity from the database
+    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<u64, sqlx::Error> {
+        todo!()
+    }
+
+    /// delete the entity from the database, but you're in a transaction
+    async fn delete_with_txn(
+        &self,
+        _txn: &mut Transaction<'_, Sqlite>,
+    ) -> Result<u64, sqlx::Error> {
+        todo!();
+    }
+
+    fn json(&self) -> Result<String, String>
+    where
+        Self: Serialize,
+    {
+        serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
+    }
 }

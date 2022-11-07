@@ -82,7 +82,7 @@ mod tests {
         let localhost: std::net::IpAddr = "127.0.0.1".parse().unwrap();
         let mut config = ResolverConfig::new();
         config.add_name_server(NameServerConfig::new(
-            SocketAddr::new(localhost, 25353),
+            SocketAddr::new(localhost, 15353),
             Protocol::Udp,
         ));
         let resolver = Resolver::new(config, ResolverOpts::default()).unwrap();
