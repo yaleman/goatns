@@ -7,9 +7,10 @@ FROM rust:latest AS builder
 # RUN rustup default nightly
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 RUN mkdir /goatns
-COPY src /goatns/src
-COPY benches /goatns/benches
-COPY Cargo* /goatns/
+COPY . /goatns/
+# COPY templates /goatns/templates
+# COPY benches /goatns/benches
+# COPY Cargo* /goatns/
 
 WORKDIR /goatns
 # RUN cargo fetch -Z sparse-registry

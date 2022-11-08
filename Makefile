@@ -14,8 +14,8 @@ BOOK_VERSION ?= master
 help:
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##/\n\t/'
 
-build/container:	## Build the kanidmd docker image locally
-build/kanidmd:
+container:	## Build the kanidmd docker image locally
+container:
 	@$(CONTAINER_TOOL) build $(CONTAINER_TOOL_ARGS) \
 	-t $(IMAGE_BASE)/server:$(IMAGE_VERSION) $(CONTAINER_BUILD_ARGS) .
 
