@@ -68,7 +68,7 @@ async fn api_query(
     };
 
     match record {
-        None => Err(""), // TODO: 404
+        None => Err(""), // TODO: throw a 404 when we can't find a record
         Some(value) => Ok(Json::from(value.typerecords)),
     }
 }

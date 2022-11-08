@@ -57,7 +57,7 @@ pub async fn ownership_get(
     let userid: i64 = userid.parse().unwrap_or(-1);
     let zoneid: i64 = zoneid.parse().unwrap_or(-1);
 
-    // TODO this needs a custom getter in the DB
+    // TODO ownership_get needs a custom getter in the DB
     if userid == -1 || zoneid == -1 {
         return Err(r#"{"message": "invalid userid or zoneid specified"}"#.to_string());
     }

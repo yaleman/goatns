@@ -293,7 +293,6 @@ pub async fn tcp_server(
     agent_tx: broadcast::Sender<AgentState>,
     mut agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
-    // TODO: add a configurable idle timeout for the TCP server
     let tcpserver = match TcpListener::bind(bind_address).await {
         Ok(value) => {
             log::info!("Started TCP listener on {}", bind_address);
@@ -306,7 +305,6 @@ pub async fn tcp_server(
     };
 
     loop {
-        // TODO: work out how to not make this blocking
         let (mut stream, addr) = match tcpserver.accept().await {
             Ok(value) => value,
             Err(error) => panic!("Couldn't get data from TcpStream: {:?}", error),
