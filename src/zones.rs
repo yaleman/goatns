@@ -11,10 +11,11 @@ use std::io::Read;
 use std::path::Path;
 use std::str::from_utf8;
 
-/// A DNS Zone in a JSON file
+/// A DNS Zone
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename(serialize = "UPPERCASE"))]
 pub struct FileZone {
+    /// Database row ID
     #[serde(default = "default_id")]
     pub id: u64,
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
@@ -55,14 +56,16 @@ impl FileZone {
 }
 /// default RNAME value for FileZone
 pub fn rname_default() -> String {
-    String::from("barry.goat")
+    String::from("barry.dot.goat")
 }
 
 /// A DNS Record from the JSON file
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct FileZoneRecord {
+    /// Foreign key to id in [FileZone::id]
     #[serde(default = "default_id")]
     pub zoneid: u64,
+    /// Database row ID
     #[serde(default)]
     pub id: u64,
     #[serde(default = "default_record_name")]
@@ -125,8 +128,9 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
 #[derive(Debug, PartialEq, Eq, Clone)]
 /// This is used when storing a set of records in the memory-based datastore
 pub struct ZoneRecord {
-    // the full name including the zone
+    /// the full name including the zone
     pub name: Vec<u8>,
+
     pub typerecords: Vec<InternalResourceRecord>,
 }
 
@@ -140,11 +144,6 @@ impl Display for ZoneRecord {
         ))
     }
 }
-
-// pub fn empty_zones() -> PatriciaMap<ZoneRecord> {
-//     let tree: PatriciaMap<ZoneRecord> = PatriciaMap::new();
-//     tree
-// }
 
 pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, String> {
     let mut file = match File::open(filename) {
@@ -178,106 +177,5 @@ pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, String> {
     file.read_to_string(&mut buf).unwrap();
     let jsonstruct: Result<Vec<FileZone>, String> =
         json5::from_str(&buf).map_err(|e| format!("Failed to read JSON file: {e:?}"));
-    //  {
-    //     Ok(value) => value,
-    //     Err(error) => {
-    //         let emsg = format!("Failed to read JSON file: {:?}", error);
-    //         error!("{}", emsg);
-    //         return Err(emsg);
-    //     }
-    // };
     jsonstruct
 }
-
-// / Load the data from a JSON file on disk
-// pub fn load_zones_to_tree(config: &ConfigFile) -> Result<PatriciaMap<ZoneRecord>, String> {
-//     let zone_filename = match &config.zone_file {
-//         Some(filename) => filename,
-//         None => return Err("No zone file specified".to_string()),
-//     };
-
-//     let jsonstruct = match load_zones(zone_filename) {
-//         Ok(value) => value,
-//         Err(err) => return Err(format!("Error loading file {zone_filename}: {err}")),
-//     };
-//     debug!("{:?}", jsonstruct);
-
-//     let mut tree = empty_zones();
-//     if config.enable_hinfo {
-//         info!("Enabling HINFO response on hinfo.goat");
-//         let hinfo_name = String::from("hinfo.goat");
-//         tree.insert(
-//             hinfo_name.clone(),
-//             ZoneRecord {
-//                 name: hinfo_name.into_bytes(),
-//                 typerecords: vec![InternalResourceRecord::HINFO {
-//                     cpu: None,
-//                     os: None,
-//                     ttl: 1,
-//                     rclass: crate::RecordClass::Chaos,
-//                 }],
-//             },
-//         );
-//     };
-
-//     for zone in jsonstruct {
-//         // here we add the SOA
-//         let soa = InternalResourceRecord::SOA {
-//             mname: DomainName::from("server.lol"), // TODO: get our hostname, or configure it in the config
-//             zone: DomainName::from(zone.name.as_str()),
-//             rname: DomainName::from(zone.rname.as_str()),
-//             serial: zone.serial,
-//             refresh: zone.refresh,
-//             retry: zone.retry,
-//             expire: zone.expire,
-//             minimum: zone.minimum,
-
-//             rclass: crate::RecordClass::Internet,
-//         };
-//         debug!("{soa:?}");
-//         tree.insert(
-//             &zone.name,
-//             ZoneRecord {
-//                 name: zone.name.as_bytes().to_vec(),
-//                 typerecords: vec![soa],
-//             },
-//         );
-
-//         for record in zone.records {
-//             debug!("fzr: {:?}", record);
-
-//             // mush the record name and the zone name together
-//             let name = match record.name.as_str() {
-//                 "@" => zone.name.clone(),
-//                 _ => {
-//                     let res = format!("{}.{}", record.clone().name, zone.name);
-//                     res
-//                 }
-//             };
-
-//             let record_data: InternalResourceRecord = match record.try_into() {
-//                 Ok(value) => value,
-//                 Err(error) => {
-//                     error!("Error loading record: {error:?}");
-//                     continue;
-//                 }
-//             };
-
-//             if tree.contains_key(&name) {
-//                 let existing_value = tree.get_mut(&name).unwrap();
-//                 existing_value.typerecords.push(record_data);
-//                 let toinsert = existing_value.clone();
-//                 tree.insert(name, toinsert);
-//             } else {
-//                 tree.insert(
-//                     &name,
-//                     ZoneRecord {
-//                         name: name.clone().into_bytes(),
-//                         typerecords: vec![record_data],
-//                     },
-//                 );
-//             }
-//         }
-//     }
-//     Ok(tree)
-// }

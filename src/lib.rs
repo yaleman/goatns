@@ -264,7 +264,6 @@ impl Question {
         match from_utf8(&self.qname) {
             Ok(value) => Ok(value.to_lowercase()),
             Err(error) => {
-                // TODO: this probably shouldn't be a panic
                 Err(format!(
                     "Failed to normalize {:?}: {:?}",
                     &self.qname, error
