@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::config::ConfigFile;
@@ -77,9 +78,11 @@ async fn api_query(
 #[derive(Debug, Clone)]
 pub struct SharedState {
     tx: Sender<datastore::Command>,
-    // TODO: ensure we actually need to use the connpool, lulz
+    // TODO: ensure we actually need to use the connpool in the web api shared state
     #[allow(dead_code)]
     connpool: Pool<Sqlite>,
+    // TODO: ensure we actually need to use the config in the web api shared state
+    #[allow(dead_code)]
     config: ConfigFile,
 }
 
@@ -88,6 +91,36 @@ pub async fn build(
     config: ConfigFile,
     connpool: Pool<Sqlite>,
 ) -> axum::Router {
+
+
+    let config_dir: PathBuf = shellexpand::tilde(&config.api_static_dir).to_string().into();
+    // check to see if we can find the static dir things
+    match config_dir.try_exists() {
+        Ok(res) => {
+            match res {
+                true => log::info!("Found static resources dir ({config_dir:#?}) for web API."),
+                false => log::error!("Couldn't find static resources dir ({config_dir:#?}) for web API!"),
+            }
+        },
+        Err(err) => {
+            match err.kind() {
+                std::io::ErrorKind::PermissionDenied =>  {
+                    log::error!("Permission denied accssing static resources dir ({:?}) for web API: {}", &config.api_static_dir, err.to_string())
+                },
+                std::io::ErrorKind::NotFound => {
+                    log::error!("Static resources dir ({:?}) not found for web API: {}", &config.api_static_dir, err.to_string())
+                },
+                _ => log::error!("Error accessing static resources dir ({:?}) for web API: {}", &config.api_static_dir, err.to_string())
+
+            }
+        }
+    }
+
+    let static_router = SpaRouter::new(
+        "/ui/static",
+        &config_dir,
+    );
+
     // from https://docs.rs/axum/0.5.17/axum/index.html#using-request-extensions
     let shared_state = Arc::new(SharedState {
         tx,
@@ -99,10 +132,7 @@ pub async fn build(
         .route("/", get(generic::index))
         .route("/status", get(generic::status))
         .route("/query/:qname/:qtype", get(api_query))
-        .merge(SpaRouter::new(
-            "/ui/static",
-            shared_state.config.api_static_dir.clone(),
-        ))
+        .merge(static_router)
         .nest("/ui", ui::new(shared_state.clone()))
         .nest("/api", api::new(shared_state))
 }

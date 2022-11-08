@@ -12,5 +12,6 @@
 	},
 	"enable_api" : true,
 	"api_tls_key" : "~/Nextcloud/dotfiles/letsencrypt/live/m1.housenet.yaleman.org/privkey.pem",
-	"api_tls_cert" : "~/Nextcloud/dotfiles/letsencrypt/live/m1.housenet.yaleman.org/fullchain.pem"
+	"api_tls_cert" : "~/Nextcloud/dotfiles/letsencrypt/live/m1.housenet.yaleman.org/fullchain.pem",
+	"api_static_dir" : "./static_files"
 }

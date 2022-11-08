@@ -56,7 +56,7 @@ pub struct ConfigFile {
     /// TLS key path
     pub api_tls_key: PathBuf,
     /// Static File Directory for api things
-    pub api_static_dir: PathBuf,
+    pub api_static_dir: String,
     /// Secret for cookie storage - don't hard code this, it'll randomly generate on startup
     #[serde(default = "generate_cookie_secret", skip)]
     api_cookie_secret: String,
@@ -99,7 +99,7 @@ impl Default for ConfigFile {
             api_port: 9000,
             api_tls_cert: PathBuf::from("./certificates/cert.pem"),
             api_tls_key: PathBuf::from("./certificates/key.pem"),
-            api_static_dir: PathBuf::from("./static_files/"),
+            api_static_dir: String::from("./static_files/"),
             api_cookie_secret: generate_cookie_secret(),
         }
     }

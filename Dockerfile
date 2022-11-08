@@ -23,13 +23,12 @@ FROM gcr.io/distroless/cc as goatns
 # # ======================
 # https://github.com/GoogleContainerTools/distroless/blob/main/examples/rust/Dockerfile
 COPY --from=builder /goatns/target/release/goatns /
+COPY --from=builder /goatns/static_files /static_files
 ENV GOATNS_LOG_LEVEL=INFO
 
 EXPOSE 15353/udp
 EXPOSE 15353/tcp
 EXPOSE 9000/udp
-
-RUN mkdir /certs && mkdir /config && mkdir /db
 
 WORKDIR /
 USER nonroot
