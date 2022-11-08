@@ -326,27 +326,6 @@
 <span id="326">326</span>
 <span id="327">327</span>
 <span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
 </pre><pre class="rust"><code><span class="attribute">#[macro_use]
 </span><span class="kw">extern crate </span>lazy_static;
 
@@ -439,7 +418,8 @@
             id: <span class="number">0</span>,
             qr: PacketType::Query,
             opcode: OpCode::Query,
-            authoritative: <span class="bool-val">false</span>,
+            <span class="doccomment">/// we *are* an authoritative DNS server after all
+            </span>authoritative: <span class="bool-val">true</span>,
             truncated: <span class="bool-val">false</span>,
             recursion_desired: <span class="bool-val">false</span>,
             recursion_available: <span class="bool-val">false</span>,
@@ -672,28 +652,6 @@
         retval.extend((<span class="self">self</span>.qtype <span class="kw">as </span>u16).to_be_bytes());
         retval.extend((<span class="self">self</span>.qclass <span class="kw">as </span>u16).to_be_bytes());
         retval
-    }
-}
-
-<span class="attribute">#[tokio::test]
-</span><span class="doccomment">///tries to test when input buffers are weird
-</span><span class="kw">async fn </span>test_question_from_bytes() {
-    <span class="kw">let </span>ok_question = <span class="macro">vec!</span>[
-        <span class="comment">/* question - 14 bytes */
-        </span><span class="number">0x04</span>, <span class="number">0x69</span>, <span class="number">0x61</span>, <span class="number">0x6e</span>, <span class="number">0x61</span>, <span class="number">0x03</span>, <span class="number">0x6f</span>, <span class="number">0x72</span>, <span class="number">0x67</span>, <span class="number">0x00</span>, <span class="number">0x00</span>, <span class="number">0x01</span>, <span class="comment">//0x00, 0x01,
-    </span>];
-    <span class="kw">let </span>input_bufs: Vec&lt;Vec&lt;u8&gt;&gt; = <span class="macro">vec!</span>[
-        <span class="comment">/* header - 12 bytes */
-        // 0xa3, 0x70, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-        </span>ok_question[<span class="number">0</span>..<span class="number">10</span>].to_vec(),
-        ok_question[<span class="number">0</span>..<span class="number">11</span>].to_vec(),
-        ok_question[<span class="number">0</span>..<span class="number">12</span>].to_vec(),
-    ];
-
-    <span class="kw">for </span>buf <span class="kw">in </span>input_bufs {
-        <span class="kw">if </span>Question::from_packets(<span class="kw-2">&amp;</span>buf).<span class="kw">await</span>.is_ok() {
-            <span class="macro">panic!</span>(<span class="string">&quot;This should bail!&quot;</span>);
-        }
     }
 }
 </code></pre></div>
