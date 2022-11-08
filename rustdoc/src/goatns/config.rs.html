@@ -345,7 +345,7 @@
     <span class="doccomment">/// TLS key path
     </span><span class="kw">pub </span>api_tls_key: PathBuf,
     <span class="doccomment">/// Static File Directory for api things
-    </span><span class="kw">pub </span>api_static_dir: PathBuf,
+    </span><span class="kw">pub </span>api_static_dir: String,
     <span class="doccomment">/// Secret for cookie storage - don&#39;t hard code this, it&#39;ll randomly generate on startup
     </span><span class="attribute">#[serde(default = <span class="string">&quot;generate_cookie_secret&quot;</span>, skip)]
     </span>api_cookie_secret: String,
@@ -388,7 +388,7 @@
             api_port: <span class="number">9000</span>,
             api_tls_cert: PathBuf::from(<span class="string">&quot;./certificates/cert.pem&quot;</span>),
             api_tls_key: PathBuf::from(<span class="string">&quot;./certificates/key.pem&quot;</span>),
-            api_static_dir: PathBuf::from(<span class="string">&quot;./static_files/&quot;</span>),
+            api_static_dir: String::from(<span class="string">&quot;./static_files/&quot;</span>),
             api_cookie_secret: generate_cookie_secret(),
         }
     }

@@ -106,7 +106,38 @@
 <span id="106">106</span>
 <span id="107">107</span>
 <span id="108">108</span>
-</pre><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+</pre><pre class="rust"><code><span class="kw">use </span>std::path::PathBuf;
+<span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::datastore;
@@ -185,10 +216,12 @@
 </span><span class="attribute">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>SharedState {
     tx: Sender&lt;datastore::Command&gt;,
-    <span class="comment">// TODO: ensure we actually need to use the connpool, lulz
+    <span class="comment">// TODO: ensure we actually need to use the connpool in the web api shared state
     </span><span class="attribute">#[allow(dead_code)]
     </span>connpool: Pool&lt;Sqlite&gt;,
-    config: ConfigFile,
+    <span class="comment">// TODO: ensure we actually need to use the config in the web api shared state
+    </span><span class="attribute">#[allow(dead_code)]
+    </span>config: ConfigFile,
 }
 
 <span class="kw">pub async fn </span>build(
@@ -196,6 +229,36 @@
     config: ConfigFile,
     connpool: Pool&lt;Sqlite&gt;,
 ) -&gt; axum::Router {
+
+
+    <span class="kw">let </span>config_dir: PathBuf = shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_static_dir).to_string().into();
+    <span class="comment">// check to see if we can find the static dir things
+    </span><span class="kw">match </span>config_dir.try_exists() {
+        <span class="prelude-val">Ok</span>(res) =&gt; {
+            <span class="kw">match </span>res {
+                <span class="bool-val">true </span>=&gt; <span class="macro">log::info!</span>(<span class="string">&quot;Found static resources dir ({config_dir:#?}) for web API.&quot;</span>),
+                <span class="bool-val">false </span>=&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find static resources dir ({config_dir:#?}) for web API!&quot;</span>),
+            }
+        },
+        <span class="prelude-val">Err</span>(err) =&gt; {
+            <span class="kw">match </span>err.kind() {
+                std::io::ErrorKind::PermissionDenied =&gt;  {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Permission denied accssing static resources dir ({:?}) for web API: {}&quot;</span>, <span class="kw-2">&amp;</span>config.api_static_dir, err.to_string())
+                },
+                std::io::ErrorKind::NotFound =&gt; {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Static resources dir ({:?}) not found for web API: {}&quot;</span>, <span class="kw-2">&amp;</span>config.api_static_dir, err.to_string())
+                },
+                <span class="kw">_ </span>=&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error accessing static resources dir ({:?}) for web API: {}&quot;</span>, <span class="kw-2">&amp;</span>config.api_static_dir, err.to_string())
+
+            }
+        }
+    }
+
+    <span class="kw">let </span>static_router = SpaRouter::new(
+        <span class="string">&quot;/ui/static&quot;</span>,
+        <span class="kw-2">&amp;</span>config_dir,
+    );
+
     <span class="comment">// from https://docs.rs/axum/0.5.17/axum/index.html#using-request-extensions
     </span><span class="kw">let </span>shared_state = Arc::new(SharedState {
         tx,
@@ -207,10 +270,7 @@
         .route(<span class="string">&quot;/&quot;</span>, get(generic::index))
         .route(<span class="string">&quot;/status&quot;</span>, get(generic::status))
         .route(<span class="string">&quot;/query/:qname/:qtype&quot;</span>, get(api_query))
-        .merge(SpaRouter::new(
-            <span class="string">&quot;/ui/static&quot;</span>,
-            shared_state.config.api_static_dir.clone(),
-        ))
+        .merge(static_router)
         .nest(<span class="string">&quot;/ui&quot;</span>, ui::new(shared_state.clone()))
         .nest(<span class="string">&quot;/api&quot;</span>, api::new(shared_state))
 }
