@@ -235,20 +235,13 @@ impl From<InternalResourceRecord> for RecordType {
             InternalResourceRecord::HINFO { .. } => RecordType::HINFO,
             InternalResourceRecord::InvalidType => RecordType::InvalidType,
             InternalResourceRecord::LOC { .. } => RecordType::LOC,
-            InternalResourceRecord::MAILB { .. } => RecordType::MAILB,
-            InternalResourceRecord::MB { .. } => RecordType::MB,
-            InternalResourceRecord::MG { .. } => RecordType::MG,
-            InternalResourceRecord::MINFO { .. } => RecordType::MINFO,
-            InternalResourceRecord::MR { .. } => RecordType::MR,
             InternalResourceRecord::MX { .. } => RecordType::MX,
             InternalResourceRecord::NAPTR { .. } => RecordType::NAPTR,
             InternalResourceRecord::NS { .. } => RecordType::NS,
-            InternalResourceRecord::NULL { .. } => RecordType::NULL,
             InternalResourceRecord::PTR { .. } => RecordType::PTR,
             InternalResourceRecord::SOA { .. } => RecordType::SOA,
             InternalResourceRecord::TXT { .. } => RecordType::TXT,
             InternalResourceRecord::URI { .. } => RecordType::URI,
-            InternalResourceRecord::WKS { .. } => RecordType::WKS,
         }
     }
 }
@@ -259,6 +252,7 @@ impl RecordType {
         match self {
             RecordType::A
             | RecordType::AAAA
+            | RecordType::ANY
             | RecordType::CAA
             | RecordType::CNAME
             | RecordType::HINFO

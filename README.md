@@ -63,9 +63,9 @@ There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml
 - [ ] DNSKEY (48) RFC4034 DNS Key record The key record used in DNSSEC.
 - [ ] EUI48 (108) RFC7043 MAC address (EUI-48) A 48-bit IEEE Extended Unique Identifier.
 - [ ] EUI64 (109) RFC7043 MAC address (EUI-64) A 64-bit IEEE Extended Unique Identifier.
-- [ ] HINFO (13) RFC8482 Providing Minimal-Sized Responses to DNS Queries That Have QTYPE=ANY
+- [x] HINFO (13) RFC8482 Providing Minimal-Sized Responses to DNS Queries That Have QTYPE=ANY
   - [x] RFC1035 interpretation is done
-  - [ ] Check up on the details in RFC8482 - "Unobsoleted by RFC 8482."
+  - [x] Check up on the details in RFC8482 - "Unobsoleted by RFC 8482."
 - [ ] HIP (55) RFC8005 Host Identity Protocol Method of separating the end-point identifier and locator roles of IP addresses.
 - [ ] HTTPS (65) (IETF Draft)[https://datatracker.ietf.org/doc/draft-ietf-dnsop-svcb-https/00/?include_text=1] HTTPS Binding RR that improves performance for clients that need to resolve many resources to access a domain. More info in this IETF Draft by DNSOP Working group and Akamai technologies.
 - [ ] IPSECKEY (45)  RFC4025 IPsec Key Key record that can be used with IPsec

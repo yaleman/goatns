@@ -42,20 +42,13 @@ impl Reply {
                     InternalResourceRecord::HINFO { ttl, .. } => ttl,
                     InternalResourceRecord::InvalidType => &1u32,
                     InternalResourceRecord::LOC { ttl, .. } => ttl,
-                    InternalResourceRecord::MAILB { ttl, .. } => ttl,
-                    InternalResourceRecord::MB { ttl, .. } => ttl,
-                    InternalResourceRecord::MG { ttl, .. } => ttl,
-                    InternalResourceRecord::MINFO { ttl, .. } => ttl,
-                    InternalResourceRecord::MR { ttl, .. } => ttl,
                     InternalResourceRecord::MX { ttl, .. } => ttl,
                     InternalResourceRecord::NAPTR { ttl, .. } => ttl,
                     InternalResourceRecord::NS { ttl, .. } => ttl,
-                    InternalResourceRecord::NULL { ttl, .. } => ttl,
                     InternalResourceRecord::PTR { ttl, .. } => ttl,
                     InternalResourceRecord::SOA { minimum, .. } => minimum,
                     InternalResourceRecord::TXT { ttl, .. } => ttl,
                     InternalResourceRecord::URI { ttl, .. } => ttl,
-                    InternalResourceRecord::WKS { ttl, .. } => ttl,
                 };
 
                 let answer_record = ResourceRecord {

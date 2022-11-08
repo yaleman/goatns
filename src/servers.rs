@@ -9,7 +9,7 @@ use tokio::time::timeout;
 
 use crate::config::ConfigFile;
 use crate::datastore::Command;
-use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass};
+use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
 use crate::reply::Reply;
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::utils::*;
@@ -413,8 +413,12 @@ async fn get_result(
           }*/
     }
 
-    // build the request to the datastore to make the query
+    if let RecordType::ANY {} = question.qtype {
+        // TODO this should check to see if we have a zone record, but that requires walking down the qname record recursively, which is its own thing. We just YOLO a HINFO back for any request now.
+        return reply_any(header.id, question);
+    };
 
+    // build the request to the datastore to make the query
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
     let ds_req: Command = Command::GetRecord {
         name: question.qname.clone(),

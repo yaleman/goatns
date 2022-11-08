@@ -1,8 +1,9 @@
 use crate::datastore::Command;
 use crate::enums::SystemState;
 use crate::reply::Reply;
+use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::zones::FileZone;
-use crate::{Header, PacketType, Rcode, HEADER_BYTES};
+use crate::{Header, PacketType, Question, Rcode, HEADER_BYTES};
 use clap::{arg, command, value_parser, Arg, ArgMatches};
 use log::{debug, trace};
 use std::str::from_utf8;
@@ -232,6 +233,30 @@ pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, String> {
 
 pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
     reply_builder(id, Rcode::NameError)
+}
+
+/// Reply to an ANY request with a HINFO "RFC8482" "" response
+pub fn reply_any(id: u16, question: Question) -> Result<Reply, String> {
+    Ok(Reply {
+        header: Header {
+            id,
+            qr: PacketType::Answer,
+            rcode: Rcode::NoError,
+            authoritative: true,
+            qdcount: 1,
+            ancount: 1,
+            ..Header::default()
+        },
+        question: Some(question.clone()),
+        answers: vec![InternalResourceRecord::HINFO {
+            cpu: Some(DNSCharString::from("RFC8482")),
+            os: Some(DNSCharString::from("")),
+            ttl: 3789,
+            rclass: question.qclass,
+        }],
+        authorities: vec![],
+        additional: vec![],
+    })
 }
 
 // lazy_static!{
