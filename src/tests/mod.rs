@@ -646,3 +646,27 @@ fn test_get_question_qname() {
         Ok(vec![101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109])
     );
 }
+
+
+
+#[tokio::test]
+///tries to test when input buffers are weird
+async fn test_question_from_bytes() {
+    let ok_question = vec![
+        /* question - 14 bytes */
+        0x04, 0x69, 0x61, 0x6e, 0x61, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, //0x00, 0x01,
+    ];
+    let input_bufs: Vec<Vec<u8>> = vec![
+        /* header - 12 bytes */
+        // 0xa3, 0x70, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+        ok_question[0..10].to_vec(),
+        ok_question[0..11].to_vec(),
+        ok_question[0..12].to_vec(),
+    ];
+
+    for buf in input_bufs {
+        if Question::from_packets(&buf).await.is_ok() {
+            panic!("This should bail!");
+        }
+    }
+}
