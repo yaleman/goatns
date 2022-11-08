@@ -179,108 +179,6 @@
 <span id="179">179</span>
 <span id="180">180</span>
 <span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
-<span id="240">240</span>
-<span id="241">241</span>
-<span id="242">242</span>
-<span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-<span id="248">248</span>
-<span id="249">249</span>
-<span id="250">250</span>
-<span id="251">251</span>
-<span id="252">252</span>
-<span id="253">253</span>
-<span id="254">254</span>
-<span id="255">255</span>
-<span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::{RecordClass, RecordType};
 <span class="kw">use </span><span class="kw">crate</span>::resourcerecord::InternalResourceRecord;
 <span class="kw">use </span>log::<span class="kw-2">*</span>;
@@ -294,11 +192,12 @@
 <span class="kw">use </span>std::path::Path;
 <span class="kw">use </span>std::str::from_utf8;
 
-<span class="doccomment">/// A DNS Zone in a JSON file
+<span class="doccomment">/// A DNS Zone
 </span><span class="attribute">#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename(serialize = <span class="string">&quot;UPPERCASE&quot;</span>))]
 </span><span class="kw">pub struct </span>FileZone {
-    <span class="attribute">#[serde(default = <span class="string">&quot;default_id&quot;</span>)]
+    <span class="doccomment">/// Database row ID
+    </span><span class="attribute">#[serde(default = <span class="string">&quot;default_id&quot;</span>)]
     </span><span class="kw">pub </span>id: u64,
     <span class="doccomment">/// MNAME The &lt;domain-name&gt; of the name server that was the original or primary source of data for this zone.
     </span><span class="attribute">#[serde(rename(serialize = <span class="string">&quot;MNAME&quot;</span>))]
@@ -338,15 +237,17 @@
 }
 <span class="doccomment">/// default RNAME value for FileZone
 </span><span class="kw">pub fn </span>rname_default() -&gt; String {
-    String::from(<span class="string">&quot;barry.goat&quot;</span>)
+    String::from(<span class="string">&quot;barry.dot.goat&quot;</span>)
 }
 
 <span class="doccomment">/// A DNS Record from the JSON file
 </span><span class="attribute">#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 </span><span class="kw">pub struct </span>FileZoneRecord {
-    <span class="attribute">#[serde(default = <span class="string">&quot;default_id&quot;</span>)]
+    <span class="doccomment">/// Foreign key to id in [FileZone::id]
+    </span><span class="attribute">#[serde(default = <span class="string">&quot;default_id&quot;</span>)]
     </span><span class="kw">pub </span>zoneid: u64,
-    <span class="attribute">#[serde(default)]
+    <span class="doccomment">/// Database row ID
+    </span><span class="attribute">#[serde(default)]
     </span><span class="kw">pub </span>id: u64,
     <span class="attribute">#[serde(default = <span class="string">&quot;default_record_name&quot;</span>)]
     </span><span class="kw">pub </span>name: String,
@@ -408,8 +309,9 @@
 <span class="attribute">#[derive(Debug, PartialEq, Eq, Clone)]
 </span><span class="doccomment">/// This is used when storing a set of records in the memory-based datastore
 </span><span class="kw">pub struct </span>ZoneRecord {
-    <span class="comment">// the full name including the zone
+    <span class="doccomment">/// the full name including the zone
     </span><span class="kw">pub </span>name: Vec&lt;u8&gt;,
+
     <span class="kw">pub </span>typerecords: Vec&lt;InternalResourceRecord&gt;,
 }
 
@@ -424,12 +326,7 @@
     }
 }
 
-<span class="comment">// pub fn empty_zones() -&gt; PatriciaMap&lt;ZoneRecord&gt; {
-//     let tree: PatriciaMap&lt;ZoneRecord&gt; = PatriciaMap::new();
-//     tree
-// }
-
-</span><span class="kw">pub fn </span>load_zone_from_file(filename: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;FileZone, String&gt; {
+<span class="kw">pub fn </span>load_zone_from_file(filename: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;FileZone, String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>file = <span class="kw">match </span>File::open(filename) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(error) =&gt; {
@@ -461,108 +358,6 @@
     file.read_to_string(<span class="kw-2">&amp;mut </span>buf).unwrap();
     <span class="kw">let </span>jsonstruct: <span class="prelude-ty">Result</span>&lt;Vec&lt;FileZone&gt;, String&gt; =
         json5::from_str(<span class="kw-2">&amp;</span>buf).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to read JSON file: {e:?}&quot;</span>));
-    <span class="comment">//  {
-    //     Ok(value) =&gt; value,
-    //     Err(error) =&gt; {
-    //         let emsg = format!(&quot;Failed to read JSON file: {:?}&quot;, error);
-    //         error!(&quot;{}&quot;, emsg);
-    //         return Err(emsg);
-    //     }
-    // };
-    </span>jsonstruct
-}
-
-<span class="comment">// / Load the data from a JSON file on disk
-// pub fn load_zones_to_tree(config: &amp;ConfigFile) -&gt; Result&lt;PatriciaMap&lt;ZoneRecord&gt;, String&gt; {
-//     let zone_filename = match &amp;config.zone_file {
-//         Some(filename) =&gt; filename,
-//         None =&gt; return Err(&quot;No zone file specified&quot;.to_string()),
-//     };
-
-//     let jsonstruct = match load_zones(zone_filename) {
-//         Ok(value) =&gt; value,
-//         Err(err) =&gt; return Err(format!(&quot;Error loading file {zone_filename}: {err}&quot;)),
-//     };
-//     debug!(&quot;{:?}&quot;, jsonstruct);
-
-//     let mut tree = empty_zones();
-//     if config.enable_hinfo {
-//         info!(&quot;Enabling HINFO response on hinfo.goat&quot;);
-//         let hinfo_name = String::from(&quot;hinfo.goat&quot;);
-//         tree.insert(
-//             hinfo_name.clone(),
-//             ZoneRecord {
-//                 name: hinfo_name.into_bytes(),
-//                 typerecords: vec![InternalResourceRecord::HINFO {
-//                     cpu: None,
-//                     os: None,
-//                     ttl: 1,
-//                     rclass: crate::RecordClass::Chaos,
-//                 }],
-//             },
-//         );
-//     };
-
-//     for zone in jsonstruct {
-//         // here we add the SOA
-//         let soa = InternalResourceRecord::SOA {
-//             mname: DomainName::from(&quot;server.lol&quot;), // TODO: get our hostname, or configure it in the config
-//             zone: DomainName::from(zone.name.as_str()),
-//             rname: DomainName::from(zone.rname.as_str()),
-//             serial: zone.serial,
-//             refresh: zone.refresh,
-//             retry: zone.retry,
-//             expire: zone.expire,
-//             minimum: zone.minimum,
-
-//             rclass: crate::RecordClass::Internet,
-//         };
-//         debug!(&quot;{soa:?}&quot;);
-//         tree.insert(
-//             &amp;zone.name,
-//             ZoneRecord {
-//                 name: zone.name.as_bytes().to_vec(),
-//                 typerecords: vec![soa],
-//             },
-//         );
-
-//         for record in zone.records {
-//             debug!(&quot;fzr: {:?}&quot;, record);
-
-//             // mush the record name and the zone name together
-//             let name = match record.name.as_str() {
-//                 &quot;@&quot; =&gt; zone.name.clone(),
-//                 _ =&gt; {
-//                     let res = format!(&quot;{}.{}&quot;, record.clone().name, zone.name);
-//                     res
-//                 }
-//             };
-
-//             let record_data: InternalResourceRecord = match record.try_into() {
-//                 Ok(value) =&gt; value,
-//                 Err(error) =&gt; {
-//                     error!(&quot;Error loading record: {error:?}&quot;);
-//                     continue;
-//                 }
-//             };
-
-//             if tree.contains_key(&amp;name) {
-//                 let existing_value = tree.get_mut(&amp;name).unwrap();
-//                 existing_value.typerecords.push(record_data);
-//                 let toinsert = existing_value.clone();
-//                 tree.insert(name, toinsert);
-//             } else {
-//                 tree.insert(
-//                     &amp;name,
-//                     ZoneRecord {
-//                         name: name.clone().into_bytes(),
-//                         typerecords: vec![record_data],
-//                     },
-//                 );
-//             }
-//         }
-//     }
-//     Ok(tree)
-// }
-</span></code></pre></div>
+    jsonstruct
+}</code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
