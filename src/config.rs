@@ -12,8 +12,8 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-/// Allow-listing ranges for making particular kinds of requests
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
+/// Allow-listing ranges for making particular kinds of requests
 pub struct IPAllowList {
     // Allow CH TXT VERSION.BIND or VERSION requests
     // pub version: Vec<IpAddr>,
@@ -28,15 +28,16 @@ pub struct IPAllowList {
 pub struct ConfigFile {
     /// The server's hostname when generating an SOA record, defaults to the results of gethostname()
     pub hostname: String,
-    /// Listen address, default is 0.0.0.0
+    /// DNS listener address, default is 127.0.0.1
     pub address: String,
-    /// Listen on this port, default is 15353
+    /// Listen for DNS queries on this port, default is 15353
     pub port: u16,
+    /// If we should capture packets on request/response
     pub capture_packets: bool,
     /// Default is "DEBUG"
     pub log_level: String,
-    /// How long until we drop client connections
-    pub tcp_client_timeout: u16,
+    /// How long until we drop TCP client connections, defaults to 5 seconds.
+    pub tcp_client_timeout: u64,
     /// Enable a HINFO record at hinfo.goat
     pub enable_hinfo: bool,
     /// The location for the zone sqlite file
@@ -86,7 +87,7 @@ impl Default for ConfigFile {
             port: 15353,
             capture_packets: false,
             log_level: "INFO".to_string(),
-            tcp_client_timeout: 15,
+            tcp_client_timeout: 5,
             enable_hinfo: false,
             ip_allow_lists: IPAllowList {
                 // axfr: vec![],

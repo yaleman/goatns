@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
-use tokio::net::{TcpListener, UdpSocket};
+use tokio::net::{TcpListener, UdpSocket, TcpStream};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::time::timeout;
 
@@ -167,10 +167,127 @@ pub async fn udp_server(
     }
 }
 
+pub async fn tcp_conn_handler(
+    stream: &mut TcpStream,
+    addr: SocketAddr,
+    tx: mpsc::Sender<Command>,
+    agent_tx: broadcast::Sender<AgentState>,
+    config: ConfigFile,
+) -> io::Result<()> {
+    let (mut reader, writer) = stream.split();
+    let msg_length: usize = reader.read_u16().await?.into();
+    log::debug!("msg_length={msg_length}");
+    let mut buf: Vec<u8> = vec![];
+
+    while buf.len() < msg_length {
+        let len = match reader.read_buf(&mut buf).await {
+            Ok(size) => size,
+            Err(error) => {
+                log::error!("Failed to read from TCP Stream: {:?}", error);
+                return Ok(());
+            }
+        };
+        if len > 0 {
+            log::debug!("Read {:?} bytes from TCP stream", len);
+        }
+    }
+
+    crate::utils::hexdump(buf.clone());
+    // the first two bytes of a tcp query is the message length
+    // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
+
+    // check the message is long enough
+    if buf.len() < msg_length {
+        log::warn!(
+            "Message length too short {}, wanted {}",
+            buf.len(),
+            msg_length + 2
+        );
+    } else {
+        log::info!("TCP Message length ftw!");
+    }
+
+    // skip the TCP length header because rad
+    let buf = &buf[0..msg_length];
+    let result = match timeout(
+        Duration::from_millis(REPLY_TIMEOUT_MS),
+        parse_query(tx.clone(), msg_length, buf, config.capture_packets),
+    )
+    .await
+    {
+        Ok(reply) => reply,
+        Err(_) => {
+            log::error!(
+                "Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms"
+            );
+            return Ok(());
+        }
+    };
+
+    match result {
+        Ok(r) => {
+            log::debug!("TCP Result: {r:?}");
+
+            // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
+            let r = match check_for_shutdown(&r, &addr, &config).await {
+                // no change here
+                Err(reply) => match reply {
+                    None => r,
+                    Some(response) => response,
+                },
+                Ok(reply) => {
+                    if let Err(error) = agent_tx.send(AgentState::Stopped {
+                        agent: Agent::TCPServer,
+                    }) {
+                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                    };
+                    if let Err(error) = tx.send(Command::Shutdown).await {
+                        eprintln!("Failed to send shutdown command to datastore.. {error:?}");
+                    };
+                    reply
+                }
+            };
+
+            let reply_bytes: Vec<u8> = match r.as_bytes().await {
+                Ok(value) => value,
+                Err(error) => {
+                    log::error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
+                    return Ok(());
+                }
+            };
+
+            log::trace!("reply_bytes: {:?}", reply_bytes);
+
+            let reply_bytes = &reply_bytes as &[u8];
+            // send the outgoing message length
+            let response_length: u16 = reply_bytes.len() as u16;
+            let len = match writer.try_write(&response_length.to_be_bytes()) {
+                Ok(value) => value,
+                Err(err) => {
+                    log::error!("Failed to send data back to {:?}: {:?}", addr, err);
+                    return Ok(());
+                }
+            };
+            log::trace!("{:?} bytes sent", len);
+
+            // send the data
+            let len = match writer.try_write(reply_bytes) {
+                Ok(value) => value,
+                Err(err) => {
+                    log::error!("Failed to send data back to {:?}: {:?}", addr, err);
+                    return Ok(());
+                }
+            };
+            log::trace!("{:?} bytes sent", len);
+        }
+        Err(error) => log::error!("Error: {}", error),
+    }
+    Ok(())
+}
+
 /// main handler for the TCP side of things
 ///
 /// Ref <https://www.rfc-editor.org/rfc/rfc7766>
-
 pub async fn tcp_server(
     bind_address: SocketAddr,
     config: ConfigFile,
@@ -191,120 +308,27 @@ pub async fn tcp_server(
     };
 
     loop {
+        // TODO: work out how to not make this blocking
         let (mut stream, addr) = match tcpserver.accept().await {
             Ok(value) => value,
-            Err(error) => panic!("Couldn't get data from TcpStrream: {:?}", error),
+            Err(error) => panic!("Couldn't get data from TcpStream: {:?}", error),
         };
+
         log::debug!("TCP connection from {:?}", addr);
-
-        let (mut reader, writer) = stream.split();
-        let msg_length: usize = reader.read_u16().await?.into();
-        log::debug!("msg_length={msg_length}");
-        let mut buf: Vec<u8> = vec![];
-
-        while buf.len() < msg_length {
-            let len = match reader.read_buf(&mut buf).await {
-                Ok(size) => size,
-                Err(error) => {
-                    log::error!("Failed to read from TCP Stream: {:?}", error);
-                    return Ok(());
-                }
-            };
-            if len > 0 {
-                log::debug!("Read {:?} bytes from TCP stream", len);
-            }
-        }
-
-        crate::utils::hexdump(buf.clone());
-        // the first two bytes of a tcp query is the message length
-        // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
-
-        // check the message is long enough
-        if buf.len() < msg_length {
-            log::warn!(
-                "Message length too short {}, wanted {}",
-                buf.len(),
-                msg_length + 2
-            );
-        } else {
-            log::info!("TCP Message length ftw!");
-        }
-
-        // skip the TCP length header because rad
-        let buf = &buf[0..msg_length];
-        let result = match timeout(
-            Duration::from_millis(REPLY_TIMEOUT_MS),
-            parse_query(tx.clone(), msg_length, buf, config.capture_packets),
-        )
-        .await
-        {
-            Ok(reply) => reply,
-            Err(_) => {
-                log::error!(
-                    "Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms"
-                );
-                continue;
-            }
-        };
-
-        match result {
-            Ok(r) => {
-                log::debug!("TCP Result: {r:?}");
-
-                // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
-                let r = match check_for_shutdown(&r, &addr, &config).await {
-                    // no change here
-                    Err(reply) => match reply {
-                        None => r,
-                        Some(response) => response,
-                    },
-                    Ok(reply) => {
-                        if let Err(error) = agent_tx.send(AgentState::Stopped {
-                            agent: Agent::TCPServer,
-                        }) {
-                            eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-                        };
-                        if let Err(error) = tx.send(Command::Shutdown).await {
-                            eprintln!("Failed to send shutdown command to datastore.. {error:?}");
-                        };
-                        reply
+        let loop_tx = tx.clone();
+        let loop_config = config.clone();
+        let loop_agent_tx= agent_tx.clone();
+        tokio::spawn(
+            async move {
+                if let Err(_) = timeout(
+                    Duration::from_secs(loop_config.tcp_client_timeout),
+            tcp_conn_handler(&mut stream, addr, loop_tx, loop_agent_tx, loop_config)
+                    ).await {
+                        log::warn!("TCP Connection from {addr:?} terminated after {} seconds.", config.tcp_client_timeout);
                     }
-                };
-
-                let reply_bytes: Vec<u8> = match r.as_bytes().await {
-                    Ok(value) => value,
-                    Err(error) => {
-                        log::error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
-                        continue;
                     }
-                };
+                ).await?;
 
-                log::trace!("reply_bytes: {:?}", reply_bytes);
-
-                let reply_bytes = &reply_bytes as &[u8];
-                // send the outgoing message length
-                let response_length: u16 = reply_bytes.len() as u16;
-                let len = match writer.try_write(&response_length.to_be_bytes()) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        log::error!("Failed to send data back to {:?}: {:?}", addr, err);
-                        return Ok(());
-                    }
-                };
-                log::trace!("{:?} bytes sent", len);
-
-                // send the data
-                let len = match writer.try_write(reply_bytes) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        log::error!("Failed to send data back to {:?}: {:?}", addr, err);
-                        return Ok(());
-                    }
-                };
-                log::trace!("{:?} bytes sent", len);
-            }
-            Err(error) => log::error!("Error: {}", error),
-        }
         if let Ok(agent_state) = agent_rx.try_recv() {
             log::info!("Got agent state: {:?}", agent_state);
         };
