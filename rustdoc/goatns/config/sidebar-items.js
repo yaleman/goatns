@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["check_config",""],["get_config","Loads the configuration from a given file or from some default locations."],["setup_logging",""]],"struct":[["CONFIG_LOCATIONS",""],["ConfigFile",""],["IPAllowList",""]]};
+window.SIDEBAR_ITEMS = {"fn":[["check_config",""],["generate_cookie_secret",""],["get_config","Loads the configuration from a given file or from some default locations."],["setup_logging",""]],"struct":[["CONFIG_LOCATIONS",""],["ConfigFile",""],["IPAllowList","Allow-listing ranges for making particular kinds of requests"],["LogFilter",""]]};

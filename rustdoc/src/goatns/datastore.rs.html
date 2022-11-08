@@ -222,16 +222,97 @@
 <span id="222">222</span>
 <span id="223">223</span>
 <span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::str::from_utf8;
+<span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
-<span class="kw">use </span><span class="kw">crate</span>::db;
+<span class="kw">use </span><span class="kw">crate</span>::db::{<span class="self">self</span>, DBEntity, ZoneOwnership};
 <span class="kw">use </span><span class="kw">crate</span>::enums::{RecordClass, RecordType};
 <span class="kw">use </span><span class="kw">crate</span>::zones::{FileZone, ZoneRecord};
+<span class="kw">use </span>clap::ArgMatches;
 <span class="kw">use </span>log::debug;
 <span class="kw">use </span>sqlx::{Pool, Sqlite};
 <span class="kw">use </span>tokio::sync::mpsc;
 <span class="kw">use </span>tokio::sync::oneshot;
+
 <span class="kw">type </span>Responder&lt;T&gt; = oneshot::Sender&lt;T&gt;;
 
 <span class="attribute">#[derive(Debug)]
@@ -244,8 +325,12 @@
         resp: Responder&lt;<span class="prelude-ty">Option</span>&lt;ZoneRecord&gt;&gt;,
     },
     GetZone {
-        name: String,
+        id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+        name: <span class="prelude-ty">Option</span>&lt;String&gt;,
         resp: Responder&lt;<span class="prelude-ty">Option</span>&lt;FileZone&gt;&gt;,
+    },
+    GetZoneNames {
+        resp: Responder&lt;Vec&lt;FileZone&gt;&gt;,
     },
     ImportFile {
         filename: String,
@@ -253,6 +338,35 @@
         resp: Responder&lt;()&gt;,
     },
     Shutdown,
+
+    PostZone,
+    DeleteZone,
+    PatchZone,
+
+    DeleteUser,
+    GetUser {
+        id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+        username: <span class="prelude-ty">Option</span>&lt;String&gt;,
+        resp: Responder&lt;()&gt;,
+    },
+    PostUser,
+    PatchUser,
+
+    DeleteOwnership {
+        zoneid: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+        userid: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+        resp: Responder&lt;()&gt;,
+    },
+    GetOwnership {
+        zoneid: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+        userid: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+        resp: Responder&lt;Vec&lt;Arc&lt;ZoneOwnership&gt;&gt;&gt;,
+    },
+    PostOwnership {
+        zoneid: i64,
+        userid: i64,
+        resp: Responder&lt;ZoneOwnership&gt;,
+    },
     <span class="comment">// TODO: create a setter when we&#39;re ready to accept updates
     // Set {
     //     name: Vec&lt;u8&gt;,
@@ -340,8 +454,6 @@
     }
 
     <span class="kw">for </span>zone <span class="kw">in </span>zones {
-        <span class="kw">use </span><span class="kw">crate</span>::db::DBEntity;
-
         zone.save_with_txn(<span class="kw-2">&amp;mut </span>txn)
             .<span class="kw">await
             </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to load zone {}: {e:?}&quot;</span>, zone.name))<span class="question-mark">?</span>;
@@ -356,52 +468,57 @@
 <span class="kw">async fn </span>handle_get_zone(
     tx: oneshot::Sender&lt;<span class="prelude-ty">Option</span>&lt;FileZone&gt;&gt;,
     pool: <span class="kw-2">&amp;</span>Pool&lt;Sqlite&gt;,
-    name: String,
+    id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+    name: <span class="prelude-ty">Option</span>&lt;String&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>txn = pool.begin().<span class="kw">await</span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>zone = <span class="kw">crate</span>::db::get_zone_with_txn(<span class="kw-2">&amp;mut </span>txn, <span class="kw-2">&amp;</span>name)
+    <span class="kw">let </span>zone = <span class="kw">crate</span>::db::get_zone_with_txn(<span class="kw-2">&amp;mut </span>txn, id, name)
         .<span class="kw">await
         </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))<span class="question-mark">?</span>;
 
     tx.send(zone).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))
 }
 
+<span class="kw">async fn </span>handle_get_zone_names(
+    tx: oneshot::Sender&lt;Vec&lt;FileZone&gt;&gt;,
+    pool: <span class="kw-2">&amp;</span>Pool&lt;Sqlite&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>txn = pool.begin().<span class="kw">await</span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>zones = <span class="kw">crate</span>::db::get_zones_with_txn(<span class="kw-2">&amp;mut </span>txn, <span class="number">100</span>, <span class="number">0</span>)
+        .<span class="kw">await
+        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))<span class="question-mark">?</span>;
+
+    tx.send(zones).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))
+}
+
 <span class="doccomment">/// Manages the datastore, waits for signals from the server instances and responds with data
 </span><span class="kw">pub async fn </span>manager(
     <span class="kw-2">mut </span>rx: mpsc::Receiver&lt;<span class="kw">crate</span>::datastore::Command&gt;,
     config: ConfigFile,
+    clap_results: ArgMatches,
+    connpool: Pool&lt;Sqlite&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-    <span class="comment">// if they specified a static zone file in the config, then load it
-    // let zones = match config.zone_file {
-    //     Some(_) =&gt; match load_zones_to_tree(&amp;config) {
-    //         Ok(value) =&gt; value,
-    //         Err(error) =&gt; {
-    //             error!(&quot;{}&quot;, error);
-    //             empty_zones()
-    //         }
-    //     },
-    //     None =&gt; empty_zones(),
-    // };
-
-    </span><span class="kw">let </span>connpool = <span class="kw">match </span>db::get_conn(<span class="kw-2">&amp;</span>config).<span class="kw">await </span>{
-        <span class="prelude-val">Ok</span>(value) =&gt; value,
-        <span class="prelude-val">Err</span>(err) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;{err}&quot;</span>);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(err);
-        }
-    };
-
-    <span class="comment">// start up the DB
-    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = db::start_db(<span class="kw-2">&amp;</span>connpool).<span class="kw">await </span>{
-        <span class="macro">log::error!</span>(<span class="string">&quot;{err}&quot;</span>);
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to start DB: {err:?}&quot;</span>));
-    };
+    <span class="comment">// Load the specified zone file on startup
+    </span><span class="kw">if </span>clap_results.get_flag(<span class="string">&quot;use_zonefile&quot;</span>) &amp;&amp; config.zone_file.is_some() {
+        <span class="kw">let </span>zone_file = config.zone_file.unwrap();
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = handle_import_file(<span class="kw-2">&amp;</span>connpool, zone_file.to_string(), <span class="prelude-val">None</span>).<span class="kw">await </span>{
+            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to import {zone_file}: {err:?}&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        };
+    }
 
     <span class="kw">while let </span><span class="prelude-val">Some</span>(cmd) = rx.recv().<span class="kw">await </span>{
         <span class="kw">match </span>cmd {
-            Command::GetZone { name, resp } =&gt; {
-                <span class="kw">let </span>res = handle_get_zone(resp, <span class="kw-2">&amp;</span>connpool, name).<span class="kw">await</span>;
+            Command::GetZone { id, name, resp } =&gt; {
+                <span class="kw">let </span>res = handle_get_zone(resp, <span class="kw-2">&amp;</span>connpool, id, name).<span class="kw">await</span>;
+                <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = res {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;{e:?}&quot;</span>)
+                };
+            }
+            Command::GetZoneNames { resp } =&gt; {
+                <span class="kw">let </span>res = handle_get_zone_names(resp, <span class="kw-2">&amp;</span>connpool).<span class="kw">await</span>;
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = res {
                     <span class="macro">log::error!</span>(<span class="string">&quot;{e:?}&quot;</span>)
                 };
@@ -441,6 +558,45 @@
                     <span class="macro">log::error!</span>(<span class="string">&quot;{e:?}&quot;</span>)
                 };
             }
+            Command::PostZone =&gt; <span class="macro">todo!</span>(),
+            Command::DeleteZone =&gt; <span class="macro">todo!</span>(),
+            Command::PatchZone =&gt; <span class="macro">todo!</span>(),
+            Command::DeleteUser =&gt; <span class="macro">todo!</span>(),
+            Command::GetUser {
+                username: <span class="kw">_</span>,
+                id: <span class="kw">_</span>,
+                resp: <span class="kw">_</span>,
+            } =&gt; <span class="macro">todo!</span>(),
+            Command::PostUser =&gt; <span class="macro">todo!</span>(),
+            Command::PatchUser =&gt; <span class="macro">todo!</span>(),
+            Command::DeleteOwnership {
+                zoneid: <span class="kw">_</span>,
+                userid: <span class="kw">_</span>,
+                resp: <span class="kw">_</span>,
+            } =&gt; <span class="macro">todo!</span>(),
+            Command::GetOwnership {
+                zoneid: <span class="kw">_</span>,
+                userid,
+                resp,
+            } =&gt; {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(userid) = userid {
+                    <span class="kw">match </span>ZoneOwnership::get_all_user(<span class="kw-2">&amp;</span>connpool, userid).<span class="kw">await </span>{
+                        <span class="prelude-val">Ok</span>(zone) =&gt; {
+                            <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = resp.send(zone) {
+                                <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send zone_ownership response: {err:?}&quot;</span>)
+                            };
+                        }
+                        <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
+                    }
+                } <span class="kw">else </span>{
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Unmatched arm in getownership&quot;</span>)
+                }
+            }
+            Command::PostOwnership {
+                zoneid: <span class="kw">_</span>,
+                userid: <span class="kw">_</span>,
+                resp: <span class="kw">_</span>,
+            } =&gt; <span class="macro">todo!</span>(),
         }
     }
 

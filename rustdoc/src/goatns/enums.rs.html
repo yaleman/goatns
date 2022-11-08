@@ -371,12 +371,9 @@
 <span id="371">371</span>
 <span id="372">372</span>
 <span id="373">373</span>
-<span id="374">374</span>
-<span id="375">375</span>
-<span id="376">376</span>
-<span id="377">377</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::fmt::Display;
 
+<span class="kw">use </span>enum_iterator::Sequence;
 <span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>serde::{Deserialize, Serialize, Serializer};
 <span class="kw">use </span>sqlx::encode::IsNull;
@@ -459,7 +456,7 @@
 </span>}
 
 <span class="attribute">#[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
 </span><span class="doccomment">/// RRType, eg A, NS, MX, etc
 </span><span class="kw">pub enum </span>RecordType {
     <span class="doccomment">/// A host address
@@ -491,7 +488,7 @@
     </span>MAILB = <span class="number">253</span>,
     URI = <span class="number">256</span>,
     <span class="doccomment">/// 255 A request for all records (*)
-    </span>ALL = <span class="number">255</span>,
+    </span>ANY = <span class="number">255</span>,
     <span class="doccomment">/// Certification Authority Restriction - &lt;https://www.rfc-editor.org/rfc/rfc6844.txt&gt;
     </span>CAA = <span class="number">257</span>,
     InvalidType,
@@ -519,7 +516,7 @@
             <span class="number">35 </span>=&gt; <span class="self">Self</span>::NAPTR, <span class="comment">// https://www.rfc-editor.org/rfc/rfc3596#section-2.1
             </span><span class="number">252 </span>=&gt; <span class="self">Self</span>::AXFR,
             <span class="number">253 </span>=&gt; <span class="self">Self</span>::MAILB,
-            <span class="number">255 </span>=&gt; <span class="self">Self</span>::ALL,
+            <span class="number">255 </span>=&gt; <span class="self">Self</span>::ANY,
             <span class="number">256 </span>=&gt; <span class="self">Self</span>::URI,
             <span class="number">257 </span>=&gt; <span class="self">Self</span>::CAA,
             <span class="kw">_ </span>=&gt; <span class="self">Self</span>::InvalidType,
@@ -538,8 +535,9 @@
         <span class="kw">match </span>input {
             <span class="string">&quot;A&quot; </span>=&gt; <span class="self">Self</span>::A,
             <span class="string">&quot;AAAA&quot; </span>=&gt; <span class="self">Self</span>::AAAA, <span class="comment">// https://www.rfc-editor.org/rfc/rfc3596#section-2.1
-            </span><span class="string">&quot;ALL&quot; </span>=&gt; <span class="self">Self</span>::ALL,
+            </span><span class="string">&quot;ANY&quot; </span>=&gt; <span class="self">Self</span>::ANY,
             <span class="string">&quot;AXFR&quot; </span>=&gt; <span class="self">Self</span>::AXFR,
+            <span class="string">&quot;CAA&quot; </span>=&gt; <span class="self">Self</span>::CAA,
             <span class="string">&quot;CNAME&quot; </span>=&gt; <span class="self">Self</span>::CNAME,
             <span class="string">&quot;HINFO&quot; </span>=&gt; <span class="self">Self</span>::HINFO,
             <span class="string">&quot;LOC&quot; </span>=&gt; <span class="self">Self</span>::LOC,
@@ -555,6 +553,7 @@
             <span class="string">&quot;PTR&quot; </span>=&gt; <span class="self">Self</span>::PTR,
             <span class="string">&quot;SOA&quot; </span>=&gt; <span class="self">Self</span>::SOA,
             <span class="string">&quot;TXT&quot; </span>=&gt; <span class="self">Self</span>::TXT,
+            <span class="string">&quot;URI&quot; </span>=&gt; <span class="self">Self</span>::URI,
             <span class="string">&quot;WKS&quot; </span>=&gt; <span class="self">Self</span>::WKS,
             <span class="kw">_ </span>=&gt; <span class="self">Self</span>::InvalidType,
         }
@@ -566,7 +565,7 @@
         <span class="kw">match </span>input {
             RecordType::A =&gt; <span class="string">&quot;A&quot;</span>,
             RecordType::AAAA =&gt; <span class="string">&quot;AAAA&quot;</span>,
-            RecordType::ALL =&gt; <span class="string">&quot;ALL&quot;</span>,
+            RecordType::ANY =&gt; <span class="string">&quot;ANY&quot;</span>,
             RecordType::AXFR =&gt; <span class="string">&quot;AXFR&quot;</span>,
             RecordType::CAA =&gt; <span class="string">&quot;CAA&quot;</span>,
             RecordType::CNAME =&gt; <span class="string">&quot;CNAME&quot;</span>,
@@ -603,27 +602,19 @@
         <span class="kw">match </span>input {
             InternalResourceRecord::A { .. } =&gt; RecordType::A,
             InternalResourceRecord::AAAA { .. } =&gt; RecordType::AAAA,
-            InternalResourceRecord::ALL { .. } =&gt; RecordType::ALL,
             InternalResourceRecord::AXFR { .. } =&gt; RecordType::AXFR,
             InternalResourceRecord::CAA { .. } =&gt; RecordType::CAA,
             InternalResourceRecord::CNAME { .. } =&gt; RecordType::CNAME,
             InternalResourceRecord::HINFO { .. } =&gt; RecordType::HINFO,
             InternalResourceRecord::InvalidType =&gt; RecordType::InvalidType,
             InternalResourceRecord::LOC { .. } =&gt; RecordType::LOC,
-            InternalResourceRecord::MAILB { .. } =&gt; RecordType::MAILB,
-            InternalResourceRecord::MB { .. } =&gt; RecordType::MB,
-            InternalResourceRecord::MG { .. } =&gt; RecordType::MG,
-            InternalResourceRecord::MINFO { .. } =&gt; RecordType::MINFO,
-            InternalResourceRecord::MR { .. } =&gt; RecordType::MR,
             InternalResourceRecord::MX { .. } =&gt; RecordType::MX,
             InternalResourceRecord::NAPTR { .. } =&gt; RecordType::NAPTR,
             InternalResourceRecord::NS { .. } =&gt; RecordType::NS,
-            InternalResourceRecord::NULL { .. } =&gt; RecordType::NULL,
             InternalResourceRecord::PTR { .. } =&gt; RecordType::PTR,
             InternalResourceRecord::SOA { .. } =&gt; RecordType::SOA,
             InternalResourceRecord::TXT { .. } =&gt; RecordType::TXT,
             InternalResourceRecord::URI { .. } =&gt; RecordType::URI,
-            InternalResourceRecord::WKS { .. } =&gt; RecordType::WKS,
         }
     }
 }
@@ -634,6 +625,7 @@
         </span><span class="kw">match </span><span class="self">self </span>{
             RecordType::A
             | RecordType::AAAA
+            | RecordType::ANY
             | RecordType::CAA
             | RecordType::CNAME
             | RecordType::HINFO
@@ -662,7 +654,7 @@
     }
 }
 
-<span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+<span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Sequence)]
 </span><span class="doccomment">/// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 </span><span class="kw">pub enum </span>RecordClass {
     <span class="doccomment">/// IN - Internet
@@ -705,8 +697,8 @@
     }
 }
 
-<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; <span class="kw">for </span>RecordClass {
-    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>RecordClass {
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value {
             <span class="string">&quot;IN&quot; </span>=&gt; RecordClass::Internet,
             <span class="string">&quot;CS&quot; </span>=&gt; RecordClass::CsNet,

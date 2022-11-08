@@ -529,63 +529,18 @@
 <span id="529">529</span>
 <span id="530">530</span>
 <span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
-<span id="562">562</span>
-<span id="563">563</span>
-<span id="564">564</span>
-<span id="565">565</span>
-<span id="566">566</span>
-<span id="567">567</span>
-<span id="568">568</span>
-<span id="569">569</span>
-<span id="570">570</span>
-<span id="571">571</span>
-<span id="572">572</span>
-<span id="573">573</span>
-<span id="574">574</span>
-<span id="575">575</span>
-<span id="576">576</span>
-<span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
-<span id="580">580</span>
-<span id="581">581</span>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::SystemState;
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
+<span class="kw">use </span><span class="kw">crate</span>::enums::SystemState;
 <span class="kw">use </span><span class="kw">crate</span>::reply::Reply;
-<span class="kw">use crate</span>::{Header, PacketType, Rcode, HEADER_BYTES};
+<span class="kw">use </span><span class="kw">crate</span>::resourcerecord::{DNSCharString, InternalResourceRecord};
+<span class="kw">use </span><span class="kw">crate</span>::zones::FileZone;
+<span class="kw">use crate</span>::{Header, PacketType, Question, Rcode, HEADER_BYTES};
 <span class="kw">use </span>clap::{arg, command, value_parser, Arg, ArgMatches};
 <span class="kw">use </span>log::{debug, trace};
 <span class="kw">use </span>std::str::from_utf8;
 <span class="kw">use </span>tokio::io::AsyncWriteExt;
+<span class="kw">use </span>tokio::sync::mpsc;
+<span class="kw">use </span>tokio::sync::oneshot;
 <span class="kw">use </span>tokio::time::sleep;
 
 <span class="kw">pub fn </span>vec_find(item: u8, search: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
@@ -811,6 +766,30 @@ name_as_bytes(
     reply_builder(id, Rcode::NameError)
 }
 
+<span class="doccomment">/// Reply to an ANY request with a HINFO &quot;RFC8482&quot; &quot;&quot; response
+</span><span class="kw">pub fn </span>reply_any(id: u16, question: Question) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, String&gt; {
+    <span class="prelude-val">Ok</span>(Reply {
+        header: Header {
+            id,
+            qr: PacketType::Answer,
+            rcode: Rcode::NoError,
+            authoritative: <span class="bool-val">true</span>,
+            qdcount: <span class="number">1</span>,
+            ancount: <span class="number">1</span>,
+            ..Header::default()
+        },
+        question: <span class="prelude-val">Some</span>(question.clone()),
+        answers: <span class="macro">vec!</span>[InternalResourceRecord::HINFO {
+            cpu: <span class="prelude-val">Some</span>(DNSCharString::from(<span class="string">&quot;RFC8482&quot;</span>)),
+            os: <span class="prelude-val">Some</span>(DNSCharString::from(<span class="string">&quot;&quot;</span>)),
+            ttl: <span class="number">3789</span>,
+            rclass: question.qclass,
+        }],
+        authorities: <span class="macro">vec!</span>[],
+        additional: <span class="macro">vec!</span>[],
+    })
+}
+
 <span class="comment">// lazy_static!{
 //     static ref GOATNS_VERSION: DNSCharString = DNSCharString::from(format!(&quot;GoatNS {}&quot;, env!(&quot;CARGO_PKG_VERSION&quot;)).as_str());
 // }
@@ -862,65 +841,6 @@ name_as_bytes(
     }
 }
 
-<span class="attribute">#[test]
-</span><span class="kw">pub fn </span>test_find_tail_match() {
-    <span class="kw">let </span>name = <span class="string">&quot;foo.example.com&quot;</span>.as_bytes().to_vec();
-    <span class="kw">let </span>target = <span class="string">&quot;zot.example.com&quot;</span>.as_bytes().to_vec();
-    <span class="kw">let </span>result = find_tail_match(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>target);
-
-    <span class="macro">assert_eq!</span>(result, <span class="number">3</span>);
-    <span class="kw">let </span>name = <span class="string">&quot;foo.yeanah.xyz&quot;</span>.as_bytes().to_vec();
-    <span class="kw">let </span>target = <span class="string">&quot;zot.example.com&quot;</span>.as_bytes().to_vec();
-    <span class="kw">let </span>result = find_tail_match(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>target);
-
-    <span class="macro">assert_eq!</span>(result, <span class="number">0</span>)
-}
-
-<span class="attribute">#[test]
-</span><span class="kw">pub fn </span>test_name_bytes_simple_compress() {
-    <span class="kw">let </span>expected_result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">192</span>, <span class="number">12</span>];
-
-    <span class="kw">let </span>test_result = name_as_bytes(<span class="string">&quot;example.com&quot;</span>.as_bytes().to_vec(), <span class="prelude-val">Some</span>(<span class="number">12</span>), <span class="prelude-val">None</span>);
-    <span class="macro">assert_eq!</span>(expected_result, test_result);
-}
-<span class="attribute">#[test]
-</span><span class="kw">pub fn </span>test_name_bytes_no_compress() {
-    <span class="kw">let </span>expected_result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">7</span>, <span class="number">101</span>, <span class="number">120</span>, <span class="number">97</span>, <span class="number">109</span>, <span class="number">112</span>, <span class="number">108</span>, <span class="number">101</span>, <span class="number">3</span>, <span class="number">99</span>, <span class="number">111</span>, <span class="number">109</span>, <span class="number">0</span>];
-
-    <span class="kw">let </span>test_result = name_as_bytes(<span class="string">&quot;example.com&quot;</span>.as_bytes().to_vec(), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-    <span class="macro">assert_eq!</span>(expected_result, test_result);
-}
-
-<span class="attribute">#[test]
-</span><span class="kw">pub fn </span>test_name_bytes_with_compression() {
-    <span class="kw">let </span>example_com = <span class="string">&quot;example.com&quot;</span>.as_bytes().to_vec();
-    <span class="kw">let </span>test_input = <span class="string">&quot;lol.example.com&quot;</span>.as_bytes().to_vec();
-
-    <span class="kw">let </span>expected_result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">108</span>, <span class="number">111</span>, <span class="number">108</span>, <span class="number">192</span>, <span class="number">12</span>];
-
-    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>example_com));
-    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>test_input));
-
-    <span class="kw">let </span>result = name_as_bytes(test_input, <span class="prelude-val">Some</span>(<span class="number">12</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>example_com));
-
-    <span class="macro">assert_eq!</span>(result, expected_result);
-}
-
-<span class="attribute">#[test]
-</span><span class="kw">pub fn </span>test_name_bytes_with_tail_compression() {
-    <span class="kw">let </span>example_com = <span class="string">&quot;ns1.example.com&quot;</span>.as_bytes().to_vec();
-    <span class="kw">let </span>test_input = <span class="string">&quot;lol.example.com&quot;</span>.as_bytes().to_vec();
-
-    <span class="kw">let </span>expected_result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">3</span>, <span class="number">108</span>, <span class="number">111</span>, <span class="number">108</span>, <span class="number">192</span>, <span class="number">16</span>];
-
-    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>example_com));
-    <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>test_input));
-
-    <span class="kw">let </span>result = name_as_bytes(test_input, <span class="prelude-val">Some</span>(<span class="number">12</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>example_com));
-
-    <span class="macro">assert_eq!</span>(result, expected_result);
-}
-
 <span class="kw">pub fn </span>clap_parser() -&gt; ArgMatches {
     <span class="macro">command!</span>() <span class="comment">// requires `cargo` feature
         // .arg(arg!([name] &quot;Optional name to operate on&quot;))
@@ -965,15 +885,13 @@ name_as_bytes(
                 .help(<span class="string">&quot;Filename to save to (used in other commands).&quot;</span>)
                 .value_parser(<span class="macro">value_parser!</span>(String)),
         )
-        <span class="comment">// .arg(arg!(
-        //     -d --debug ... &quot;Turn debugging information on&quot;
-        // ))
-        // .subcommand(
-        //     Command::new(&quot;test&quot;)
-        //         .about(&quot;does testing things&quot;)
-        //         .arg(arg!(-l --list &quot;lists test values&quot;).action(ArgAction::SetTrue)),
-        // )
-        </span>.get_matches()
+        .arg(
+            Arg::new(<span class="string">&quot;use_zonefile&quot;</span>)
+                .long(<span class="string">&quot;using-zonefile&quot;</span>)
+                .help(<span class="string">&quot;Load the zone file into the DB on startup, typically used for testing.&quot;</span>)
+                .action(clap::ArgAction::SetTrue),
+        )
+        .get_matches()
 }
 
 <span class="doccomment">/// turn a degrees/minutes/seconds format into unsigned 32-bit integer matching the format
@@ -1017,21 +935,6 @@ name_as_bytes(
     </span><span class="kw">let </span>retval: u8 = (mantissa &lt;&lt; <span class="number">4</span>) | (exponent <span class="kw">as </span>u8);
     retval
 }
-
-<span class="attribute">#[test]
-</span><span class="kw">fn </span>test_loc_size_to_u8() {
-    <span class="comment">// let test = &quot;10&quot;;
-    // let res = loc_size_to_u8(&amp;test).unwrap();
-    // eprintln!(&quot;res: {res:3x}&quot;);
-
-    // assert_eq!(1,2);
-    </span><span class="macro">assert_eq!</span>(loc_size_to_u8(<span class="number">10.0</span>), <span class="number">0x13</span>);
-    <span class="macro">assert_eq!</span>(loc_size_to_u8(<span class="number">100.0</span>), <span class="number">0x14</span>);
-    <span class="macro">eprintln!</span>(<span class="string">&quot;testing 90000000.0 = 0x99&quot;</span>);
-    <span class="macro">assert_eq!</span>(loc_size_to_u8(<span class="number">90000000.0</span>), <span class="number">0x99</span>);
-    <span class="macro">eprintln!</span>(<span class="string">&quot;{:3x}&quot;</span>, loc_size_to_u8(<span class="number">20000000.0</span>));
-    <span class="comment">// assert_eq!(loc_size_to_u8(20000000.0), Ok(0x29));
-</span>}
 
 <span class="kw">pub async fn </span>cli_commands(
     tx: tokio::sync::mpsc::Sender&lt;Command&gt;,
@@ -1079,10 +982,6 @@ name_as_bytes(
     };
     <span class="prelude-val">Ok</span>(SystemState::Server)
 }
-<span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
-<span class="kw">use </span><span class="kw">crate</span>::zones::FileZone;
-<span class="kw">use </span>tokio::sync::mpsc;
-<span class="kw">use </span>tokio::sync::oneshot;
 <span class="doccomment">/// dump a zone to a file
 </span><span class="kw">pub async fn </span>export_zone_file(
     tx: mpsc::Sender&lt;Command&gt;,
@@ -1093,7 +992,8 @@ name_as_bytes(
 
     </span><span class="kw">let </span>(tx_oneshot, rx_oneshot) = oneshot::channel();
     <span class="kw">let </span>ds_req: Command = Command::GetZone {
-        name: zone_name.to_owned(),
+        id: <span class="prelude-val">None</span>,
+        name: <span class="prelude-val">Some</span>(zone_name.clone()),
         resp: tx_oneshot,
     };
     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = tx.send(ds_req).<span class="kw">await </span>{

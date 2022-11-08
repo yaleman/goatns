@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["STATUS_OK",""]],"fn":[["api_query",""],["build",""]],"mod":[["api",""],["generic",""],["macros",""],["ui",""]],"struct":[["SharedState","Internal State handler for the datastore object within the API"]]};

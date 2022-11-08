@@ -440,19 +440,83 @@
 <span id="440">440</span>
 <span id="441">441</span>
 <span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
 </pre><pre class="rust"><code><span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::net::SocketAddr;
 <span class="kw">use </span>std::str::{from_utf8, FromStr};
 <span class="kw">use </span>std::time::Duration;
 <span class="kw">use </span>tokio::io::{<span class="self">self</span>, AsyncReadExt};
-<span class="kw">use </span>tokio::net::{TcpListener, UdpSocket};
+<span class="kw">use </span>tokio::net::{TcpListener, TcpStream, UdpSocket};
 <span class="kw">use </span>tokio::sync::{broadcast, mpsc, oneshot};
 <span class="kw">use </span>tokio::time::timeout;
 
 <span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
-<span class="kw">use </span><span class="kw">crate</span>::enums::{Agent, AgentState, PacketType, Rcode, RecordClass};
+<span class="kw">use </span><span class="kw">crate</span>::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
 <span class="kw">use </span><span class="kw">crate</span>::reply::Reply;
+<span class="kw">use </span><span class="kw">crate</span>::resourcerecord::{DNSCharString, InternalResourceRecord};
 <span class="kw">use </span><span class="kw">crate</span>::utils::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::zones::ZoneRecord;
 <span class="kw">use crate</span>::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
@@ -464,30 +528,45 @@
 </span>}
 
 <span class="doccomment">/// this handles a shutdown CHAOS request
-</span><span class="kw">async fn </span>check_for_shutdown(r: <span class="kw-2">&amp;</span>Reply, addr: <span class="kw-2">&amp;</span>SocketAddr, config: <span class="kw-2">&amp;</span>ConfigFile) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+</span><span class="kw">async fn </span>check_for_shutdown(
+    r: <span class="kw-2">&amp;</span>Reply,
+    addr: <span class="kw-2">&amp;</span>SocketAddr,
+    config: <span class="kw-2">&amp;</span>ConfigFile,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, <span class="prelude-ty">Option</span>&lt;Reply&gt;&gt; {
     <span class="comment">// when you get a CHAOS from localhost with &quot;shutdown&quot; break dat loop
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(q) = <span class="kw-2">&amp;</span>r.question {
         <span class="kw">if </span>q.qclass == RecordClass::Chaos {
-            <span class="kw">if let </span><span class="prelude-val">Ok</span>(qname) = from_utf8(<span class="kw-2">&amp;</span>q.qname) {
-                <span class="comment">// Just don&#39;t do this on UDP, because we can&#39;t really tell who it&#39;s coming from.
-                </span><span class="kw">if </span>qname == <span class="string">&quot;shutdown&quot; </span>{
-                    <span class="kw">match </span>config.ip_allow_lists.shutdown.contains(<span class="kw-2">&amp;</span>addr.ip()) {
-                        <span class="bool-val">true </span>=&gt; {
-                            <span class="macro">log::info!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, shutting down&quot;</span>, addr.ip());
-                            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-                        }
-                        <span class="bool-val">false </span>=&gt; <span class="macro">log::warn!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, ignoring!&quot;</span>, addr.ip()),
+            <span class="kw">let </span>qname = from_utf8(<span class="kw-2">&amp;</span>q.qname)
+                .map_err(|e| {
+                    <span class="macro">log::error!</span>(
+                        <span class="string">&quot;Failed to parse qname from {:?}, this shouldn&#39;t be able to happen! {e:?}&quot;</span>,
+                        q.qname
+                    );
+                })
+                .unwrap();
+            <span class="comment">// Just don&#39;t do this on UDP, because we can&#39;t really tell who it&#39;s coming from.
+            </span><span class="kw">if </span>qname == <span class="string">&quot;shutdown&quot; </span>{
+                <span class="comment">// when we get a request, we update the response to say if we&#39;re going to do it or not
+                </span><span class="kw">match </span>config.ip_allow_lists.shutdown.contains(<span class="kw-2">&amp;</span>addr.ip()) {
+                    <span class="bool-val">true </span>=&gt; {
+                        <span class="macro">log::info!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, shutting down&quot;</span>, addr.ip());
+                        <span class="kw">let </span><span class="kw-2">mut </span>chaos_reply = r.clone();
+                        chaos_reply.answers.push(CHAOS_OK.clone());
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(chaos_reply);
                     }
-                }
-            } <span class="kw">else </span>{
-                <span class="macro">log::error!</span>(
-                    <span class="string">&quot;Failed to parse qname from {:?}, this shouldn&#39;t be able to happen!&quot;</span>,
-                    q.qname
-                );
+                    <span class="bool-val">false </span>=&gt; {
+                        <span class="comment">// get lost!  🤣
+                        </span><span class="macro">log::warn!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, ignoring!&quot;</span>, addr.ip());
+                        <span class="kw">let </span><span class="kw-2">mut </span>chaos_reply = r.clone();
+                        chaos_reply.answers.push(CHAOS_NO.clone());
+                        chaos_reply.header.rcode = Rcode::Refused;
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="prelude-val">Some</span>(chaos_reply));
+                    }
+                };
             }
         }
     };
-    <span class="prelude-val">Err</span>(())
+    <span class="prelude-val">Err</span>(<span class="prelude-val">None</span>)
 }
 
 <span class="doccomment">/// this handles a version CHAOS request
@@ -593,10 +672,125 @@
     }
 }
 
+<span class="kw">pub async fn </span>tcp_conn_handler(
+    stream: <span class="kw-2">&amp;mut </span>TcpStream,
+    addr: SocketAddr,
+    tx: mpsc::Sender&lt;Command&gt;,
+    agent_tx: broadcast::Sender&lt;AgentState&gt;,
+    config: ConfigFile,
+) -&gt; io::Result&lt;()&gt; {
+    <span class="kw">let </span>(<span class="kw-2">mut </span>reader, writer) = stream.split();
+    <span class="kw">let </span>msg_length: usize = reader.read_u16().<span class="kw">await</span><span class="question-mark">?</span>.into();
+    <span class="macro">log::debug!</span>(<span class="string">&quot;msg_length={msg_length}&quot;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>buf: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
+
+    <span class="kw">while </span>buf.len() &lt; msg_length {
+        <span class="kw">let </span>len = <span class="kw">match </span>reader.read_buf(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await </span>{
+            <span class="prelude-val">Ok</span>(size) =&gt; size,
+            <span class="prelude-val">Err</span>(error) =&gt; {
+                <span class="macro">log::error!</span>(<span class="string">&quot;Failed to read from TCP Stream: {:?}&quot;</span>, error);
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+            }
+        };
+        <span class="kw">if </span>len &gt; <span class="number">0 </span>{
+            <span class="macro">log::debug!</span>(<span class="string">&quot;Read {:?} bytes from TCP stream&quot;</span>, len);
+        }
+    }
+
+    <span class="kw">crate</span>::utils::hexdump(buf.clone());
+    <span class="comment">// the first two bytes of a tcp query is the message length
+    // ref &lt;https://www.rfc-editor.org/rfc/rfc7766#section-8&gt;
+
+    // check the message is long enough
+    </span><span class="kw">if </span>buf.len() &lt; msg_length {
+        <span class="macro">log::warn!</span>(
+            <span class="string">&quot;Message length too short {}, wanted {}&quot;</span>,
+            buf.len(),
+            msg_length + <span class="number">2
+        </span>);
+    } <span class="kw">else </span>{
+        <span class="macro">log::info!</span>(<span class="string">&quot;TCP Message length ftw!&quot;</span>);
+    }
+
+    <span class="comment">// skip the TCP length header because rad
+    </span><span class="kw">let </span>buf = <span class="kw-2">&amp;</span>buf[<span class="number">0</span>..msg_length];
+    <span class="kw">let </span>result = <span class="kw">match </span>timeout(
+        Duration::from_millis(REPLY_TIMEOUT_MS),
+        parse_query(tx.clone(), msg_length, buf, config.capture_packets),
+    )
+    .<span class="kw">await
+    </span>{
+        <span class="prelude-val">Ok</span>(reply) =&gt; reply,
+        <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
+            <span class="macro">log::error!</span>(<span class="string">&quot;Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        }
+    };
+
+    <span class="kw">match </span>result {
+        <span class="prelude-val">Ok</span>(r) =&gt; {
+            <span class="macro">log::debug!</span>(<span class="string">&quot;TCP Result: {r:?}&quot;</span>);
+
+            <span class="comment">// when you get a CHAOS from the allow-list with &quot;shutdown&quot; it&#39;s quitting time
+            </span><span class="kw">let </span>r = <span class="kw">match </span>check_for_shutdown(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>addr, <span class="kw-2">&amp;</span>config).<span class="kw">await </span>{
+                <span class="comment">// no change here
+                </span><span class="prelude-val">Err</span>(reply) =&gt; <span class="kw">match </span>reply {
+                    <span class="prelude-val">None </span>=&gt; r,
+                    <span class="prelude-val">Some</span>(response) =&gt; response,
+                },
+                <span class="prelude-val">Ok</span>(reply) =&gt; {
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = agent_tx.send(AgentState::Stopped {
+                        agent: Agent::TCPServer,
+                    }) {
+                        <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send UDPServer shutdown message: {error:?}&quot;</span>);
+                    };
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = tx.send(Command::Shutdown).<span class="kw">await </span>{
+                        <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send shutdown command to datastore.. {error:?}&quot;</span>);
+                    };
+                    reply
+                }
+            };
+
+            <span class="kw">let </span>reply_bytes: Vec&lt;u8&gt; = <span class="kw">match </span>r.as_bytes().<span class="kw">await </span>{
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
+                <span class="prelude-val">Err</span>(error) =&gt; {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse reply {:?} into bytes: {:?}&quot;</span>, r, error);
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                }
+            };
+
+            <span class="macro">log::trace!</span>(<span class="string">&quot;reply_bytes: {:?}&quot;</span>, reply_bytes);
+
+            <span class="kw">let </span>reply_bytes = <span class="kw-2">&amp;</span>reply_bytes <span class="kw">as </span><span class="kw-2">&amp;</span>[u8];
+            <span class="comment">// send the outgoing message length
+            </span><span class="kw">let </span>response_length: u16 = reply_bytes.len() <span class="kw">as </span>u16;
+            <span class="kw">let </span>len = <span class="kw">match </span>writer.try_write(<span class="kw-2">&amp;</span>response_length.to_be_bytes()) {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
+                <span class="prelude-val">Err</span>(err) =&gt; {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                }
+            };
+            <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
+
+            <span class="comment">// send the data
+            </span><span class="kw">let </span>len = <span class="kw">match </span>writer.try_write(reply_bytes) {
+                <span class="prelude-val">Ok</span>(value) =&gt; value,
+                <span class="prelude-val">Err</span>(err) =&gt; {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                }
+            };
+            <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
+        }
+        <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error: {}&quot;</span>, error),
+    }
+    <span class="prelude-val">Ok</span>(())
+}
+
 <span class="doccomment">/// main handler for the TCP side of things
 ///
 /// Ref &lt;https://www.rfc-editor.org/rfc/rfc7766&gt;
-
 </span><span class="kw">pub async fn </span>tcp_server(
     bind_address: SocketAddr,
     config: ConfigFile,
@@ -604,8 +798,7 @@
     agent_tx: broadcast::Sender&lt;AgentState&gt;,
     <span class="kw-2">mut </span>agent_rx: broadcast::Receiver&lt;AgentState&gt;,
 ) -&gt; io::Result&lt;()&gt; {
-    <span class="comment">// TODO: add a configurable idle timeout for the TCP server
-    </span><span class="kw">let </span>tcpserver = <span class="kw">match </span>TcpListener::bind(bind_address).<span class="kw">await </span>{
+    <span class="kw">let </span>tcpserver = <span class="kw">match </span>TcpListener::bind(bind_address).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; {
             <span class="macro">log::info!</span>(<span class="string">&quot;Started TCP listener on {}&quot;</span>, bind_address);
             value
@@ -619,112 +812,28 @@
     <span class="kw">loop </span>{
         <span class="kw">let </span>(<span class="kw-2">mut </span>stream, addr) = <span class="kw">match </span>tcpserver.accept().<span class="kw">await </span>{
             <span class="prelude-val">Ok</span>(value) =&gt; value,
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t get data from TcpStrream: {:?}&quot;</span>, error),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t get data from TcpStream: {:?}&quot;</span>, error),
         };
+
         <span class="macro">log::debug!</span>(<span class="string">&quot;TCP connection from {:?}&quot;</span>, addr);
-
-        <span class="kw">let </span>(<span class="kw-2">mut </span>reader, writer) = stream.split();
-        <span class="kw">let </span>msg_length: usize = reader.read_u16().<span class="kw">await</span><span class="question-mark">?</span>.into();
-        <span class="macro">log::debug!</span>(<span class="string">&quot;msg_length={msg_length}&quot;</span>);
-        <span class="kw">let </span><span class="kw-2">mut </span>buf: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
-
-        <span class="kw">while </span>buf.len() &lt; msg_length {
-            <span class="kw">let </span>len = <span class="kw">match </span>reader.read_buf(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await </span>{
-                <span class="prelude-val">Ok</span>(size) =&gt; size,
-                <span class="prelude-val">Err</span>(error) =&gt; {
-                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to read from TCP Stream: {:?}&quot;</span>, error);
-                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-                }
-            };
-            <span class="kw">if </span>len &gt; <span class="number">0 </span>{
-                <span class="macro">log::debug!</span>(<span class="string">&quot;Read {:?} bytes from TCP stream&quot;</span>, len);
+        <span class="kw">let </span>loop_tx = tx.clone();
+        <span class="kw">let </span>loop_config = config.clone();
+        <span class="kw">let </span>loop_agent_tx = agent_tx.clone();
+        tokio::spawn(<span class="kw">async move </span>{
+            <span class="kw">if </span>timeout(
+                Duration::from_secs(loop_config.tcp_client_timeout),
+                tcp_conn_handler(<span class="kw-2">&amp;mut </span>stream, addr, loop_tx, loop_agent_tx, loop_config),
+            )
+            .<span class="kw">await</span>.is_err()
+            {
+                <span class="macro">log::warn!</span>(
+                    <span class="string">&quot;TCP Connection from {addr:?} terminated after {} seconds.&quot;</span>,
+                    config.tcp_client_timeout
+                );
             }
-        }
+        })
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
-        <span class="kw">crate</span>::utils::hexdump(buf.clone());
-        <span class="comment">// the first two bytes of a tcp query is the message length
-        // ref &lt;https://www.rfc-editor.org/rfc/rfc7766#section-8&gt;
-
-        // check the message is long enough
-        </span><span class="kw">if </span>buf.len() &lt; msg_length {
-            <span class="macro">log::warn!</span>(
-                <span class="string">&quot;Message length too short {}, wanted {}&quot;</span>,
-                buf.len(),
-                msg_length + <span class="number">2
-            </span>);
-        } <span class="kw">else </span>{
-            <span class="macro">log::info!</span>(<span class="string">&quot;TCP Message length ftw!&quot;</span>);
-        }
-
-        <span class="comment">// skip the TCP length header because rad
-        </span><span class="kw">let </span>buf = <span class="kw-2">&amp;</span>buf[<span class="number">0</span>..msg_length];
-        <span class="kw">let </span>result = <span class="kw">match </span>timeout(
-            Duration::from_millis(REPLY_TIMEOUT_MS),
-            parse_query(tx.clone(), msg_length, buf, config.capture_packets),
-        )
-        .<span class="kw">await
-        </span>{
-            <span class="prelude-val">Ok</span>(reply) =&gt; reply,
-            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                <span class="macro">log::error!</span>(
-                    <span class="string">&quot;Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms&quot;
-                </span>);
-                <span class="kw">continue</span>;
-            }
-        };
-
-        <span class="kw">match </span>result {
-            <span class="prelude-val">Ok</span>(r) =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;TCP Result: {r:?}&quot;</span>);
-
-                <span class="comment">// when you get a CHAOS from the allow-list with &quot;shutdown&quot; it&#39;s quitting time
-                </span><span class="kw">if </span>check_for_shutdown(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>addr, <span class="kw-2">&amp;</span>config).<span class="kw">await</span>.is_ok() {
-                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = agent_tx.send(AgentState::Stopped {
-                        agent: Agent::TCPServer,
-                    }) {
-                        <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send UDPServer shutdown message: {error:?}&quot;</span>);
-                    };
-                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = tx.send(Command::Shutdown).<span class="kw">await </span>{
-                        <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send shutdown command to datastore.. {error:?}&quot;</span>);
-                    };
-
-                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-                }
-
-                <span class="kw">let </span>reply_bytes: Vec&lt;u8&gt; = <span class="kw">match </span>r.as_bytes().<span class="kw">await </span>{
-                    <span class="prelude-val">Ok</span>(value) =&gt; value,
-                    <span class="prelude-val">Err</span>(error) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse reply {:?} into bytes: {:?}&quot;</span>, r, error);
-                        <span class="kw">continue</span>;
-                    }
-                };
-
-                <span class="macro">log::trace!</span>(<span class="string">&quot;reply_bytes: {:?}&quot;</span>, reply_bytes);
-
-                <span class="kw">let </span>reply_bytes = <span class="kw-2">&amp;</span>reply_bytes <span class="kw">as </span><span class="kw-2">&amp;</span>[u8];
-                <span class="comment">// send the outgoing message length
-                </span><span class="kw">let </span>response_length: u16 = reply_bytes.len() <span class="kw">as </span>u16;
-                <span class="kw">let </span>len = <span class="kw">match </span>writer.try_write(<span class="kw-2">&amp;</span>response_length.to_be_bytes()) {
-                    <span class="prelude-val">Ok</span>(value) =&gt; value,
-                    <span class="prelude-val">Err</span>(err) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
-                        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-                    }
-                };
-                <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
-
-                <span class="comment">// send the data
-                </span><span class="kw">let </span>len = <span class="kw">match </span>writer.try_write(reply_bytes) {
-                    <span class="prelude-val">Ok</span>(value) =&gt; value,
-                    <span class="prelude-val">Err</span>(err) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
-                        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-                    }
-                };
-                <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
-            }
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error: {}&quot;</span>, error),
-        }
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(agent_state) = agent_rx.try_recv() {
             <span class="macro">log::info!</span>(<span class="string">&quot;Got agent state: {:?}&quot;</span>, agent_state);
         };
@@ -760,6 +869,19 @@
     <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed header: {:?}&quot;</span>, header);
     get_result(header, len, buf, datastore).<span class="kw">await
 </span>}
+
+<span class="macro">lazy_static! </span>{
+    <span class="kw">static </span><span class="kw-2">ref </span>CHAOS_OK: InternalResourceRecord = InternalResourceRecord::TXT {
+        txtdata: DNSCharString::from(<span class="string">&quot;OK&quot;</span>),
+        ttl: <span class="number">0</span>,
+        class: RecordClass::Chaos,
+    };
+    <span class="kw">static </span><span class="kw-2">ref </span>CHAOS_NO: InternalResourceRecord = InternalResourceRecord::TXT {
+        txtdata: DNSCharString::from(<span class="string">&quot;NO&quot;</span>),
+        ttl: <span class="number">0</span>,
+        class: RecordClass::Chaos,
+    };
+}
 
 <span class="doccomment">/// The generic handler for the packets once they&#39;ve been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y&#39;know?
 </span><span class="kw">async fn </span>get_result(
@@ -820,8 +942,12 @@
           }*/
     </span>}
 
-    <span class="comment">// build the request to the datastore to make the query
+    <span class="kw">if let </span>RecordType::ANY {} = question.qtype {
+        <span class="comment">// TODO this should check to see if we have a zone record, but that requires walking down the qname record recursively, which is its own thing. We just YOLO a HINFO back for any request now.
+        </span><span class="kw">return </span>reply_any(header.id, question);
+    };
 
+    <span class="comment">// build the request to the datastore to make the query
     </span><span class="kw">let </span>(tx_oneshot, rx_oneshot) = oneshot::channel();
     <span class="kw">let </span>ds_req: Command = Command::GetRecord {
         name: question.qname.clone(),

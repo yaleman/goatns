@@ -967,89 +967,6 @@
 <span id="967">967</span>
 <span id="968">968</span>
 <span id="969">969</span>
-<span id="970">970</span>
-<span id="971">971</span>
-<span id="972">972</span>
-<span id="973">973</span>
-<span id="974">974</span>
-<span id="975">975</span>
-<span id="976">976</span>
-<span id="977">977</span>
-<span id="978">978</span>
-<span id="979">979</span>
-<span id="980">980</span>
-<span id="981">981</span>
-<span id="982">982</span>
-<span id="983">983</span>
-<span id="984">984</span>
-<span id="985">985</span>
-<span id="986">986</span>
-<span id="987">987</span>
-<span id="988">988</span>
-<span id="989">989</span>
-<span id="990">990</span>
-<span id="991">991</span>
-<span id="992">992</span>
-<span id="993">993</span>
-<span id="994">994</span>
-<span id="995">995</span>
-<span id="996">996</span>
-<span id="997">997</span>
-<span id="998">998</span>
-<span id="999">999</span>
-<span id="1000">1000</span>
-<span id="1001">1001</span>
-<span id="1002">1002</span>
-<span id="1003">1003</span>
-<span id="1004">1004</span>
-<span id="1005">1005</span>
-<span id="1006">1006</span>
-<span id="1007">1007</span>
-<span id="1008">1008</span>
-<span id="1009">1009</span>
-<span id="1010">1010</span>
-<span id="1011">1011</span>
-<span id="1012">1012</span>
-<span id="1013">1013</span>
-<span id="1014">1014</span>
-<span id="1015">1015</span>
-<span id="1016">1016</span>
-<span id="1017">1017</span>
-<span id="1018">1018</span>
-<span id="1019">1019</span>
-<span id="1020">1020</span>
-<span id="1021">1021</span>
-<span id="1022">1022</span>
-<span id="1023">1023</span>
-<span id="1024">1024</span>
-<span id="1025">1025</span>
-<span id="1026">1026</span>
-<span id="1027">1027</span>
-<span id="1028">1028</span>
-<span id="1029">1029</span>
-<span id="1030">1030</span>
-<span id="1031">1031</span>
-<span id="1032">1032</span>
-<span id="1033">1033</span>
-<span id="1034">1034</span>
-<span id="1035">1035</span>
-<span id="1036">1036</span>
-<span id="1037">1037</span>
-<span id="1038">1038</span>
-<span id="1039">1039</span>
-<span id="1040">1040</span>
-<span id="1041">1041</span>
-<span id="1042">1042</span>
-<span id="1043">1043</span>
-<span id="1044">1044</span>
-<span id="1045">1045</span>
-<span id="1046">1046</span>
-<span id="1047">1047</span>
-<span id="1048">1048</span>
-<span id="1049">1049</span>
-<span id="1050">1050</span>
-<span id="1051">1051</span>
-<span id="1052">1052</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::{RecordClass, RecordType};
 <span class="kw">use </span><span class="kw">crate</span>::utils::{dms_to_u32, hexdump, name_as_bytes};
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZoneRecord;
@@ -1214,7 +1131,6 @@
         ttl: u32,
         rclass: RecordClass,
     }, <span class="comment">// 252 A request for a transfer of an entire zone
-
     // [RFC8659](https://www.rfc-editor.org/rfc/rfc8659) - CAA Record
     </span>CAA {
         flag: u8,
@@ -1308,41 +1224,18 @@
         rclass: RecordClass,
     }, <span class="comment">// 6 marks the start of a zone of authority
 
-    </span>MB {
-        ttl: u32,
-        rclass: RecordClass,
-    }, <span class="comment">// 7 a mailbox domain name (EXPERIMENTAL)
-    </span>MG {
-        ttl: u32,
-        rclass: RecordClass,
-    }, <span class="comment">// 8 a mail group member (EXPERIMENTAL)
-    </span>MR {
-        ttl: u32,
-        rclass: RecordClass,
-    }, <span class="comment">// 9 a mail rename domain name (EXPERIMENTAL)
-    </span>NULL {
-        ttl: u32,
-        rclass: RecordClass,
-    }, <span class="comment">// 10 a null RR (EXPERIMENTAL)
-    </span>WKS {
-        ttl: u32,
-        rclass: RecordClass,
-    }, <span class="comment">// 11 a well known service description
     </span>PTR {
         ptrdname: DomainName,
         ttl: u32,
         rclass: RecordClass,
     }, <span class="comment">// 12 a domain name pointer
+    </span><span class="doccomment">/// RFC1035
     </span>HINFO {
         cpu: <span class="prelude-ty">Option</span>&lt;DNSCharString&gt;,
         os: <span class="prelude-ty">Option</span>&lt;DNSCharString&gt;,
         ttl: u32,
         rclass: RecordClass,
     }, <span class="comment">// 13 host information
-    </span>MINFO {
-        ttl: u32,
-        rclass: RecordClass,
-    }, <span class="comment">// 14 mailbox or mail list information
     </span>MX {
         preference: u16,
         exchange: DomainName,
@@ -1361,17 +1254,7 @@
         ttl: u32,
         rclass: RecordClass,
     },
-
-    MAILB {
-        ttl: u32,
-        rclass: RecordClass,
-    }, <span class="comment">// 253 A request for mailbox-related records (MB, MG or MR)
-
-    // MAILA {
-    //     ttl: u32,
-    // }, // 254 A request for mail agent RRs (Obsolete - see MX)
-    </span>ALL {}, <span class="comment">// 255 A request for all records (*)
-    </span>InvalidType,
+    InvalidType,
 }
 
 <span class="kw">impl </span>TryFrom&lt;FileZoneRecord&gt; <span class="kw">for </span>InternalResourceRecord {
@@ -1586,27 +1469,19 @@
         <span class="kw">match </span><span class="self">self </span>{
             InternalResourceRecord::A { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::A,
             InternalResourceRecord::AAAA { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::AAAA,
-            InternalResourceRecord::ALL { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::ALL,
             InternalResourceRecord::AXFR { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::AXFR,
             InternalResourceRecord::CAA { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::CAA,
             InternalResourceRecord::CNAME { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::CNAME,
             InternalResourceRecord::HINFO { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::HINFO,
             InternalResourceRecord::InvalidType =&gt; other == <span class="kw-2">&amp;</span>RecordType::InvalidType,
-            InternalResourceRecord::MAILB { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MAILB,
             InternalResourceRecord::LOC { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::LOC,
-            InternalResourceRecord::MB { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MB,
-            InternalResourceRecord::MG { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MG,
-            InternalResourceRecord::MINFO { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MINFO,
-            InternalResourceRecord::MR { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MR,
             InternalResourceRecord::MX { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::MX,
             InternalResourceRecord::NAPTR { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::NAPTR,
             InternalResourceRecord::NS { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::NS,
-            InternalResourceRecord::NULL { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::NULL,
             InternalResourceRecord::PTR { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::PTR,
             InternalResourceRecord::SOA { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::SOA,
             InternalResourceRecord::TXT { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::TXT,
             InternalResourceRecord::URI { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::URI,
-            InternalResourceRecord::WKS { .. } =&gt; other == <span class="kw-2">&amp;</span>RecordType::WKS,
         }
     }
 }
@@ -1621,9 +1496,7 @@
                 <span class="macro">log::trace!</span>(<span class="string">&quot;turning CNAME {cname:?} into bytes&quot;</span>);
                 cname.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(question))
             }
-            <span class="comment">// InternalResourceRecord::MD {  } =&gt; todo!(),
-            // InternalResourceRecord::MF {  } =&gt; todo!(),
-            </span>InternalResourceRecord::LOC {
+            InternalResourceRecord::LOC {
                 ttl,
                 version,
                 size,
@@ -1696,12 +1569,7 @@
                 res.extend(<span class="kw-2">&amp;</span>target.data);
                 res
             }
-            <span class="comment">// InternalResourceRecord::MB {  } =&gt; todo!(),
-            // InternalResourceRecord::MG {  } =&gt; todo!(),
-            // InternalResourceRecord::MR {  } =&gt; todo!(),
-            // InternalResourceRecord::NULL {  } =&gt; todo!(),
-            // InternalResourceRecord::WKS {  } =&gt; todo!(),
-            </span>InternalResourceRecord::HINFO { cpu, os, .. } =&gt; {
+            InternalResourceRecord::HINFO { cpu, os, .. } =&gt; {
                 <span class="kw">let </span><span class="kw-2">mut </span>hinfo_bytes: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
                 <span class="kw">match </span>cpu {
                     <span class="prelude-val">Some</span>(value) =&gt; {
@@ -1735,8 +1603,6 @@
                 mx_bytes
             }
             InternalResourceRecord::AXFR { .. } =&gt; <span class="macro">todo!</span>(),
-            InternalResourceRecord::MAILB { .. } =&gt; <span class="macro">todo!</span>(),
-            InternalResourceRecord::ALL {} =&gt; <span class="macro">todo!</span>(),
             InternalResourceRecord::InvalidType =&gt; <span class="macro">todo!</span>(),
             InternalResourceRecord::CAA {
                 flag, tag, value, ..
@@ -1749,26 +1615,7 @@
 
                 result
             }
-            <span class="attribute">#[allow(unused_variables)]
-            </span>InternalResourceRecord::NAPTR {
-                domain,
-                order,
-                preference,
-                flags,
-                ..
-            } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[allow(unused_variables)]
-            </span>InternalResourceRecord::MB { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[allow(unused_variables)]
-            </span>InternalResourceRecord::MG { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[allow(unused_variables)]
-            </span>InternalResourceRecord::MR { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[allow(unused_variables)]
-            </span>InternalResourceRecord::NULL { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[allow(unused_variables)]
-            </span>InternalResourceRecord::WKS { .. } =&gt; <span class="macro">todo!</span>(),
-            <span class="attribute">#[allow(unused_variables)]
-            </span>InternalResourceRecord::MINFO { .. } =&gt; <span class="macro">todo!</span>(),
+            InternalResourceRecord::NAPTR { .. } =&gt; <span class="macro">todo!</span>(),
         }
     }
 
@@ -2088,19 +1935,6 @@
 <span class="doccomment">/// tests to ensure that no label in the name is longer than 63 octets (bytes)
 </span><span class="kw">pub fn </span>check_long_labels(testval: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="kw">return </span>testval.split(<span class="string">&#39;.&#39;</span>).into_iter().any(|x| x.len() &gt; <span class="number">63</span>);
-}
-
-<span class="attribute">#[test]
-</span><span class="kw">fn </span>test_check_long_labels() {
-    <span class="macro">assert_eq!</span>(<span class="bool-val">false</span>, check_long_labels(<span class="kw-2">&amp;</span><span class="string">&quot;hello.&quot;</span>.to_string()));
-    <span class="macro">assert_eq!</span>(<span class="bool-val">false</span>, check_long_labels(<span class="kw-2">&amp;</span><span class="string">&quot;hello.world&quot;</span>.to_string()));
-    <span class="macro">assert_eq!</span>(
-        <span class="bool-val">true</span>,
-        check_long_labels(
-            <span class="kw-2">&amp;</span><span class="string">&quot;foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890&quot;
-                </span>.to_string()
-        )
-    );
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

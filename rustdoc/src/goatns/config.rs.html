@@ -195,33 +195,138 @@
 <span id="195">195</span>
 <span id="196">196</span>
 <span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
 </pre><pre class="rust"><code><span class="kw">use </span>clap::ArgMatches;
 <span class="kw">use </span>config::{Config, File};
-<span class="kw">use </span>flexi_logger::LoggerHandle;
+<span class="kw">use </span>flexi_logger::filter::{LogLineFilter, LogLineWriter};
+<span class="kw">use </span>flexi_logger::{DeferredNow, LoggerHandle};
+<span class="kw">use </span>gethostname::gethostname;
+<span class="comment">// use ipnet::IpNet;
+</span><span class="kw">use </span>rand::distributions::{Alphanumeric, DistString};
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::net::IpAddr;
+<span class="kw">use </span>std::net::SocketAddr;
 <span class="kw">use </span>std::path::PathBuf;
+<span class="kw">use </span>std::str::FromStr;
 
 <span class="attribute">#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
+</span><span class="doccomment">/// Allow-listing ranges for making particular kinds of requests
 </span><span class="kw">pub struct </span>IPAllowList {
     <span class="comment">// Allow CH TXT VERSION.BIND or VERSION requests
     // pub version: Vec&lt;IpAddr&gt;,
-    </span><span class="doccomment">/// A list of allowed IPs to send a shutdown record from
+    </span><span class="doccomment">/// IPs allowed to make AXFR requests
+    </span><span class="comment">// pub axfr: Vec&lt;IpNet&gt;,
+    // TODO: Change shutdown from IpAddr to ipnet
+    </span><span class="doccomment">/// A list of allowed IPs which can send a &quot;shutdown CH&quot; request
     </span><span class="kw">pub </span>shutdown: Vec&lt;IpAddr&gt;,
 }
 
-<span class="attribute">#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Serialize)]
+<span class="attribute">#[derive(Debug, Deserialize, Eq, PartialEq, Clone, Serialize)]
 </span><span class="kw">pub struct </span>ConfigFile {
-    <span class="doccomment">/// Listen address, default is 0.0.0.0
+    <span class="doccomment">/// The server&#39;s hostname when generating an SOA record, defaults to the results of gethostname()
+    </span><span class="kw">pub </span>hostname: String,
+    <span class="doccomment">/// DNS listener address, default is 127.0.0.1
     </span><span class="kw">pub </span>address: String,
-    <span class="doccomment">/// Listen on this port, default is 15353
+    <span class="doccomment">/// Listen for DNS queries on this port, default is 15353
     </span><span class="kw">pub </span>port: u16,
-    <span class="kw">pub </span>capture_packets: bool,
+    <span class="doccomment">/// If we should capture packets on request/response
+    </span><span class="kw">pub </span>capture_packets: bool,
     <span class="doccomment">/// Default is &quot;DEBUG&quot;
     </span><span class="kw">pub </span>log_level: String,
-    <span class="doccomment">/// How long until we drop client connections
-    </span><span class="kw">pub </span>tcp_client_timeout: u16,
+    <span class="doccomment">/// How long until we drop TCP client connections, defaults to 5 seconds.
+    </span><span class="kw">pub </span>tcp_client_timeout: u64,
     <span class="doccomment">/// Enable a HINFO record at hinfo.goat
     </span><span class="kw">pub </span>enable_hinfo: bool,
     <span class="doccomment">/// The location for the zone sqlite file
@@ -229,49 +334,83 @@
     <span class="doccomment">/// Where the JSON zone file is
     </span><span class="kw">pub </span>zone_file: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// IP Allow lists
+    </span><span class="attribute">#[serde(flatten)]
     </span><span class="kw">pub </span>ip_allow_lists: IPAllowList,
+    <span class="doccomment">/// Do you really want an API?
+    </span><span class="kw">pub </span>enable_api: bool,
     <span class="doccomment">/// API / Web UI Port
     </span><span class="kw">pub </span>api_port: u16,
     <span class="doccomment">/// Certificate path
     </span><span class="kw">pub </span>api_tls_cert: PathBuf,
     <span class="doccomment">/// TLS key path
     </span><span class="kw">pub </span>api_tls_key: PathBuf,
+    <span class="doccomment">/// Static File Directory for api things
+    </span><span class="kw">pub </span>api_static_dir: PathBuf,
+    <span class="doccomment">/// Secret for cookie storage - don&#39;t hard code this, it&#39;ll randomly generate on startup
+    </span><span class="attribute">#[serde(default = <span class="string">&quot;generate_cookie_secret&quot;</span>, skip)]
+    </span>api_cookie_secret: String,
+}
+
+<span class="kw">fn </span>generate_cookie_secret() -&gt; String {
+    Alphanumeric.sample_string(<span class="kw-2">&amp;mut </span>rand::thread_rng(), <span class="number">64</span>)
 }
 
 <span class="kw">impl </span>ConfigFile {
     <span class="doccomment">/// get a string version of the listener address
-    </span><span class="kw">pub fn </span>api_listener_address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="self">self</span>.address, <span class="self">self</span>.api_port)
+    </span><span class="kw">pub fn </span>api_listener_address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SocketAddr {
+        SocketAddr::from_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="self">self</span>.address, <span class="self">self</span>.api_port)).unwrap()
+    }
+
+    <span class="kw">pub fn </span>api_cookie_secret(<span class="self">self</span>) -&gt; String {
+        <span class="self">self</span>.api_cookie_secret
     }
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>ConfigFile {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>hostname = gethostname();
+        <span class="kw">let </span>hostname = hostname.into_string().unwrap();
         <span class="self">Self </span>{
-            address: <span class="string">&quot;0.0.0.0&quot;</span>.to_string(),
+            hostname,
+            address: <span class="string">&quot;127.0.0.1&quot;</span>.to_string(),
             port: <span class="number">15353</span>,
             capture_packets: <span class="bool-val">false</span>,
             log_level: <span class="string">&quot;INFO&quot;</span>.to_string(),
-            tcp_client_timeout: <span class="number">15</span>,
+            tcp_client_timeout: <span class="number">5</span>,
             enable_hinfo: <span class="bool-val">false</span>,
             ip_allow_lists: IPAllowList {
-                <span class="comment">// version: vec![],
+                <span class="comment">// axfr: vec![],
                 </span>shutdown: <span class="macro">vec!</span>[],
             },
             sqlite_path: String::from(<span class="string">&quot;~/.cache/goatns.sqlite&quot;</span>),
             zone_file: <span class="prelude-val">None</span>,
+            enable_api: <span class="bool-val">false</span>,
             api_port: <span class="number">9000</span>,
             api_tls_cert: PathBuf::from(<span class="string">&quot;./certificates/cert.pem&quot;</span>),
             api_tls_key: PathBuf::from(<span class="string">&quot;./certificates/key.pem&quot;</span>),
+            api_static_dir: PathBuf::from(<span class="string">&quot;./static_files/&quot;</span>),
+            api_cookie_secret: generate_cookie_secret(),
         }
     }
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>ConfigFile {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="kw">let </span>api_details = <span class="kw">match </span><span class="self">self</span>.enable_api {
+            <span class="bool-val">false </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;enable_api={}&quot;</span>, <span class="self">self</span>.enable_api),
+            <span class="bool-val">true </span>=&gt; {
+                <span class="macro">format!</span>(
+                    <span class="string">&quot;enable_api={}  api_endpoint=\&quot;https://{}\&quot; tls_cert={:?} tls_key={:?}&quot;</span>,
+                    <span class="self">self</span>.enable_api,
+                    <span class="self">self</span>.api_listener_address(),
+                    <span class="self">self</span>.api_tls_cert,
+                    <span class="self">self</span>.api_tls_key
+                )
+            }
+        };
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;listening_address=\&quot;{}:{}\&quot; api_endpoint=\&quot;https://{}\&quot; capturing_pcaps={} Log_level={}&quot;</span>,
-            <span class="self">self</span>.address, <span class="self">self</span>.port, <span class="self">self</span>.api_listener_address(), <span class="self">self</span>.capture_packets, <span class="self">self</span>.log_level
+            <span class="string">&quot;hostname=\&quot;{}\&quot; listening_address=\&quot;{}:{}\&quot; capturing_pcaps={} Log_level={}, {api_details}&quot;</span>,
+            <span class="self">self</span>.hostname, <span class="self">self</span>.address, <span class="self">self</span>.port, <span class="self">self</span>.capture_packets, <span class="self">self</span>.log_level
         ))
     }
 }
@@ -279,7 +418,8 @@
 <span class="kw">impl </span>From&lt;Config&gt; <span class="kw">for </span>ConfigFile {
     <span class="kw">fn </span>from(config: Config) -&gt; <span class="self">Self </span>{
         ConfigFile {
-            address: config.get(<span class="string">&quot;addr&quot;</span>).unwrap_or(<span class="self">Self</span>::default().address),
+            hostname: config.get(<span class="string">&quot;hostname&quot;</span>).unwrap_or(<span class="self">Self</span>::default().hostname),
+            address: config.get(<span class="string">&quot;address&quot;</span>).unwrap_or(<span class="self">Self</span>::default().address),
             port: config.get(<span class="string">&quot;port&quot;</span>).unwrap_or_default(),
             capture_packets: config.get(<span class="string">&quot;capture_packets&quot;</span>).unwrap_or_default(),
             log_level: config.get(<span class="string">&quot;log_level&quot;</span>).unwrap_or(<span class="self">Self</span>::default().log_level),
@@ -296,6 +436,9 @@
                 .get(<span class="string">&quot;sqlite_path&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().sqlite_path),
             zone_file: config.get(<span class="string">&quot;zone_file&quot;</span>).unwrap_or(<span class="self">Self</span>::default().zone_file),
+            enable_api: config
+                .get(<span class="string">&quot;enable_api&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().enable_api),
             api_port: config.get(<span class="string">&quot;api_port&quot;</span>).unwrap_or(<span class="self">Self</span>::default().api_port),
             api_tls_cert: config
                 .get(<span class="string">&quot;api_tls_cert&quot;</span>)
@@ -303,6 +446,10 @@
             api_tls_key: config
                 .get(<span class="string">&quot;api_tls_key&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().api_tls_key),
+            api_static_dir: config
+                .get(<span class="string">&quot;api_static_dir&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().api_static_dir),
+            api_cookie_secret: generate_cookie_secret(),
         }
     }
 }
@@ -348,9 +495,19 @@
     ConfigFile::default()
 }
 
-<span class="kw">pub fn </span>check_config(config: <span class="kw-2">&amp;</span>ConfigFile) -&gt; <span class="prelude-ty">Result</span>&lt;(), Vec&lt;String&gt;&gt; {
+<span class="kw">pub fn </span>check_config(config: <span class="kw-2">&amp;mut </span>ConfigFile) -&gt; <span class="prelude-ty">Result</span>&lt;ConfigFile, Vec&lt;String&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>config_ok: bool = <span class="bool-val">true</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>errors: Vec&lt;String&gt; = <span class="macro">vec!</span>[];
+
+    <span class="kw">if </span>config.api_tls_cert.starts_with(<span class="string">&quot;~&quot;</span>) {
+        config.api_tls_cert =
+            PathBuf::from(shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_tls_cert.to_str().unwrap()).to_string());
+    }
+    <span class="kw">if </span>config.api_tls_key.starts_with(<span class="string">&quot;~&quot;</span>) {
+        config.api_tls_key =
+            PathBuf::from(shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_tls_key.to_str().unwrap()).to_string());
+    }
+
     <span class="kw">if </span>!config.api_tls_key.exists() {
         errors.push(<span class="macro">format!</span>(
             <span class="string">&quot;Failed to find API TLS Key file: {:?}&quot;</span>,
@@ -368,8 +525,32 @@
     };
 
     <span class="kw">match </span>config_ok {
-        <span class="bool-val">true </span>=&gt; <span class="prelude-val">Ok</span>(()),
+        <span class="bool-val">true </span>=&gt; <span class="prelude-val">Ok</span>(config.to_owned()),
         <span class="bool-val">false </span>=&gt; <span class="prelude-val">Err</span>(errors),
+    }
+}
+
+<span class="kw">pub struct </span>LogFilter {
+    filters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
+}
+
+<span class="kw">impl </span>LogLineFilter <span class="kw">for </span>LogFilter {
+    <span class="kw">fn </span>write(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        now: <span class="kw-2">&amp;mut </span>DeferredNow,
+        record: <span class="kw-2">&amp;</span>log::Record,
+        log_line_writer: <span class="kw-2">&amp;</span><span class="kw">dyn </span>LogLineWriter,
+    ) -&gt; std::io::Result&lt;()&gt; {
+        <span class="comment">// eprintln!(&quot;{:?}&quot;, record.metadata());
+        </span><span class="kw">if </span><span class="self">self
+            </span>.filters
+            .iter()
+            .any(|r| record.metadata().target().starts_with(r))
+        {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        }
+        log_line_writer.write(now, record)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
@@ -386,6 +567,9 @@
     <span class="kw">match </span>flexi_logger::Logger::try_with_str(<span class="kw-2">&amp;</span>log_level).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>)) {
         <span class="prelude-val">Ok</span>(logger) =&gt; logger
             .write_mode(flexi_logger::WriteMode::Async)
+            .filter(Box::new(LogFilter {
+                filters: <span class="macro">vec!</span>[<span class="string">&quot;h2&quot;</span>, <span class="string">&quot;hyper::proto&quot;</span>],
+            }))
             .set_palette(<span class="string">&quot;b1;3;2;6;5&quot;</span>.to_string())
             .start()
             .map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>)),

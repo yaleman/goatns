@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">2.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">3.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">4.</strong> References</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">2.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">3.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="rrtypes.html"><strong aria-hidden="true">4.</strong> Supported RRTypes</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">5.</strong> References</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -136,13 +136,22 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="goatns"><a class="header" href="#goatns">GoatNS</a></h1>
-<p>A rusty DNS name server.</p>
-<p>Currently designed to be authoritative.</p>
-<p>Though, &quot;designed&quot; is a stretch.</p>
+<p>Yet another authoritative DNS name server. But with goat references.</p>
+<ul>
+<li>Built in Rust, thanks to some great packages
+<ul>
+<li>DNS features use <a href="https://crates.io/crates/tokio">tokio</a> and <a href="https://crates.io/crates/packed_struct">packed_struct</a></li>
+<li>HTTP things use <a href="https://crates.io/crates/tide">tide</a> / <a href="https://crates.io/crates/askama">Askama</a></li>
+<li>Database - <a href="https://crates.io/crates/sqlx">sqlx</a> for async sqlite goodness.</li>
+<li>Logging - <a href="https://crates.io/crates/flexi_logger">flexi_logger</a></li>
+</ul>
+</li>
+</ul>
 <h2 id="crate-documentation"><a class="header" href="#crate-documentation">Crate Documentation</a></h2>
 <p>Auto-generated and available here: <a href="https://yaleman.github.io/goatns/rustdoc/goatns/">https://yaleman.github.io/goatns/rustdoc/goatns</a></p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>Look at <code>zones.json</code> and <code>goatns.json</code> for examples.</p>
+<p>The configuration file's fields are best found here: <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the <code>ip_allow_list</code> field is a nested map.</p>
 <h2 id="testing"><a class="header" href="#testing">Testing</a></h2>
 <p>Rust tests are run using cargo.</p>
 <pre><code class="language-shell">cargo test
@@ -156,110 +165,16 @@
 <h2 id="running-in-docker"><a class="header" href="#running-in-docker">Running in Docker</a></h2>
 <p>There's a dockerfile at <code>ghcr.io/yaleman/goatns:latest</code> and a docker-compose.yml file if that's your thing.</p>
 <h2 id="supported-requestrecord-types"><a class="header" href="#supported-requestrecord-types">Supported request/record types</a></h2>
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-A</li>
-<li><input disabled="" type="checkbox" checked=""/>
-AAAA</li>
-<li><input disabled="" type="checkbox"/>
-AXFR
-<ul>
-<li><input disabled="" type="checkbox"/>
-add an allow-list in the config file (CIDRs)</li>
-</ul>
-</li>
-<li><input disabled="" type="checkbox" checked=""/>
-CAA</li>
-<li><input disabled="" type="checkbox" checked=""/>
-CNAME</li>
-<li><input disabled="" type="checkbox" checked=""/>
-HINFO</li>
-<li><input disabled="" type="checkbox" checked=""/>
-LOC</li>
-<li><input disabled="" type="checkbox"/>
-MAILB</li>
-<li><input disabled="" type="checkbox"/>
-MB</li>
-<li><input disabled="" type="checkbox"/>
-MD</li>
-<li><input disabled="" type="checkbox"/>
-MF</li>
-<li><input disabled="" type="checkbox"/>
-MG</li>
-<li><input disabled="" type="checkbox"/>
-MINFO</li>
-<li><input disabled="" type="checkbox"/>
-MR</li>
-<li><input disabled="" type="checkbox" checked=""/>
-MX</li>
-<li><input disabled="" type="checkbox"/>
-NAPTR</li>
-<li><input disabled="" type="checkbox" checked=""/>
-NS</li>
-<li><input disabled="" type="checkbox" checked=""/>
-PTR</li>
-<li><input disabled="" type="checkbox" checked=""/>
-SOA</li>
-<li><input disabled="" type="checkbox" checked=""/>
-TXT</li>
-<li><input disabled="" type="checkbox" checked=""/>
-URI (<a href="https://www.rfc-editor.org/rfc/rfc7553">RFC 7553</a>)</li>
-<li><input disabled="" type="checkbox"/>
-WKS</li>
-</ul>
+<p>This list is now <a href="https://goatns.dotgoat.net/rrtypes.html">in the book</a>.</p>
 <h2 id="todo"><a class="header" href="#todo">TODO</a></h2>
 <ul>
 <li><input disabled="" type="checkbox"/>
-record storage in a DB and caching instead of loading everything into memory
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-add zoneid to FileZoneRecord</li>
-<li><input disabled="" type="checkbox" checked=""/>
-add recordid (id) to FileZoneRecord</li>
-<li><input disabled="" type="checkbox" checked=""/>
-zone
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-create</li>
-<li><input disabled="" type="checkbox" checked=""/>
-retrieve</li>
-<li><input disabled="" type="checkbox" checked=""/>
-update</li>
-<li><input disabled="" type="checkbox" checked=""/>
-delete 
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-need to delete all the user ownership</li>
-<li><input disabled="" type="checkbox" checked=""/>
-delete all associated records</li>
-</ul>
-</li>
-</ul>
-</li>
+set config.hostname as authority on SOA records</li>
 <li><input disabled="" type="checkbox"/>
-record
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-create</li>
-<li><input disabled="" type="checkbox" checked=""/>
-retrieve</li>
-<li><input disabled="" type="checkbox"/>
-update</li>
-<li><input disabled="" type="checkbox"/>
-delete</li>
-</ul>
-</li>
-<li><input disabled="" type="checkbox" checked=""/>
-import from json</li>
-<li><input disabled="" type="checkbox" checked=""/>
-export to json (file-per-zone)</li>
-</ul>
-</li>
+test records for every rrtype</li>
 <li><input disabled="" type="checkbox"/>
 API things
 <ul>
-<li><input disabled="" type="checkbox" checked=""/>
-move to another web framework (tide-rs)</li>
 <li><input disabled="" type="checkbox"/>
 Oauth for management/UI things</li>
 </ul>
@@ -329,6 +244,121 @@ build the response packets in a nice way that doesn't blow up</li>
     udpserver-&gt;&gt;udpport: Send data to client
     
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h2 id="supported-requestrecord-types-1"><a class="header" href="#supported-requestrecord-types-1">Supported request/record types</a></h2>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+A (1) RFC1035</li>
+<li><input disabled="" type="checkbox" checked=""/>
+AAAA (28) RFC3596</li>
+<li><input disabled="" type="checkbox"/>
+AFSDB (18) RFC1183</li>
+<li><input disabled="" type="checkbox"/>
+APL (42) RFC3123 (Experimental)</li>
+<li><input disabled="" type="checkbox"/>
+AXFR (252) RFC1035
+<ul>
+<li><input disabled="" type="checkbox"/>
+add an allow-list in the config file (CIDRs)</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+ANY (255) RFC8482
+<ul>
+<li><input disabled="" type="checkbox"/>
+should return a hinfo value of &quot;RFC8482&quot;, can't be stored</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox" checked=""/>
+CAA (257) RFC6844</li>
+<li><input disabled="" type="checkbox"/>
+CDNSKEY (60) RFC7344 Child copy of DNSKEY record, for transfer to parent</li>
+<li><input disabled="" type="checkbox"/>
+CDNSKEY (59) RFC7344 Child copy of DS record, for transfer to parent</li>
+<li><input disabled="" type="checkbox"/>
+CERT (37) RFC4398 Certificate record</li>
+<li><input disabled="" type="checkbox"/>
+CSYNC (62) RFC7477 Specify a synchronization mechanism between a child and a parent DNS zone. Typical example is declaring the same NS records in the parent and the child zone</li>
+<li><input disabled="" type="checkbox" checked=""/>
+CNAME (5) RFC7477</li>
+<li><input disabled="" type="checkbox"/>
+DHCID (49) RFC4701 Used in conjunction with the FQDN option to DHCP</li>
+<li><input disabled="" type="checkbox"/>
+DLV (32769) RFC4431 DNSSEC Lookaside Validation record</li>
+<li><input disabled="" type="checkbox"/>
+DNAME (39) RFC6672 Delegation name record</li>
+<li><input disabled="" type="checkbox"/>
+DNSKEY (48) RFC4034 DNS Key record The key record used in DNSSEC.</li>
+<li><input disabled="" type="checkbox"/>
+EUI48 (108) RFC7043 MAC address (EUI-48) A 48-bit IEEE Extended Unique Identifier.</li>
+<li><input disabled="" type="checkbox"/>
+EUI64 (109) RFC7043 MAC address (EUI-64) A 64-bit IEEE Extended Unique Identifier.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+HINFO (13) RFC8482 Providing Minimal-Sized Responses to DNS Queries That Have QTYPE=ANY
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+RFC1035 interpretation is done</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Check up on the details in RFC8482 - &quot;Unobsoleted by RFC 8482.&quot;</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+HIP (55) RFC8005 Host Identity Protocol Method of separating the end-point identifier and locator roles of IP addresses.</li>
+<li><input disabled="" type="checkbox"/>
+HTTPS (65) (IETF Draft)[https://datatracker.ietf.org/doc/draft-ietf-dnsop-svcb-https/00/?include_text=1] HTTPS Binding RR that improves performance for clients that need to resolve many resources to access a domain. More info in this IETF Draft by DNSOP Working group and Akamai technologies.</li>
+<li><input disabled="" type="checkbox"/>
+IPSECKEY (45)  RFC4025 IPsec Key Key record that can be used with IPsec</li>
+<li><input disabled="" type="checkbox"/>
+KX (36)  RFC2230 Key Exchanger record Used with some cryptographic systems (not including DNSSEC) to identify a key management agent for the associated domain-name. Note that this has nothing to do with DNS Security. It is Informational status, rather than being on the IETF standards-track. It has always had limited deployment, but is still in use.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+LOC (29)  RFC1876 Location record</li>
+<li><input disabled="" type="checkbox" checked=""/>
+MX (15) RFC1035 and  RFC7505 Mail exchange record</li>
+<li><input disabled="" type="checkbox"/>
+NAPTR (35) RFC3403 Naming Authority Pointer Allows regular-expression-based rewriting of domain names which can then be used as URIs, further domain names to lookups, etc.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+NS</li>
+<li><input disabled="" type="checkbox"/>
+NSEC (47)  RFC4034 Next Secure record Part of DNSSEC—used to prove a name does not exist. Uses the same format as the (obsolete) NXT record.</li>
+<li><input disabled="" type="checkbox"/>
+NSEC3 50  RFC5155 Next Secure record version 3 An extension to DNSSEC that allows proof of nonexistence for a name without permitting zonewalking</li>
+<li><input disabled="" type="checkbox"/>
+NSEC3PARAM 51  RFC5155 NSEC3 parameters Parameter record for use with NSEC3</li>
+<li><input disabled="" type="checkbox"/>
+OPENPGPKEY 61  RFC7929 OpenPGP public key record A DNS-based Authentication of Named Entities (DANE) method for publishing and locating OpenPGP public keys in DNS for a specific email address using an OPENPGPKEY DNS resource record.</li>
+<li><input disabled="" type="checkbox"/>
+OPT 41  RFC6891 Option This is a pseudo-record type needed to support EDNS.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+PTR 12  RFC1035</li>
+<li><input disabled="" type="checkbox"/>
+RRSIG 46  RFC4034 DNSSEC signature Signature for a DNSSEC-secured record set. Uses the same format as the SIG record.</li>
+<li><input disabled="" type="checkbox"/>
+RP 17  RFC1183 Responsible Person Information about the responsible person(s) for the domain. Usually an email address with the @ replaced by a .</li>
+<li><input disabled="" type="checkbox"/>
+SMIMEA 53  RFC8162 S/MIME cert association Associates an S/MIME certificate with a domain name for sender authentication.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+SOA (6)  RFC1035 and  RFC2308 Start of [a zone of] authority record</li>
+<li><input disabled="" type="checkbox"/>
+SRV (33)  RFC2782 Service locator</li>
+<li><input disabled="" type="checkbox"/>
+SSHFP (44)  RFC4255 SSH Public Key Fingerprint Resource record for publishing SSH public host key fingerprints in the DNS, in order to aid in verifying the authenticity of the host.  RFC6594 defines ECC SSH keys and SHA-256 hashes. See the <a href="https://www.iana.org/assignments/dns-sshfp-rr-parameters/dns-sshfp-rr-parameters.xml">IANA SSHFP RR parameters registry</a> for details</li>
+<li><input disabled="" type="checkbox"/>
+SVCB 64 IETF Draft Service Binding RR that improves performance for clients that need to resolve many resources to access a domain. More info in this <a href="https://datatracker.ietf.org/doc/draft-ietf-dnsop-svcb-https/00/?include_text=1">IETF Draft</a> by DNSOP Working group and Akamai technologies.</li>
+<li><input disabled="" type="checkbox"/>
+TA 32768 — DNSSEC Trust Authorities Part of a deployment proposal for DNSSEC without a signed DNS root. See the <a href="https://www.iana.org/assignments/dns-parameters">IANA database</a> and <a href="http://www.watson.org/%7Eweiler/INI1999-19.pdf">Weiler Spec</a> for details. Uses the same format as the DS record.</li>
+<li><input disabled="" type="checkbox"/>
+TKEY 249  RFC2930 Transaction Key record A method of providing keying material to be used with TSIG that is encrypted under the public key in an accompanying KEY RR.</li>
+<li><input disabled="" type="checkbox"/>
+TLSA 52  RFC6698 TLSA certificate association A record for DANE.</li>
+<li><input disabled="" type="checkbox"/>
+TSIG 250  RFC2845 Transaction Signature Can be used to authenticate dynamic updates as coming from an approved client, or to authenticate responses as coming from an approved recursive name server</li>
+<li><input disabled="" type="checkbox" checked=""/>
+TXT 16 RFC1035 Text record</li>
+<li><input disabled="" type="checkbox" checked=""/>
+URI 256 <a href="https://www.rfc-editor.org/rfc/rfc7553">RFC7553</a> Uniform Resource Identifier</li>
+<li><input disabled="" type="checkbox"/>
+ZONEMD (63) RFC8976 Message Digests for DNS Zones Provides a cryptographic message digest over DNS zone data at rest.</li>
+</ul>
+<p>A lot of the details above were transcribed from the <a href="https://en.wikipedia.org/wiki/List_of_DNS_record_types">Wikipedia page on DNS REcord Types</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="references"><a class="header" href="#references">References</a></h1>
 <ul>
 <li><a href="https://github.com/paulc/dnslib/">dnslib</a> has some good example data</li>

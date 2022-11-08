@@ -1,0 +1,293 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Supported RRTypes - Goat NS</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">2.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">3.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="rrtypes.html" class="active"><strong aria-hidden="true">4.</strong> Supported RRTypes</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">5.</strong> References</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Goat NS</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h2 id="supported-requestrecord-types"><a class="header" href="#supported-requestrecord-types">Supported request/record types</a></h2>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+A (1) RFC1035</li>
+<li><input disabled="" type="checkbox" checked=""/>
+AAAA (28) RFC3596</li>
+<li><input disabled="" type="checkbox"/>
+AFSDB (18) RFC1183</li>
+<li><input disabled="" type="checkbox"/>
+APL (42) RFC3123 (Experimental)</li>
+<li><input disabled="" type="checkbox"/>
+AXFR (252) RFC1035
+<ul>
+<li><input disabled="" type="checkbox"/>
+add an allow-list in the config file (CIDRs)</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+ANY (255) RFC8482
+<ul>
+<li><input disabled="" type="checkbox"/>
+should return a hinfo value of &quot;RFC8482&quot;, can't be stored</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox" checked=""/>
+CAA (257) RFC6844</li>
+<li><input disabled="" type="checkbox"/>
+CDNSKEY (60) RFC7344 Child copy of DNSKEY record, for transfer to parent</li>
+<li><input disabled="" type="checkbox"/>
+CDNSKEY (59) RFC7344 Child copy of DS record, for transfer to parent</li>
+<li><input disabled="" type="checkbox"/>
+CERT (37) RFC4398 Certificate record</li>
+<li><input disabled="" type="checkbox"/>
+CSYNC (62) RFC7477 Specify a synchronization mechanism between a child and a parent DNS zone. Typical example is declaring the same NS records in the parent and the child zone</li>
+<li><input disabled="" type="checkbox" checked=""/>
+CNAME (5) RFC7477</li>
+<li><input disabled="" type="checkbox"/>
+DHCID (49) RFC4701 Used in conjunction with the FQDN option to DHCP</li>
+<li><input disabled="" type="checkbox"/>
+DLV (32769) RFC4431 DNSSEC Lookaside Validation record</li>
+<li><input disabled="" type="checkbox"/>
+DNAME (39) RFC6672 Delegation name record</li>
+<li><input disabled="" type="checkbox"/>
+DNSKEY (48) RFC4034 DNS Key record The key record used in DNSSEC.</li>
+<li><input disabled="" type="checkbox"/>
+EUI48 (108) RFC7043 MAC address (EUI-48) A 48-bit IEEE Extended Unique Identifier.</li>
+<li><input disabled="" type="checkbox"/>
+EUI64 (109) RFC7043 MAC address (EUI-64) A 64-bit IEEE Extended Unique Identifier.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+HINFO (13) RFC8482 Providing Minimal-Sized Responses to DNS Queries That Have QTYPE=ANY
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+RFC1035 interpretation is done</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Check up on the details in RFC8482 - &quot;Unobsoleted by RFC 8482.&quot;</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+HIP (55) RFC8005 Host Identity Protocol Method of separating the end-point identifier and locator roles of IP addresses.</li>
+<li><input disabled="" type="checkbox"/>
+HTTPS (65) (IETF Draft)[https://datatracker.ietf.org/doc/draft-ietf-dnsop-svcb-https/00/?include_text=1] HTTPS Binding RR that improves performance for clients that need to resolve many resources to access a domain. More info in this IETF Draft by DNSOP Working group and Akamai technologies.</li>
+<li><input disabled="" type="checkbox"/>
+IPSECKEY (45)  RFC4025 IPsec Key Key record that can be used with IPsec</li>
+<li><input disabled="" type="checkbox"/>
+KX (36)  RFC2230 Key Exchanger record Used with some cryptographic systems (not including DNSSEC) to identify a key management agent for the associated domain-name. Note that this has nothing to do with DNS Security. It is Informational status, rather than being on the IETF standards-track. It has always had limited deployment, but is still in use.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+LOC (29)  RFC1876 Location record</li>
+<li><input disabled="" type="checkbox" checked=""/>
+MX (15) RFC1035 and  RFC7505 Mail exchange record</li>
+<li><input disabled="" type="checkbox"/>
+NAPTR (35) RFC3403 Naming Authority Pointer Allows regular-expression-based rewriting of domain names which can then be used as URIs, further domain names to lookups, etc.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+NS</li>
+<li><input disabled="" type="checkbox"/>
+NSEC (47)  RFC4034 Next Secure record Part of DNSSEC—used to prove a name does not exist. Uses the same format as the (obsolete) NXT record.</li>
+<li><input disabled="" type="checkbox"/>
+NSEC3 50  RFC5155 Next Secure record version 3 An extension to DNSSEC that allows proof of nonexistence for a name without permitting zonewalking</li>
+<li><input disabled="" type="checkbox"/>
+NSEC3PARAM 51  RFC5155 NSEC3 parameters Parameter record for use with NSEC3</li>
+<li><input disabled="" type="checkbox"/>
+OPENPGPKEY 61  RFC7929 OpenPGP public key record A DNS-based Authentication of Named Entities (DANE) method for publishing and locating OpenPGP public keys in DNS for a specific email address using an OPENPGPKEY DNS resource record.</li>
+<li><input disabled="" type="checkbox"/>
+OPT 41  RFC6891 Option This is a pseudo-record type needed to support EDNS.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+PTR 12  RFC1035</li>
+<li><input disabled="" type="checkbox"/>
+RRSIG 46  RFC4034 DNSSEC signature Signature for a DNSSEC-secured record set. Uses the same format as the SIG record.</li>
+<li><input disabled="" type="checkbox"/>
+RP 17  RFC1183 Responsible Person Information about the responsible person(s) for the domain. Usually an email address with the @ replaced by a .</li>
+<li><input disabled="" type="checkbox"/>
+SMIMEA 53  RFC8162 S/MIME cert association Associates an S/MIME certificate with a domain name for sender authentication.</li>
+<li><input disabled="" type="checkbox" checked=""/>
+SOA (6)  RFC1035 and  RFC2308 Start of [a zone of] authority record</li>
+<li><input disabled="" type="checkbox"/>
+SRV (33)  RFC2782 Service locator</li>
+<li><input disabled="" type="checkbox"/>
+SSHFP (44)  RFC4255 SSH Public Key Fingerprint Resource record for publishing SSH public host key fingerprints in the DNS, in order to aid in verifying the authenticity of the host.  RFC6594 defines ECC SSH keys and SHA-256 hashes. See the <a href="https://www.iana.org/assignments/dns-sshfp-rr-parameters/dns-sshfp-rr-parameters.xml">IANA SSHFP RR parameters registry</a> for details</li>
+<li><input disabled="" type="checkbox"/>
+SVCB 64 IETF Draft Service Binding RR that improves performance for clients that need to resolve many resources to access a domain. More info in this <a href="https://datatracker.ietf.org/doc/draft-ietf-dnsop-svcb-https/00/?include_text=1">IETF Draft</a> by DNSOP Working group and Akamai technologies.</li>
+<li><input disabled="" type="checkbox"/>
+TA 32768 — DNSSEC Trust Authorities Part of a deployment proposal for DNSSEC without a signed DNS root. See the <a href="https://www.iana.org/assignments/dns-parameters">IANA database</a> and <a href="http://www.watson.org/%7Eweiler/INI1999-19.pdf">Weiler Spec</a> for details. Uses the same format as the DS record.</li>
+<li><input disabled="" type="checkbox"/>
+TKEY 249  RFC2930 Transaction Key record A method of providing keying material to be used with TSIG that is encrypted under the public key in an accompanying KEY RR.</li>
+<li><input disabled="" type="checkbox"/>
+TLSA 52  RFC6698 TLSA certificate association A record for DANE.</li>
+<li><input disabled="" type="checkbox"/>
+TSIG 250  RFC2845 Transaction Signature Can be used to authenticate dynamic updates as coming from an approved client, or to authenticate responses as coming from an approved recursive name server</li>
+<li><input disabled="" type="checkbox" checked=""/>
+TXT 16 RFC1035 Text record</li>
+<li><input disabled="" type="checkbox" checked=""/>
+URI 256 <a href="https://www.rfc-editor.org/rfc/rfc7553">RFC7553</a> Uniform Resource Identifier</li>
+<li><input disabled="" type="checkbox"/>
+ZONEMD (63) RFC8976 Message Digests for DNS Zones Provides a cryptographic message digest over DNS zone data at rest.</li>
+</ul>
+<p>A lot of the details above were transcribed from the <a href="https://en.wikipedia.org/wiki/List_of_DNS_record_types">Wikipedia page on DNS REcord Types</a></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="processing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="references.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="processing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="references.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        <script type="text/javascript" src="mermaid.min.js"></script>
+        <script type="text/javascript" src="mermaid-init.js"></script>
+    </body>
+</html>

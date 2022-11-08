@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["dashboard",""],["logout",""],["new",""],["zone_view",""],["zones_list",""]],"struct":[["DashboardTemplate",""],["TemplateViewZone",""],["TemplateViewZones",""]]};

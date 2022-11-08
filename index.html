@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html" class="active"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">2.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">3.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">4.</strong> References</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html" class="active"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">2.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">3.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="rrtypes.html"><strong aria-hidden="true">4.</strong> Supported RRTypes</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">5.</strong> References</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -135,13 +135,22 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="goatns"><a class="header" href="#goatns">GoatNS</a></h1>
-<p>A rusty DNS name server.</p>
-<p>Currently designed to be authoritative.</p>
-<p>Though, &quot;designed&quot; is a stretch.</p>
+<p>Yet another authoritative DNS name server. But with goat references.</p>
+<ul>
+<li>Built in Rust, thanks to some great packages
+<ul>
+<li>DNS features use <a href="https://crates.io/crates/tokio">tokio</a> and <a href="https://crates.io/crates/packed_struct">packed_struct</a></li>
+<li>HTTP things use <a href="https://crates.io/crates/tide">tide</a> / <a href="https://crates.io/crates/askama">Askama</a></li>
+<li>Database - <a href="https://crates.io/crates/sqlx">sqlx</a> for async sqlite goodness.</li>
+<li>Logging - <a href="https://crates.io/crates/flexi_logger">flexi_logger</a></li>
+</ul>
+</li>
+</ul>
 <h2 id="crate-documentation"><a class="header" href="#crate-documentation">Crate Documentation</a></h2>
 <p>Auto-generated and available here: <a href="https://yaleman.github.io/goatns/rustdoc/goatns/">https://yaleman.github.io/goatns/rustdoc/goatns</a></p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>Look at <code>zones.json</code> and <code>goatns.json</code> for examples.</p>
+<p>The configuration file's fields are best found here: <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the <code>ip_allow_list</code> field is a nested map.</p>
 <h2 id="testing"><a class="header" href="#testing">Testing</a></h2>
 <p>Rust tests are run using cargo.</p>
 <pre><code class="language-shell">cargo test
@@ -155,110 +164,16 @@
 <h2 id="running-in-docker"><a class="header" href="#running-in-docker">Running in Docker</a></h2>
 <p>There's a dockerfile at <code>ghcr.io/yaleman/goatns:latest</code> and a docker-compose.yml file if that's your thing.</p>
 <h2 id="supported-requestrecord-types"><a class="header" href="#supported-requestrecord-types">Supported request/record types</a></h2>
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-A</li>
-<li><input disabled="" type="checkbox" checked=""/>
-AAAA</li>
-<li><input disabled="" type="checkbox"/>
-AXFR
-<ul>
-<li><input disabled="" type="checkbox"/>
-add an allow-list in the config file (CIDRs)</li>
-</ul>
-</li>
-<li><input disabled="" type="checkbox" checked=""/>
-CAA</li>
-<li><input disabled="" type="checkbox" checked=""/>
-CNAME</li>
-<li><input disabled="" type="checkbox" checked=""/>
-HINFO</li>
-<li><input disabled="" type="checkbox" checked=""/>
-LOC</li>
-<li><input disabled="" type="checkbox"/>
-MAILB</li>
-<li><input disabled="" type="checkbox"/>
-MB</li>
-<li><input disabled="" type="checkbox"/>
-MD</li>
-<li><input disabled="" type="checkbox"/>
-MF</li>
-<li><input disabled="" type="checkbox"/>
-MG</li>
-<li><input disabled="" type="checkbox"/>
-MINFO</li>
-<li><input disabled="" type="checkbox"/>
-MR</li>
-<li><input disabled="" type="checkbox" checked=""/>
-MX</li>
-<li><input disabled="" type="checkbox"/>
-NAPTR</li>
-<li><input disabled="" type="checkbox" checked=""/>
-NS</li>
-<li><input disabled="" type="checkbox" checked=""/>
-PTR</li>
-<li><input disabled="" type="checkbox" checked=""/>
-SOA</li>
-<li><input disabled="" type="checkbox" checked=""/>
-TXT</li>
-<li><input disabled="" type="checkbox" checked=""/>
-URI (<a href="https://www.rfc-editor.org/rfc/rfc7553">RFC 7553</a>)</li>
-<li><input disabled="" type="checkbox"/>
-WKS</li>
-</ul>
+<p>This list is now <a href="https://goatns.dotgoat.net/rrtypes.html">in the book</a>.</p>
 <h2 id="todo"><a class="header" href="#todo">TODO</a></h2>
 <ul>
 <li><input disabled="" type="checkbox"/>
-record storage in a DB and caching instead of loading everything into memory
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-add zoneid to FileZoneRecord</li>
-<li><input disabled="" type="checkbox" checked=""/>
-add recordid (id) to FileZoneRecord</li>
-<li><input disabled="" type="checkbox" checked=""/>
-zone
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-create</li>
-<li><input disabled="" type="checkbox" checked=""/>
-retrieve</li>
-<li><input disabled="" type="checkbox" checked=""/>
-update</li>
-<li><input disabled="" type="checkbox" checked=""/>
-delete 
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-need to delete all the user ownership</li>
-<li><input disabled="" type="checkbox" checked=""/>
-delete all associated records</li>
-</ul>
-</li>
-</ul>
-</li>
+set config.hostname as authority on SOA records</li>
 <li><input disabled="" type="checkbox"/>
-record
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-create</li>
-<li><input disabled="" type="checkbox" checked=""/>
-retrieve</li>
-<li><input disabled="" type="checkbox"/>
-update</li>
-<li><input disabled="" type="checkbox"/>
-delete</li>
-</ul>
-</li>
-<li><input disabled="" type="checkbox" checked=""/>
-import from json</li>
-<li><input disabled="" type="checkbox" checked=""/>
-export to json (file-per-zone)</li>
-</ul>
-</li>
+test records for every rrtype</li>
 <li><input disabled="" type="checkbox"/>
 API things
 <ul>
-<li><input disabled="" type="checkbox" checked=""/>
-move to another web framework (tide-rs)</li>
 <li><input disabled="" type="checkbox"/>
 Oauth for management/UI things</li>
 </ul>
