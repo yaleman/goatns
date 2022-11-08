@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
-use tokio::net::{TcpListener, UdpSocket, TcpStream};
+use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::time::timeout;
 
@@ -217,9 +217,7 @@ pub async fn tcp_conn_handler(
     {
         Ok(reply) => reply,
         Err(_) => {
-            log::error!(
-                "Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms"
-            );
+            log::error!("Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms");
             return Ok(());
         }
     };
@@ -317,17 +315,21 @@ pub async fn tcp_server(
         log::debug!("TCP connection from {:?}", addr);
         let loop_tx = tx.clone();
         let loop_config = config.clone();
-        let loop_agent_tx= agent_tx.clone();
-        tokio::spawn(
-            async move {
-                if let Err(_) = timeout(
-                    Duration::from_secs(loop_config.tcp_client_timeout),
-            tcp_conn_handler(&mut stream, addr, loop_tx, loop_agent_tx, loop_config)
-                    ).await {
-                        log::warn!("TCP Connection from {addr:?} terminated after {} seconds.", config.tcp_client_timeout);
-                    }
-                    }
-                ).await?;
+        let loop_agent_tx = agent_tx.clone();
+        tokio::spawn(async move {
+            if timeout(
+                Duration::from_secs(loop_config.tcp_client_timeout),
+                tcp_conn_handler(&mut stream, addr, loop_tx, loop_agent_tx, loop_config),
+            )
+            .await.is_err()
+            {
+                log::warn!(
+                    "TCP Connection from {addr:?} terminated after {} seconds.",
+                    config.tcp_client_timeout
+                );
+            }
+        })
+        .await?;
 
         if let Ok(agent_state) = agent_rx.try_recv() {
             log::info!("Got agent state: {:?}", agent_state);
