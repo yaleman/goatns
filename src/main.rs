@@ -1,12 +1,14 @@
 use log::{error, info};
 use std::io;
 use std::net::SocketAddr;
-use tide_rustls::TlsListener;
+
+use axum_server::tls_rustls::RustlsConfig;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 
 use goatns::config::{check_config, get_config, setup_logging, ConfigFile};
 use goatns::datastore;
+use goatns::db;
 use goatns::enums::{Agent, AgentState, SystemState};
 use goatns::servers;
 use goatns::utils::clap_parser;
@@ -16,34 +18,39 @@ use tokio::time::sleep;
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let clap_results = clap_parser();
-    let config: ConfigFile = get_config(clap_results.get_one::<String>("config"));
+    let mut config: ConfigFile = get_config(clap_results.get_one::<String>("config"));
 
     let logger = match setup_logging(&config, &clap_results) {
         Ok(logger) => logger,
         Err(_) => return Ok(()),
     };
 
-    let config_check_result = check_config(&config);
+    let config = check_config(&mut config);
 
     if clap_results.get_flag("configcheck") {
-        log::info!("{:#?}", config);
-        match config_check_result {
+        log::info!("{}", serde_json::to_string_pretty(&config).unwrap());
+        match config {
             Ok(_) => log::info!("Checking config... [OK!]"),
             Err(_) => log::error!("Checking config... [ERR!]"),
         };
     }
 
     // sometimes you just have to print some errors
-    if let Err(errors) = config_check_result {
-        for error in errors {
-            log::error!("{error:}")
+    let config = match config {
+        Err(errors) => {
+            for error in errors {
+                log::error!("{error:}")
+            }
+            log::error!("Shutting down!");
+            return Ok(());
         }
-        log::error!("Shutting down!");
-        return Ok(());
+        Ok(c) => {
+            if clap_results.get_flag("configcheck") {
+                return Ok(());
+            };
+            c
+        }
     };
-    if clap_results.get_flag("configcheck") {
-        return Ok(());
-    }
 
     info!("Configuration: {}", config);
 
@@ -66,13 +73,31 @@ async fn main() -> io::Result<()> {
     let rx: mpsc::Receiver<datastore::Command>;
     (tx, rx) = mpsc::channel(MAX_IN_FLIGHT);
 
+    // start up the DB
+    let connpool = match db::get_conn(&config).await {
+        Ok(value) => value,
+        Err(err) => {
+            log::error!("Failed to start sqlite connection tool: {err}");
+            return Ok(());
+        }
+    };
+    if let Err(err) = db::start_db(&connpool).await {
+        log::error!("{err}");
+        return Ok(());
+    };
+
     // start all the things!
-    let datastore_manager = tokio::spawn(datastore::manager(rx, config.clone()));
+    let datastore_manager = tokio::spawn(datastore::manager(
+        rx,
+        config.clone(),
+        clap_results.clone(),
+        connpool.clone(),
+    ));
 
     let system_state = match goatns::utils::cli_commands(tx.clone(), &clap_results).await {
         Ok(value) => value,
         Err(error) => {
-            eprintln!("{error}");
+            log::trace!("{error}");
             SystemState::ShuttingDown
         }
     };
@@ -105,27 +130,33 @@ async fn main() -> io::Result<()> {
                 agent_tx.subscribe(),
             ));
 
-            let api_listener = match TlsListener::build()
-                .addrs(config.api_listener_address())
-                .cert(&config.api_tls_cert)
-                .key(&config.api_tls_key)
-                .finish()
-            {
-                Ok(value) => value,
-                Err(error) => {
-                    log::error!("Failed to start API TLS Listener: {error:?}");
-                    return Ok(());
+            let _apiserver = match config.enable_api {
+                true => {
+                    let tls_config =
+                        RustlsConfig::from_pem_file(&config.api_tls_cert, &config.api_tls_key)
+                            .await
+                            .unwrap();
+
+                    log::trace!(
+                        "tls config: {tls_config:?} cert={:?} key={:?}",
+                        &config.api_tls_cert,
+                        &config.api_tls_key
+                    );
+
+                    let api =
+                        goatns::web::build(tx.clone(), config.clone(), connpool.clone()).await;
+                    let apiserver = Some(tokio::spawn(
+                        axum_server::bind_rustls(config.api_listener_address(), tls_config)
+                            .serve(api.into_make_service()),
+                    ));
+                    log::info!(
+                        "Started Web/API server on https://{}",
+                        config.api_listener_address()
+                    );
+                    apiserver
                 }
+                false => None,
             };
-            let api = match goatns::api::build(tx.clone()).await {
-                Ok(value) => value,
-                Err(err) => {
-                    // TODO: need to clean-shutdown the server here
-                    log::error!("Failed to build API server: {err:?}");
-                    return Ok(());
-                }
-            };
-            let apiserver = tokio::spawn(api.listen(api_listener));
 
             loop {
                 // if any of the servers bail, the server does too.
@@ -143,30 +174,33 @@ async fn main() -> io::Result<()> {
                     if let Err(error) = agent_tx.send(AgentState::Stopped {
                         agent: Agent::TCPServer,
                     }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                        eprintln!("Failed to send TCPServer shutdown message: {error:?}");
                     };
                     return Ok(());
                 };
+                // if config.enable_api {
+                //     if let Some(api) = &apiserver {
+                //         if api.is_finished() {
+                //             log::info!("API manager shut down");
+                //             if let Err(error) = agent_tx.send(AgentState::Stopped { agent: Agent::API }) {
+                //                 eprintln!("Failed to send API Server shutdown message: {error:?}");
+                //             };
+                //         }
+                //     }
+                // }
+
                 if datastore_manager.is_finished() {
-                    log::info!("Datastore manager shut down");
+                    log::info!("Datastore manager shut down!");
                     if let Err(error) = agent_tx.send(AgentState::Stopped {
                         agent: Agent::Datastore,
                     }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                        eprintln!("Failed to send Datastore shutdown message: {error:?}");
                     };
                     return Ok(());
                 };
-                if apiserver.is_finished() {
-                    log::info!("API manager shut down");
-                    if let Err(error) = agent_tx.send(AgentState::Stopped { agent: Agent::API }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-                    };
-                    // return Ok(());
-                }
 
                 if udpserver.is_finished()
                     & tcpserver.is_finished()
-                    & apiserver.is_finished()
                     & datastore_manager.is_finished()
                 {
                     break;
@@ -175,7 +209,6 @@ async fn main() -> io::Result<()> {
             }
         }
     }
-
     logger.flush();
     sleep(std::time::Duration::from_secs(1)).await;
     logger.flush();

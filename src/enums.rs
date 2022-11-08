@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use enum_iterator::Sequence;
 use packed_struct::prelude::*;
 use serde::{Deserialize, Serialize, Serializer};
 use sqlx::encode::IsNull;
@@ -82,7 +83,7 @@ pub enum Rcode {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
 /// RRType, eg A, NS, MX, etc
 pub enum RecordType {
     /// A host address
@@ -114,7 +115,7 @@ pub enum RecordType {
     MAILB = 253,
     URI = 256,
     /// 255 A request for all records (*)
-    ALL = 255,
+    ANY = 255,
     /// Certification Authority Restriction - <https://www.rfc-editor.org/rfc/rfc6844.txt>
     CAA = 257,
     InvalidType,
@@ -142,7 +143,7 @@ impl From<&u16> for RecordType {
             35 => Self::NAPTR, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
             252 => Self::AXFR,
             253 => Self::MAILB,
-            255 => Self::ALL,
+            255 => Self::ANY,
             256 => Self::URI,
             257 => Self::CAA,
             _ => Self::InvalidType,
@@ -161,8 +162,9 @@ impl From<&str> for RecordType {
         match input {
             "A" => Self::A,
             "AAAA" => Self::AAAA, // https://www.rfc-editor.org/rfc/rfc3596#section-2.1
-            "ALL" => Self::ALL,
+            "ANY" => Self::ANY,
             "AXFR" => Self::AXFR,
+            "CAA" => Self::CAA,
             "CNAME" => Self::CNAME,
             "HINFO" => Self::HINFO,
             "LOC" => Self::LOC,
@@ -178,6 +180,7 @@ impl From<&str> for RecordType {
             "PTR" => Self::PTR,
             "SOA" => Self::SOA,
             "TXT" => Self::TXT,
+            "URI" => Self::URI,
             "WKS" => Self::WKS,
             _ => Self::InvalidType,
         }
@@ -189,7 +192,7 @@ impl From<RecordType> for &'static str {
         match input {
             RecordType::A => "A",
             RecordType::AAAA => "AAAA",
-            RecordType::ALL => "ALL",
+            RecordType::ANY => "ANY",
             RecordType::AXFR => "AXFR",
             RecordType::CAA => "CAA",
             RecordType::CNAME => "CNAME",
@@ -226,27 +229,19 @@ impl From<InternalResourceRecord> for RecordType {
         match input {
             InternalResourceRecord::A { .. } => RecordType::A,
             InternalResourceRecord::AAAA { .. } => RecordType::AAAA,
-            InternalResourceRecord::ALL { .. } => RecordType::ALL,
             InternalResourceRecord::AXFR { .. } => RecordType::AXFR,
             InternalResourceRecord::CAA { .. } => RecordType::CAA,
             InternalResourceRecord::CNAME { .. } => RecordType::CNAME,
             InternalResourceRecord::HINFO { .. } => RecordType::HINFO,
             InternalResourceRecord::InvalidType => RecordType::InvalidType,
             InternalResourceRecord::LOC { .. } => RecordType::LOC,
-            InternalResourceRecord::MAILB { .. } => RecordType::MAILB,
-            InternalResourceRecord::MB { .. } => RecordType::MB,
-            InternalResourceRecord::MG { .. } => RecordType::MG,
-            InternalResourceRecord::MINFO { .. } => RecordType::MINFO,
-            InternalResourceRecord::MR { .. } => RecordType::MR,
             InternalResourceRecord::MX { .. } => RecordType::MX,
             InternalResourceRecord::NAPTR { .. } => RecordType::NAPTR,
             InternalResourceRecord::NS { .. } => RecordType::NS,
-            InternalResourceRecord::NULL { .. } => RecordType::NULL,
             InternalResourceRecord::PTR { .. } => RecordType::PTR,
             InternalResourceRecord::SOA { .. } => RecordType::SOA,
             InternalResourceRecord::TXT { .. } => RecordType::TXT,
             InternalResourceRecord::URI { .. } => RecordType::URI,
-            InternalResourceRecord::WKS { .. } => RecordType::WKS,
         }
     }
 }
@@ -257,6 +252,7 @@ impl RecordType {
         match self {
             RecordType::A
             | RecordType::AAAA
+            | RecordType::ANY
             | RecordType::CAA
             | RecordType::CNAME
             | RecordType::HINFO
@@ -285,7 +281,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for RecordType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Sequence)]
 /// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
     /// IN - Internet
@@ -328,8 +324,8 @@ impl Display for RecordClass {
     }
 }
 
-impl From<&'static str> for RecordClass {
-    fn from(value: &'static str) -> Self {
+impl From<&str> for RecordClass {
+    fn from(value: &str) -> Self {
         match value {
             "IN" => RecordClass::Internet,
             "CS" => RecordClass::CsNet,

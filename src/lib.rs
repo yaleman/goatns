@@ -1,6 +1,10 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[cfg(test)]
+#[macro_use(defer)]
+extern crate scopeguard;
+
 use crate::enums::*;
 use crate::utils::*;
 use log::trace;
@@ -8,8 +12,6 @@ use packed_struct::prelude::*;
 use std::fmt::{Debug, Display};
 use std::str::from_utf8;
 
-/// Configuration and management API
-pub mod api;
 /// Configuration handling for the server
 pub mod config;
 /// The data-storing backend for zone information and (eventually) caching.
@@ -21,8 +23,11 @@ pub mod reply;
 pub mod resourcerecord;
 pub mod serializers;
 pub mod servers;
+#[cfg(test)]
 mod tests;
 pub mod utils;
+/// Configuration and management API
+pub mod web;
 pub mod zones;
 
 /// Internal limit of in-flight requests
@@ -187,35 +192,6 @@ impl Display for Question {
             qname, self.qtype, self.qclass,
         ))
     }
-}
-
-#[test]
-fn test_normalize_name() {
-    let q = Question {
-        qname: String::from("HellO.world").into_bytes(),
-        qtype: crate::enums::RecordType::A,
-        qclass: crate::enums::RecordClass::Internet,
-    };
-    assert_eq!(q.normalized_name().unwrap(), String::from("hello.world"));
-    let q = Question {
-        qname: String::from("hello.world").into_bytes(),
-        qtype: crate::enums::RecordType::A,
-        qclass: crate::enums::RecordClass::Internet,
-    };
-    assert_eq!(q.normalized_name().unwrap(), String::from("hello.world"));
-}
-
-#[test]
-fn test_get_question_qname() {
-    assert!(get_question_qname(&[23, 0]).is_err());
-
-    let sample_data = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
-    eprintln!("{:?}", sample_data);
-    let result = get_question_qname(&sample_data);
-    assert_eq!(
-        result,
-        Ok(vec![101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109])
-    );
 }
 
 /// Returns a Vec<u8> representation of the name

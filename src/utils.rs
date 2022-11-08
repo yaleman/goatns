@@ -1,10 +1,15 @@
+use crate::datastore::Command;
 use crate::enums::SystemState;
 use crate::reply::Reply;
-use crate::{Header, PacketType, Rcode, HEADER_BYTES};
+use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
+use crate::zones::FileZone;
+use crate::{Header, PacketType, Question, Rcode, HEADER_BYTES};
 use clap::{arg, command, value_parser, Arg, ArgMatches};
 use log::{debug, trace};
 use std::str::from_utf8;
 use tokio::io::AsyncWriteExt;
+use tokio::sync::mpsc;
+use tokio::sync::oneshot;
 use tokio::time::sleep;
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
@@ -230,6 +235,30 @@ pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
     reply_builder(id, Rcode::NameError)
 }
 
+/// Reply to an ANY request with a HINFO "RFC8482" "" response
+pub fn reply_any(id: u16, question: Question) -> Result<Reply, String> {
+    Ok(Reply {
+        header: Header {
+            id,
+            qr: PacketType::Answer,
+            rcode: Rcode::NoError,
+            authoritative: true,
+            qdcount: 1,
+            ancount: 1,
+            ..Header::default()
+        },
+        question: Some(question.clone()),
+        answers: vec![InternalResourceRecord::HINFO {
+            cpu: Some(DNSCharString::from("RFC8482")),
+            os: Some(DNSCharString::from("")),
+            ttl: 3789,
+            rclass: question.qclass,
+        }],
+        authorities: vec![],
+        additional: vec![],
+    })
+}
+
 // lazy_static!{
 //     static ref GOATNS_VERSION: DNSCharString = DNSCharString::from(format!("GoatNS {}", env!("CARGO_PKG_VERSION")).as_str());
 // }
@@ -281,65 +310,6 @@ pub fn hexdump(bytes: Vec<u8>) {
     }
 }
 
-#[test]
-pub fn test_find_tail_match() {
-    let name = "foo.example.com".as_bytes().to_vec();
-    let target = "zot.example.com".as_bytes().to_vec();
-    let result = find_tail_match(&name, &target);
-
-    assert_eq!(result, 3);
-    let name = "foo.yeanah.xyz".as_bytes().to_vec();
-    let target = "zot.example.com".as_bytes().to_vec();
-    let result = find_tail_match(&name, &target);
-
-    assert_eq!(result, 0)
-}
-
-#[test]
-pub fn test_name_bytes_simple_compress() {
-    let expected_result: Vec<u8> = vec![192, 12];
-
-    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), Some(12), None);
-    assert_eq!(expected_result, test_result);
-}
-#[test]
-pub fn test_name_bytes_no_compress() {
-    let expected_result: Vec<u8> = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
-
-    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), None, None);
-    assert_eq!(expected_result, test_result);
-}
-
-#[test]
-pub fn test_name_bytes_with_compression() {
-    let example_com = "example.com".as_bytes().to_vec();
-    let test_input = "lol.example.com".as_bytes().to_vec();
-
-    let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 12];
-
-    trace!("{:?}", from_utf8(&example_com));
-    trace!("{:?}", from_utf8(&test_input));
-
-    let result = name_as_bytes(test_input, Some(12), Some(&example_com));
-
-    assert_eq!(result, expected_result);
-}
-
-#[test]
-pub fn test_name_bytes_with_tail_compression() {
-    let example_com = "ns1.example.com".as_bytes().to_vec();
-    let test_input = "lol.example.com".as_bytes().to_vec();
-
-    let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 16];
-
-    trace!("{:?}", from_utf8(&example_com));
-    trace!("{:?}", from_utf8(&test_input));
-
-    let result = name_as_bytes(test_input, Some(12), Some(&example_com));
-
-    assert_eq!(result, expected_result);
-}
-
 pub fn clap_parser() -> ArgMatches {
     command!() // requires `cargo` feature
         // .arg(arg!([name] "Optional name to operate on"))
@@ -384,14 +354,12 @@ pub fn clap_parser() -> ArgMatches {
                 .help("Filename to save to (used in other commands).")
                 .value_parser(value_parser!(String)),
         )
-        // .arg(arg!(
-        //     -d --debug ... "Turn debugging information on"
-        // ))
-        // .subcommand(
-        //     Command::new("test")
-        //         .about("does testing things")
-        //         .arg(arg!(-l --list "lists test values").action(ArgAction::SetTrue)),
-        // )
+        .arg(
+            Arg::new("use_zonefile")
+                .long("using-zonefile")
+                .help("Load the zone file into the DB on startup, typically used for testing.")
+                .action(clap::ArgAction::SetTrue),
+        )
         .get_matches()
 }
 
@@ -435,21 +403,6 @@ pub fn loc_size_to_u8(input: f32) -> u8 {
     // turn it into the magic ugly numbers
     let retval: u8 = (mantissa << 4) | (exponent as u8);
     retval
-}
-
-#[test]
-fn test_loc_size_to_u8() {
-    // let test = "10";
-    // let res = loc_size_to_u8(&test).unwrap();
-    // eprintln!("res: {res:3x}");
-
-    // assert_eq!(1,2);
-    assert_eq!(loc_size_to_u8(10.0), 0x13);
-    assert_eq!(loc_size_to_u8(100.0), 0x14);
-    eprintln!("testing 90000000.0 = 0x99");
-    assert_eq!(loc_size_to_u8(90000000.0), 0x99);
-    eprintln!("{:3x}", loc_size_to_u8(20000000.0));
-    // assert_eq!(loc_size_to_u8(20000000.0), Ok(0x29));
 }
 
 pub async fn cli_commands(
@@ -498,10 +451,6 @@ pub async fn cli_commands(
     };
     Ok(SystemState::Server)
 }
-use crate::datastore::Command;
-use crate::zones::FileZone;
-use tokio::sync::mpsc;
-use tokio::sync::oneshot;
 /// dump a zone to a file
 pub async fn export_zone_file(
     tx: mpsc::Sender<Command>,
@@ -512,7 +461,8 @@ pub async fn export_zone_file(
 
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
     let ds_req: Command = Command::GetZone {
-        name: zone_name.to_owned(),
+        id: None,
+        name: Some(zone_name.clone()),
         resp: tx_oneshot,
     };
     if let Err(error) = tx.send(ds_req).await {

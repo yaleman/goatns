@@ -1,10 +1,12 @@
 # GoatNS
 
-A rusty DNS name server.
+Yet another authoritative DNS name server. But with goat references.
 
-Currently designed to be authoritative.
-
-Though, "designed" is a stretch.
+- Built in Rust, thanks to some great packages
+  - DNS features use [tokio](https://crates.io/crates/tokio) and [packed_struct](https://crates.io/crates/packed_struct)
+  - HTTP things use [tide](https://crates.io/crates/tide) / [Askama](https://crates.io/crates/askama)
+  - Database - [sqlx](https://crates.io/crates/sqlx) for async sqlite goodness.
+  - Logging - [flexi_logger](https://crates.io/crates/flexi_logger)
 
 ## Crate Documentation
 
@@ -14,8 +16,9 @@ Auto-generated and available here: [https://yaleman.github.io/goatns/rustdoc/goa
 
 Look at `zones.json` and `goatns.json` for examples.
 
-## Testing
+The configuration file's fields are best found here: <https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html>. Note that the `ip_allow_list` field is a nested map.
 
+## Testing
 
 Rust tests are run using cargo.
 
@@ -39,54 +42,15 @@ Or if you want to fuzz the server and test that it doesn't blow up:
 
 There's a dockerfile at `ghcr.io/yaleman/goatns:latest` and a docker-compose.yml file if that's your thing.
 
-
 ## Supported request/record types
 
-- [x] A
-- [x] AAAA
-- [ ] AXFR
-  - [ ] add an allow-list in the config file (CIDRs)
-- [x] CAA
-- [x] CNAME
-- [x] HINFO
-- [X] LOC
-- [ ] MAILB
-- [ ] MB
-- [ ] MD
-- [ ] MF
-- [ ] MG
-- [ ] MINFO
-- [ ] MR
-- [x] MX
-- [ ] NAPTR
-- [x] NS
-- [x] PTR
-- [x] SOA
-- [x] TXT
-- [x] URI ([RFC 7553](https://www.rfc-editor.org/rfc/rfc7553))
-- [ ] WKS
+This list is now [in the book](https://goatns.dotgoat.net/rrtypes.html).
 
 ## TODO 
 
-  - [ ] record storage in a DB and caching instead of loading everything into memory
-    - [x] add zoneid to FileZoneRecord
-    - [x] add recordid (id) to FileZoneRecord
-    - [x] zone
-      - [x] create
-      - [x] retrieve
-      - [x] update
-      - [x] delete 
-        - [x] need to delete all the user ownership
-        - [x] delete all associated records
-    - [ ] record
-      - [x] create
-      - [x] retrieve
-      - [ ] update
-      - [ ] delete
-    - [x] import from json
-    - [x] export to json (file-per-zone)
+  - [ ] set config.hostname as authority on SOA records
+  - [ ] test records for every rrtype
   - [ ] API things
-    - [x] move to another web framework (tide-rs)
     - [ ] Oauth for management/UI things
   - [ ] support all record-classes
   - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data

@@ -4,11 +4,40 @@ mod tests {
     use std::env;
     use std::net::*;
     use std::thread::sleep;
+    use std::time::Duration;
     use trust_dns_resolver::config::*;
     use trust_dns_resolver::Resolver;
 
     fn in_github_actions() -> bool {
         env::var("GITHUB_ACTIONS").is_ok()
+    }
+
+    #[cfg(test)]
+    fn wait_for_server() {
+        // TODO: wait for the process to start up
+        let client = reqwest::blocking::ClientBuilder::new()
+            .danger_accept_invalid_certs(true)
+            .build()
+            .unwrap();
+        for i in 0..10 {
+            match client.get("https://localhost:9000/status").send() {
+                Ok(value) => {
+                    eprintln!("OK: {value:?}");
+                    if let Ok(text) = value.text() {
+                        eprintln!("Server response: {text}");
+                        if text == crate::web::STATUS_OK.to_string() {
+                            println!("API is up!");
+                            break;
+                        }
+                    }
+                }
+                Err(err) => eprintln!("ERR: {err:?}"),
+            }
+            sleep(Duration::from_secs(1));
+            if i == 9 {
+                panic!("Couldn't connect to test server after 10 seconds!");
+            }
+        }
     }
 
     #[test]
@@ -20,29 +49,40 @@ mod tests {
 
         // YOLO some certs
         std::process::Command::new("./insecure_generate_tls.sh").spawn()?;
-        sleep(std::time::Duration::from_secs(1));
+
         // start the server
         let goat = std::process::Command::new("cargo")
             .args([
                 "run",
                 "--",
+                "--using-zonefile",
                 "--config",
                 "./examples/test_config/goatns-test.json",
             ])
             .spawn();
-        let mut res = match goat {
+        let mut goatns_testserver_process = match goat {
             Ok(child) => child,
             Err(error) => {
                 log::trace!("Failed to start: {error:?}");
                 return Err(error);
             }
         };
+        wait_for_server();
+
+        // this is a scope guard to save us from leaving behind multiple goatns test instances
+        // ask me how I know this is a problem
+        defer! {
+            match goatns_testserver_process.kill() {
+                Ok(_) => println!("Successfully killed goatns!"),
+                Err(err) => println!("Failed to kill test goatns instance: {err:?}"),
+            };
+        }
 
         // Construct a new Resolver pointing at localhost
         let localhost: std::net::IpAddr = "127.0.0.1".parse().unwrap();
         let mut config = ResolverConfig::new();
         config.add_name_server(NameServerConfig::new(
-            SocketAddr::new(localhost, 25353),
+            SocketAddr::new(localhost, 15353),
             Protocol::Udp,
         ));
         let resolver = Resolver::new(config, ResolverOpts::default()).unwrap();
@@ -55,10 +95,10 @@ mod tests {
         //     "{:?}",
         //     resolver.lookup("hello.goat", trust_dns_resolver::proto::rr::RecordType::A)
         // );
+        println!("Querying hello.goat A");
         let response = match resolver.lookup_ip("hello.goat") {
             Ok(value) => value,
             Err(error) => {
-                res.kill()?;
                 panic!("Error resolving hello.goat A {error:?}");
             }
         };
@@ -76,10 +116,14 @@ mod tests {
                 ))
             );
         }
+        println!("Succesfully got hello.goat A: {:?}", address);
 
+        println!("Querying _mqtt._http.hello.goat URI");
         let response = match resolver.lookup(
             "_mqtt._http.hello.goat",
-            trust_dns_resolver::proto::rr::RecordType::Unknown(256),
+            trust_dns_resolver::proto::rr::RecordType::Unknown(
+                crate::enums::RecordType::URI as u16,
+            ),
         ) {
             Ok(value) => value,
             Err(error) => panic!("{error:?}"),
@@ -89,7 +133,6 @@ mod tests {
 
         // clean up
         info!("Killing goatns");
-        res.kill()?;
         Ok(())
     }
 }

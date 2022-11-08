@@ -162,7 +162,6 @@ pub enum InternalResourceRecord {
         ttl: u32,
         rclass: RecordClass,
     }, // 252 A request for a transfer of an entire zone
-
     // [RFC8659](https://www.rfc-editor.org/rfc/rfc8659) - CAA Record
     CAA {
         flag: u8,
@@ -256,41 +255,18 @@ pub enum InternalResourceRecord {
         rclass: RecordClass,
     }, // 6 marks the start of a zone of authority
 
-    MB {
-        ttl: u32,
-        rclass: RecordClass,
-    }, // 7 a mailbox domain name (EXPERIMENTAL)
-    MG {
-        ttl: u32,
-        rclass: RecordClass,
-    }, // 8 a mail group member (EXPERIMENTAL)
-    MR {
-        ttl: u32,
-        rclass: RecordClass,
-    }, // 9 a mail rename domain name (EXPERIMENTAL)
-    NULL {
-        ttl: u32,
-        rclass: RecordClass,
-    }, // 10 a null RR (EXPERIMENTAL)
-    WKS {
-        ttl: u32,
-        rclass: RecordClass,
-    }, // 11 a well known service description
     PTR {
         ptrdname: DomainName,
         ttl: u32,
         rclass: RecordClass,
     }, // 12 a domain name pointer
+    /// RFC1035
     HINFO {
         cpu: Option<DNSCharString>,
         os: Option<DNSCharString>,
         ttl: u32,
         rclass: RecordClass,
     }, // 13 host information
-    MINFO {
-        ttl: u32,
-        rclass: RecordClass,
-    }, // 14 mailbox or mail list information
     MX {
         preference: u16,
         exchange: DomainName,
@@ -309,16 +285,6 @@ pub enum InternalResourceRecord {
         ttl: u32,
         rclass: RecordClass,
     },
-
-    MAILB {
-        ttl: u32,
-        rclass: RecordClass,
-    }, // 253 A request for mailbox-related records (MB, MG or MR)
-
-    // MAILA {
-    //     ttl: u32,
-    // }, // 254 A request for mail agent RRs (Obsolete - see MX)
-    ALL {}, // 255 A request for all records (*)
     InvalidType,
 }
 
@@ -534,27 +500,19 @@ impl PartialEq<RecordType> for InternalResourceRecord {
         match self {
             InternalResourceRecord::A { .. } => other == &RecordType::A,
             InternalResourceRecord::AAAA { .. } => other == &RecordType::AAAA,
-            InternalResourceRecord::ALL { .. } => other == &RecordType::ALL,
             InternalResourceRecord::AXFR { .. } => other == &RecordType::AXFR,
             InternalResourceRecord::CAA { .. } => other == &RecordType::CAA,
             InternalResourceRecord::CNAME { .. } => other == &RecordType::CNAME,
             InternalResourceRecord::HINFO { .. } => other == &RecordType::HINFO,
             InternalResourceRecord::InvalidType => other == &RecordType::InvalidType,
-            InternalResourceRecord::MAILB { .. } => other == &RecordType::MAILB,
             InternalResourceRecord::LOC { .. } => other == &RecordType::LOC,
-            InternalResourceRecord::MB { .. } => other == &RecordType::MB,
-            InternalResourceRecord::MG { .. } => other == &RecordType::MG,
-            InternalResourceRecord::MINFO { .. } => other == &RecordType::MINFO,
-            InternalResourceRecord::MR { .. } => other == &RecordType::MR,
             InternalResourceRecord::MX { .. } => other == &RecordType::MX,
             InternalResourceRecord::NAPTR { .. } => other == &RecordType::NAPTR,
             InternalResourceRecord::NS { .. } => other == &RecordType::NS,
-            InternalResourceRecord::NULL { .. } => other == &RecordType::NULL,
             InternalResourceRecord::PTR { .. } => other == &RecordType::PTR,
             InternalResourceRecord::SOA { .. } => other == &RecordType::SOA,
             InternalResourceRecord::TXT { .. } => other == &RecordType::TXT,
             InternalResourceRecord::URI { .. } => other == &RecordType::URI,
-            InternalResourceRecord::WKS { .. } => other == &RecordType::WKS,
         }
     }
 }
@@ -569,8 +527,6 @@ impl InternalResourceRecord {
                 log::trace!("turning CNAME {cname:?} into bytes");
                 cname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
             }
-            // InternalResourceRecord::MD {  } => todo!(),
-            // InternalResourceRecord::MF {  } => todo!(),
             InternalResourceRecord::LOC {
                 ttl,
                 version,
@@ -644,11 +600,6 @@ impl InternalResourceRecord {
                 res.extend(&target.data);
                 res
             }
-            // InternalResourceRecord::MB {  } => todo!(),
-            // InternalResourceRecord::MG {  } => todo!(),
-            // InternalResourceRecord::MR {  } => todo!(),
-            // InternalResourceRecord::NULL {  } => todo!(),
-            // InternalResourceRecord::WKS {  } => todo!(),
             InternalResourceRecord::HINFO { cpu, os, .. } => {
                 let mut hinfo_bytes: Vec<u8> = vec![];
                 match cpu {
@@ -683,8 +634,6 @@ impl InternalResourceRecord {
                 mx_bytes
             }
             InternalResourceRecord::AXFR { .. } => todo!(),
-            InternalResourceRecord::MAILB { .. } => todo!(),
-            InternalResourceRecord::ALL {} => todo!(),
             InternalResourceRecord::InvalidType => todo!(),
             InternalResourceRecord::CAA {
                 flag, tag, value, ..
@@ -697,26 +646,7 @@ impl InternalResourceRecord {
 
                 result
             }
-            #[allow(unused_variables)]
-            InternalResourceRecord::NAPTR {
-                domain,
-                order,
-                preference,
-                flags,
-                ..
-            } => todo!(),
-            #[allow(unused_variables)]
-            InternalResourceRecord::MB { .. } => todo!(),
-            #[allow(unused_variables)]
-            InternalResourceRecord::MG { .. } => todo!(),
-            #[allow(unused_variables)]
-            InternalResourceRecord::MR { .. } => todo!(),
-            #[allow(unused_variables)]
-            InternalResourceRecord::NULL { .. } => todo!(),
-            #[allow(unused_variables)]
-            InternalResourceRecord::WKS { .. } => todo!(),
-            #[allow(unused_variables)]
-            InternalResourceRecord::MINFO { .. } => todo!(),
+            InternalResourceRecord::NAPTR { .. } => todo!(),
         }
     }
 
@@ -1036,17 +966,4 @@ impl TryFrom<&str> for FileLocRecord {
 /// tests to ensure that no label in the name is longer than 63 octets (bytes)
 pub fn check_long_labels(testval: &str) -> bool {
     return testval.split('.').into_iter().any(|x| x.len() > 63);
-}
-
-#[test]
-fn test_check_long_labels() {
-    assert_eq!(false, check_long_labels(&"hello.".to_string()));
-    assert_eq!(false, check_long_labels(&"hello.world".to_string()));
-    assert_eq!(
-        true,
-        check_long_labels(
-            &"foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890"
-                .to_string()
-        )
-    );
 }

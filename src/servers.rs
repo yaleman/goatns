@@ -3,14 +3,15 @@ use std::net::SocketAddr;
 use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
-use tokio::net::{TcpListener, UdpSocket};
+use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::time::timeout;
 
 use crate::config::ConfigFile;
 use crate::datastore::Command;
-use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass};
+use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
 use crate::reply::Reply;
+use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::utils::*;
 use crate::zones::ZoneRecord;
 use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
@@ -22,30 +23,45 @@ lazy_static! {
 }
 
 /// this handles a shutdown CHAOS request
-async fn check_for_shutdown(r: &Reply, addr: &SocketAddr, config: &ConfigFile) -> Result<(), ()> {
+async fn check_for_shutdown(
+    r: &Reply,
+    addr: &SocketAddr,
+    config: &ConfigFile,
+) -> Result<Reply, Option<Reply>> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
     if let Some(q) = &r.question {
         if q.qclass == RecordClass::Chaos {
-            if let Ok(qname) = from_utf8(&q.qname) {
-                // Just don't do this on UDP, because we can't really tell who it's coming from.
-                if qname == "shutdown" {
-                    match config.ip_allow_lists.shutdown.contains(&addr.ip()) {
-                        true => {
-                            log::info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
-                            return Ok(());
-                        }
-                        false => log::warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip()),
+            let qname = from_utf8(&q.qname)
+                .map_err(|e| {
+                    log::error!(
+                        "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
+                        q.qname
+                    );
+                })
+                .unwrap();
+            // Just don't do this on UDP, because we can't really tell who it's coming from.
+            if qname == "shutdown" {
+                // when we get a request, we update the response to say if we're going to do it or not
+                match config.ip_allow_lists.shutdown.contains(&addr.ip()) {
+                    true => {
+                        log::info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
+                        let mut chaos_reply = r.clone();
+                        chaos_reply.answers.push(CHAOS_OK.clone());
+                        return Ok(chaos_reply);
                     }
-                }
-            } else {
-                log::error!(
-                    "Failed to parse qname from {:?}, this shouldn't be able to happen!",
-                    q.qname
-                );
+                    false => {
+                        // get lost!  🤣
+                        log::warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip());
+                        let mut chaos_reply = r.clone();
+                        chaos_reply.answers.push(CHAOS_NO.clone());
+                        chaos_reply.header.rcode = Rcode::Refused;
+                        return Err(Some(chaos_reply));
+                    }
+                };
             }
         }
     };
-    Err(())
+    Err(None)
 }
 
 /// this handles a version CHAOS request
@@ -151,10 +167,125 @@ pub async fn udp_server(
     }
 }
 
+pub async fn tcp_conn_handler(
+    stream: &mut TcpStream,
+    addr: SocketAddr,
+    tx: mpsc::Sender<Command>,
+    agent_tx: broadcast::Sender<AgentState>,
+    config: ConfigFile,
+) -> io::Result<()> {
+    let (mut reader, writer) = stream.split();
+    let msg_length: usize = reader.read_u16().await?.into();
+    log::debug!("msg_length={msg_length}");
+    let mut buf: Vec<u8> = vec![];
+
+    while buf.len() < msg_length {
+        let len = match reader.read_buf(&mut buf).await {
+            Ok(size) => size,
+            Err(error) => {
+                log::error!("Failed to read from TCP Stream: {:?}", error);
+                return Ok(());
+            }
+        };
+        if len > 0 {
+            log::debug!("Read {:?} bytes from TCP stream", len);
+        }
+    }
+
+    crate::utils::hexdump(buf.clone());
+    // the first two bytes of a tcp query is the message length
+    // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
+
+    // check the message is long enough
+    if buf.len() < msg_length {
+        log::warn!(
+            "Message length too short {}, wanted {}",
+            buf.len(),
+            msg_length + 2
+        );
+    } else {
+        log::info!("TCP Message length ftw!");
+    }
+
+    // skip the TCP length header because rad
+    let buf = &buf[0..msg_length];
+    let result = match timeout(
+        Duration::from_millis(REPLY_TIMEOUT_MS),
+        parse_query(tx.clone(), msg_length, buf, config.capture_packets),
+    )
+    .await
+    {
+        Ok(reply) => reply,
+        Err(_) => {
+            log::error!("Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms");
+            return Ok(());
+        }
+    };
+
+    match result {
+        Ok(r) => {
+            log::debug!("TCP Result: {r:?}");
+
+            // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
+            let r = match check_for_shutdown(&r, &addr, &config).await {
+                // no change here
+                Err(reply) => match reply {
+                    None => r,
+                    Some(response) => response,
+                },
+                Ok(reply) => {
+                    if let Err(error) = agent_tx.send(AgentState::Stopped {
+                        agent: Agent::TCPServer,
+                    }) {
+                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                    };
+                    if let Err(error) = tx.send(Command::Shutdown).await {
+                        eprintln!("Failed to send shutdown command to datastore.. {error:?}");
+                    };
+                    reply
+                }
+            };
+
+            let reply_bytes: Vec<u8> = match r.as_bytes().await {
+                Ok(value) => value,
+                Err(error) => {
+                    log::error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
+                    return Ok(());
+                }
+            };
+
+            log::trace!("reply_bytes: {:?}", reply_bytes);
+
+            let reply_bytes = &reply_bytes as &[u8];
+            // send the outgoing message length
+            let response_length: u16 = reply_bytes.len() as u16;
+            let len = match writer.try_write(&response_length.to_be_bytes()) {
+                Ok(value) => value,
+                Err(err) => {
+                    log::error!("Failed to send data back to {:?}: {:?}", addr, err);
+                    return Ok(());
+                }
+            };
+            log::trace!("{:?} bytes sent", len);
+
+            // send the data
+            let len = match writer.try_write(reply_bytes) {
+                Ok(value) => value,
+                Err(err) => {
+                    log::error!("Failed to send data back to {:?}: {:?}", addr, err);
+                    return Ok(());
+                }
+            };
+            log::trace!("{:?} bytes sent", len);
+        }
+        Err(error) => log::error!("Error: {}", error),
+    }
+    Ok(())
+}
+
 /// main handler for the TCP side of things
 ///
 /// Ref <https://www.rfc-editor.org/rfc/rfc7766>
-
 pub async fn tcp_server(
     bind_address: SocketAddr,
     config: ConfigFile,
@@ -162,7 +293,6 @@ pub async fn tcp_server(
     agent_tx: broadcast::Sender<AgentState>,
     mut agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
-    // TODO: add a configurable idle timeout for the TCP server
     let tcpserver = match TcpListener::bind(bind_address).await {
         Ok(value) => {
             log::info!("Started TCP listener on {}", bind_address);
@@ -177,112 +307,28 @@ pub async fn tcp_server(
     loop {
         let (mut stream, addr) = match tcpserver.accept().await {
             Ok(value) => value,
-            Err(error) => panic!("Couldn't get data from TcpStrream: {:?}", error),
+            Err(error) => panic!("Couldn't get data from TcpStream: {:?}", error),
         };
+
         log::debug!("TCP connection from {:?}", addr);
-
-        let (mut reader, writer) = stream.split();
-        let msg_length: usize = reader.read_u16().await?.into();
-        log::debug!("msg_length={msg_length}");
-        let mut buf: Vec<u8> = vec![];
-
-        while buf.len() < msg_length {
-            let len = match reader.read_buf(&mut buf).await {
-                Ok(size) => size,
-                Err(error) => {
-                    log::error!("Failed to read from TCP Stream: {:?}", error);
-                    return Ok(());
-                }
-            };
-            if len > 0 {
-                log::debug!("Read {:?} bytes from TCP stream", len);
-            }
-        }
-
-        crate::utils::hexdump(buf.clone());
-        // the first two bytes of a tcp query is the message length
-        // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
-
-        // check the message is long enough
-        if buf.len() < msg_length {
-            log::warn!(
-                "Message length too short {}, wanted {}",
-                buf.len(),
-                msg_length + 2
-            );
-        } else {
-            log::info!("TCP Message length ftw!");
-        }
-
-        // skip the TCP length header because rad
-        let buf = &buf[0..msg_length];
-        let result = match timeout(
-            Duration::from_millis(REPLY_TIMEOUT_MS),
-            parse_query(tx.clone(), msg_length, buf, config.capture_packets),
-        )
-        .await
-        {
-            Ok(reply) => reply,
-            Err(_) => {
-                log::error!(
-                    "Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms"
+        let loop_tx = tx.clone();
+        let loop_config = config.clone();
+        let loop_agent_tx = agent_tx.clone();
+        tokio::spawn(async move {
+            if timeout(
+                Duration::from_secs(loop_config.tcp_client_timeout),
+                tcp_conn_handler(&mut stream, addr, loop_tx, loop_agent_tx, loop_config),
+            )
+            .await.is_err()
+            {
+                log::warn!(
+                    "TCP Connection from {addr:?} terminated after {} seconds.",
+                    config.tcp_client_timeout
                 );
-                continue;
             }
-        };
+        })
+        .await?;
 
-        match result {
-            Ok(r) => {
-                log::debug!("TCP Result: {r:?}");
-
-                // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
-                if check_for_shutdown(&r, &addr, &config).await.is_ok() {
-                    if let Err(error) = agent_tx.send(AgentState::Stopped {
-                        agent: Agent::TCPServer,
-                    }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-                    };
-                    if let Err(error) = tx.send(Command::Shutdown).await {
-                        eprintln!("Failed to send shutdown command to datastore.. {error:?}");
-                    };
-
-                    return Ok(());
-                }
-
-                let reply_bytes: Vec<u8> = match r.as_bytes().await {
-                    Ok(value) => value,
-                    Err(error) => {
-                        log::error!("Failed to parse reply {:?} into bytes: {:?}", r, error);
-                        continue;
-                    }
-                };
-
-                log::trace!("reply_bytes: {:?}", reply_bytes);
-
-                let reply_bytes = &reply_bytes as &[u8];
-                // send the outgoing message length
-                let response_length: u16 = reply_bytes.len() as u16;
-                let len = match writer.try_write(&response_length.to_be_bytes()) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        log::error!("Failed to send data back to {:?}: {:?}", addr, err);
-                        return Ok(());
-                    }
-                };
-                log::trace!("{:?} bytes sent", len);
-
-                // send the data
-                let len = match writer.try_write(reply_bytes) {
-                    Ok(value) => value,
-                    Err(err) => {
-                        log::error!("Failed to send data back to {:?}: {:?}", addr, err);
-                        return Ok(());
-                    }
-                };
-                log::trace!("{:?} bytes sent", len);
-            }
-            Err(error) => log::error!("Error: {}", error),
-        }
         if let Ok(agent_state) = agent_rx.try_recv() {
             log::info!("Got agent state: {:?}", agent_state);
         };
@@ -317,6 +363,19 @@ pub async fn parse_query(
     log::trace!("Buffer length: {}", len);
     log::trace!("Parsed header: {:?}", header);
     get_result(header, len, buf, datastore).await
+}
+
+lazy_static! {
+    static ref CHAOS_OK: InternalResourceRecord = InternalResourceRecord::TXT {
+        txtdata: DNSCharString::from("OK"),
+        ttl: 0,
+        class: RecordClass::Chaos,
+    };
+    static ref CHAOS_NO: InternalResourceRecord = InternalResourceRecord::TXT {
+        txtdata: DNSCharString::from("NO"),
+        ttl: 0,
+        class: RecordClass::Chaos,
+    };
 }
 
 /// The generic handler for the packets once they've been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y'know?
@@ -378,8 +437,12 @@ async fn get_result(
           }*/
     }
 
-    // build the request to the datastore to make the query
+    if let RecordType::ANY {} = question.qtype {
+        // TODO this should check to see if we have a zone record, but that requires walking down the qname record recursively, which is its own thing. We just YOLO a HINFO back for any request now.
+        return reply_any(header.id, question);
+    };
 
+    // build the request to the datastore to make the query
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
     let ds_req: Command = Command::GetRecord {
         name: question.qname.clone(),

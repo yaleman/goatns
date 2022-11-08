@@ -9,3 +9,10 @@ out.stacks
 flamegraph.svg
 vendor
 certificates/*
+
+
+static_files/css/*
+!static_files/css/bootstrap.min.css
+
+static_files/js/*
+!static_files/js/bootstrap.bundle.min.js

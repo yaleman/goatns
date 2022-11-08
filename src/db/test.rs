@@ -290,7 +290,7 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
     }
 
     eprintln!("Exporting zone {}", zone.id);
-    let exported_zone = export_zone(pool.acquire().await?, zone.id).await?;
+    let exported_zone = export_zone(pool.acquire().await?, zone.id.try_into().unwrap()).await?;
     eprintln!("Done exporting zone");
 
     println!("found {} records", exported_zone.records.len());
@@ -300,10 +300,11 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
 
     println!("{json_result}");
 
-    let export_json_result = match export_zone_json(pool.acquire().await?, zone.id).await {
-        Ok(val) => val,
-        Err(err) => panic!("error exporting json: {err}"),
-    };
+    let export_json_result =
+        match export_zone_json(pool.acquire().await?, zone.id.try_into().unwrap()).await {
+            Ok(val) => val,
+            Err(err) => panic!("error exporting json: {err}"),
+        };
 
     println!("Checking that the result matches expectation");
     assert_eq!(json_result, export_json_result);

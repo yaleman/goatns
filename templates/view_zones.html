@@ -1,0 +1,17 @@
+{% extends "dashboard.html" %}
+{% block content %}
+<h1>Zones!</h1>
+
+<table class="table">
+    <thead>
+        <th scope="col">Name</th>
+        <th scope="col">RName</th>
+    </thead>
+    {% for zone in zones %}
+    <tr>
+        <td class="text-truncate"><a href="/ui/zones/{{zone.id}}">{{zone.name}}</a></td>
+        <td>{{zone.rname}}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock content %}
