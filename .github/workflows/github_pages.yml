@@ -7,7 +7,9 @@ name: GitHub Pages
       - 'main'
   pull_request:
 
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   deploy_book:
     runs-on: ubuntu-latest
