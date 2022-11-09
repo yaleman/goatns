@@ -15,7 +15,7 @@ pub async fn oidc_discover(config: &ConfigFile) -> Result<OidcDiscoveryResponse,
 
     let oauth_config: OidcDiscoveryResponse =
         response.json().await.map_err(|e| format!("{e:?}"))?;
-    log::debug!("{oauth_config:?}");
+    log::debug!("{oauth_config:#?}");
     Ok(oauth_config)
 }
 

@@ -1,3 +1,8 @@
+/// # Web things
+///
+/// Uses axum/tower for protocol, askama for templating, confusion for the rest.
+///
+/// Example using shared state: https://github.com/tokio-rs/axum/blob/axum-v0.5.17/examples/key-value-store/src/main.rs
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -153,6 +158,7 @@ pub async fn build(
         false => None,
         true => Some(DateTime::from_utc(NaiveDateTime::default(), Utc)),
     };
+
     let state: SharedState = Arc::new(RwLock::new(State {
         tx,
         connpool,
