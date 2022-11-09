@@ -14,7 +14,7 @@ Auto-generated and available here: [https://yaleman.github.io/goatns/rustdoc/goa
 
 ## Configuration
 
-Look at `zones.json` and `goatns.json` for examples.
+Look at `zones.json` and `goatns.example.json` for examples.
 
 The configuration file's fields are best found here: <https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html>. Note that the `ip_allow_list` field is a nested map.
 

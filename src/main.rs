@@ -18,7 +18,10 @@ use tokio::time::sleep;
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let clap_results = clap_parser();
-    let mut config: ConfigFile = get_config(clap_results.get_one::<String>("config"));
+    let mut config: ConfigFile = match get_config(clap_results.get_one::<String>("config")) {
+        Ok(value) => value,
+        Err(_) => return Ok(()),
+    };
 
     let logger = match setup_logging(&config, &clap_results) {
         Ok(logger) => logger,

@@ -319,7 +319,8 @@ pub async fn tcp_server(
                 Duration::from_secs(loop_config.tcp_client_timeout),
                 tcp_conn_handler(&mut stream, addr, loop_tx, loop_agent_tx, loop_config),
             )
-            .await.is_err()
+            .await
+            .is_err()
             {
                 log::warn!(
                     "TCP Connection from {addr:?} terminated after {} seconds.",

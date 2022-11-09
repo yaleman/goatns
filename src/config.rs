@@ -60,6 +60,14 @@ pub struct ConfigFile {
     /// Secret for cookie storage - don't hard code this, it'll randomly generate on startup
     #[serde(default = "generate_cookie_secret", skip)]
     api_cookie_secret: String,
+    /// OAuth2 Resource server name
+    pub oauth_client_id: String,
+    #[serde(skip_serializing)]
+    /// Oauth2 Secret
+    pub oauth2_secret: String,
+    /// OIDC Discovery URL, eg for Kanidm you'd use https://idm.example.com/oauth2/openid/:client_id:/.well-known/openid-configuration
+    #[serde(default)]
+    pub oauth2_config_url: String,
 }
 
 fn generate_cookie_secret() -> String {
@@ -101,6 +109,9 @@ impl Default for ConfigFile {
             api_tls_key: PathBuf::from("./certificates/key.pem"),
             api_static_dir: String::from("./static_files/"),
             api_cookie_secret: generate_cookie_secret(),
+            oauth_client_id: String::from("goatns"),
+            oauth2_secret: String::from(""),
+            oauth2_config_url: String::from(""),
         }
     }
 }
@@ -161,6 +172,15 @@ impl From<Config> for ConfigFile {
                 .get("api_static_dir")
                 .unwrap_or(Self::default().api_static_dir),
             api_cookie_secret: generate_cookie_secret(),
+            oauth_client_id: config
+                .get("oauth_client_id")
+                .unwrap_or(Self::default().oauth_client_id),
+            oauth2_secret: config
+                .get("oauth2_secret")
+                .unwrap_or(Self::default().oauth2_secret),
+            oauth2_config_url: config
+                .get("oauth2_config_url")
+                .unwrap_or(Self::default().oauth2_config_url),
         }
     }
 }
@@ -173,7 +193,7 @@ lazy_static! {
 /// Loads the configuration from a given file or from some default locations.
 ///
 /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
-pub fn get_config(config_path: Option<&String>) -> ConfigFile {
+pub fn get_config(config_path: Option<&String>) -> Result<ConfigFile, String> {
     let file_locations = match config_path {
         Some(value) => vec![value.to_owned()],
         None => CONFIG_LOCATIONS.iter().map(|x| x.to_string()).collect(),
@@ -194,16 +214,19 @@ pub fn get_config(config_path: Option<&String>) -> ConfigFile {
                 match builder.build() {
                     Ok(config) => {
                         println!("Successfully loaded config from: {}", config_filename);
-                        return config.into();
+                        return Ok(ConfigFile::from(config));
                     }
                     Err(error) => {
-                        eprintln!("Couldn't load config from {}: {:?}", config_filename, error);
+                        let err =
+                            format!("Couldn't load config from {}: {:?}", config_filename, error);
+                        log::error!("{err}");
+                        return Err(err);
                     }
                 }
             }
         }
     }
-    ConfigFile::default()
+    Ok(ConfigFile::default())
 }
 
 pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> {

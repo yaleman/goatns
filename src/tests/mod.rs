@@ -647,8 +647,6 @@ fn test_get_question_qname() {
     );
 }
 
-
-
 #[tokio::test]
 ///tries to test when input buffers are weird
 async fn test_question_from_bytes() {

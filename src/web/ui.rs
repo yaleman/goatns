@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::datastore::Command;
 use crate::zones::FileZone;
 use askama::Template;
@@ -7,6 +5,7 @@ use axum::extract::Path;
 use axum::response::Html;
 use axum::routing::get;
 use axum::{Extension, Router};
+use axum_macros::debug_handler;
 
 use super::SharedState;
 
@@ -22,16 +21,22 @@ struct TemplateViewZone {
     zone: FileZone,
 }
 
+#[debug_handler]
 pub async fn zones_list(
-    Extension(req): Extension<Arc<SharedState>>,
+    Extension(state): Extension<SharedState>,
 ) -> Result<Html<String>, &'static str> {
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
-
-    if let Err(err) = req.tx.send(Command::GetZoneNames { resp: os_tx }).await {
+    let state_writer = state.write().await;
+    if let Err(err) = state_writer
+        .tx
+        .send(Command::GetZoneNames { resp: os_tx })
+        .await
+    {
         eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
         log::error!("failed to send GetZoneNames command to datastore: {err:?}");
         return Err("Failed to send request to backend");
     };
+    drop(state_writer);
 
     let zones = os_rx.await.expect("Failed to get response: {res:?}");
 
@@ -41,7 +46,7 @@ pub async fn zones_list(
 
 pub async fn zone_view(
     Path(name_or_id): Path<i64>,
-    Extension(state): Extension<Arc<SharedState>>,
+    Extension(state): Extension<SharedState>,
 ) -> Result<Html<String>, &'static str> {
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     // TODO: fix this one
@@ -51,11 +56,13 @@ pub async fn zone_view(
         name: None,
     };
     log::debug!("{cmd:?}");
-    if let Err(err) = state.tx.send(cmd).await {
+    let state_writer = state.write().await;
+    if let Err(err) = state_writer.tx.send(cmd).await {
         eprintln!("failed to send GetZone command to datastore: {err:?}");
         log::error!("failed to send GetZone command to datastore: {err:?}");
         return Err("Failed to send request to backend");
     };
+    drop(state_writer);
 
     let zone = match os_rx.await.expect("Failed to get response: {res:?}") {
         Some(value) => value,
@@ -65,11 +72,6 @@ pub async fn zone_view(
     log::trace!("Returning zone: {zone:?}");
     let context = TemplateViewZone { zone };
     Ok(Html::from(context.render().unwrap()))
-}
-
-// #[axum_macros::debug_handler]
-pub async fn logout() -> Result<Html<String>, &'static str> {
-    Ok(Html::from("Logout page coming soon".to_string()))
 }
 
 #[derive(Template)]
@@ -83,13 +85,9 @@ pub async fn dashboard() -> Result<Html<String>, ()> {
     Ok(Html::from(context.render().unwrap()))
 }
 
-pub fn new(shared_state: Arc<SharedState>) -> Router {
+pub fn new() -> Router {
     Router::new()
         .route("/", get(dashboard))
-        .route("/logout", get(logout))
-        .route("/zones/list", get(zones_list))
-        .layer(Extension(shared_state.clone()))
-        .layer(Extension(shared_state.clone()))
         .route("/zones/:id", get(zone_view))
-        .layer(Extension(shared_state))
+        .route("/zones/list", get(zones_list))
 }

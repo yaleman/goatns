@@ -263,12 +263,10 @@ impl Question {
     fn normalized_name(&self) -> Result<String, String> {
         match from_utf8(&self.qname) {
             Ok(value) => Ok(value.to_lowercase()),
-            Err(error) => {
-                Err(format!(
-                    "Failed to normalize {:?}: {:?}",
-                    &self.qname, error
-                ))
-            }
+            Err(error) => Err(format!(
+                "Failed to normalize {:?}: {:?}",
+                &self.qname, error
+            )),
         }
     }
 
