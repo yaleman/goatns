@@ -69,10 +69,6 @@ mod tests {
                 return Err(error);
             }
         };
-        let config =
-            crate::config::get_config(Some(&"./examples/test_config/goatns-test.json".to_string()))
-                .unwrap();
-        wait_for_server(&config);
 
         // this is a scope guard to save us from leaving behind multiple goatns test instances
         // ask me how I know this is a problem
@@ -82,6 +78,11 @@ mod tests {
                 Err(err) => println!("Failed to kill test goatns instance: {err:?}"),
             };
         }
+
+        let config =
+            crate::config::get_config(Some(&"./examples/test_config/goatns-test.json".to_string()))
+                .unwrap();
+        wait_for_server(&config);
 
         // Construct a new Resolver pointing at localhost
         let localhost: std::net::IpAddr = "127.0.0.1".parse().unwrap();
