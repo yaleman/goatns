@@ -207,8 +207,6 @@ pub fn name_as_bytes(
                 result.extend(pointer.to_be_bytes());
             }
         }
-
-        // TODO: try and find a sub-slice to make test_name_bytes_with_tail_compression pass
     }
     trace!("Final result {result:?}");
     result
@@ -366,6 +364,7 @@ pub fn clap_parser() -> ArgMatches {
 /// turn a degrees/minutes/seconds format into unsigned 32-bit integer matching the format
 /// required for a DNS LOC record
 ///
+/// when positive = true, you're North or West
 pub fn dms_to_u32(deg: u8, min: u8, sec: f32, positive: bool) -> u32 {
     let secsfrac = sec % 1f32;
 

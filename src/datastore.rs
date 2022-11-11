@@ -260,18 +260,10 @@ pub async fn manager(
             Command::DeleteZone => todo!(),
             Command::PatchZone => todo!(),
             Command::DeleteUser => todo!(),
-            Command::GetUser {
-                username: _,
-                id: _,
-                resp: _,
-            } => todo!(),
+            Command::GetUser { .. } => todo!(),
             Command::PostUser => todo!(),
             Command::PatchUser => todo!(),
-            Command::DeleteOwnership {
-                zoneid: _,
-                userid: _,
-                resp: _,
-            } => todo!(),
+            Command::DeleteOwnership { .. } => todo!(),
             Command::GetOwnership {
                 zoneid: _,
                 userid,
@@ -290,11 +282,7 @@ pub async fn manager(
                     log::error!("Unmatched arm in getownership")
                 }
             }
-            Command::PostOwnership {
-                zoneid: _,
-                userid: _,
-                resp: _,
-            } => todo!(),
+            Command::PostOwnership { .. } => todo!(),
         }
     }
 

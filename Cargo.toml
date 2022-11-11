@@ -13,9 +13,11 @@ opt-level = 3
 
 [dependencies]
 askama = { version="0.11.1"}
+async-sqlx-session = { git="https://github.com/jbr/async-sqlx-session.git", default-features = false, features = ["sqlite"] }
 async-trait = "0.1.58"
 axum = { version="0.5.17", features=["http2", "headers"] }
 axum-extra = { version = "0.3.7", features = ["spa"] }
+axum-login = { version = "0.2.0", features = ["sqlite"] }
 axum-macros = "0.2.3"
 axum-server = { version = "0.4.3", features = [ "tls-rustls"] }
 bit-vec = "0.6.3"
@@ -28,10 +30,11 @@ flexi_logger = { version = "0.24", features = ["async", "default"] }
 gethostname = "0.4.0"
 ipnet = { version = "2.5.0", features = [ "json", "serde" ] }
 json5 = "0.4.1"
-kanidm_proto = { version = "^1.1.0-alpha.10", git = "https://github.com/kanidm/kanidm.git" }
 lazy_static = "1.4.0"
 log = "0.4.17"
 num-traits = "0.2.15"
+oauth2 = "4.3.0"
+openidconnect = "2.4.0"
 packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
 rand = "0.8.5"
 regex = "1.6.0"
@@ -41,13 +44,14 @@ serde_bytes = "0.11.7"
 serde_derive = "1.0.145"
 serde_json = "1.0.86"
 shellexpand = "2.1.2"
-sqlx = { version = "0.6", features = ["runtime-tokio-native-tls", "sqlite"], default-features=false }
-sqlx-core = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite"], default-features=false }
+sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite"], default-features=false }
+# sqlx-core = { version = "0.6.2", features = ["runtime-tokio-rustls", "sqlite"], default-features=false }
 tokio = { version = "1.21.2", features = ["full"] }
+tokio-cron-scheduler = "0.8.1"
 tokio-stream = { version = "0.1.11", features = ["net"] }
 tokio-util = { version = "0.7.4", features = ["full"] }
 tower = "0.4.13"
-tower-http = { version = "0.3.4", features = ["trace","add-extension"] }
+tower-http = { version = "0.3.4", features = ["trace","add-extension","compression-gzip"] }
 tracing = "0.1.37"
 url = { version = "2.3.1", features = ["serde"] }
 

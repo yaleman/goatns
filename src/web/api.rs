@@ -64,9 +64,6 @@ pub async fn ownership_get(
 
     log::debug!("ownership_get userid={userid} zoneid={zoneid}");
     todo!();
-    // let response = serde_json::to_string(&NotImplemented::default()).unwrap();
-    // tide_result_json!(response, 403)
-    // Json::from<None>
 }
 pub async fn ownership_get_user(
     Path(userid): Path<String>,

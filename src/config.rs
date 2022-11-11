@@ -11,6 +11,7 @@ use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
+use url::Url;
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 /// Allow-listing ranges for making particular kinds of requests
@@ -61,13 +62,20 @@ pub struct ConfigFile {
     #[serde(default = "generate_cookie_secret", skip)]
     api_cookie_secret: String,
     /// OAuth2 Resource server name
-    pub oauth_client_id: String,
+    pub oauth2_client_id: String,
     #[serde(skip_serializing)]
     /// Oauth2 Secret
     pub oauth2_secret: String,
     /// OIDC Discovery URL, eg for Kanidm you'd use https://idm.example.com/oauth2/openid/:client_id:/.well-known/openid-configuration
     #[serde(default)]
     pub oauth2_config_url: String,
+    #[serde(default)]
+    /// A list of scopes to request from the IdP
+    pub oauth2_user_scopes: Vec<String>,
+    /// Log things sometimes
+    pub sql_log_statements: bool,
+    /// When queries take more than this many seconds, log them
+    pub sql_log_slow_duration: u64,
 }
 
 fn generate_cookie_secret() -> String {
@@ -82,6 +90,14 @@ impl ConfigFile {
 
     pub fn api_cookie_secret(self) -> String {
         self.api_cookie_secret
+    }
+
+    pub fn status_url(&self) -> Url {
+        Url::from_str(&format!(
+            "https://{}:{}/status",
+            self.hostname, self.api_port
+        ))
+        .unwrap()
     }
 }
 
@@ -109,9 +125,12 @@ impl Default for ConfigFile {
             api_tls_key: PathBuf::from("./certificates/key.pem"),
             api_static_dir: String::from("./static_files/"),
             api_cookie_secret: generate_cookie_secret(),
-            oauth_client_id: String::from("goatns"),
+            oauth2_client_id: String::from(""),
             oauth2_secret: String::from(""),
             oauth2_config_url: String::from(""),
+            oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
+            sql_log_slow_duration: 5,
+            sql_log_statements: false,
         }
     }
 }
@@ -172,15 +191,24 @@ impl From<Config> for ConfigFile {
                 .get("api_static_dir")
                 .unwrap_or(Self::default().api_static_dir),
             api_cookie_secret: generate_cookie_secret(),
-            oauth_client_id: config
-                .get("oauth_client_id")
-                .unwrap_or(Self::default().oauth_client_id),
+            oauth2_client_id: config
+                .get("oauth2_client_id")
+                .unwrap_or(Self::default().oauth2_client_id),
             oauth2_secret: config
                 .get("oauth2_secret")
                 .unwrap_or(Self::default().oauth2_secret),
             oauth2_config_url: config
                 .get("oauth2_config_url")
                 .unwrap_or(Self::default().oauth2_config_url),
+            oauth2_user_scopes: config
+                .get("oauth2_user_scopes")
+                .unwrap_or(Self::default().oauth2_user_scopes),
+            sql_log_slow_duration: config
+                .get("sql_log_slow_duration")
+                .unwrap_or(Self::default().sql_log_slow_duration),
+            sql_log_statements: config
+                .get("sql_log_statements")
+                .unwrap_or(Self::default().sql_log_statements),
         }
     }
 }

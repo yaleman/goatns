@@ -52,6 +52,7 @@ This list is now [in the book](https://goatns.dotgoat.net/rrtypes.html).
   - [ ] test records for every rrtype
   - [ ] API things
     - [ ] Oauth for management/UI things
+    - [ ] web_hostname field for config so that the NS and web hostnames can be different?
   - [ ] support all record-classes
   - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data
    - [?] SOA minimum overrides RR TTL - RFC1035 3.3.13 - "Whenever a RR is sent in a response to a query, the TTL field is set to the maximum of the TTL field from the RR and the MINIMUM field in the appropriate SOA." - this is done in the database view currently

@@ -28,10 +28,16 @@ pub async fn get_conn(config: &ConfigFile) -> Result<Pool<Sqlite>, String> {
         Ok(value) => value,
         Err(error) => return Err(format!("connection failed: {error:?}")),
     };
-    options.log_statements(log::LevelFilter::Trace);
+    if config.sql_log_statements {
+        options.log_statements(log::LevelFilter::Trace);
+    } else {
+        options.log_statements(log::LevelFilter::Off);
+    }
     // log anything that takes longer than 1s
-    // TODO: make this configurable
-    options.log_slow_statements(log::LevelFilter::Warn, Duration::from_secs(1));
+    options.log_slow_statements(
+        log::LevelFilter::Warn,
+        Duration::from_secs(config.sql_log_slow_duration),
+    );
 
     match SqlitePool::connect_with(options).await {
         Ok(value) => Ok(value),
@@ -71,6 +77,19 @@ pub async fn create_users_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(&mut pool.acquire().await?)
     .await?;
 
+    log::debug!("Ensuring DB user link table exists");
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS
+        user_links (
+            id  INTEGER PRIMARY KEY,
+            userid TEXT NOT NULL,
+            authref TEXT NOT NULL,
+            FOREIGN KEY(userid) REFERENCES users(id)
+        )"#,
+    )
+    .execute(&mut pool.acquire().await?)
+    .await?;
+
     Ok(())
 }
 
@@ -82,6 +101,7 @@ pub struct User {
     pub email: String,
     #[serde(default)]
     pub owned_zones: Vec<u64>,
+    pub disabled: bool,
 }
 
 impl User {
@@ -115,6 +135,22 @@ impl User {
         txn.commit().await?;
 
         Ok(())
+    }
+
+    /// Query the DB looking for a user
+    pub async fn get_by_email(pool: &SqlitePool, email: String) -> Result<Self, sqlx::Error> {
+        let res = sqlx::query(&format!(
+            "
+            SELECT id, username, email, disabled
+            FROM {}
+            WHERE email = ?",
+            User::table_name()
+        ))
+        .bind(email)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(User::from(res))
     }
 }
 
@@ -599,7 +635,7 @@ pub async fn export_zone_json(
 
 #[async_trait]
 pub trait DBEntity: Send {
-    fn table_name(&self) -> &str;
+    fn table_name() -> &'static str;
 
     /// Get the entity
     async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error>;
@@ -629,7 +665,7 @@ pub trait DBEntity: Send {
 
 #[async_trait]
 impl DBEntity for FileZone {
-    fn table_name(&self) -> &str {
+    fn table_name() -> &'static str {
         "zones"
     }
 
@@ -739,13 +775,11 @@ impl DBEntity for FileZone {
         log::trace!("Zone after update: {updated_zone:?}");
 
         // drop all the records
-        let mut args = SqliteArguments::default();
-        args.add(updated_zone.id as i64);
-
         #[cfg(test)]
         eprintln!("Dropping all records for zone {self:?}");
-        log::debug!("Dropping all records for zone {self:?}");
-        sqlx_core::query::query_with("delete from records where zoneid = ?", args)
+        // log::debug!("Dropping all records for zone {self:?}");
+        sqlx::query("delete from records where zoneid = ?")
+            .bind(updated_zone.id as i64)
             .execute(&mut *txn)
             .await?;
 
@@ -788,7 +822,7 @@ impl DBEntity for FileZone {
             .await?;
 
         // finally delete the zone
-        let query = format!("DELETE FROM {} where id = ?", self.table_name());
+        let query = format!("DELETE FROM {} where id = ?", FileZone::table_name());
         sqlx::query(&query).bind(zone_id).execute(&mut *txn).await?;
 
         Ok(1)
@@ -797,7 +831,7 @@ impl DBEntity for FileZone {
 
 #[async_trait]
 impl DBEntity for FileZoneRecord {
-    fn table_name(&self) -> &str {
+    fn table_name() -> &'static str {
         "records"
     }
 
@@ -903,7 +937,7 @@ impl DBEntity for FileZoneRecord {
     }
 
     async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<u64, sqlx::Error> {
-        let res = sqlx::query(format!("DELETE FROM {} WHERE id = ?", &self.table_name()).as_str())
+        let res = sqlx::query(format!("DELETE FROM {} WHERE id = ?", Self::table_name()).as_str())
             .bind(self.id as i64)
             .execute(&mut *txn)
             .await?;
@@ -989,9 +1023,25 @@ impl From<SqliteRow> for ZoneOwnership {
     }
 }
 
+impl From<SqliteRow> for User {
+    fn from(row: SqliteRow) -> Self {
+        let id: i64 = row.get("id");
+        let username: String = row.get("username");
+        let email: String = row.get("email");
+        let disabled: bool = row.get("disabled");
+        User {
+            id: id as u64,
+            username,
+            email,
+            owned_zones: vec![],
+            disabled,
+        }
+    }
+}
+
 #[async_trait]
 impl DBEntity for ZoneOwnership {
-    fn table_name(&self) -> &str {
+    fn table_name() -> &'static str {
         "ownership"
     }
 
@@ -1016,6 +1066,75 @@ impl DBEntity for ZoneOwnership {
             .fetch_all(&mut conn)
             .await?;
         let result: Vec<Arc<ZoneOwnership>> = res.into_iter().map(|z| Arc::new(z.into())).collect();
+        Ok(result)
+    }
+
+    /// save the entity to the database
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<u64, sqlx::Error> {
+        let mut txn = pool.begin().await?;
+        let res = self.save_with_txn(&mut txn).await?;
+        txn.commit().await?;
+        Ok(res)
+    }
+
+    /// save the entity to the database, but you're in a transaction
+    async fn save_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<u64, sqlx::Error> {
+        todo!();
+    }
+
+    /// delete the entity from the database
+    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<u64, sqlx::Error> {
+        todo!()
+    }
+
+    /// delete the entity from the database, but you're in a transaction
+    async fn delete_with_txn(
+        &self,
+        _txn: &mut Transaction<'_, Sqlite>,
+    ) -> Result<u64, sqlx::Error> {
+        todo!();
+    }
+
+    fn json(&self) -> Result<String, String>
+    where
+        Self: Serialize,
+    {
+        serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
+    }
+}
+
+#[async_trait]
+impl DBEntity for User {
+    fn table_name() -> &'static str {
+        "users"
+    }
+
+    /// Get an ownership record by its id
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error> {
+        let mut conn = pool.acquire().await?;
+
+        let res: User = sqlx::query(&format!(
+            "SELECT id, username, email, disabled from {} where id = ?",
+            Self::table_name()
+        ))
+        .bind(id)
+        .fetch_one(&mut conn)
+        .await?
+        .into();
+        Ok(Arc::new(res))
+    }
+    /// Get an ownership record by its id
+    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+        let mut conn = pool.acquire().await?;
+
+        let res = sqlx::query("SELECT id, zoneid, userid from ownership where id = ?")
+            .bind(id)
+            .fetch_all(&mut conn)
+            .await?;
+        let result: Vec<Arc<Self>> = res.into_iter().map(|z| Arc::new(z.into())).collect();
         Ok(result)
     }
 

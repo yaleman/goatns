@@ -380,38 +380,8 @@ async fn test_build_ackcdn_allzeros() {
     assert_eq!([reply_bytes[0], reply_bytes[1]], [0x3D, 0xE1]);
 }
 
-// #[tokio::test]
-// async fn test_from_bytes() {
-//     use crate::UDP_BUFFER_SIZE;
-//     let input = [
-//         0x9c, 0x58, 0x01, 0x20, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x79,
-//         0x61, 0x6c, 0x65, 0x6d, 0x61, 0x6e, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, 0x00,
-//         0x01,
-//     ];
-
-//     let mut buf: [u8; UDP_BUFFER_SIZE] = [0; UDP_BUFFER_SIZE];
-//     for (i, b) in input.iter().enumerate() {
-//         buf[i] = *b as u8;
-//     }
-
-//     let result = crate::parse_udp_query(crate::enums::Protocol::Udp, input.len(), buf, false)
-//         .await
-//         .unwrap();
-
-//     assert_eq!(
-//         result.question.as_ref().unwrap().qclass,
-//         crate::enums::RecordClass::Internet
-//     );
-//     assert_eq!(
-//         result.question.as_ref().unwrap().qname,
-//         "yaleman.org".as_bytes().to_vec()
-//     );
-//     // TODO: make sure *everything* is right here
-// }
-
 /// turns a degrees-minutes-seconds input into a signed 32-bit integer.
 /// when positive = true, you're North or West
-
 #[test]
 fn test_dms_to_i32() {
     use crate::utils::dms_to_u32;

@@ -253,7 +253,15 @@ async fn test_load_zone() -> Result<(), sqlx::Error> {
     let zone_second = get_zone(&pool, zone.clone().name).await?.unwrap();
 
     assert_ne!(zone_first, zone_second);
-    // TODO: work out how to compare the full record list
+
+    // compare the record lists
+    println!("comparing the list of records in each zone");
+    for record in zone_first.records.iter() {
+        assert!(zone_second.records.contains(&record));
+    }
+    for record in zone_second.records.iter() {
+        assert!(zone_first.records.contains(&record));
+    }
 
     Ok(())
 }

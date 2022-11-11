@@ -8,19 +8,21 @@ mod tests {
     use trust_dns_resolver::config::*;
     use trust_dns_resolver::Resolver;
 
+    use crate::config::ConfigFile;
+
     fn in_github_actions() -> bool {
         env::var("GITHUB_ACTIONS").is_ok()
     }
 
+    /// Test function to keep checking the server for startup
     #[cfg(test)]
-    fn wait_for_server() {
-        // TODO: wait for the process to start up
+    fn wait_for_server(config: &ConfigFile) {
         let client = reqwest::blocking::ClientBuilder::new()
             .danger_accept_invalid_certs(true)
             .build()
             .unwrap();
         for i in 0..10 {
-            match client.get("https://localhost:9000/status").send() {
+            match client.get(config.status_url().clone()).send() {
                 Ok(value) => {
                     eprintln!("OK: {value:?}");
                     if let Ok(text) = value.text() {
@@ -67,7 +69,10 @@ mod tests {
                 return Err(error);
             }
         };
-        wait_for_server();
+        let config =
+            crate::config::get_config(Some(&"./examples/test_config/goatns-test.json".to_string()))
+                .unwrap();
+        wait_for_server(&config);
 
         // this is a scope guard to save us from leaving behind multiple goatns test instances
         // ask me how I know this is a problem

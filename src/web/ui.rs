@@ -49,7 +49,6 @@ pub async fn zone_view(
     Extension(state): Extension<SharedState>,
 ) -> Result<Html<String>, &'static str> {
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
-    // TODO: fix this one
     let cmd = Command::GetZone {
         resp: os_tx,
         id: Some(name_or_id),

@@ -1,31 +1,30 @@
+use crate::config::ConfigFile;
+use crate::datastore;
+use async_trait::async_trait;
+use axum::routing::get;
+use axum::{Extension, Router};
 /// # Web things
 ///
 /// Uses axum/tower for protocol, askama for templating, confusion for the rest.
 ///
 /// Example using shared state: https://github.com/tokio-rs/axum/blob/axum-v0.5.17/examples/key-value-store/src/main.rs
-use std::path::PathBuf;
-use std::sync::Arc;
-
-use crate::config::ConfigFile;
-use crate::datastore;
-// use axum::error_handling::HandleErrorLayer;
-// use crate::enums::RecordType;
-// use crate::resourcerecord::InternalResourceRecord;
-// use axum::extract::MatchedPath;
-use axum::routing::get;
-use axum::{Extension, Router};
-// use axum::{Extension, Json, Router};
 use axum_extra::routing::SpaRouter;
 use chrono::{DateTime, NaiveDateTime, Utc};
-use kanidm_proto::oauth2::OidcDiscoveryResponse;
+use oauth2::{ClientId, ClientSecret, PkceCodeVerifier, RedirectUrl};
+use openidconnect::Nonce;
 use sqlx::{Pool, Sqlite};
-
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
 use tower::ServiceBuilder;
-// use tokio::sync::oneshot;
+use tower_http::compression::CompressionLayer;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing::Level;
+use url::Url;
+
+use self::auth::CustomProviderMetadata;
 
 #[macro_use]
 pub mod macros;
@@ -37,74 +36,95 @@ pub mod ui;
 
 pub const STATUS_OK: &str = "Ok";
 
-// // TODO: look at the ServiceBuilder layers bits here: https://github.com/tokio-rs/axum/blob/dea36db400f27c025b646e5720b9a6784ea4db6e/examples/key-value-store/src/main.rs
+// TODO: look at the ServiceBuilder layers bits here: https://github.com/tokio-rs/axum/blob/dea36db400f27c025b646e5720b9a6784ea4db6e/examples/key-value-store/src/main.rs
 
 type SharedState = Arc<RwLock<State>>;
+
+#[async_trait]
+trait SharedStateTrait {
+    async fn connpool(&self) -> Pool<Sqlite>;
+    async fn config(&self) -> ConfigFile;
+    async fn oidc_config(&self) -> Option<CustomProviderMetadata>;
+    async fn oidc_update(&self, response: CustomProviderMetadata);
+    async fn pop_verifier(&self, csrftoken: String) -> Option<(PkceCodeVerifier, Nonce)>;
+    async fn oauth2_client_id(&self) -> ClientId;
+    async fn oauth2_secret(&self) -> Option<ClientSecret>;
+    async fn oauth2_redirect_url(&self) -> RedirectUrl;
+    // async fn oauth2_introspection_url(&self) -> IntrospectionUrl;
+    async fn push_verifier(&self, csrftoken: String, verifier: (PkceCodeVerifier, Nonce));
+}
+
+#[async_trait]
+impl SharedStateTrait for SharedState {
+    /// Get an sqlite connection pool
+    async fn connpool(&self) -> Pool<Sqlite> {
+        self.write().await.connpool.clone()
+    }
+    /// Get a copy of the config
+    async fn config(&self) -> ConfigFile {
+        self.read().await.config.clone()
+    }
+    /// Get a copy of the config
+    async fn oidc_config(&self) -> Option<CustomProviderMetadata> {
+        self.read().await.oidc_config.clone()
+    }
+    async fn oidc_update(&self, response: CustomProviderMetadata) {
+        let mut writer = self.write().await;
+        writer.oidc_config = Some(response.clone());
+        writer.oidc_config_updated = Some(DateTime::from_utc(NaiveDateTime::default(), Utc));
+    }
+
+    async fn pop_verifier(&self, csrftoken: String) -> Option<(PkceCodeVerifier, Nonce)> {
+        let mut writer = self.write().await;
+        let result = writer.oidc_verifier.remove_entry(&csrftoken);
+        result.map(|(_, (pkce, nonce))| (pkce, nonce))
+    }
+    async fn oauth2_client_id(&self) -> ClientId {
+        let client_id = self.read().await.config.oauth2_client_id.clone();
+        ClientId::new(client_id)
+    }
+
+    async fn oauth2_secret(&self) -> Option<ClientSecret> {
+        let client_secret = self.read().await.config.oauth2_secret.clone();
+        Some(ClientSecret::new(client_secret))
+    }
+
+    async fn oauth2_redirect_url(&self) -> RedirectUrl {
+        let config = self.config().await;
+        let baseurl = match config.api_port {
+            443 => format!("https://{}", config.hostname),
+            _ => format!("https://{}:{}", config.hostname, config.api_port),
+        };
+        let url = Url::parse(&format!("{}/auth/login", baseurl))
+            .expect("Failed to parse config into an OAuth Redirect URL");
+        RedirectUrl::from_url(url)
+    }
+
+    // async fn oauth2_introspection_url(&self) -> IntrospectionUrl {
+    //     let reader = self.read().await;
+    //     let introspect_url = reader.oidc_config.as_ref().unwrap().token_endpoint.clone();
+    //     let domain = introspect_url.domain().unwrap();
+    //     let introspect_url =
+    //         Url::parse(&format!("https://{domain}/oauth2/token/introspect")).unwrap();
+    //     IntrospectionUrl::from_url(introspect_url)
+    // }
+
+    async fn push_verifier(&self, csrftoken: String, verifier: (PkceCodeVerifier, Nonce)) {
+        let mut writer = self.write().await;
+        writer.oidc_verifier.insert(csrftoken, verifier);
+    }
+}
 
 #[derive(Debug)]
 /// Internal State handler for the datastore object within the API
 pub struct State {
     pub tx: Sender<datastore::Command>,
-    // TODO: ensure we actually need to use the connpool in the web api shared state
-    #[allow(dead_code)]
     pub connpool: Pool<Sqlite>,
-    // TODO: ensure we actually need to use the config in the web api shared state
-    #[allow(dead_code)]
     pub config: ConfigFile,
     pub oidc_config_updated: Option<DateTime<Utc>>,
-    pub oidc_config: Option<Arc<OidcDiscoveryResponse>>,
+    pub oidc_config: Option<auth::CustomProviderMetadata>,
+    pub oidc_verifier: HashMap<String, (PkceCodeVerifier, Nonce)>,
 }
-
-// async fn api_query(
-//     qname: MatchedPath,
-//     qtype: MatchedPath,
-//     state: Extension<Arc<SharedState>>,
-// ) -> Result<Json<Vec<InternalResourceRecord>>, &'static str> {
-//     let rrtype: RecordType = qtype.as_str().into();
-//     if let RecordType::InvalidType = rrtype {
-//         // return Err(tide::BadRequest(
-//         // ));
-//         return Err("Invalid RRTYPE requested: {qtype:?}");
-//     }
-
-//     let (tx_oneshot, rx_oneshot) = oneshot::channel();
-//     let ds_req: datastore::Command = datastore::Command::GetRecord {
-//         name: qname.as_str().into(),
-//         rrtype,
-//         rclass: crate::RecordClass::Internet,
-//         resp: tx_oneshot,
-//     };
-
-//     // here we talk to the datastore to pull the result
-//     // TODO: shared state req
-//     match state.tx.send(ds_req).await {
-//         Ok(_) => log::trace!("Sent a request to the datastore!"),
-//         // TODO: handle this properly
-//         Err(error) => log::error!("Error sending to datastore: {:?}", error),
-//     };
-
-//     let record: Option<crate::zones::ZoneRecord> = match rx_oneshot.await {
-//         Ok(value) => match value {
-//             Some(zr) => {
-//                 log::debug!("DS Response: {}", zr);
-//                 Some(zr)
-//             }
-//             None => {
-//                 log::debug!("No response from datastore");
-//                 return Err("No response from datastore");
-//             }
-//         },
-//         Err(error) => {
-//             log::error!("Failed to get response from datastore: {:?}", error);
-//             return Err("Sorry, something went wrong.");
-//         }
-//     };
-
-//     match record {
-//         None => Err(""), // TODO: throw a 404 when we can't find a record
-//         Some(value) => Ok(Json::from(value.typerecords)),
-//     }
-// }
 
 pub async fn build(
     tx: Sender<datastore::Command>,
@@ -147,24 +167,15 @@ pub async fn build(
 
     let static_router = SpaRouter::new("/ui/static", &config_dir);
 
-    let oidc_config = match auth::oidc_discover(&config).await {
-        Ok(val) => Some(Arc::new(val)),
-        Err(error) => {
-            log::error!("Failed to pull OIDC Discovery data: {error:?}");
-            None
-        }
-    };
-    let oidc_config_updated: Option<DateTime<Utc>> = match oidc_config.is_some() {
-        false => None,
-        true => Some(DateTime::from_utc(NaiveDateTime::default(), Utc)),
-    };
+    let (auth_layer, session_layer) = auth::build_auth_stores(&config, connpool.clone()).await;
 
     let state: SharedState = Arc::new(RwLock::new(State {
         tx,
         connpool,
         config,
-        oidc_config_updated,
-        oidc_config,
+        oidc_config_updated: None,
+        oidc_config: None,
+        oidc_verifier: HashMap::new(),
     }));
 
     // add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html
@@ -180,14 +191,11 @@ pub async fn build(
         .nest("/auth", auth::new())
         .layer(
             ServiceBuilder::new()
-                // Handle errors from middleware
-                // .layer(HandleErrorLayer::new(handle_error))
-                // .load_shed()
-                // .concurrency_limit(1024)
-                // .timeout(Duration::from_secs(10))
-                .layer(TraceLayer::new_for_http())
-                .layer(Extension(state))
                 .layer(trace_layer)
+                .layer(CompressionLayer::new())
+                .layer(Extension(state))
+                .layer(Extension(auth_layer))
+                .layer(session_layer)
                 .into_inner(),
         )
 }
