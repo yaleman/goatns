@@ -1,6 +1,4 @@
-
-use axum::response::{Redirect};
-
+use axum::response::Redirect;
 
 pub fn redirect_to_home() -> Redirect {
     Redirect::to("/")

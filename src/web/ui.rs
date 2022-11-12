@@ -1,8 +1,8 @@
 use crate::datastore::Command;
-use crate::web::utils::{redirect_to_dashboard, redirect_to_zones_list, redirect_to_login};
+use crate::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zones_list};
 use crate::zones::FileZone;
 use askama::Template;
-use axum::extract::{Path, OriginalUri};
+use axum::extract::{OriginalUri, Path};
 use axum::http::{Response, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
@@ -26,9 +26,10 @@ struct TemplateViewZone {
 
 #[debug_handler]
 pub async fn zones_list(
-    Extension(state): Extension<SharedState>,session: WritableSession, OriginalUri(path): OriginalUri
+    Extension(state): Extension<SharedState>,
+    session: WritableSession,
+    OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-
     if let Err(e) = check_logged_in(&state, session, path).await {
         return e.into_response();
     }
@@ -49,16 +50,19 @@ pub async fn zones_list(
 
     log::debug!("about to return zone list...");
     let context = TemplateViewZones { zones };
-    Response::builder().status(200).body(context.render().unwrap()).unwrap().into_response()
+    Response::builder()
+        .status(200)
+        .body(context.render().unwrap())
+        .unwrap()
+        .into_response()
 }
 
 pub async fn zone_view(
     Path(name_or_id): Path<i64>,
     Extension(state): Extension<SharedState>,
     session: WritableSession,
-    OriginalUri(path): OriginalUri
+    OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-
     if let Err(e) = check_logged_in(&state, session, path).await {
         return e.into_response();
     }
@@ -93,32 +97,46 @@ struct DashboardTemplate /*<'a>*/ {
     // name: &'a str,
 }
 
-pub async fn check_logged_in(_state: &SharedState, mut session: WritableSession, path: Uri) -> Result<(),Redirect> {
+pub async fn check_logged_in(
+    _state: &SharedState,
+    mut session: WritableSession,
+    path: Uri,
+) -> Result<(), Redirect> {
     let authref = session.get::<String>("authref");
 
     let redirect_path = Some(path.path_and_query().unwrap().to_string());
     if authref.is_none() {
         session.regenerate();
-        session.insert("redirect", redirect_path).map_err(|e| log::debug!("Couldn't store redirect for user: {e:?}")).unwrap();
+        session
+            .insert("redirect", redirect_path)
+            .map_err(|e| log::debug!("Couldn't store redirect for user: {e:?}"))
+            .unwrap();
         log::warn!("Not-logged-in-user tried to log in, how rude!");
         // TODO: this should redirect to the current page
-        return Err(redirect_to_login())
+        return Err(redirect_to_login());
     }
     log::debug!("session ok!");
     // TODO: check the database to make sure they're actually legit and not disabled and blah
     Ok(())
-
 }
 
 #[debug_handler]
-pub async fn dashboard(Extension(state): Extension<SharedState>, session: WritableSession,OriginalUri(path): OriginalUri) -> impl IntoResponse {
+pub async fn dashboard(
+    Extension(state): Extension<SharedState>,
+    session: WritableSession,
+    OriginalUri(path): OriginalUri,
+) -> impl IntoResponse {
     if let Err(e) = check_logged_in(&state, session, path).await {
         return e.into_response();
     }
 
     let context = DashboardTemplate {};
     // Html::from()).into_response()
-    Response::builder().status(200).body(context.render().unwrap()).unwrap().into_response()
+    Response::builder()
+        .status(200)
+        .body(context.render().unwrap())
+        .unwrap()
+        .into_response()
 }
 
 pub fn new() -> Router {

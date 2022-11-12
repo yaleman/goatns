@@ -1,8 +1,10 @@
 use crate::config::ConfigFile;
 use crate::datastore;
 use async_trait::async_trait;
+use axum::handler::Handler;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::{get, any};
+use axum::routing::get;
 use axum::{Extension, Router};
 /// # Web things
 ///
@@ -10,13 +12,10 @@ use axum::{Extension, Router};
 ///
 /// Example using shared state: https://github.com/tokio-rs/axum/blob/axum-v0.5.17/examples/key-value-store/src/main.rs
 use axum_extra::routing::SpaRouter;
-use axum::http::StatusCode;
-use axum_macros::debug_handler;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use oauth2::{ClientId, ClientSecret, PkceCodeVerifier, RedirectUrl};
 use openidconnect::Nonce;
 use sqlx::{Pool, Sqlite};
-use tower::util::MapResponse;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -188,52 +187,31 @@ pub async fn build(
         TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
 
     pub async fn handler_404() -> impl IntoResponse {
-        (StatusCode::NOT_FOUND, "nothing to see here")
+        axum::response::Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(
+                "You've found a 404, try <a href='#' onclick='history.back();'>going back</a>"
+                    .to_string(),
+            )
+            .unwrap()
+            .into_response()
     }
 
     Router::new()
         .route("/", get(generic::index))
         .route("/status", get(generic::status))
-
-
         .merge(static_router)
         .nest("/ui", ui::new())
         .nest("/api", api::new())
         .nest("/auth", auth::new())
         .layer(
             ServiceBuilder::new()
-            .layer(trace_layer)
-            .layer(CompressionLayer::new())
-            .layer(Extension(state))
-            .layer(Extension(auth_layer))
-            .layer(session_layer)
-            .into_inner(),
-        )        .fallback(handler_404)
-        /*
-
-error[E0277]: the trait bound `fn() -> impl Future<Output = impl IntoResponse> {handler_404}: Service<axum::http::Request<_>>` is not satisfied
-   --> src/web/mod.rs:197:19
-    |
-197 |         .fallback(handler_404)
-    |          -------- ^^^^^^^^^^^ the trait `Service<axum::http::Request<_>>` is not implemented for fn item `fn() -> impl Future<Output = impl IntoResponse> {handler_404}`
-    |          |
-    |          required by a bound introduced by this call
-    |
-    = help: the following other types implement trait `Service<Request>`:
-              <&'a mut S as Service<Request>>
-              <&hyper::client::client::Client<C, B> as Service<axum::http::Request<B>>>
-              <&reqwest::async_impl::client::Client as Service<reqwest::async_impl::request::Request>>
-              <AddAuthorization<S> as Service<axum::http::Request<ReqBody>>>
-              <AndThen<S, F> as Service<Request>>
-              <AsService<'_, M, Request> as Service<Target>>
-              <AsyncRequireAuthorization<S, Auth> as Service<axum::http::Request<ReqBody>>>
-              <Box<S> as Service<Request>>
-            and 63 others
-note: required by a bound in `axum::Router::<B>::fallback`
-   --> /Users/yaleman/.cargo/registry/src/github.com-1ecc6299db9ec823/axum-0.5.17/src/routing/mod.rs:388:12
-    |
-388 |         T: Service<Request<B>, Response = Response, Error = Infallible> + Clone + Send + 'static,
-    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `axum::Router::<B>::fallback`
-
-    */
+                .layer(trace_layer)
+                .layer(CompressionLayer::new())
+                .layer(Extension(state))
+                .layer(Extension(auth_layer))
+                .layer(session_layer)
+                .into_inner(),
+        )
+        .fallback(handler_404.into_service())
 }

@@ -159,7 +159,10 @@ impl User {
     }
 
     /// Query the DB looking for a user
-    pub async fn get_by_subject(pool: &SqlitePool, subject: &SubjectIdentifier) -> Result<Self, sqlx::Error> {
+    pub async fn get_by_subject(
+        pool: &SqlitePool,
+        subject: &SubjectIdentifier,
+    ) -> Result<Self, sqlx::Error> {
         let res = sqlx::query(
             "
             select * from users
@@ -176,7 +179,7 @@ impl User {
 
 impl AuthUser for User {
     fn get_id(&self) -> String {
-        format!("{}", self.username)
+        self.username.to_string()
     }
 
     fn get_password_hash(&self) -> String {
@@ -1188,15 +1191,18 @@ impl DBEntity for User {
         &self,
         txn: &mut Transaction<'t, Sqlite>,
     ) -> Result<u64, sqlx::Error> {
-        let res = sqlx::query("INSERT INTO users
+        let res = sqlx::query(
+            "INSERT INTO users
             (displayname, username, email, disabled, authref)
-            VALUES (?1, ?2, ?3, ?4, ?5)")
-            .bind(&self.displayname)
-            .bind(&self.username)
-            .bind(&self.email)
-            .bind(&self.disabled)
-            .bind(&self.authref)
-            .execute(txn).await?;
+            VALUES (?1, ?2, ?3, ?4, ?5)",
+        )
+        .bind(&self.displayname)
+        .bind(&self.username)
+        .bind(&self.email)
+        .bind(self.disabled)
+        .bind(&self.authref)
+        .execute(txn)
+        .await?;
         Ok(res.rows_affected())
     }
 

@@ -1,9 +1,9 @@
+use super::utils::{redirect_to_dashboard, redirect_to_home};
 use super::SharedState;
 use crate::config::ConfigFile;
-use crate::db::{User, DBEntity};
+use crate::db::{DBEntity, User};
 use crate::web::SharedStateTrait;
 use crate::COOKIE_NAME;
-use super::utils::{redirect_to_home, redirect_to_dashboard};
 use askama::Template;
 use axum::extract::Query;
 use axum::response::{IntoResponse, Redirect, Response};
@@ -22,11 +22,16 @@ use axum_login::{AuthLayer, SqliteStore};
 use rand::Rng;
 use sqlx::{Pool, Sqlite};
 
-use openidconnect::{core::*, TokenResponse, ClaimsVerificationError, EndUserUsername, IdTokenClaims, EmptyAdditionalClaims};
+use openidconnect::{
+    core::*, ClaimsVerificationError, EmptyAdditionalClaims, EndUserUsername, IdTokenClaims,
+    TokenResponse,
+};
 
 use openidconnect::reqwest::async_http_client;
 use openidconnect::EmptyAdditionalProviderMetadata;
-use openidconnect::{AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl,Nonce, ProviderMetadata, Scope,};
+use openidconnect::{
+    AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
+};
 
 #[derive(Deserialize)]
 pub struct LoginQuery {
@@ -135,7 +140,6 @@ pub async fn oauth_start(state: &SharedState) -> Result<url::Url, String> {
     Ok(authorize_url)
 }
 
-
 pub enum ParserError {
     Redirect { content: Redirect },
     ErrorMessage { content: &'static str },
@@ -149,10 +153,7 @@ pub async fn parse_state_code(
     query_code: String,
     pkce_verifier: PkceCodeVerifier,
     nonce: Nonce,
-) -> Result<
-        CustomClaimType,
-        ParserError,
-> {
+) -> Result<CustomClaimType, ParserError> {
     let auth_code = AuthorizationCode::new(query_code);
 
     let provider_metadata = shared_state.oidc_config().await.unwrap();
@@ -188,9 +189,11 @@ pub async fn parse_state_code(
     // if verifier.is_none() {
     // return Err(ParserError::ErrorMessage{content: "Couldn't find a known session!"});
     // }
-    id_token.claims(verifier, &nonce).map_err(|e| ParserError::ClaimsVerificationError { content: e }).cloned()
+    id_token
+        .claims(verifier, &nonce)
+        .map_err(|e| ParserError::ClaimsVerificationError { content: e })
+        .cloned()
 }
-
 
 pub trait CustomClaimTypeThings {
     fn get_displayname(&self) -> String;
@@ -199,19 +202,18 @@ pub trait CustomClaimTypeThings {
 }
 
 impl CustomClaimTypeThings for CustomClaimType {
-
-fn get_email(&self) -> Result<String, Redirect> {
-    let email: String;
-    if let Some(user_email) = self.email() {
-        email = user_email.to_string();
-    } else if let Some(user_email) = self.preferred_username() {
-        email = user_email.to_string();
-    } else {
-        log::error!("Couldn't extract email address from claim: {self:?}");
-        return Err(redirect_to_home());
+    fn get_email(&self) -> Result<String, Redirect> {
+        let email: String;
+        if let Some(user_email) = self.email() {
+            email = user_email.to_string();
+        } else if let Some(user_email) = self.preferred_username() {
+            email = user_email.to_string();
+        } else {
+            log::error!("Couldn't extract email address from claim: {self:?}");
+            return Err(redirect_to_home());
+        }
+        Ok(email)
     }
-    Ok(email)
-}
     fn get_displayname(&self) -> String {
         let mut displayname: String = "Anonymous Kid".to_string();
         if let Some(name) = self.name() {
@@ -222,12 +224,10 @@ fn get_email(&self) -> Result<String, Redirect> {
         displayname
     }
     fn get_username(&self) -> String {
-
         let default = EndUserUsername::new("".to_string());
         self.preferred_username().unwrap_or(&default).to_string()
     }
 }
-
 
 #[debug_handler]
 pub async fn login(
@@ -235,7 +235,6 @@ pub async fn login(
     mut session: WritableSession,
     Extension(state): Extension<SharedState>,
 ) -> impl IntoResponse {
-
     // check if we've got an existing, valid session
     if !session.is_expired() {
         if let Some(signed_in) = session.get("signed_in") {
@@ -275,9 +274,10 @@ pub async fn login(
         Ok(claims) => {
             // check if they're in the database
 
-            let email = claims.get_email().map_err(|e| return e.into_response()).unwrap();
+            let email = claims.get_email().unwrap();
 
-            let dbuser = match User::get_by_subject(&state.connpool().await, claims.subject()).await {
+            let dbuser = match User::get_by_subject(&state.connpool().await, claims.subject()).await
+            {
                 Ok(user) => user,
                 Err(error) => {
                     match error {
@@ -313,9 +313,9 @@ pub async fn login(
                                 Some(destination) => {
                                     session.remove("redirect");
                                     Redirect::to(&destination).into_response()
-                                },
-                                None => redirect_to_home().into_response()
-                            }
+                                }
+                                None => redirect_to_home().into_response(),
+                            };
                         }
                     }
                 }
@@ -336,20 +336,17 @@ pub async fn login(
 
             redirect_to_dashboard().into_response()
         }
-        Err(error) => {
-            match error
-            {
-                ParserError::Redirect { content } => return content.into_response(),
-                ParserError::ErrorMessage { content } => {
-                    log::debug!("{content}");
-                    todo!();
-                },
-                ParserError::ClaimsVerificationError { content } => {
-                    log::error!("Failed to verify claim token: {content:?}");
-                    redirect_to_home().into_response()
-                }
+        Err(error) => match error {
+            ParserError::Redirect { content } => content.into_response(),
+            ParserError::ErrorMessage { content } => {
+                log::debug!("{content}");
+                todo!();
             }
-        }
+            ParserError::ClaimsVerificationError { content } => {
+                log::error!("Failed to verify claim token: {content:?}");
+                redirect_to_home().into_response()
+            }
+        },
     }
     // let context = AuthLogin {
     //     errors,
@@ -429,28 +426,22 @@ pub async fn signup(
     };
     // let verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
 
-    let claims = parse_state_code(
-        &state,
-        form.code,
-        pkce_verifier,
-        nonce.clone(),
-    )
-    .await;
+    let claims = parse_state_code(&state, form.code, pkce_verifier, nonce.clone()).await;
     match claims {
         Err(error) => match error {
-            ParserError::Redirect { content } => return content.into_response(),
+            ParserError::Redirect { content } => content.into_response(),
             ParserError::ErrorMessage { content } => {
                 log::debug!("{content}");
                 todo!();
-            },
+            }
             ParserError::ClaimsVerificationError { content } => {
                 log::error!("Failed to verify claim token: {content:?}");
-                return redirect_to_home().into_response()
+                redirect_to_home().into_response()
             }
         },
         Ok(claims) => {
             log::debug!("Verified claims in signup form: {claims:?}");
-            let email = claims.get_email().map_err(|e| return e.into_response()).unwrap();
+            let email = claims.get_email().unwrap();
             let user = User {
                 id: None,
                 displayname: claims.get_displayname(),
@@ -460,16 +451,15 @@ pub async fn signup(
                 authref: Some(claims.subject().to_string()),
             };
             match user.save(&state.connpool().await).await {
-                Ok(_) => return redirect_to_dashboard().into_response(),
+                Ok(_) => redirect_to_dashboard().into_response(),
                 Err(error) => {
                     log::debug!("Failed to save new user signup... oh no! {error:?}");
                     // TODO: throw an error page on this one
-                    return redirect_to_home().into_response();
+                    redirect_to_home().into_response()
                 }
-            };
+            }
         }
     }
-
 }
 
 pub fn new() -> Router {

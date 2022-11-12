@@ -9,15 +9,20 @@ async fn test_create_user() -> Result<(), sqlx::Error> {
 
     start_db(&pool).await?;
 
-    let user = User {
+    let mut user = User {
         username: "yaleman".to_string(),
         email: "billy@hello.goat".to_string(),
+        disabled: true,
         ..User::default()
     };
 
-    user.create(&pool, false).await?;
+    println!("Creating user the first time");
+    user.save(&pool).await?;
 
-    let res = user.clone().create(&pool, false).await;
+    user.disabled = false;
+
+    println!("Creating user the second time");
+    let res = user.save(&pool).await;
     assert!(res.is_err());
 
     Ok(())

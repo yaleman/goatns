@@ -1,9 +1,9 @@
+use crate::enums::ContactDetails;
 use clap::ArgMatches;
 use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
 use flexi_logger::{DeferredNow, LoggerHandle};
 use gethostname::gethostname;
-// use ipnet::IpNet;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -77,7 +77,7 @@ pub struct ConfigFile {
     /// When queries take more than this many seconds, log them
     pub sql_log_slow_duration: u64,
     /// Administrator contact details
-    pub admin_contact: Option<ContactDetails>
+    pub admin_contact: Option<ContactDetails>,
 }
 
 fn generate_cookie_secret() -> String {
@@ -298,41 +298,26 @@ pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> 
     }
 }
 
-#[derive(Debug, Serialize,Deserialize, PartialEq,Eq, Clone)]
-pub enum ContactDetails {
-    Mastodon{ contact: String },
-    Email { contact: String },
-    Twitter { contact: String },
-}
+pub fn setup_logging(
+    config: &ConfigFile,
+    clap_results: &ArgMatches,
+) -> Result<LoggerHandle, String> {
+    // force the log level to info if we're testing config
+    let log_level = match clap_results.get_flag("configcheck") {
+        true => "info".to_string(),
+        false => config.log_level.to_ascii_lowercase(),
+    };
 
-impl TryFrom<String> for ContactDetails {
-    type Error = &'static str;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let split_value = value.split(":");
-        let mut split_iter = split_value.into_iter();
-        if split_iter.size_hint().0 != 2 {
-            return Err("Contact value wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon");
-        }
-        let contact_type = split_iter.next().unwrap();
-        let contact_value = split_iter.next().unwrap();
-        match contact_type {
-            "Mastodon" => {
-                Ok(Self::Mastodon { contact: contact_value.to_string() })
-
-            },
-            "Email" => {
-                Ok(Self::Email { contact: contact_value.to_string() })
-
-            },
-            "Twitter" => {
-                Ok(Self::Twitter { contact: contact_value.to_string() })
-
-            },
-            &_ => {
-                Err("Contact type wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon")
-            }
-        }
+    match flexi_logger::Logger::try_with_str(&log_level).map_err(|e| format!("{e:?}")) {
+        Ok(logger) => logger
+            .write_mode(flexi_logger::WriteMode::Async)
+            .filter(Box::new(LogFilter {
+                filters: vec!["h2", "hyper::proto"],
+            }))
+            .set_palette("b1;3;2;6;5".to_string())
+            .start()
+            .map_err(|e| format!("{e:?}")),
+        Err(error) => Err(format!("Failed to start logger! {error:?}")),
     }
 }
 
@@ -357,28 +342,5 @@ impl LogLineFilter for LogFilter {
         }
         log_line_writer.write(now, record)?;
         Ok(())
-    }
-}
-
-pub fn setup_logging(
-    config: &ConfigFile,
-    clap_results: &ArgMatches,
-) -> Result<LoggerHandle, String> {
-    // force the log level to info if we're testing config
-    let log_level = match clap_results.get_flag("configcheck") {
-        true => "info".to_string(),
-        false => config.log_level.to_ascii_lowercase(),
-    };
-
-    match flexi_logger::Logger::try_with_str(&log_level).map_err(|e| format!("{e:?}")) {
-        Ok(logger) => logger
-            .write_mode(flexi_logger::WriteMode::Async)
-            .filter(Box::new(LogFilter {
-                filters: vec!["h2", "hyper::proto"],
-            }))
-            .set_palette("b1;3;2;6;5".to_string())
-            .start()
-            .map_err(|e| format!("{e:?}")),
-        Err(error) => Err(format!("Failed to start logger! {error:?}")),
     }
 }

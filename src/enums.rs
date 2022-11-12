@@ -1,12 +1,10 @@
-use std::fmt::Display;
-
+use crate::resourcerecord::InternalResourceRecord;
 use enum_iterator::Sequence;
 use packed_struct::prelude::*;
 use serde::{Deserialize, Serialize, Serializer};
 use sqlx::encode::IsNull;
 use sqlx::sqlite::SqliteArgumentValue;
-
-use crate::resourcerecord::InternalResourceRecord;
+use std::fmt::Display;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Agent {
@@ -368,6 +366,54 @@ impl From<bool> for PacketType {
         match input {
             false => Self::Query,
             true => Self::Answer,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub enum ContactDetails {
+    Mastodon { contact: String },
+    Email { contact: String },
+    Twitter { contact: String },
+}
+
+impl TryFrom<&'static str> for ContactDetails {
+    type Error = String;
+
+    fn try_from(value: &'static str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_string())
+    }
+}
+
+impl TryFrom<String> for ContactDetails {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let mut split_value = value.split(':');
+        let contact_type = split_value.next();
+        let contact_value = split_value.next();
+        if contact_type.is_none() || contact_value.is_none() {
+            return Err(
+                "Length of input is wrong please ensure it's in the format type:value".to_string(),
+            );
+        }
+        let contact_value = contact_value.unwrap();
+        match contact_type.unwrap() {
+            "Mastodon" => {
+                Ok(Self::Mastodon { contact: contact_value.to_string() })
+
+            },
+            "Email" => {
+                Ok(Self::Email { contact: contact_value.to_string() })
+
+            },
+            "Twitter" => {
+                Ok(Self::Twitter { contact: contact_value.to_string() })
+
+            },
+            &_ => {
+                Err(format!("Contact type ({}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon", contact_type.unwrap()))
+            }
         }
     }
 }
