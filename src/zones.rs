@@ -113,6 +113,10 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
         let rdata: String = row.get("rdata");
         let ttl: u32 = row.get("ttl");
 
+        if let RecordType::ANY = rrtype {
+            return Err("Cannot serve ANY records".to_string())
+        }
+
         Ok(FileZoneRecord {
             zoneid: zoneid as u64,
             id: id as u64,
