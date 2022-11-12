@@ -337,6 +337,7 @@ pub async fn login(
             session
                 .insert("authref", claims.subject().to_string())
                 .unwrap();
+            session.insert("user", dbuser).unwrap();
             session.insert("signed_in", true).unwrap();
 
             redirect_to_dashboard().into_response()

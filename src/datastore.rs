@@ -28,6 +28,9 @@ pub enum Command {
         resp: Responder<Option<FileZone>>,
     },
     GetZoneNames {
+        user: User,
+        offset: i64,
+        limit: i64,
         resp: Responder<Vec<FileZone>>,
     },
     ImportFile {
@@ -185,15 +188,21 @@ async fn handle_get_zone(
 }
 
 async fn handle_get_zone_names(
+    user: User,
     tx: oneshot::Sender<Vec<FileZone>>,
     pool: &Pool<Sqlite>,
+    offset: i64,
+    limit: i64,
 ) -> Result<(), String> {
     let mut txn = pool.begin().await.map_err(|e| format!("{e:?}"))?;
 
-    let zones = crate::db::get_zones_with_txn(&mut txn, 100, 0)
+    log::debug!("handle_get_zone_names: user={user:?}");
+    let zones = user
+        .get_zones_for_user(&mut txn, offset, limit)
         .await
         .map_err(|e| format!("{e:?}"))?;
 
+    log::debug!("handle_get_zone_names: {zones:?}");
     tx.send(zones).map_err(|e| format!("{e:?}"))
 }
 
@@ -221,8 +230,13 @@ pub async fn manager(
                     log::error!("{e:?}")
                 };
             }
-            Command::GetZoneNames { resp } => {
-                let res = handle_get_zone_names(resp, &connpool).await;
+            Command::GetZoneNames {
+                resp,
+                user,
+                offset,
+                limit,
+            } => {
+                let res = handle_get_zone_names(user, resp, &connpool, offset, limit).await;
                 if let Err(e) = res {
                     log::error!("{e:?}")
                 };

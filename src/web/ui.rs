@@ -1,4 +1,5 @@
 use crate::datastore::Command;
+use crate::db::User;
 use crate::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zones_list};
 use crate::zones::FileZone;
 use askama::Template;
@@ -27,17 +28,34 @@ struct TemplateViewZone {
 #[debug_handler]
 pub async fn zones_list(
     Extension(state): Extension<SharedState>,
-    session: WritableSession,
+    mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    if let Err(e) = check_logged_in(&state, session, path).await {
+    if let Err(e) = check_logged_in(&state, &mut session, path).await {
         return e.into_response();
     }
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let state_writer = state.write().await;
+
+    let offset = 0;
+    let limit = 20;
+
+    let user: User = match session.get("user") {
+        Some(val) => {
+            log::info!("current user: {val:?}");
+            val
+        }
+        None => return redirect_to_login().into_response(),
+    };
+
     if let Err(err) = state_writer
         .tx
-        .send(Command::GetZoneNames { resp: os_tx })
+        .send(Command::GetZoneNames {
+            resp: os_tx,
+            user,
+            offset,
+            limit,
+        })
         .await
     {
         eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
@@ -48,7 +66,7 @@ pub async fn zones_list(
 
     let zones = os_rx.await.expect("Failed to get response: {res:?}");
 
-    log::debug!("about to return zone list...");
+    log::debug!("about to return zone list... found {} zones", zones.len());
     let context = TemplateViewZones { zones };
     Response::builder()
         .status(200)
@@ -60,10 +78,10 @@ pub async fn zones_list(
 pub async fn zone_view(
     Path(name_or_id): Path<i64>,
     Extension(state): Extension<SharedState>,
-    session: WritableSession,
+    mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    if let Err(e) = check_logged_in(&state, session, path).await {
+    if let Err(e) = check_logged_in(&state, &mut session, path).await {
         return e.into_response();
     }
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
@@ -99,7 +117,7 @@ struct DashboardTemplate /*<'a>*/ {
 
 pub async fn check_logged_in(
     _state: &SharedState,
-    mut session: WritableSession,
+    session: &mut WritableSession,
     path: Uri,
 ) -> Result<(), Redirect> {
     let authref = session.get::<String>("authref");
@@ -123,10 +141,10 @@ pub async fn check_logged_in(
 #[debug_handler]
 pub async fn dashboard(
     Extension(state): Extension<SharedState>,
-    session: WritableSession,
+    mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    if let Err(e) = check_logged_in(&state, session, path).await {
+    if let Err(e) = check_logged_in(&state, &mut session, path).await {
         return e.into_response();
     }
 

@@ -32,7 +32,7 @@ async fn test_create_user() -> Result<(), sqlx::Error> {
 /// create a zone example.com
 async fn test_create_example_com_records(
     pool: &SqlitePool,
-    zoneid: u64,
+    zoneid: i64,
     num_records: usize,
 ) -> Result<(), sqlx::Error> {
     use rand::distributions::{Alphanumeric, DistString};
@@ -49,7 +49,7 @@ async fn test_create_example_com_records(
             rrtype: RecordType::A.to_string(),
             class: RecordClass::Internet,
             rdata,
-            id: i as u64,
+            id: i as i64,
             ttl: i as u32,
         }
         .save(&pool)
