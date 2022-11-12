@@ -13,9 +13,9 @@ opt-level = 3
 
 [dependencies]
 askama = { version="0.11.1"}
-async-sqlx-session = { git="https://github.com/jbr/async-sqlx-session.git", default-features = false, features = ["sqlite"] }
+async-sqlx-session = { git="https://github.com/jbr/async-sqlx-session.git", rev="3f2e1cf", default-features = false, features = ["sqlite"] }
 async-trait = "0.1.58"
-axum = { version="0.5.17", features=["http2", "headers"] }
+axum = { version="0.5.17", features=["http2", "headers", "original-uri"] }
 axum-extra = { version = "0.3.7", features = ["spa"] }
 axum-login = { version = "0.2.0", features = ["sqlite"] }
 axum-macros = "0.2.3"

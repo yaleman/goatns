@@ -9,6 +9,8 @@ use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::{FileZone, FileZoneRecord};
 use async_trait::async_trait;
 
+use axum_login::AuthUser;
+use openidconnect::SubjectIdentifier;
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
@@ -61,9 +63,11 @@ pub async fn create_users_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         r#"CREATE TABLE IF NOT EXISTS
         users (
             id  INTEGER PRIMARY KEY,
+            displayname TEXT NOT NULL,
             username TEXT NOT NULL,
             email TEXT NOT NULL,
-            disabled BOOL NOT NULL
+            disabled BOOL NOT NULL,
+            authref TEXT
         )"#,
     )
     .execute(&mut pool.acquire().await?)
@@ -77,43 +81,45 @@ pub async fn create_users_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(&mut pool.acquire().await?)
     .await?;
 
-    log::debug!("Ensuring DB user link table exists");
-    sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS
-        user_links (
-            id  INTEGER PRIMARY KEY,
-            userid TEXT NOT NULL,
-            authref TEXT NOT NULL,
-            FOREIGN KEY(userid) REFERENCES users(id)
-        )"#,
-    )
-    .execute(&mut pool.acquire().await?)
-    .await?;
-
     Ok(())
 }
-
-#[derive(Clone, Deserialize, Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, sqlx::FromRow)]
 pub struct User {
-    #[serde(default)]
-    pub id: u64,
+    pub id: Option<i64>,
+    pub displayname: String,
     pub username: String,
     pub email: String,
-    #[serde(default)]
-    pub owned_zones: Vec<u64>,
+    // #[serde(default)]
+    // pub owned_zones: Vec<u64>,
     pub disabled: bool,
+    pub authref: Option<String>,
+}
+
+impl Default for User {
+    fn default() -> Self {
+        User {
+            id: None,
+            displayname: "Anonymous Kid".to_string(),
+            username: "".to_string(),
+            email: "".to_string(),
+            disabled: true,
+            authref: None,
+        }
+    }
 }
 
 impl User {
     #[allow(dead_code, unused_variables)]
-    pub async fn create(&self, pool: &SqlitePool) -> Result<usize, sqlx::Error> {
+    pub async fn create(&self, pool: &SqlitePool, disabled: bool) -> Result<usize, sqlx::Error> {
         // TODO: test user create
-        let res = sqlx::query("INSERT into users (username, email, disabled) VALUES(?, ?, ?)")
-            .bind(&self.username)
-            .bind(&self.email)
-            .bind(false)
-            .execute(&mut pool.acquire().await?)
-            .await?;
+        let res =
+            sqlx::query("INSERT into users (username, email, disabled, authref) VALUES(?, ?, ?)")
+                .bind(&self.username)
+                .bind(&self.email)
+                .bind(disabled)
+                .bind(&self.authref)
+                .execute(&mut pool.acquire().await?)
+                .await?;
 
         Ok(1)
     }
@@ -123,12 +129,12 @@ impl User {
         let mut txn = pool.begin().await?;
 
         let res = sqlx::query("DELETE FROM ownership WHERE userid = ?")
-            .bind(self.id as i64)
+            .bind(self.id.unwrap() as i64)
             .execute(&mut *txn)
             .await?;
 
         let res = sqlx::query("DELETE FROM users WHERE id = ?")
-            .bind(self.id as i64)
+            .bind(self.id.unwrap() as i64)
             .execute(&mut *txn)
             .await?;
 
@@ -137,20 +143,64 @@ impl User {
         Ok(())
     }
 
-    /// Query the DB looking for a user
+    // Query the DB looking for a user
     pub async fn get_by_email(pool: &SqlitePool, email: String) -> Result<Self, sqlx::Error> {
-        let res = sqlx::query(&format!(
+        let res = sqlx::query(
             "
-            SELECT id, username, email, disabled
-            FROM {}
-            WHERE email = ?",
-            User::table_name()
-        ))
+            select * from users
+            where email = ?
+            ",
+        )
         .bind(email)
         .fetch_one(pool)
         .await?;
 
         Ok(User::from(res))
+    }
+
+    /// Query the DB looking for a user
+    pub async fn get_by_subject(pool: &SqlitePool, subject: &SubjectIdentifier) -> Result<Self, sqlx::Error> {
+        let res = sqlx::query(
+            "
+            select * from users
+            where authref = ?
+            ",
+        )
+        .bind(subject.to_string())
+        .fetch_one(pool)
+        .await?;
+
+        Ok(User::from(res))
+    }
+}
+
+impl AuthUser for User {
+    fn get_id(&self) -> String {
+        format!("{}", self.username)
+    }
+
+    fn get_password_hash(&self) -> String {
+        // self.password_hash.clone()
+        todo!("There's no password hashes for users!");
+    }
+}
+
+impl From<SqliteRow> for User {
+    fn from(row: SqliteRow) -> Self {
+        let id: i64 = row.get("id");
+        let displayname: String = row.get("displayname");
+        let username: String = row.get("username");
+        let email: String = row.get("email");
+        let disabled: bool = row.get("disabled");
+        let authref: Option<String> = row.get("authref");
+        User {
+            id: Some(id),
+            displayname,
+            username,
+            email,
+            disabled,
+            authref,
+        }
     }
 }
 
@@ -1023,22 +1073,6 @@ impl From<SqliteRow> for ZoneOwnership {
     }
 }
 
-impl From<SqliteRow> for User {
-    fn from(row: SqliteRow) -> Self {
-        let id: i64 = row.get("id");
-        let username: String = row.get("username");
-        let email: String = row.get("email");
-        let disabled: bool = row.get("disabled");
-        User {
-            id: id as u64,
-            username,
-            email,
-            owned_zones: vec![],
-            disabled,
-        }
-    }
-}
-
 #[async_trait]
 impl DBEntity for ZoneOwnership {
     fn table_name() -> &'static str {
@@ -1117,7 +1151,7 @@ impl DBEntity for User {
         let mut conn = pool.acquire().await?;
 
         let res: User = sqlx::query(&format!(
-            "SELECT id, username, email, disabled from {} where id = ?",
+            "SELECT id, displayname, username, email, disabled from {} where id = ?",
             Self::table_name()
         ))
         .bind(id)
@@ -1126,14 +1160,17 @@ impl DBEntity for User {
         .into();
         Ok(Arc::new(res))
     }
-    /// Get an ownership record by its id
+    /// Get an ownership record by its id, which is slightly ironic in this case
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
         let mut conn = pool.acquire().await?;
 
-        let res = sqlx::query("SELECT id, zoneid, userid from ownership where id = ?")
-            .bind(id)
-            .fetch_all(&mut conn)
-            .await?;
+        let res = sqlx::query(&format!(
+            "SELECT id, zoneid, userid from {} where id = ?",
+            Self::table_name()
+        ))
+        .bind(id)
+        .fetch_all(&mut conn)
+        .await?;
         let result: Vec<Arc<Self>> = res.into_iter().map(|z| Arc::new(z.into())).collect();
         Ok(result)
     }
@@ -1149,9 +1186,18 @@ impl DBEntity for User {
     /// save the entity to the database, but you're in a transaction
     async fn save_with_txn<'t>(
         &self,
-        _txn: &mut Transaction<'t, Sqlite>,
+        txn: &mut Transaction<'t, Sqlite>,
     ) -> Result<u64, sqlx::Error> {
-        todo!();
+        let res = sqlx::query("INSERT INTO users
+            (displayname, username, email, disabled, authref)
+            VALUES (?1, ?2, ?3, ?4, ?5)")
+            .bind(&self.displayname)
+            .bind(&self.username)
+            .bind(&self.email)
+            .bind(&self.disabled)
+            .bind(&self.authref)
+            .execute(txn).await?;
+        Ok(res.rows_affected())
     }
 
     /// delete the entity from the database

@@ -69,3 +69,9 @@ This list is now [in the book](https://goatns.dotgoat.net/rrtypes.html).
   - [ ] support VERSION/VERSION.BIND requests
     - [x] allow list config
     - [ ] build the response packets in a nice way that doesn't blow up
+
+Old sessions:
+
+```sql
+select strftime('%s') as now, expires-strftime('%s') as diff, * from sessions where expires > now;
+```

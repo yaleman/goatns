@@ -76,6 +76,8 @@ pub struct ConfigFile {
     pub sql_log_statements: bool,
     /// When queries take more than this many seconds, log them
     pub sql_log_slow_duration: u64,
+    /// Administrator contact details
+    pub admin_contact: Option<ContactDetails>
 }
 
 fn generate_cookie_secret() -> String {
@@ -131,6 +133,7 @@ impl Default for ConfigFile {
             oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
             sql_log_slow_duration: 5,
             sql_log_statements: false,
+            admin_contact: Default::default(),
         }
     }
 }
@@ -209,6 +212,9 @@ impl From<Config> for ConfigFile {
             sql_log_statements: config
                 .get("sql_log_statements")
                 .unwrap_or(Self::default().sql_log_statements),
+            admin_contact: config
+                .get("admin_contact")
+                .unwrap_or(Self::default().admin_contact),
         }
     }
 }
@@ -289,6 +295,44 @@ pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> 
     match config_ok {
         true => Ok(config.to_owned()),
         false => Err(errors),
+    }
+}
+
+#[derive(Debug, Serialize,Deserialize, PartialEq,Eq, Clone)]
+pub enum ContactDetails {
+    Mastodon{ contact: String },
+    Email { contact: String },
+    Twitter { contact: String },
+}
+
+impl TryFrom<String> for ContactDetails {
+    type Error = &'static str;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let split_value = value.split(":");
+        let mut split_iter = split_value.into_iter();
+        if split_iter.size_hint().0 != 2 {
+            return Err("Contact value wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon");
+        }
+        let contact_type = split_iter.next().unwrap();
+        let contact_value = split_iter.next().unwrap();
+        match contact_type {
+            "Mastodon" => {
+                Ok(Self::Mastodon { contact: contact_value.to_string() })
+
+            },
+            "Email" => {
+                Ok(Self::Email { contact: contact_value.to_string() })
+
+            },
+            "Twitter" => {
+                Ok(Self::Twitter { contact: contact_value.to_string() })
+
+            },
+            &_ => {
+                Err("Contact type wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon")
+            }
+        }
     }
 }
 

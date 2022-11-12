@@ -1,10 +1,13 @@
 use crate::datastore::Command;
+use crate::web::utils::{redirect_to_dashboard, redirect_to_zones_list, redirect_to_login};
 use crate::zones::FileZone;
 use askama::Template;
-use axum::extract::Path;
-use axum::response::Html;
+use axum::extract::{Path, OriginalUri};
+use axum::http::{Response, Uri};
+use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::{Extension, Router};
+use axum_login::axum_sessions::extractors::WritableSession;
 use axum_macros::debug_handler;
 
 use super::SharedState;
@@ -23,8 +26,12 @@ struct TemplateViewZone {
 
 #[debug_handler]
 pub async fn zones_list(
-    Extension(state): Extension<SharedState>,
-) -> Result<Html<String>, &'static str> {
+    Extension(state): Extension<SharedState>,session: WritableSession, OriginalUri(path): OriginalUri
+) -> impl IntoResponse {
+
+    if let Err(e) = check_logged_in(&state, session, path).await {
+        return e.into_response();
+    }
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let state_writer = state.write().await;
     if let Err(err) = state_writer
@@ -34,20 +41,27 @@ pub async fn zones_list(
     {
         eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
         log::error!("failed to send GetZoneNames command to datastore: {err:?}");
-        return Err("Failed to send request to backend");
+        return redirect_to_dashboard().into_response();
     };
     drop(state_writer);
 
     let zones = os_rx.await.expect("Failed to get response: {res:?}");
 
+    log::debug!("about to return zone list...");
     let context = TemplateViewZones { zones };
-    Ok(Html::from(context.render().unwrap()))
+    Response::builder().status(200).body(context.render().unwrap()).unwrap().into_response()
 }
 
 pub async fn zone_view(
     Path(name_or_id): Path<i64>,
     Extension(state): Extension<SharedState>,
-) -> Result<Html<String>, &'static str> {
+    session: WritableSession,
+    OriginalUri(path): OriginalUri
+) -> impl IntoResponse {
+
+    if let Err(e) = check_logged_in(&state, session, path).await {
+        return e.into_response();
+    }
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let cmd = Command::GetZone {
         resp: os_tx,
@@ -59,7 +73,7 @@ pub async fn zone_view(
     if let Err(err) = state_writer.tx.send(cmd).await {
         eprintln!("failed to send GetZone command to datastore: {err:?}");
         log::error!("failed to send GetZone command to datastore: {err:?}");
-        return Err("Failed to send request to backend");
+        return redirect_to_zones_list().into_response();
     };
     drop(state_writer);
 
@@ -70,7 +84,7 @@ pub async fn zone_view(
 
     log::trace!("Returning zone: {zone:?}");
     let context = TemplateViewZone { zone };
-    Ok(Html::from(context.render().unwrap()))
+    Response::new(context.render().unwrap()).into_response()
 }
 
 #[derive(Template)]
@@ -79,9 +93,32 @@ struct DashboardTemplate /*<'a>*/ {
     // name: &'a str,
 }
 
-pub async fn dashboard() -> Result<Html<String>, ()> {
+pub async fn check_logged_in(_state: &SharedState, mut session: WritableSession, path: Uri) -> Result<(),Redirect> {
+    let authref = session.get::<String>("authref");
+
+    let redirect_path = Some(path.path_and_query().unwrap().to_string());
+    if authref.is_none() {
+        session.regenerate();
+        session.insert("redirect", redirect_path).map_err(|e| log::debug!("Couldn't store redirect for user: {e:?}")).unwrap();
+        log::warn!("Not-logged-in-user tried to log in, how rude!");
+        // TODO: this should redirect to the current page
+        return Err(redirect_to_login())
+    }
+    log::debug!("session ok!");
+    // TODO: check the database to make sure they're actually legit and not disabled and blah
+    Ok(())
+
+}
+
+#[debug_handler]
+pub async fn dashboard(Extension(state): Extension<SharedState>, session: WritableSession,OriginalUri(path): OriginalUri) -> impl IntoResponse {
+    if let Err(e) = check_logged_in(&state, session, path).await {
+        return e.into_response();
+    }
+
     let context = DashboardTemplate {};
-    Ok(Html::from(context.render().unwrap()))
+    // Html::from()).into_response()
+    Response::builder().status(200).body(context.render().unwrap()).unwrap().into_response()
 }
 
 pub fn new() -> Router {

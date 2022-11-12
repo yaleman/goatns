@@ -12,13 +12,12 @@ async fn test_create_user() -> Result<(), sqlx::Error> {
     let user = User {
         username: "yaleman".to_string(),
         email: "billy@hello.goat".to_string(),
-        owned_zones: vec![],
         ..User::default()
     };
 
-    user.create(&pool).await?;
+    user.create(&pool, false).await?;
 
-    let res = user.clone().create(&pool).await;
+    let res = user.clone().create(&pool, false).await;
     assert!(res.is_err());
 
     Ok(())

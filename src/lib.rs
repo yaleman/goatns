@@ -40,6 +40,8 @@ pub const REPLY_TIMEOUT_MS: u64 = 1000;
 /// The maximum size of a UDP packet <https://dnsflagday.net/2020/#dns-flag-day-2020>
 pub const UDP_BUFFER_SIZE: usize = 1232;
 
+pub const COOKIE_NAME: &'static str = "goatns_session";
+
 /// The header of a DNS transmission, either a Query or Reply. Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.1) section 4.1.1.
 #[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
 #[packed_struct(bit_numbering = "msb0", size_bytes = "12")]
