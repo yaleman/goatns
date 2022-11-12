@@ -634,7 +634,7 @@ async fn test_question_from_bytes() {
     ];
 
     for buf in input_bufs {
-        if Question::from_packets(&buf).await.is_ok() {
+        if Question::from_packets(&buf).is_ok() {
             panic!("This should bail!");
         }
     }

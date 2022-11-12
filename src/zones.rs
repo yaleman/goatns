@@ -114,7 +114,7 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
         let ttl: u32 = row.get("ttl");
 
         if let RecordType::ANY = rrtype {
-            return Err("Cannot serve ANY records".to_string())
+            return Err("Cannot serve ANY records".to_string());
         }
 
         Ok(FileZoneRecord {

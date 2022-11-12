@@ -1,7 +1,9 @@
 #![warn(clippy::complexity)]
+// #![warn(clippy::cargo)]
+#![warn(clippy::perf)]
 // #![warn(clippy::pedantic)]
 #![deny(unsafe_code)]
-
+#![allow(clippy::multiple_crate_versions)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -50,6 +52,7 @@ pub const COOKIE_NAME: &str = "goatns_session";
 /// The header of a DNS transmission, either a Query or Reply. Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.1) section 4.1.1.
 #[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
 #[packed_struct(bit_numbering = "msb0", size_bytes = "12")]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Header {
     /// The query ID
     #[packed_field(bits = "0..=15", endian = "msb")]
@@ -167,10 +170,11 @@ impl From<&ResourceRecord> for Vec<u8> {
         let ttl_bytes: [u8; 4] = record.ttl.to_be_bytes();
         trace!("ttl_bytes: {:?}", ttl_bytes);
         retval.extend(ttl_bytes);
+        #[allow(clippy::cast_possible_truncation)]
         // reply data length
         retval.extend((record.rdata.len() as u16).to_be_bytes());
         // rdata
-        retval.extend(record.rdata.to_vec());
+        retval.extend(record.rdata.clone());
 
         retval
     }
@@ -204,6 +208,9 @@ impl Display for Question {
 
 /// Returns a Vec<u8> representation of the name
 /// (ie, example.com = [101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109])
+///
+/// # Errors
+/// Will return Strings telling you what's gone wrong.
 pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
     trace!("got buf: {input_val:?}");
     if input_val.is_empty() {
@@ -235,7 +242,7 @@ pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
                 buf.len()
             ));
         }
-        result.extend(buf[1..label_len + 1].to_vec());
+        result.extend(buf[1..=label_len].to_vec());
         #[cfg(test)]
         eprintln!("After extend:  {result:?}");
 
@@ -278,7 +285,7 @@ impl Question {
     }
 
     /// hand it the buffer and the things, and get back a [Question]
-    async fn from_packets(buf: &[u8]) -> Result<Self, String> {
+    fn from_packets(buf: &[u8]) -> Result<Self, String> {
         let qname = get_question_qname(buf)?;
 
         // skip past the end of the question

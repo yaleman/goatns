@@ -393,7 +393,7 @@ async fn get_result(
         return Err(format!("Invalid OPCODE, got {:?}", header.opcode));
     };
 
-    let question = match Question::from_packets(&buf[HEADER_BYTES..len]).await {
+    let question = match Question::from_packets(&buf[HEADER_BYTES..len]) {
         Ok(value) => {
             log::trace!("Parsed question: {:?}", value);
             value

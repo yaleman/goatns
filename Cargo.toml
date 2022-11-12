@@ -1,8 +1,13 @@
 [package]
 name = "goatns"
+description = "Yet another authoritative DNS name server. But with goat references."
 version = "0.2.0"
 edition = "2021"
 rust-version = "1.64"
+license = "MIT"
+repository = "https://github.com/yaleman/goatns.git"
+keywords = ["dns","server","tokio","api","oauth2","oidc"]
+categories = ["network-programming"]
 
 [lib]
 bench=false

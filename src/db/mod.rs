@@ -207,7 +207,7 @@ impl From<SqliteRow> for User {
             email,
             disabled,
             authref,
-            admin
+            admin,
         }
     }
 }

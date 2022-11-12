@@ -282,7 +282,6 @@ pub async fn login(
                 Err(error) => {
                     match error {
                         sqlx::Error::RowNotFound => {
-
                             if !state.config().await.user_auto_provisioning {
                                 // TODO: show a "sorry" page when auto-provisioning's not enabled
                                 log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
