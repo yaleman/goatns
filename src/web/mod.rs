@@ -189,8 +189,9 @@ pub async fn build(
     pub async fn handler_404() -> impl IntoResponse {
         axum::response::Response::builder()
             .status(StatusCode::NOT_FOUND)
+            .header("Content-type", "text/html")
             .body(
-                "You've found a 404, try <a href='#' onclick='history.back();'>going back</a>"
+                "<h1>Oh no!</h1><p>You've found a 404, try <a href='#' onclick='history.back();'>going back</a> or <a href='/'>home!</a></p>"
                     .to_string(),
             )
             .unwrap()

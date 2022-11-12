@@ -67,7 +67,8 @@ pub async fn create_users_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             username TEXT NOT NULL,
             email TEXT NOT NULL,
             disabled BOOL NOT NULL,
-            authref TEXT
+            authref TEXT,
+            admin BOOL DEFAULT 0
         )"#,
     )
     .execute(&mut pool.acquire().await?)
@@ -93,6 +94,7 @@ pub struct User {
     // pub owned_zones: Vec<u64>,
     pub disabled: bool,
     pub authref: Option<String>,
+    pub admin: bool,
 }
 
 impl Default for User {
@@ -104,6 +106,7 @@ impl Default for User {
             email: "".to_string(),
             disabled: true,
             authref: None,
+            admin: false,
         }
     }
 }
@@ -196,6 +199,7 @@ impl From<SqliteRow> for User {
         let email: String = row.get("email");
         let disabled: bool = row.get("disabled");
         let authref: Option<String> = row.get("authref");
+        let admin: bool = row.get("admin");
         User {
             id: Some(id),
             displayname,
@@ -203,6 +207,7 @@ impl From<SqliteRow> for User {
             email,
             disabled,
             authref,
+            admin
         }
     }
 }
@@ -926,6 +931,7 @@ impl DBEntity for FileZoneRecord {
             0 => None,
             _ => Some(self.to_owned().name),
         };
+        #[cfg(test)]
         eprintln!(
             "save_with_txn rtype: {} => {}",
             self.rrtype.clone(),

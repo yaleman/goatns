@@ -282,7 +282,13 @@ pub async fn login(
                 Err(error) => {
                     match error {
                         sqlx::Error::RowNotFound => {
-                            // TODO: show the user a signup page?
+
+                            if !state.config().await.user_auto_provisioning {
+                                // TODO: show a "sorry" page when auto-provisioning's not enabled
+                                log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
+                                return redirect_to_home().into_response();
+                            }
+
                             let new_user_page = AuthNewUser {
                                 state: query.state.clone().unwrap(),
                                 code: query.code.clone().unwrap(),
@@ -348,13 +354,6 @@ pub async fn login(
             }
         },
     }
-    // let context = AuthLogin {
-    //     errors,
-    //     redirect_url: authorize_url,
-    // };
-    // need to log the user in!
-    // Response::builder().status(200).body(Html::from(context.render().unwrap())).into_response()
-    // Html::from(context.render().unwrap()).into_response()
 }
 
 #[derive(Template)]
@@ -449,6 +448,7 @@ pub async fn signup(
                 email,
                 disabled: false,
                 authref: Some(claims.subject().to_string()),
+                admin: false,
             };
             match user.save(&state.connpool().await).await {
                 Ok(_) => redirect_to_dashboard().into_response(),

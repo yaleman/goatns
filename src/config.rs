@@ -78,6 +78,8 @@ pub struct ConfigFile {
     pub sql_log_slow_duration: u64,
     /// Administrator contact details
     pub admin_contact: Option<ContactDetails>,
+    /// Allow auto-provisioning of users
+    pub user_auto_provisioning: bool,
 }
 
 fn generate_cookie_secret() -> String {
@@ -134,6 +136,7 @@ impl Default for ConfigFile {
             sql_log_slow_duration: 5,
             sql_log_statements: false,
             admin_contact: Default::default(),
+            user_auto_provisioning: false,
         }
     }
 }
@@ -215,6 +218,9 @@ impl From<Config> for ConfigFile {
             admin_contact: config
                 .get("admin_contact")
                 .unwrap_or(Self::default().admin_contact),
+            user_auto_provisioning: config
+                .get("user_auto_provisioning")
+                .unwrap_or(Self::default().user_auto_provisioning),
         }
     }
 }
