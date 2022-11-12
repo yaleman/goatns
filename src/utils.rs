@@ -1,10 +1,11 @@
 use crate::datastore::Command;
 use crate::enums::SystemState;
-use crate::reply::Reply;
-use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::zones::FileZone;
-use crate::{Header, PacketType, Question, Rcode, HEADER_BYTES};
+use crate::HEADER_BYTES;
 use clap::{arg, command, value_parser, Arg, ArgMatches};
+use dialoguer::theme::ColorfulTheme;
+use dialoguer::Confirm;
+use dialoguer::Input;
 use log::{debug, trace};
 use std::str::from_utf8;
 use tokio::io::AsyncWriteExt;
@@ -212,51 +213,6 @@ pub fn name_as_bytes(
     result
 }
 
-/// Want a generic empty reply with an ID and an RCODE? Here's your function.
-pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, String> {
-    let header = Header {
-        id,
-        qr: PacketType::Answer,
-        rcode,
-        ..Default::default()
-    };
-    Ok(Reply {
-        header,
-        question: None,
-        answers: vec![],
-        authorities: vec![],
-        additional: vec![],
-    })
-}
-
-pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
-    reply_builder(id, Rcode::NameError)
-}
-
-/// Reply to an ANY request with a HINFO "RFC8482" "" response
-pub fn reply_any(id: u16, question: Question) -> Result<Reply, String> {
-    Ok(Reply {
-        header: Header {
-            id,
-            qr: PacketType::Answer,
-            rcode: Rcode::NoError,
-            authoritative: true,
-            qdcount: 1,
-            ancount: 1,
-            ..Header::default()
-        },
-        question: Some(question.clone()),
-        answers: vec![InternalResourceRecord::HINFO {
-            cpu: Some(DNSCharString::from("RFC8482")),
-            os: Some(DNSCharString::from("")),
-            ttl: 3789,
-            rclass: question.qclass,
-        }],
-        authorities: vec![],
-        additional: vec![],
-    })
-}
-
 // lazy_static!{
 //     static ref GOATNS_VERSION: DNSCharString = DNSCharString::from(format!("GoatNS {}", env!("CARGO_PKG_VERSION")).as_str());
 // }
@@ -353,6 +309,12 @@ pub fn clap_parser() -> ArgMatches {
                 .value_parser(value_parser!(String)),
         )
         .arg(
+            Arg::new("add_admin")
+                .long("add-admin")
+                .help("Add a new admin user.")
+                .action(clap::ArgAction::SetTrue),
+        )
+        .arg(
             Arg::new("use_zonefile")
                 .long("using-zonefile")
                 .help("Load the zone file into the DB on startup, typically used for testing.")
@@ -404,10 +366,70 @@ pub fn loc_size_to_u8(input: f32) -> u8 {
     retval
 }
 
+pub async fn add_admin_user(tx: mpsc::Sender<Command>) -> Result<(), ()> {
+    // prompt for the username
+    println!("Creating admin user, please enter their username from the identity provider");
+    let username: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Username")
+        .interact_text()
+        .unwrap();
+    let displayname: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Display Name")
+        .interact_text()
+        .unwrap();
+
+    // show the details and confirm them
+    let confirm = Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt("Do these details look correct?")
+        .interact_opt();
+    if confirm.is_err() || confirm.unwrap().is_none() {
+        log::warn!("Cancelled user creation");
+        return Err(());
+    };
+
+    // create oneshot
+    let (tx_oneshot, rx_oneshot) = oneshot::channel();
+
+    let new_user = Command::CreateUser {
+        username: username.clone(),
+        displayname,
+        admin: true,
+        resp: tx_oneshot,
+    };
+    // send command
+    if let Err(error) = tx.send(new_user).await {
+        log::error!("Failed to send new user command for username {username:?}: {error:?}");
+        return Err(());
+    };
+    // wait for the response
+    match rx_oneshot.await {
+        Ok(res) => match res {
+            true => {
+                log::info!("Successfully created user!");
+                Ok(())
+            }
+            false => {
+                log::error!("Failed to create user! Check datastore logs.");
+                Err(())
+            }
+        },
+        Err(error) => {
+            log::debug!("Failed to rx result from datastore: {error:?}");
+            Err(())
+        }
+    }
+}
+
 pub async fn cli_commands(
-    tx: tokio::sync::mpsc::Sender<Command>,
+    tx: mpsc::Sender<Command>,
     clap_results: &ArgMatches,
 ) -> Result<SystemState, String> {
+    if clap_results.get_flag("add_admin") {
+        let _ = add_admin_user(tx).await;
+
+        return Ok(SystemState::ShuttingDown);
+    }
+
     if let Some(zone_name) = clap_results.get_one::<String>("export_zone") {
         if let Some(output_filename) = clap_results.get_one::<String>("filename") {
             log::info!("Exporting zone {zone_name} to {output_filename}");

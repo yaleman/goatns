@@ -30,6 +30,7 @@ bytes = "1.2.1"
 chrono = { version = "0.4.22", features = ["clock"] }
 clap = { version="4.0.19", features=["cargo"]}
 config = { version = "0.13", features = ["json"] }
+dialoguer = "0.10.2"
 enum-iterator = "1.2.0"
 flexi_logger = { version = "0.24", features = ["async", "default"] }
 gethostname = "0.4.0"

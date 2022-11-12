@@ -10,9 +10,8 @@ use tokio::time::timeout;
 use crate::config::ConfigFile;
 use crate::datastore::Command;
 use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
-use crate::reply::Reply;
+use crate::reply::{reply_any, reply_builder, reply_nxdomain, Reply};
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
-use crate::utils::*;
 use crate::zones::ZoneRecord;
 use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 

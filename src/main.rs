@@ -49,6 +49,9 @@ async fn main() -> io::Result<()> {
                 log::error!("{error:}")
             }
             log::error!("Shutting down!");
+            logger.flush();
+            sleep(std::time::Duration::from_millis(250)).await;
+            logger.flush();
             return Ok(());
         }
         Ok(c) => {
@@ -138,6 +141,8 @@ async fn start(
             logger.flush();
             if let Err(error) = tx.send(datastore::Command::Shutdown).await {
                 eprintln!("failed to tell Datastore to shut down! {error:?} Bailing!");
+                logger.flush();
+                sleep(std::time::Duration::from_millis(500)).await;
                 logger.flush();
                 return Ok(());
             };

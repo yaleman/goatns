@@ -2,7 +2,7 @@ use std::str::from_utf8;
 use std::sync::Arc;
 
 use crate::config::ConfigFile;
-use crate::db::{self, DBEntity, ZoneOwnership};
+use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
 use crate::zones::{FileZone, ZoneRecord};
 use clap::ArgMatches;
@@ -42,6 +42,12 @@ pub enum Command {
     PatchZone,
 
     DeleteUser,
+    CreateUser {
+        username: String,
+        displayname: String,
+        admin: bool,
+        resp: Responder<bool>,
+    },
     GetUser {
         id: Option<i64>,
         username: Option<String>,
@@ -259,6 +265,30 @@ pub async fn manager(
             Command::PostZone => todo!(),
             Command::DeleteZone => todo!(),
             Command::PatchZone => todo!(),
+            Command::CreateUser {
+                username,
+                displayname,
+                admin,
+                resp,
+            } => {
+                let new_user = User {
+                    username: username.clone(),
+                    displayname,
+                    admin,
+                    ..Default::default()
+                };
+                log::debug!("Creating: {new_user:?}");
+                let res = match new_user.save(&connpool).await {
+                    Ok(_) => true,
+                    Err(error) => {
+                        log::error!("Failed to create {username}: {error:?}");
+                        false
+                    }
+                };
+                if let Err(error) = resp.send(res) {
+                    log::error!("Failed to send message back to caller: {error:?}");
+                }
+            }
             Command::DeleteUser => todo!(),
             Command::GetUser { .. } => todo!(),
             Command::PostUser => todo!(),

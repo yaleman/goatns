@@ -178,6 +178,52 @@ impl User {
 
         Ok(User::from(res))
     }
+
+    pub async fn get_zones_for_user(
+        &self,
+        pool: &Pool<Sqlite>,
+        offset: i64,
+        limit: i64,
+    ) -> Result<Vec<FileZone>, sqlx::Error> {
+        let query_string = match self.admin {
+            true => {
+                "SELECT id, name
+                    FROM zones
+                    LIMIT ?1 OFFSET ?2"
+            }
+            false => {
+                "SELECT id, name
+                    FROM zones, ownership
+                    WHERE zones.id = ownership.zoneid
+                        AND ownership.userid = ?3
+                    LIMIT ?1 OFFSET ?2"
+            }
+        };
+        let mut conn = pool.acquire().await?;
+        let query = sqlx::query(query_string).bind(offset).bind(limit);
+        let query = match self.admin {
+            true => query,
+            false => query.bind(self.id),
+        };
+        let rows: Vec<FileZone> = match query.fetch_all(&mut conn).await {
+            Err(error) => {
+                log::error!("Error: {error:?}");
+                vec![]
+            }
+            Ok(rows) => rows
+                .iter()
+                .map(|row| {
+                    let zone_id: i64 = row.get("id");
+                    FileZone {
+                        id: zone_id as u64,
+                        name: row.get("name"),
+                        ..Default::default()
+                    }
+                })
+                .collect(),
+        };
+        Ok(rows)
+    }
 }
 
 impl AuthUser for User {
@@ -1199,14 +1245,15 @@ impl DBEntity for User {
     ) -> Result<u64, sqlx::Error> {
         let res = sqlx::query(
             "INSERT INTO users
-            (displayname, username, email, disabled, authref)
-            VALUES (?1, ?2, ?3, ?4, ?5)",
+            (displayname, username, email, disabled, authref, admin)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         )
         .bind(&self.displayname)
         .bind(&self.username)
         .bind(&self.email)
         .bind(self.disabled)
         .bind(&self.authref)
+        .bind(self.admin)
         .execute(txn)
         .await?;
         Ok(res.rows_affected())
