@@ -15,5 +15,5 @@
 	"api_tls_cert" : "fullchain.pem",
 	"api_static_dir" : "./static_files",
 	"oauth2_rs_name" : "goatns",
-	"oauth2_secret" : "supersecret_message",
+	"oauth2_secret" : "supersecret_message"
 }
