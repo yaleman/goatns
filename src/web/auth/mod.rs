@@ -1,40 +1,42 @@
+use std::time::Duration;
+
 use super::utils::{redirect_to_dashboard, redirect_to_home};
 use super::SharedState;
 use crate::config::ConfigFile;
 use crate::db::{DBEntity, User};
 use crate::web::SharedStateTrait;
 use crate::COOKIE_NAME;
+
 use askama::Template;
+use async_sqlx_session::SqliteSessionStore;
 use axum::extract::Query;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Extension, Form, Router};
-use axum_login::axum_sessions::extractors::WritableSession;
 use axum_macros::debug_handler;
+use axum_sessions::extractors::WritableSession;
+use axum_sessions::SessionLayer;
 use chrono::{DateTime, Utc};
 use oauth2::{PkceCodeChallenge, PkceCodeVerifier};
-use serde::Deserialize;
-
-use async_sqlx_session::SqliteSessionStore;
-use axum_login::axum_sessions::SessionLayer;
-
-use axum_login::{AuthLayer, SqliteStore};
-use rand::Rng;
-use sqlx::{Pool, Sqlite};
-
-use openidconnect::{
-    core::*, ClaimsVerificationError, EmptyAdditionalClaims, EndUserUsername, IdTokenClaims,
-    TokenResponse,
-};
-
 use openidconnect::reqwest::async_http_client;
 use openidconnect::EmptyAdditionalProviderMetadata;
 use openidconnect::{
+    core::*, ClaimsVerificationError, EmptyAdditionalClaims, IdTokenClaims, TokenResponse,
+};
+use openidconnect::{
     AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
 };
+use rand::Rng;
+use serde::Deserialize;
+use sqlx::{Pool, Sqlite};
+
+pub mod sessions;
+pub mod traits;
+use traits::*;
 
 #[derive(Deserialize)]
-pub struct LoginQuery {
+/// Parser for path bits
+pub struct QueryForLogin {
     /// OAuth2 CSRF token
     pub state: Option<String>,
     /// OAuth2 code
@@ -43,27 +45,7 @@ pub struct LoginQuery {
     pub redirect: Option<String>,
 }
 
-#[allow(dead_code)]
-type AuthContext = axum_login::extractors::AuthContext<User, SqliteStore<User>>;
-
-#[derive(Template)]
-#[template(path = "auth_login.html")]
-struct AuthLogin {
-    errors: Vec<String>,
-    redirect_url: String,
-}
-
-#[derive(Template)]
-#[template(path = "auth_new_user.html")]
-struct AuthNewUser {
-    state: String,
-    code: String,
-    email: String,
-    displayname: String,
-    redirect_url: String,
-    errors: Vec<String>,
-}
-
+/// Used in the parsing of the OIDC Provider metadata
 pub type CustomProviderMetadata = ProviderMetadata<
     EmptyAdditionalProviderMetadata,
     CoreAuthDisplay,
@@ -81,6 +63,44 @@ pub type CustomProviderMetadata = ProviderMetadata<
     CoreResponseType,
     CoreSubjectIdentifierType,
 >;
+type CustomClaimType = IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>;
+
+#[derive(Template)]
+#[template(path = "auth_login.html")]
+struct AuthLoginTemplate {
+    errors: Vec<String>,
+    redirect_url: String,
+}
+
+#[derive(Template)]
+#[template(path = "auth_new_user.html")]
+struct AuthNewUserTemplate {
+    state: String,
+    code: String,
+    email: String,
+    displayname: String,
+    redirect_url: String,
+    errors: Vec<String>,
+}
+
+#[derive(Template)]
+#[template(path = "auth_logout.html")]
+struct AuthLogoutTemplate {}
+
+#[derive(Template)]
+#[template(path = "auth_provisioning_disabled.html")]
+/// This renders a page telling the user that auto-provisioning is disabled and to tell the admin which username to add
+struct AuthProvisioningDisabledTemplate {
+    username: String,
+    authref: String,
+    admin_contact: String,
+}
+
+pub enum ParserError {
+    Redirect { content: Redirect },
+    ErrorMessage { content: &'static str },
+    ClaimsVerificationError { content: ClaimsVerificationError },
+}
 
 pub async fn oauth_get_discover(state: &SharedState) -> Result<CustomProviderMetadata, String> {
     let issuer_url = IssuerUrl::new(state.config().await.oauth2_config_url);
@@ -109,7 +129,7 @@ pub async fn oauth_start(state: &SharedState) -> Result<url::Url, String> {
             meta
         }
     };
-    log::debug!("provider metadata: {provider_metadata:?}");
+    log::trace!("provider metadata: {provider_metadata:?}");
 
     // Generate a PKCE challenge.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -140,14 +160,6 @@ pub async fn oauth_start(state: &SharedState) -> Result<url::Url, String> {
     Ok(authorize_url)
 }
 
-pub enum ParserError {
-    Redirect { content: Redirect },
-    ErrorMessage { content: &'static str },
-    ClaimsVerificationError { content: ClaimsVerificationError },
-}
-
-type CustomClaimType = IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>;
-
 pub async fn parse_state_code(
     shared_state: &SharedState,
     query_code: String,
@@ -156,7 +168,14 @@ pub async fn parse_state_code(
 ) -> Result<CustomClaimType, ParserError> {
     let auth_code = AuthorizationCode::new(query_code);
 
-    let provider_metadata = shared_state.oidc_config().await.unwrap();
+    let provider_metadata = match shared_state.oidc_config().await {
+        Some(value) => value,
+        None => {
+            return Err(ParserError::ErrorMessage {
+                content: "Failed to pull provider metadata!",
+            })
+        }
+    };
 
     let client = CoreClient::from_provider_metadata(
         provider_metadata,
@@ -177,8 +196,15 @@ pub async fn parse_state_code(
         .unwrap();
 
     // Extract the ID token claims after verifying its authenticity and nonce.
-    let id_token = token_response.id_token().unwrap();
-    log::debug!("id_token: {id_token:?}");
+    let id_token = match token_response.id_token() {
+        Some(token) => token,
+        None => {
+            return Err(ParserError::ErrorMessage {
+                content: "couldn't parse token",
+            })
+        }
+    };
+    log::trace!("id_token: {id_token:?}");
     let allowed_algs = vec![
         CoreJwsSigningAlgorithm::EcdsaP256Sha256,
         CoreJwsSigningAlgorithm::RsaSsaPkcs1V15Sha256,
@@ -195,43 +221,9 @@ pub async fn parse_state_code(
         .cloned()
 }
 
-pub trait CustomClaimTypeThings {
-    fn get_displayname(&self) -> String;
-    fn get_email(&self) -> Result<String, Redirect>;
-    fn get_username(&self) -> String;
-}
-
-impl CustomClaimTypeThings for CustomClaimType {
-    fn get_email(&self) -> Result<String, Redirect> {
-        let email: String;
-        if let Some(user_email) = self.email() {
-            email = user_email.to_string();
-        } else if let Some(user_email) = self.preferred_username() {
-            email = user_email.to_string();
-        } else {
-            log::error!("Couldn't extract email address from claim: {self:?}");
-            return Err(redirect_to_home());
-        }
-        Ok(email)
-    }
-    fn get_displayname(&self) -> String {
-        let mut displayname: String = "Anonymous Kid".to_string();
-        if let Some(name) = self.name() {
-            if let Some(username) = name.iter().next() {
-                displayname = username.1.to_string();
-            }
-        }
-        displayname
-    }
-    fn get_username(&self) -> String {
-        let default = EndUserUsername::new("".to_string());
-        self.preferred_username().unwrap_or(&default).to_string()
-    }
-}
-
 #[debug_handler]
 pub async fn login(
-    query: Query<LoginQuery>,
+    query: Query<QueryForLogin>,
     mut session: WritableSession,
     Extension(state): Extension<SharedState>,
 ) -> impl IntoResponse {
@@ -284,11 +276,25 @@ pub async fn login(
                         sqlx::Error::RowNotFound => {
                             if !state.config().await.user_auto_provisioning {
                                 // TODO: show a "sorry" page when auto-provisioning's not enabled
-                                log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
-                                return redirect_to_home().into_response();
+                                // log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
+                                let admin_contact = state.config().await.admin_contact;
+                                let admin_contact = match admin_contact {
+                                    Some(value) => value,
+                                    None => "the administrator".to_string(),
+                                };
+                                let context = AuthProvisioningDisabledTemplate {
+                                    username: claims.get_username(),
+                                    authref: claims.subject().to_string(),
+                                    admin_contact,
+                                };
+                                return Response::builder()
+                                    .status(200)
+                                    .body(context.render().unwrap())
+                                    .unwrap()
+                                    .into_response();
                             }
 
-                            let new_user_page = AuthNewUser {
+                            let new_user_page = AuthNewUserTemplate {
                                 state: query.state.clone().unwrap(),
                                 code: query.code.clone().unwrap(),
                                 email,
@@ -330,7 +336,6 @@ pub async fn login(
             if dbuser.disabled {
                 session.destroy();
                 log::info!("Disabled user attempted to log in: {dbuser:?}");
-                // TODO: show a disabled user prompt
                 return redirect_to_home().into_response();
             }
 
@@ -356,56 +361,47 @@ pub async fn login(
     }
 }
 
-#[derive(Template)]
-#[template(path = "auth_logout.html")]
-struct AuthLogout {}
-
-pub async fn logout(
-    // Extension(_shared_state): Extension<SharedState>,
-    mut session: WritableSession,
-) -> impl IntoResponse {
-    // let context = AuthLogout {};
+pub async fn logout(mut session: WritableSession) -> impl IntoResponse {
     session.destroy();
-    // Html::from(context.render().unwrap()).into_response()
     Redirect::to("/")
 }
 
 pub async fn build_auth_stores(
-    _config: &ConfigFile,
+    config: &ConfigFile,
     connpool: Pool<Sqlite>,
-) -> (
-    AuthLayer<User, SqliteStore<User>>,
-    SessionLayer<SqliteSessionStore>,
-) {
-    let mut secret: [u8; 64] = [0; 64];
+) -> SessionLayer<SqliteSessionStore> {
+    let mut secret: [u8; 128] = [0; 128];
     rand::thread_rng().fill(&mut secret);
-
-    let user_store = SqliteStore::<User>::new(connpool.clone());
-    let auth_layer = AuthLayer::new(user_store, &secret);
 
     let session_store = SqliteSessionStore::from_client(connpool).with_table_name("sessions");
 
     session_store
         .migrate()
         .await
-        .expect("Could not migrate session store.");
-    let session_layer = SessionLayer::new(session_store, &secret)
-        .with_secure(true)
-        // TODO: this isn't working because it sets .(hostname) for some reason.
-        // .with_cookie_domain(config.hostname.clone())
-        .with_cookie_name(COOKIE_NAME);
+        .expect("Could not migrate session store database on startup!");
 
-    (auth_layer, session_layer)
+    let _ = tokio::spawn(sessions::session_store_cleanup(
+        Duration::from_secs(config.sql_session_cleanup_seconds),
+        session_store.clone(),
+    ));
+
+    SessionLayer::new(session_store, &secret)
+        .with_secure(true)
+        // TODO: cookie domain isn't working because it sets .(hostname) for some reason.
+        // .with_cookie_domain(config.hostname.clone())
+        .with_cookie_name(COOKIE_NAME)
+        .with_save_unchanged(false)
 }
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
-
+/// This handles the POST from "would you like to create your user"
 pub struct SignupForm {
     pub state: String,
     pub code: String,
 }
 
+/// /auth/signup
 pub async fn signup(
     Extension(state): Extension<SharedState>,
     Form(form): Form<SignupForm>,

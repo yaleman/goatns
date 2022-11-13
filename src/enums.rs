@@ -370,18 +370,26 @@ impl From<bool> for PacketType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub enum ContactDetails {
-    Mastodon { contact: String },
+    Mastodon { contact: String, server: String },
     Email { contact: String },
     Twitter { contact: String },
 }
 
-impl TryFrom<&'static str> for ContactDetails {
-    type Error = String;
-
-    fn try_from(value: &'static str) -> Result<Self, Self::Error> {
-        Self::try_from(value.to_string())
+impl ToString for ContactDetails {
+    fn to_string(&self) -> String {
+        match self {
+            ContactDetails::Mastodon { server, contact } => {
+                format!(r#"<a href="https://{server}/@{contact}">{contact}</a>"#)
+            }
+            ContactDetails::Email { contact } => {
+                format!(r#"<a href="mailto:{contact}">{contact}</a>"#)
+            }
+            ContactDetails::Twitter { contact } => {
+                format!(r#"<a href="https://twitter.com/{contact}">{contact}</a>"#)
+            }
+        }
     }
 }
 
@@ -394,13 +402,30 @@ impl TryFrom<String> for ContactDetails {
         let contact_value = split_value.next();
         if contact_type.is_none() || contact_value.is_none() {
             return Err(
-                "Length of input is wrong please ensure it's in the format type:value".to_string(),
+                "Length of input is wrong please ensure it's in the format type:username@server (server for Mastodon)".to_string(),
             );
         }
         let contact_value = contact_value.unwrap();
         match contact_type.unwrap() {
             "Mastodon" => {
-                Ok(Self::Mastodon { contact: contact_value.to_string() })
+                let contact_value = match contact_value.starts_with('@') {
+                    false => contact_value,
+                    true => contact_value.trim_start_matches(
+                        '@'
+                    )
+                };
+                if !contact_value.contains('@') {
+                    return Err(
+                        "Input format is wrong please ensure it's in the format Mastodon:username@server for Mastodon".to_string(),
+                    );
+                }
+
+                let mut contact_split = contact_value.split('@');
+
+                Ok( Self::Mastodon {
+                    contact: contact_split.next().unwrap().to_string(),
+                    server: contact_split.next().unwrap().to_string(),
+                })
 
             },
             "Email" => {

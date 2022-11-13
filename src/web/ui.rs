@@ -8,8 +8,8 @@ use axum::http::{Response, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::{Extension, Router};
-use axum_login::axum_sessions::extractors::WritableSession;
 use axum_macros::debug_handler;
+use axum_sessions::extractors::WritableSession;
 
 use super::SharedState;
 
@@ -25,15 +25,24 @@ struct TemplateViewZone {
     zone: FileZone,
 }
 
+macro_rules! check_logged_in {
+    ( $state:tt, $session:tt, $path:tt ) => {
+        if let Err(e) = check_logged_in(&$state, &mut $session, $path).await {
+            return e.into_response();
+        }
+    };
+}
+
 #[debug_handler]
 pub async fn zones_list(
     Extension(state): Extension<SharedState>,
     mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    if let Err(e) = check_logged_in(&state, &mut session, path).await {
-        return e.into_response();
-    }
+    // if let Err(e) = check_logged_in(&state, &mut session, path).await {
+    //     return e.into_response();
+    // }
+    check_logged_in!(state, session, path);
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let state_writer = state.write().await;
 

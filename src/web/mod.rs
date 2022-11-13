@@ -104,15 +104,7 @@ impl SharedStateTrait for SharedState {
         RedirectUrl::from_url(url)
     }
 
-    // async fn oauth2_introspection_url(&self) -> IntrospectionUrl {
-    //     let reader = self.read().await;
-    //     let introspect_url = reader.oidc_config.as_ref().unwrap().token_endpoint.clone();
-    //     let domain = introspect_url.domain().unwrap();
-    //     let introspect_url =
-    //         Url::parse(&format!("https://{domain}/oauth2/token/introspect")).unwrap();
-    //     IntrospectionUrl::from_url(introspect_url)
-    // }
-
+    /// Store the PKCE verifier details server-side for when the user comes back with their auth token
     async fn push_verifier(&self, csrftoken: String, verifier: (PkceCodeVerifier, Nonce)) {
         let mut writer = self.write().await;
         writer.oidc_verifier.insert(csrftoken, verifier);
@@ -171,7 +163,7 @@ pub async fn build(
 
     let static_router = SpaRouter::new("/ui/static", &config_dir);
 
-    let (auth_layer, session_layer) = auth::build_auth_stores(&config, connpool.clone()).await;
+    let session_layer = auth::build_auth_stores(&config, connpool.clone()).await;
 
     let state: SharedState = Arc::new(RwLock::new(State {
         tx,
@@ -210,7 +202,7 @@ pub async fn build(
                 .layer(trace_layer)
                 .layer(CompressionLayer::new())
                 .layer(Extension(state))
-                .layer(Extension(auth_layer))
+                // .layer(Extension(auth_layer))
                 .layer(session_layer)
                 .into_inner(),
         )

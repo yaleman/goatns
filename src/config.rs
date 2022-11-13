@@ -1,4 +1,3 @@
-use crate::enums::ContactDetails;
 use clap::ArgMatches;
 use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
@@ -76,8 +75,10 @@ pub struct ConfigFile {
     pub sql_log_statements: bool,
     /// When queries take more than this many seconds, log them
     pub sql_log_slow_duration: u64,
+    /// Clean up sessions table every n seconds
+    pub sql_session_cleanup_seconds: u64,
     /// Administrator contact details
-    pub admin_contact: Option<ContactDetails>,
+    pub admin_contact: Option<String>,
     /// Allow auto-provisioning of users
     pub user_auto_provisioning: bool,
 }
@@ -135,6 +136,7 @@ impl Default for ConfigFile {
             oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
             sql_log_slow_duration: 5,
             sql_log_statements: false,
+            sql_session_cleanup_seconds: 3600, // one hour
             admin_contact: Default::default(),
             user_auto_provisioning: false,
         }
@@ -156,8 +158,8 @@ impl Display for ConfigFile {
             }
         };
         f.write_fmt(format_args!(
-            "hostname=\"{}\" listening_address=\"{}:{}\" capturing_pcaps={} Log_level={}, {api_details}",
-            self.hostname, self.address, self.port, self.capture_packets, self.log_level
+            "hostname=\"{}\" listening_address=\"{}:{}\" capturing_pcaps={} Log_level={}, admin_contact={:?} {api_details}",
+            self.hostname, self.address, self.port, self.capture_packets, self.log_level, self.admin_contact,
         ))
     }
 }
@@ -215,6 +217,9 @@ impl From<Config> for ConfigFile {
             sql_log_statements: config
                 .get("sql_log_statements")
                 .unwrap_or(Self::default().sql_log_statements),
+            sql_session_cleanup_seconds: config
+                .get("sql_session_cleanup_seconds")
+                .unwrap_or(Self::default().sql_session_cleanup_seconds),
             admin_contact: config
                 .get("admin_contact")
                 .unwrap_or(Self::default().admin_contact),

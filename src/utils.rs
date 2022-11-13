@@ -373,11 +373,26 @@ pub async fn add_admin_user(tx: mpsc::Sender<Command>) -> Result<(), ()> {
         .with_prompt("Username")
         .interact_text()
         .unwrap();
-    let displayname: String = Input::with_theme(&ColorfulTheme::default())
-        .with_prompt("Display Name")
+
+    println!(
+        "The authentication reference is the unique user identifier in the Identity Provider."
+    );
+    let authref: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Authentication Reference:")
         .interact_text()
         .unwrap();
 
+    println!(
+        r#"
+
+Creating the following user:
+
+
+Username: {username}
+Authref:  {authref}
+
+"#
+    );
     // show the details and confirm them
     let confirm = Confirm::with_theme(&ColorfulTheme::default())
         .with_prompt("Do these details look correct?")
@@ -392,8 +407,9 @@ pub async fn add_admin_user(tx: mpsc::Sender<Command>) -> Result<(), ()> {
 
     let new_user = Command::CreateUser {
         username: username.clone(),
-        displayname,
+        authref: authref.clone(),
         admin: true,
+        disabled: false,
         resp: tx_oneshot,
     };
     // send command

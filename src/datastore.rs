@@ -47,8 +47,9 @@ pub enum Command {
     DeleteUser,
     CreateUser {
         username: String,
-        displayname: String,
+        authref: String,
         admin: bool,
+        disabled: bool,
         resp: Responder<bool>,
     },
     GetUser {
@@ -281,14 +282,16 @@ pub async fn manager(
             Command::PatchZone => todo!(),
             Command::CreateUser {
                 username,
-                displayname,
+                authref,
                 admin,
+                disabled,
                 resp,
             } => {
                 let new_user = User {
                     username: username.clone(),
-                    displayname,
+                    authref: Some(authref.clone()),
                     admin,
+                    disabled,
                     ..Default::default()
                 };
                 log::debug!("Creating: {new_user:?}");

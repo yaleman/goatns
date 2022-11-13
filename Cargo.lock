@@ -283,27 +283,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum-login"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a006dfa952fad01aa566cf8e5b246c82c4c482fa1082c33f7344c781828e62b8"
-dependencies = [
- "async-trait",
- "axum",
- "axum-sessions",
- "base64",
- "eyre",
- "futures",
- "ring",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
-]
-
-[[package]]
 name = "axum-macros"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -975,16 +954,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
-name = "eyre"
-version = "0.6.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c2b6b5a29c02cdc822728b7d7b8ae1bab3e3b05d44522770ddd49722eeac7eb"
-dependencies = [
- "indenter",
- "once_cell",
-]
-
-[[package]]
 name = "fastrand"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1233,9 +1202,9 @@ dependencies = [
  "async-trait",
  "axum",
  "axum-extra",
- "axum-login",
  "axum-macros",
  "axum-server",
+ "axum-sessions",
  "bit-vec",
  "bytes",
  "chrono",
@@ -1537,12 +1506,6 @@ dependencies = [
  "unicode-bidi",
  "unicode-normalization",
 ]
-
-[[package]]
-name = "indenter"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce23b50ad8242c51a442f3ff322d56b02f08852c77e4c0b4d3fd684abc89c683"
 
 [[package]]
 name = "indexmap"
@@ -3091,7 +3054,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c530c8675c1dbf98facee631536fa116b5fb6382d7dd6dc1b118d970eafe3ba"
 dependencies = [
  "async-compression",
- "base64",
  "bitflags",
  "bytes",
  "futures-core",

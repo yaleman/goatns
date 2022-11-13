@@ -8,8 +8,6 @@ use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::{FileZone, FileZoneRecord};
 use async_trait::async_trait;
-
-use axum_login::AuthUser;
 use openidconnect::SubjectIdentifier;
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolConnection;
@@ -199,7 +197,10 @@ impl User {
                     LIMIT ?1 OFFSET ?2"
             }
         };
-        log::debug!("get_zones_for_user query: {query_string:?}");
+        log::debug!(
+            "get_zones_for_user query: {:?}",
+            query_string.replace('\n', "")
+        );
         let query = sqlx::query(query_string).bind(limit).bind(offset);
         let query = match self.admin {
             true => query,
@@ -229,17 +230,6 @@ impl From<&SqliteRow> for FileZone {
             minimum: row.get("minimum"),
             records: vec![],
         }
-    }
-}
-
-impl AuthUser for User {
-    fn get_id(&self) -> String {
-        self.username.to_string()
-    }
-
-    fn get_password_hash(&self) -> String {
-        // self.password_hash.clone()
-        todo!("There's no password hashes for users!");
     }
 }
 
