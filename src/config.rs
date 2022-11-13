@@ -65,7 +65,7 @@ pub struct ConfigFile {
     #[serde(skip_serializing)]
     /// Oauth2 Secret
     pub oauth2_secret: String,
-    /// OIDC Discovery URL, eg for Kanidm you'd use https://idm.example.com/oauth2/openid/:client_id:/.well-known/openid-configuration
+    /// OIDC Discovery URL, eg for Kanidm you'd use `https://idm.example.com/oauth2/openid/:client_id:/.well-known/openid-configuration`
     #[serde(default)]
     pub oauth2_config_url: String,
     #[serde(default)]
@@ -258,7 +258,7 @@ pub fn get_config(config_path: Option<&String>) -> Result<ConfigFile, String> {
 
                 match builder.build() {
                     Ok(config) => {
-                        println!("Successfully loaded config from: {}", config_filename);
+                        eprintln!("Successfully loaded config from: {}", config_filename);
                         return Ok(ConfigFile::from(config));
                     }
                     Err(error) => {

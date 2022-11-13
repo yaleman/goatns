@@ -1,3 +1,5 @@
+//! Goats are cool, but they make for poor DNS record stores. So here's an authoritative DNS server INSPIRED by goats.
+
 #![warn(clippy::complexity)]
 // #![warn(clippy::cargo)]
 #![warn(clippy::perf)]
@@ -19,6 +21,7 @@ use packed_struct::prelude::*;
 use std::fmt::{Debug, Display};
 use std::str::from_utf8;
 
+pub mod cli;
 /// Configuration handling for the server
 pub mod config;
 /// The data-storing backend for zone information and (eventually) caching.

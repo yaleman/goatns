@@ -10,12 +10,12 @@ use axum_server::tls_rustls::RustlsConfig;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 
+use goatns::cli::clap_parser;
 use goatns::config::{check_config, get_config, setup_logging, ConfigFile};
 use goatns::datastore;
 use goatns::db;
 use goatns::enums::{Agent, AgentState, SystemState};
 use goatns::servers;
-use goatns::utils::clap_parser;
 use goatns::MAX_IN_FLIGHT;
 use tokio::time::sleep;
 
@@ -94,7 +94,7 @@ async fn main() -> io::Result<()> {
         connpool.clone(),
     ));
 
-    let system_state = match goatns::utils::cli_commands(tx.clone(), &clap_results).await {
+    let system_state = match goatns::cli::cli_commands(tx.clone(), &clap_results).await {
         Ok(value) => value,
         Err(error) => {
             log::trace!("{error}");
