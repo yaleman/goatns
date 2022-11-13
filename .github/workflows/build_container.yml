@@ -2,10 +2,12 @@
 name: Build Container
 
 "on":
-  workflow_dispatch:
   push:
     branches:
       - main
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
 jobs:
   build_container:
     runs-on: ubuntu-latest
