@@ -963,10 +963,6 @@
 <span id="963">963</span>
 <span id="964">964</span>
 <span id="965">965</span>
-<span id="966">966</span>
-<span id="967">967</span>
-<span id="968">968</span>
-<span id="969">969</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::{RecordClass, RecordType};
 <span class="kw">use </span><span class="kw">crate</span>::utils::{dms_to_u32, hexdump, name_as_bytes};
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZoneRecord;
@@ -997,7 +993,6 @@
 
 <span class="kw">impl </span>DomainName {
     <span class="doccomment">/// Push the DomainName through the name_as_bytes function
-    </span><span class="comment">// TODO:
     </span><span class="kw">pub fn </span>as_bytes(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         compress_target: <span class="prelude-ty">Option</span>&lt;u16&gt;,
@@ -1099,15 +1094,13 @@
 }
 
 <span class="kw">impl </span>DNSCharString {
-    <span class="doccomment">/// Returns the bytes for a packet, ie - the length and then the string (automagically truncated to 255 bytes)
+    <span class="doccomment">/// Returns the bytes for a packet, ie - the length and then the string
     </span><span class="kw">fn </span>as_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>res: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="self">self</span>.data.len() <span class="kw">as </span>u8];
-        res.extend(<span class="kw-2">&amp;</span><span class="self">self</span>.data);
+        <span class="kw">let </span><span class="kw-2">mut </span>res: Vec&lt;u8&gt; = <span class="self">self</span>.data.to_vec();
         <span class="comment">// &lt;character-string&gt; is a single length octet followed by that number of characters.  &lt;character-string&gt; is treated as binary information, and can be up to 256 characters in length (including the length octet).
-        </span>res.truncate(<span class="number">257</span>);
-
-        <span class="comment">// TODO: I wonder if we can automagically split this and return it as individual records? it&#39;d have to happen up the stack.
-        </span>res
+        </span>res.truncate(<span class="number">255</span>);
+        res.insert(<span class="number">0</span>, res.len() <span class="kw">as </span>u8);
+        res
     }
 }
 
@@ -1259,8 +1252,7 @@
 
 <span class="kw">impl </span>TryFrom&lt;FileZoneRecord&gt; <span class="kw">for </span>InternalResourceRecord {
     <span class="kw">type </span>Error = String;
-    <span class="comment">// TODO: This should be a try_into because we&#39;re parsing text
-    </span><span class="doccomment">/// This is where we convert from the JSON blob in the file to an internal representation of the data.
+    <span class="doccomment">/// This is where we convert from the JSON blob in the file to an internal representation of the data.
     </span><span class="kw">fn </span>try_from(record: FileZoneRecord) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, String&gt; {
         <span class="kw">if </span>check_long_labels(<span class="kw-2">&amp;</span>record.name) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;At least one label is of length over 63 in name {}! I&#39;m refusing to serve this record.&quot;</span>, record.name));
@@ -1543,12 +1535,10 @@
                 minimum,
                 ..
             } =&gt; {
-                <span class="comment">// TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
-                </span><span class="kw">let </span>zone_as_bytes = zone.name.as_bytes().to_vec();
+                <span class="kw">let </span>zone_as_bytes = zone.name.as_bytes().to_vec();
                 <span class="kw">let </span><span class="kw-2">mut </span>res: Vec&lt;u8&gt; =
                     mname.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>zone_as_bytes));
-                <span class="comment">// TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
-                </span>res.extend(rname.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>zone_as_bytes)));
+                res.extend(rname.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>zone_as_bytes)));
                 res.extend(serial.to_be_bytes());
                 res.extend(refresh.to_be_bytes());
                 res.extend(retry.to_be_bytes());
@@ -1602,8 +1592,10 @@
                 mx_bytes.extend(exchange.as_bytes(<span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">Some</span>(question)));
                 mx_bytes
             }
-            InternalResourceRecord::AXFR { .. } =&gt; <span class="macro">todo!</span>(),
-            InternalResourceRecord::InvalidType =&gt; <span class="macro">todo!</span>(),
+            InternalResourceRecord::AXFR { .. } =&gt; <span class="macro">unimplemented!</span>(), <span class="comment">// TODO: handle axfr records
+            </span>InternalResourceRecord::InvalidType =&gt; {
+                <span class="macro">panic!</span>(<span class="string">&quot;Somehow people are requesting InvalidType records as bytes!&quot;</span>)
+            }
             InternalResourceRecord::CAA {
                 flag, tag, value, ..
             } =&gt; {

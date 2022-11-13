@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["index",""],["status",""]],"struct":[["IndexTemplate",""]]};
+window.SIDEBAR_ITEMS = {"fn":[["__axum_macros_check_index_0_from_request",""],["__axum_macros_check_index_future",""],["__axum_macros_check_index_into_response",""],["index",""],["status",""]],"struct":[["IndexTemplate",""]]};

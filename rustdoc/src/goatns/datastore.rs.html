@@ -300,11 +300,46 @@
 <span id="300">300</span>
 <span id="301">301</span>
 <span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::str::from_utf8;
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
-<span class="kw">use </span><span class="kw">crate</span>::db::{<span class="self">self</span>, DBEntity, ZoneOwnership};
+<span class="kw">use </span><span class="kw">crate</span>::db::{<span class="self">self</span>, DBEntity, User, ZoneOwnership};
 <span class="kw">use </span><span class="kw">crate</span>::enums::{RecordClass, RecordType};
 <span class="kw">use </span><span class="kw">crate</span>::zones::{FileZone, ZoneRecord};
 <span class="kw">use </span>clap::ArgMatches;
@@ -330,6 +365,9 @@
         resp: Responder&lt;<span class="prelude-ty">Option</span>&lt;FileZone&gt;&gt;,
     },
     GetZoneNames {
+        user: User,
+        offset: i64,
+        limit: i64,
         resp: Responder&lt;Vec&lt;FileZone&gt;&gt;,
     },
     ImportFile {
@@ -344,6 +382,13 @@
     PatchZone,
 
     DeleteUser,
+    CreateUser {
+        username: String,
+        authref: String,
+        admin: bool,
+        disabled: bool,
+        resp: Responder&lt;bool&gt;,
+    },
     GetUser {
         id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
         username: <span class="prelude-ty">Option</span>&lt;String&gt;,
@@ -481,15 +526,21 @@
 }
 
 <span class="kw">async fn </span>handle_get_zone_names(
+    user: User,
     tx: oneshot::Sender&lt;Vec&lt;FileZone&gt;&gt;,
     pool: <span class="kw-2">&amp;</span>Pool&lt;Sqlite&gt;,
+    offset: i64,
+    limit: i64,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>txn = pool.begin().<span class="kw">await</span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>zones = <span class="kw">crate</span>::db::get_zones_with_txn(<span class="kw-2">&amp;mut </span>txn, <span class="number">100</span>, <span class="number">0</span>)
+    <span class="macro">log::debug!</span>(<span class="string">&quot;handle_get_zone_names: user={user:?}&quot;</span>);
+    <span class="kw">let </span>zones = user
+        .get_zones_for_user(<span class="kw-2">&amp;mut </span>txn, offset, limit)
         .<span class="kw">await
         </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))<span class="question-mark">?</span>;
 
+    <span class="macro">log::debug!</span>(<span class="string">&quot;handle_get_zone_names: {zones:?}&quot;</span>);
     tx.send(zones).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))
 }
 
@@ -517,8 +568,13 @@
                     <span class="macro">log::error!</span>(<span class="string">&quot;{e:?}&quot;</span>)
                 };
             }
-            Command::GetZoneNames { resp } =&gt; {
-                <span class="kw">let </span>res = handle_get_zone_names(resp, <span class="kw-2">&amp;</span>connpool).<span class="kw">await</span>;
+            Command::GetZoneNames {
+                resp,
+                user,
+                offset,
+                limit,
+            } =&gt; {
+                <span class="kw">let </span>res = handle_get_zone_names(user, resp, <span class="kw-2">&amp;</span>connpool, offset, limit).<span class="kw">await</span>;
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = res {
                     <span class="macro">log::error!</span>(<span class="string">&quot;{e:?}&quot;</span>)
                 };
@@ -561,19 +617,37 @@
             Command::PostZone =&gt; <span class="macro">todo!</span>(),
             Command::DeleteZone =&gt; <span class="macro">todo!</span>(),
             Command::PatchZone =&gt; <span class="macro">todo!</span>(),
+            Command::CreateUser {
+                username,
+                authref,
+                admin,
+                disabled,
+                resp,
+            } =&gt; {
+                <span class="kw">let </span>new_user = User {
+                    username: username.clone(),
+                    authref: <span class="prelude-val">Some</span>(authref.clone()),
+                    admin,
+                    disabled,
+                    ..Default::default()
+                };
+                <span class="macro">log::debug!</span>(<span class="string">&quot;Creating: {new_user:?}&quot;</span>);
+                <span class="kw">let </span>res = <span class="kw">match </span>new_user.save(<span class="kw-2">&amp;</span>connpool).<span class="kw">await </span>{
+                    <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
+                    <span class="prelude-val">Err</span>(error) =&gt; {
+                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to create {username}: {error:?}&quot;</span>);
+                        <span class="bool-val">false
+                    </span>}
+                };
+                <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = resp.send(res) {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send message back to caller: {error:?}&quot;</span>);
+                }
+            }
             Command::DeleteUser =&gt; <span class="macro">todo!</span>(),
-            Command::GetUser {
-                username: <span class="kw">_</span>,
-                id: <span class="kw">_</span>,
-                resp: <span class="kw">_</span>,
-            } =&gt; <span class="macro">todo!</span>(),
+            Command::GetUser { .. } =&gt; <span class="macro">todo!</span>(),
             Command::PostUser =&gt; <span class="macro">todo!</span>(),
             Command::PatchUser =&gt; <span class="macro">todo!</span>(),
-            Command::DeleteOwnership {
-                zoneid: <span class="kw">_</span>,
-                userid: <span class="kw">_</span>,
-                resp: <span class="kw">_</span>,
-            } =&gt; <span class="macro">todo!</span>(),
+            Command::DeleteOwnership { .. } =&gt; <span class="macro">todo!</span>(),
             Command::GetOwnership {
                 zoneid: <span class="kw">_</span>,
                 userid,
@@ -592,11 +666,7 @@
                     <span class="macro">log::error!</span>(<span class="string">&quot;Unmatched arm in getownership&quot;</span>)
                 }
             }
-            Command::PostOwnership {
-                zoneid: <span class="kw">_</span>,
-                userid: <span class="kw">_</span>,
-                resp: <span class="kw">_</span>,
-            } =&gt; <span class="macro">todo!</span>(),
+            Command::PostOwnership { .. } =&gt; <span class="macro">todo!</span>(),
         }
     }
 

@@ -174,9 +174,6 @@
 <span id="174">174</span>
 <span id="175">175</span>
 <span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
 <span class="kw">use </span><span class="kw">crate</span>::db::ZoneOwnership;
@@ -243,13 +240,10 @@
 
     <span class="macro">log::debug!</span>(<span class="string">&quot;ownership_get userid={userid} zoneid={zoneid}&quot;</span>);
     <span class="macro">todo!</span>();
-    <span class="comment">// let response = serde_json::to_string(&amp;NotImplemented::default()).unwrap();
-    // tide_result_json!(response, 403)
-    // Json::from&lt;None&gt;
-</span>}
+}
 <span class="kw">pub async fn </span>ownership_get_user(
     Path(userid): Path&lt;String&gt;,
-    state: SharedState,
+    Extension(state): Extension&lt;SharedState&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Vec&lt;Arc&lt;ZoneOwnership&gt;&gt;&gt;, String&gt; {
     <span class="macro">log::debug!</span>(<span class="string">&quot;starting ownership_get_user&quot;</span>);
     <span class="kw">let </span>userid: i64 = userid.parse().unwrap();
@@ -260,7 +254,8 @@
         userid: <span class="prelude-val">Some</span>(userid),
         resp: tx_oneshot,
     };
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = state.tx.send(cmd).<span class="kw">await </span>{
+    <span class="kw">let </span>state_writer = state.write().<span class="kw">await</span>;
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = state_writer.tx.send(cmd).<span class="kw">await </span>{
         <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send GetOwnership for userid: {userid} {err:?}&quot;</span>);
         <span class="kw">let </span>res = <span class="macro">format!</span>(<span class="string">&quot;Failed to send GetOwnership for userid: {userid} {err:?}&quot;</span>);
         <span class="kw">return </span><span class="prelude-val">Err</span>(res);
@@ -333,9 +328,8 @@
     Json::from(GoatNSVersion::default())
 }
 
-<span class="kw">pub fn </span>new(shared_state: Arc&lt;SharedState&gt;) -&gt; Router {
+<span class="kw">pub fn </span>new() -&gt; Router {
     Router::new()
-        .layer(Extension(shared_state))
         <span class="comment">// just zone things
         </span>.route(<span class="string">&quot;/zone/:id&quot;</span>, get(zone_get))
         .route(<span class="string">&quot;/zone/:id&quot;</span>, delete(zone_delete))

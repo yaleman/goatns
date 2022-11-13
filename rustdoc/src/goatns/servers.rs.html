@@ -515,9 +515,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
 <span class="kw">use </span><span class="kw">crate</span>::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
-<span class="kw">use </span><span class="kw">crate</span>::reply::Reply;
+<span class="kw">use </span><span class="kw">crate</span>::reply::{reply_any, reply_builder, reply_nxdomain, Reply};
 <span class="kw">use </span><span class="kw">crate</span>::resourcerecord::{DNSCharString, InternalResourceRecord};
-<span class="kw">use </span><span class="kw">crate</span>::utils::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::zones::ZoneRecord;
 <span class="kw">use crate</span>::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
@@ -824,7 +823,8 @@
                 Duration::from_secs(loop_config.tcp_client_timeout),
                 tcp_conn_handler(<span class="kw-2">&amp;mut </span>stream, addr, loop_tx, loop_agent_tx, loop_config),
             )
-            .<span class="kw">await</span>.is_err()
+            .<span class="kw">await
+            </span>.is_err()
             {
                 <span class="macro">log::warn!</span>(
                     <span class="string">&quot;TCP Connection from {addr:?} terminated after {} seconds.&quot;</span>,
@@ -897,7 +897,7 @@
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Invalid OPCODE, got {:?}&quot;</span>, header.opcode));
     };
 
-    <span class="kw">let </span>question = <span class="kw">match </span>Question::from_packets(<span class="kw-2">&amp;</span>buf[HEADER_BYTES..len]).<span class="kw">await </span>{
+    <span class="kw">let </span>question = <span class="kw">match </span>Question::from_packets(<span class="kw-2">&amp;</span>buf[HEADER_BYTES..len]) {
         <span class="prelude-val">Ok</span>(value) =&gt; {
             <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed question: {:?}&quot;</span>, value);
             value
@@ -959,7 +959,7 @@
     <span class="comment">// here we talk to the datastore to pull the result
     </span><span class="kw">match </span>datastore.send(ds_req).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">log::trace!</span>(<span class="string">&quot;Sent a request to the datastore!&quot;</span>),
-        <span class="comment">// TODO: handle this properly
+        <span class="comment">// TODO: handle errors sending to the DS properly
         </span><span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error sending to datastore: {:?}&quot;</span>, error),
     };
 
@@ -986,20 +986,20 @@
             id: header.id,
             qr: PacketType::Answer,
             opcode: header.opcode,
-            authoritative: <span class="bool-val">false</span>, <span class="comment">// TODO: are we authoritative
-            </span>truncated: <span class="bool-val">false</span>,     <span class="comment">// TODO: work out if it&#39;s truncated (ie, UDP)
+            authoritative: <span class="bool-val">true</span>,
+            truncated: <span class="bool-val">false</span>, <span class="comment">// TODO: work out if it&#39;s truncated (ie, UDP)
             </span>recursion_desired: header.recursion_desired,
-            recursion_available: header.recursion_desired, <span class="comment">// TODO: work this out
+            recursion_available: header.recursion_available, <span class="comment">// TODO: work this out
             </span>z: <span class="bool-val">false</span>,
             ad: <span class="bool-val">true</span>, <span class="comment">// TODO: decide how the ad flag should be set -  &quot;authentic data&quot; - This requests the server to return whether all of the answer and
             // authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all
             // records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer
             // was insecure or not validated. This bit is set by default.
             </span>cd: <span class="bool-val">false</span>, <span class="comment">// TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
-            </span>rcode: Rcode::NoError, <span class="comment">// TODO: this could be something to return if we don&#39;t die half way through
-            </span>qdcount: <span class="number">1</span>,
-            ancount: record.typerecords.len() <span class="kw">as </span>u16, <span class="comment">// TODO: work out how many we&#39;ll return
-            </span>nscount: <span class="number">0</span>,
+            </span>rcode: Rcode::NoError,
+            qdcount: <span class="number">1</span>,
+            ancount: record.typerecords.len() <span class="kw">as </span>u16,
+            nscount: <span class="number">0</span>,
             arcount: <span class="number">0</span>,
         },
         question: <span class="prelude-val">Some</span>(question),

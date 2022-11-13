@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["redirect_to_dashboard",""],["redirect_to_home",""],["redirect_to_login",""],["redirect_to_zones_list",""]]};

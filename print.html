@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">2.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">3.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="rrtypes.html"><strong aria-hidden="true">4.</strong> Supported RRTypes</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">5.</strong> References</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">2.</strong> Configuration</a></li><li class="chapter-item expanded affix "><li class="part-title">Development Notes</li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">3.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">4.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="rrtypes.html"><strong aria-hidden="true">5.</strong> Supported RRTypes</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">6.</strong> References</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -150,7 +150,7 @@
 <h2 id="crate-documentation"><a class="header" href="#crate-documentation">Crate Documentation</a></h2>
 <p>Auto-generated and available here: <a href="https://yaleman.github.io/goatns/rustdoc/goatns/">https://yaleman.github.io/goatns/rustdoc/goatns</a></p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<p>Look at <code>zones.json</code> and <code>goatns.json</code> for examples.</p>
+<p>Look at <code>zones.json</code> and <code>goatns.example.json</code> for examples.</p>
 <p>The configuration file's fields are best found here: <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the <code>ip_allow_list</code> field is a nested map.</p>
 <h2 id="testing"><a class="header" href="#testing">Testing</a></h2>
 <p>Rust tests are run using cargo.</p>
@@ -177,6 +177,8 @@ API things
 <ul>
 <li><input disabled="" type="checkbox"/>
 Oauth for management/UI things</li>
+<li><input disabled="" type="checkbox"/>
+web_hostname field for config so that the NS and web hostnames can be different?</li>
 </ul>
 </li>
 <li><input disabled="" type="checkbox"/>
@@ -226,7 +228,30 @@ build the response packets in a nice way that doesn't blow up</li>
 </ul>
 </li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="packet-header"><a class="header" href="#packet-header">Packet Header</a></h1>
+<p>Old sessions:</p>
+<pre><code class="language-sql">select strftime('%s') as now, expires-strftime('%s') as diff, * from sessions where expires &gt; now;
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h1>
+<p>I'll totally forget to update this, so check <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">the rustdoc for ConfigFile</a> for up-to-date information.</p>
+<p>To write out a &quot;default&quot; config file, run <code>goatns --export-default-config</code> which will dump the contents of the system defaults.</p>
+<h2 id="user-authentication"><a class="header" href="#user-authentication">User Authentication</a></h2>
+<p>This is build for <a href="https://kanidm.com">Kanidm</a> but should work with any OIDC identity provider.</p>
+<h3 id="user-auto-provisioning"><a class="header" href="#user-auto-provisioning">User auto-provisioning</a></h3>
+<p>This is disabled by default, but set <code>user_auto_provisioning</code> to true and anyone who can authenticate will be able to add themselves to the system.</p>
+<h2 id="admin-contact"><a class="header" href="#admin-contact">Admin contact</a></h2>
+<p>If it's configured, this'll show up in a few places.</p>
+<ul>
+<li>the home page</li>
+<li>error messages</li>
+<li>randomly because I forgot to update the docs</li>
+</ul>
+<p>These are the current supported formats:</p>
+<div class="table-wrapper"><table><thead><tr><th>Contact Type</th><th>Example Format</th></tr></thead><tbody>
+<tr><td>Mastodon</td><td><code>Mastodon:yaleman@mastodon.social</code></td></tr>
+<tr><td>Email</td><td><code>Email:billy@dotgoat.net</code></td></tr>
+<tr><td>Twitter</td><td><code>Twitter:dotgoatdomains</code></td></tr>
+</tbody></table>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="packet-header"><a class="header" href="#packet-header">Packet Header</a></h1>
 <p>These things are spicy.</p>
 <p><img src="dns_header.png" alt="" /></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="processing-packets"><a class="header" href="#processing-packets">Processing Packets</a></h1>
@@ -261,11 +286,13 @@ AXFR (252) RFC1035
 add an allow-list in the config file (CIDRs)</li>
 </ul>
 </li>
-<li><input disabled="" type="checkbox"/>
+<li><input disabled="" type="checkbox" checked=""/>
 ANY (255) RFC8482
 <ul>
 <li><input disabled="" type="checkbox"/>
-should return a hinfo value of &quot;RFC8482&quot;, can't be stored</li>
+should check for zones, is currently just YOLOing a response to any request</li>
+<li><input disabled="" type="checkbox" checked=""/>
+return a HINFO record of &quot;RFC8482&quot;, can't be stored</li>
 </ul>
 </li>
 <li><input disabled="" type="checkbox" checked=""/>

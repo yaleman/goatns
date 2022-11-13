@@ -17,10 +17,24 @@
 <span id="17">17</span>
 <span id="18">18</span>
 <span id="19">19</span>
-</pre><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::ContactDetails;
+
+<span class="kw">use super</span>::<span class="kw-2">*</span>;
 
 <span class="kw">use </span>askama::Template;
 <span class="kw">use </span>axum::response::Html;
+<span class="kw">use </span>axum_macros::debug_handler;
 
 <span class="kw">pub async fn </span>status() -&gt; String {
     STATUS_OK.to_string()
@@ -28,12 +42,20 @@
 
 <span class="attribute">#[derive(Template)]
 #[template(path = <span class="string">&quot;index.html&quot;</span>)]
-</span><span class="kw">struct </span>IndexTemplate <span class="comment">/*&lt;&#39;a&gt;*/ </span>{
-    <span class="comment">// name: &amp;&#39;a str,
-</span>}
+</span><span class="kw">struct </span>IndexTemplate {
+    admin_contact: String,
+}
 
-<span class="kw">pub async fn </span>index() -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, ()&gt; {
-    <span class="kw">let </span>context = IndexTemplate {};
+<span class="attribute">#[debug_handler]
+</span><span class="kw">pub async fn </span>index(Extension(state): Extension&lt;SharedState&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, ()&gt; {
+    <span class="kw">let </span>admin_contact = <span class="kw">match </span>state.config().<span class="kw">await</span>.admin_contact {
+        <span class="prelude-val">None </span>=&gt; <span class="string">&quot;&quot;</span>.to_string(),
+        <span class="prelude-val">Some</span>(contact) =&gt; <span class="kw">match </span>ContactDetails::try_from(contact) {
+            <span class="prelude-val">Ok</span>(value) =&gt; <span class="macro">format!</span>(<span class="string">&quot;This instance cared for by {}&quot;</span>, value.to_string()),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="string">&quot;&quot;</span>.to_string(),
+        },
+    };
+    <span class="kw">let </span>context = IndexTemplate { admin_contact };
     <span class="prelude-val">Ok</span>(Html::from(context.render().unwrap()))
 }
 </code></pre></div>

@@ -136,92 +136,200 @@
 <span id="136">136</span>
 <span id="137">137</span>
 <span id="138">138</span>
-</pre><pre class="rust"><code><span class="kw">use </span>std::path::PathBuf;
-<span class="kw">use </span>std::sync::Arc;
-
-<span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::datastore;
-<span class="kw">use </span><span class="kw">crate</span>::enums::RecordType;
-<span class="kw">use </span><span class="kw">crate</span>::resourcerecord::InternalResourceRecord;
-<span class="kw">use </span>axum::extract::MatchedPath;
+<span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>axum::handler::Handler;
+<span class="kw">use </span>axum::http::StatusCode;
+<span class="kw">use </span>axum::response::IntoResponse;
 <span class="kw">use </span>axum::routing::get;
-<span class="kw">use </span>axum::{Extension, Json, Router};
-<span class="kw">use </span>axum_extra::routing::SpaRouter;
+<span class="kw">use </span>axum::{Extension, Router};
+<span class="doccomment">/// # Web things
+///
+/// Uses axum/tower for protocol, askama for templating, confusion for the rest.
+///
+/// Example using shared state: https://github.com/tokio-rs/axum/blob/axum-v0.5.17/examples/key-value-store/src/main.rs
+</span><span class="kw">use </span>axum_extra::routing::SpaRouter;
+<span class="kw">use </span>chrono::{DateTime, NaiveDateTime, Utc};
+<span class="kw">use </span>oauth2::{ClientId, ClientSecret, PkceCodeVerifier, RedirectUrl};
+<span class="kw">use </span>openidconnect::Nonce;
 <span class="kw">use </span>sqlx::{Pool, Sqlite};
-
+<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>std::path::PathBuf;
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>tokio::sync::mpsc::Sender;
-<span class="kw">use </span>tokio::sync::oneshot;
+<span class="kw">use </span>tokio::sync::RwLock;
+<span class="kw">use </span>tower::ServiceBuilder;
+<span class="kw">use </span>tower_http::compression::CompressionLayer;
+<span class="kw">use </span>tower_http::trace::{DefaultMakeSpan, TraceLayer};
+<span class="kw">use </span>tracing::Level;
+<span class="kw">use </span>url::Url;
+
+<span class="kw">use </span><span class="self">self</span>::auth::CustomProviderMetadata;
 
 <span class="attribute">#[macro_use]
 </span><span class="kw">pub mod </span>macros;
 
 <span class="kw">pub mod </span>api;
+<span class="kw">pub mod </span>auth;
 <span class="kw">pub mod </span>generic;
 <span class="kw">pub mod </span>ui;
+<span class="kw">pub mod </span>utils;
 
 <span class="kw">pub const </span>STATUS_OK: <span class="kw-2">&amp;</span>str = <span class="string">&quot;Ok&quot;</span>;
 
-<span class="kw">async fn </span>api_query(
-    qname: MatchedPath,
-    qtype: MatchedPath,
-    state: Extension&lt;Arc&lt;SharedState&gt;&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Vec&lt;InternalResourceRecord&gt;&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="kw">let </span>rrtype: RecordType = qtype.as_str().into();
-    <span class="kw">if let </span>RecordType::InvalidType = rrtype {
-        <span class="comment">// return Err(tide::BadRequest(
-        // ));
-        </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid RRTYPE requested: {qtype:?}&quot;</span>);
+<span class="comment">// TODO: look at the ServiceBuilder layers bits here: https://github.com/tokio-rs/axum/blob/dea36db400f27c025b646e5720b9a6784ea4db6e/examples/key-value-store/src/main.rs
+
+</span><span class="kw">type </span>SharedState = Arc&lt;RwLock&lt;State&gt;&gt;;
+
+<span class="attribute">#[async_trait]
+</span><span class="kw">trait </span>SharedStateTrait {
+    <span class="kw">async fn </span>connpool(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Pool&lt;Sqlite&gt;;
+    <span class="kw">async fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ConfigFile;
+    <span class="kw">async fn </span>oidc_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;CustomProviderMetadata&gt;;
+    <span class="kw">async fn </span>oidc_update(<span class="kw-2">&amp;</span><span class="self">self</span>, response: CustomProviderMetadata);
+    <span class="kw">async fn </span>pop_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String) -&gt; <span class="prelude-ty">Option</span>&lt;(PkceCodeVerifier, Nonce)&gt;;
+    <span class="kw">async fn </span>oauth2_client_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ClientId;
+    <span class="kw">async fn </span>oauth2_secret(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;ClientSecret&gt;;
+    <span class="kw">async fn </span>oauth2_redirect_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedirectUrl;
+    <span class="comment">// async fn oauth2_introspection_url(&amp;self) -&gt; IntrospectionUrl;
+    </span><span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String, verifier: (PkceCodeVerifier, Nonce));
+}
+
+<span class="attribute">#[async_trait]
+</span><span class="kw">impl </span>SharedStateTrait <span class="kw">for </span>SharedState {
+    <span class="doccomment">/// Get an sqlite connection pool
+    </span><span class="kw">async fn </span>connpool(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Pool&lt;Sqlite&gt; {
+        <span class="self">self</span>.write().<span class="kw">await</span>.connpool.clone()
+    }
+    <span class="doccomment">/// Get a copy of the config
+    </span><span class="kw">async fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ConfigFile {
+        <span class="self">self</span>.read().<span class="kw">await</span>.config.clone()
+    }
+    <span class="doccomment">/// Get a copy of the config
+    </span><span class="kw">async fn </span>oidc_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;CustomProviderMetadata&gt; {
+        <span class="self">self</span>.read().<span class="kw">await</span>.oidc_config.clone()
+    }
+    <span class="kw">async fn </span>oidc_update(<span class="kw-2">&amp;</span><span class="self">self</span>, response: CustomProviderMetadata) {
+        <span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="self">self</span>.write().<span class="kw">await</span>;
+        writer.oidc_config = <span class="prelude-val">Some</span>(response.clone());
+        writer.oidc_config_updated = <span class="prelude-val">Some</span>(DateTime::from_utc(NaiveDateTime::default(), Utc));
     }
 
-    <span class="kw">let </span>(tx_oneshot, rx_oneshot) = oneshot::channel();
-    <span class="kw">let </span>ds_req: datastore::Command = datastore::Command::GetRecord {
-        name: qname.as_str().into(),
-        rrtype,
-        rclass: <span class="kw">crate</span>::RecordClass::Internet,
-        resp: tx_oneshot,
-    };
+    <span class="kw">async fn </span>pop_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String) -&gt; <span class="prelude-ty">Option</span>&lt;(PkceCodeVerifier, Nonce)&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="self">self</span>.write().<span class="kw">await</span>;
+        <span class="kw">let </span>result = writer.oidc_verifier.remove_entry(<span class="kw-2">&amp;</span>csrftoken);
+        result.map(|(<span class="kw">_</span>, (pkce, nonce))| (pkce, nonce))
+    }
+    <span class="kw">async fn </span>oauth2_client_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ClientId {
+        <span class="kw">let </span>client_id = <span class="self">self</span>.read().<span class="kw">await</span>.config.oauth2_client_id.clone();
+        ClientId::new(client_id)
+    }
 
-    <span class="comment">// here we talk to the datastore to pull the result
-    // TODO: shared state req
-    </span><span class="kw">match </span>state.tx.send(ds_req).<span class="kw">await </span>{
-        <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">log::trace!</span>(<span class="string">&quot;Sent a request to the datastore!&quot;</span>),
-        <span class="comment">// TODO: handle this properly
-        </span><span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error sending to datastore: {:?}&quot;</span>, error),
-    };
+    <span class="kw">async fn </span>oauth2_secret(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;ClientSecret&gt; {
+        <span class="kw">let </span>client_secret = <span class="self">self</span>.read().<span class="kw">await</span>.config.oauth2_secret.clone();
+        <span class="prelude-val">Some</span>(ClientSecret::new(client_secret))
+    }
 
-    <span class="kw">let </span>record: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::zones::ZoneRecord&gt; = <span class="kw">match </span>rx_oneshot.<span class="kw">await </span>{
-        <span class="prelude-val">Ok</span>(value) =&gt; <span class="kw">match </span>value {
-            <span class="prelude-val">Some</span>(zr) =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;DS Response: {}&quot;</span>, zr);
-                <span class="prelude-val">Some</span>(zr)
-            }
-            <span class="prelude-val">None </span>=&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;No response from datastore&quot;</span>);
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;No response from datastore&quot;</span>);
-            }
-        },
-        <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to get response from datastore: {:?}&quot;</span>, error);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Sorry, something went wrong.&quot;</span>);
-        }
-    };
+    <span class="kw">async fn </span>oauth2_redirect_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedirectUrl {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().<span class="kw">await</span>;
+        <span class="kw">let </span>baseurl = <span class="kw">match </span>config.api_port {
+            <span class="number">443 </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}&quot;</span>, config.hostname),
+            <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}:{}&quot;</span>, config.hostname, config.api_port),
+        };
+        <span class="kw">let </span>url = Url::parse(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}/auth/login&quot;</span>, baseurl))
+            .expect(<span class="string">&quot;Failed to parse config into an OAuth Redirect URL&quot;</span>);
+        RedirectUrl::from_url(url)
+    }
 
-    <span class="kw">match </span>record {
-        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;&quot;</span>), <span class="comment">// TODO: throw a 404 when we can&#39;t find a record
-        </span><span class="prelude-val">Some</span>(value) =&gt; <span class="prelude-val">Ok</span>(Json::from(value.typerecords)),
+    <span class="doccomment">/// Store the PKCE verifier details server-side for when the user comes back with their auth token
+    </span><span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String, verifier: (PkceCodeVerifier, Nonce)) {
+        <span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="self">self</span>.write().<span class="kw">await</span>;
+        writer.oidc_verifier.insert(csrftoken, verifier);
     }
 }
 
-<span class="doccomment">/// Internal State handler for the datastore object within the API
-</span><span class="attribute">#[derive(Debug, Clone)]
-</span><span class="kw">pub struct </span>SharedState {
-    tx: Sender&lt;datastore::Command&gt;,
-    <span class="comment">// TODO: ensure we actually need to use the connpool in the web api shared state
-    </span><span class="attribute">#[allow(dead_code)]
-    </span>connpool: Pool&lt;Sqlite&gt;,
-    <span class="comment">// TODO: ensure we actually need to use the config in the web api shared state
-    </span><span class="attribute">#[allow(dead_code)]
-    </span>config: ConfigFile,
+<span class="attribute">#[derive(Debug)]
+</span><span class="doccomment">/// Internal State handler for the datastore object within the API
+</span><span class="kw">pub struct </span>State {
+    <span class="kw">pub </span>tx: Sender&lt;datastore::Command&gt;,
+    <span class="kw">pub </span>connpool: Pool&lt;Sqlite&gt;,
+    <span class="kw">pub </span>config: ConfigFile,
+    <span class="kw">pub </span>oidc_config_updated: <span class="prelude-ty">Option</span>&lt;DateTime&lt;Utc&gt;&gt;,
+    <span class="kw">pub </span>oidc_config: <span class="prelude-ty">Option</span>&lt;auth::CustomProviderMetadata&gt;,
+    <span class="kw">pub </span>oidc_verifier: HashMap&lt;String, (PkceCodeVerifier, Nonce)&gt;,
 }
 
 <span class="kw">pub async fn </span>build(
@@ -229,50 +337,86 @@
     config: ConfigFile,
     connpool: Pool&lt;Sqlite&gt;,
 ) -&gt; axum::Router {
-
-
-    <span class="kw">let </span>config_dir: PathBuf = shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_static_dir).to_string().into();
+    <span class="kw">let </span>config_dir: PathBuf = shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_static_dir)
+        .to_string()
+        .into();
     <span class="comment">// check to see if we can find the static dir things
     </span><span class="kw">match </span>config_dir.try_exists() {
-        <span class="prelude-val">Ok</span>(res) =&gt; {
-            <span class="kw">match </span>res {
-                <span class="bool-val">true </span>=&gt; <span class="macro">log::info!</span>(<span class="string">&quot;Found static resources dir ({config_dir:#?}) for web API.&quot;</span>),
-                <span class="bool-val">false </span>=&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find static resources dir ({config_dir:#?}) for web API!&quot;</span>),
+        <span class="prelude-val">Ok</span>(res) =&gt; <span class="kw">match </span>res {
+            <span class="bool-val">true </span>=&gt; <span class="macro">log::info!</span>(<span class="string">&quot;Found static resources dir ({config_dir:#?}) for web API.&quot;</span>),
+            <span class="bool-val">false </span>=&gt; {
+                <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find static resources dir ({config_dir:#?}) for web API!&quot;</span>)
             }
         },
-        <span class="prelude-val">Err</span>(err) =&gt; {
-            <span class="kw">match </span>err.kind() {
-                std::io::ErrorKind::PermissionDenied =&gt;  {
-                    <span class="macro">log::error!</span>(<span class="string">&quot;Permission denied accssing static resources dir ({:?}) for web API: {}&quot;</span>, <span class="kw-2">&amp;</span>config.api_static_dir, err.to_string())
-                },
-                std::io::ErrorKind::NotFound =&gt; {
-                    <span class="macro">log::error!</span>(<span class="string">&quot;Static resources dir ({:?}) not found for web API: {}&quot;</span>, <span class="kw-2">&amp;</span>config.api_static_dir, err.to_string())
-                },
-                <span class="kw">_ </span>=&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error accessing static resources dir ({:?}) for web API: {}&quot;</span>, <span class="kw-2">&amp;</span>config.api_static_dir, err.to_string())
-
+        <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">match </span>err.kind() {
+            std::io::ErrorKind::PermissionDenied =&gt; {
+                <span class="macro">log::error!</span>(
+                    <span class="string">&quot;Permission denied accssing static resources dir ({:?}) for web API: {}&quot;</span>,
+                    <span class="kw-2">&amp;</span>config.api_static_dir,
+                    err.to_string()
+                )
             }
-        }
+            std::io::ErrorKind::NotFound =&gt; {
+                <span class="macro">log::error!</span>(
+                    <span class="string">&quot;Static resources dir ({:?}) not found for web API: {}&quot;</span>,
+                    <span class="kw-2">&amp;</span>config.api_static_dir,
+                    err.to_string()
+                )
+            }
+            <span class="kw">_ </span>=&gt; <span class="macro">log::error!</span>(
+                <span class="string">&quot;Error accessing static resources dir ({:?}) for web API: {}&quot;</span>,
+                <span class="kw-2">&amp;</span>config.api_static_dir,
+                err.to_string()
+            ),
+        },
     }
 
-    <span class="kw">let </span>static_router = SpaRouter::new(
-        <span class="string">&quot;/ui/static&quot;</span>,
-        <span class="kw-2">&amp;</span>config_dir,
-    );
+    <span class="kw">let </span>static_router = SpaRouter::new(<span class="string">&quot;/ui/static&quot;</span>, <span class="kw-2">&amp;</span>config_dir);
 
-    <span class="comment">// from https://docs.rs/axum/0.5.17/axum/index.html#using-request-extensions
-    </span><span class="kw">let </span>shared_state = Arc::new(SharedState {
+    <span class="kw">let </span>session_layer = auth::build_auth_stores(<span class="kw-2">&amp;</span>config, connpool.clone()).<span class="kw">await</span>;
+
+    <span class="kw">let </span>state: SharedState = Arc::new(RwLock::new(State {
         tx,
         connpool,
         config,
-    });
+        oidc_config_updated: <span class="prelude-val">None</span>,
+        oidc_config: <span class="prelude-val">None</span>,
+        oidc_verifier: HashMap::new(),
+    }));
+
+    <span class="comment">// add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html
+    </span><span class="kw">let </span>trace_layer =
+        TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
+
+    <span class="kw">pub async fn </span>handler_404() -&gt; <span class="kw">impl </span>IntoResponse {
+        axum::response::Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .header(<span class="string">&quot;Content-type&quot;</span>, <span class="string">&quot;text/html&quot;</span>)
+            .body(
+                <span class="string">&quot;&lt;h1&gt;Oh no!&lt;/h1&gt;&lt;p&gt;You&#39;ve found a 404, try &lt;a href=&#39;#&#39; onclick=&#39;history.back();&#39;&gt;going back&lt;/a&gt; or &lt;a href=&#39;/&#39;&gt;home!&lt;/a&gt;&lt;/p&gt;&quot;
+                    </span>.to_string(),
+            )
+            .unwrap()
+            .into_response()
+    }
 
     Router::new()
         .route(<span class="string">&quot;/&quot;</span>, get(generic::index))
         .route(<span class="string">&quot;/status&quot;</span>, get(generic::status))
-        .route(<span class="string">&quot;/query/:qname/:qtype&quot;</span>, get(api_query))
         .merge(static_router)
-        .nest(<span class="string">&quot;/ui&quot;</span>, ui::new(shared_state.clone()))
-        .nest(<span class="string">&quot;/api&quot;</span>, api::new(shared_state))
+        .nest(<span class="string">&quot;/ui&quot;</span>, ui::new())
+        .nest(<span class="string">&quot;/api&quot;</span>, api::new())
+        .nest(<span class="string">&quot;/auth&quot;</span>, auth::new())
+        .layer(
+            ServiceBuilder::new()
+                .layer(trace_layer)
+                .layer(CompressionLayer::new())
+                .layer(Extension(state))
+                <span class="comment">// .layer(Extension(auth_layer))
+                </span>.layer(session_layer)
+                .into_inner(),
+        )
+        .fallback(handler_404.into_service())
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

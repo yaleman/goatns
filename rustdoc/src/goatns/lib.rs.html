@@ -325,7 +325,31 @@
 <span id="325">325</span>
 <span id="326">326</span>
 <span id="327">327</span>
-</pre><pre class="rust"><code><span class="attribute">#[macro_use]
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Goats are cool, but they make for poor DNS record stores. So here&#39;s an authoritative DNS server INSPIRED by goats.
+
+</span><span class="attribute">#![warn(clippy::complexity)]
+</span><span class="comment">// #![warn(clippy::cargo)]
+</span><span class="attribute">#![warn(clippy::perf)]
+</span><span class="comment">// #![warn(clippy::pedantic)]
+</span><span class="attribute">#![deny(unsafe_code)]
+#![allow(clippy::multiple_crate_versions)]
+
+#[macro_use]
 </span><span class="kw">extern crate </span>lazy_static;
 
 <span class="attribute">#[cfg(test)]
@@ -339,6 +363,7 @@
 <span class="kw">use </span>std::fmt::{Debug, Display};
 <span class="kw">use </span>std::str::from_utf8;
 
+<span class="kw">pub mod </span>cli;
 <span class="doccomment">/// Configuration handling for the server
 </span><span class="kw">pub mod </span>config;
 <span class="doccomment">/// The data-storing backend for zone information and (eventually) caching.
@@ -367,9 +392,12 @@
 <span class="doccomment">/// The maximum size of a UDP packet &lt;https://dnsflagday.net/2020/#dns-flag-day-2020&gt;
 </span><span class="kw">pub const </span>UDP_BUFFER_SIZE: usize = <span class="number">1232</span>;
 
+<span class="kw">pub const </span>COOKIE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;goatns_session&quot;</span>;
+
 <span class="doccomment">/// The header of a DNS transmission, either a Query or Reply. Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.1) section 4.1.1.
 </span><span class="attribute">#[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
 #[packed_struct(bit_numbering = <span class="string">&quot;msb0&quot;</span>, size_bytes = <span class="string">&quot;12&quot;</span>)]
+#[allow(clippy::struct_excessive_bools)]
 </span><span class="kw">pub struct </span>Header {
     <span class="doccomment">/// The query ID
     </span><span class="attribute">#[packed_field(bits = <span class="string">&quot;0..=15&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
@@ -487,10 +515,11 @@
         </span><span class="kw">let </span>ttl_bytes: [u8; <span class="number">4</span>] = record.ttl.to_be_bytes();
         <span class="macro">trace!</span>(<span class="string">&quot;ttl_bytes: {:?}&quot;</span>, ttl_bytes);
         retval.extend(ttl_bytes);
-        <span class="comment">// reply data length
+        <span class="attribute">#[allow(clippy::cast_possible_truncation)]
+        </span><span class="comment">// reply data length
         </span>retval.extend((record.rdata.len() <span class="kw">as </span>u16).to_be_bytes());
         <span class="comment">// rdata
-        </span>retval.extend(record.rdata.to_vec());
+        </span>retval.extend(record.rdata.clone());
 
         retval
     }
@@ -524,6 +553,9 @@
 
 <span class="doccomment">/// Returns a Vec&lt;u8&gt; representation of the name
 /// (ie, example.com = [101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109])
+///
+/// # Errors
+/// Will return Strings telling you what&#39;s gone wrong.
 </span><span class="kw">pub fn </span>get_question_qname(input_val: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, String&gt; {
     <span class="macro">trace!</span>(<span class="string">&quot;got buf: {input_val:?}&quot;</span>);
     <span class="kw">if </span>input_val.is_empty() {
@@ -555,7 +587,7 @@
                 buf.len()
             ));
         }
-        result.extend(buf[<span class="number">1</span>..label_len + <span class="number">1</span>].to_vec());
+        result.extend(buf[<span class="number">1</span>..=label_len].to_vec());
         <span class="attribute">#[cfg(test)]
         </span><span class="macro">eprintln!</span>(<span class="string">&quot;After extend:  {result:?}&quot;</span>);
 
@@ -590,17 +622,15 @@
     <span class="kw">fn </span>normalized_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
         <span class="kw">match </span>from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.qname) {
             <span class="prelude-val">Ok</span>(value) =&gt; <span class="prelude-val">Ok</span>(value.to_lowercase()),
-            <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;Failed to normalize {:?}: {:?}&quot;</span>,
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.qname, error
-                ))
-            }
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+                <span class="string">&quot;Failed to normalize {:?}: {:?}&quot;</span>,
+                <span class="kw-2">&amp;</span><span class="self">self</span>.qname, error
+            )),
         }
     }
 
     <span class="doccomment">/// hand it the buffer and the things, and get back a [Question]
-    </span><span class="kw">async fn </span>from_packets(buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, String&gt; {
+    </span><span class="kw">fn </span>from_packets(buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, String&gt; {
         <span class="kw">let </span>qname = get_question_qname(buf)<span class="question-mark">?</span>;
 
         <span class="comment">// skip past the end of the question

@@ -287,19 +287,87 @@
 <span id="287">287</span>
 <span id="288">288</span>
 <span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
 </pre><pre class="rust"><code><span class="kw">use </span>clap::ArgMatches;
 <span class="kw">use </span>config::{Config, File};
 <span class="kw">use </span>flexi_logger::filter::{LogLineFilter, LogLineWriter};
 <span class="kw">use </span>flexi_logger::{DeferredNow, LoggerHandle};
 <span class="kw">use </span>gethostname::gethostname;
-<span class="comment">// use ipnet::IpNet;
-</span><span class="kw">use </span>rand::distributions::{Alphanumeric, DistString};
+<span class="kw">use </span>rand::distributions::{Alphanumeric, DistString};
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::net::IpAddr;
 <span class="kw">use </span>std::net::SocketAddr;
 <span class="kw">use </span>std::path::PathBuf;
 <span class="kw">use </span>std::str::FromStr;
+<span class="kw">use </span>url::Url;
 
 <span class="attribute">#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 </span><span class="doccomment">/// Allow-listing ranges for making particular kinds of requests
@@ -349,6 +417,27 @@
     <span class="doccomment">/// Secret for cookie storage - don&#39;t hard code this, it&#39;ll randomly generate on startup
     </span><span class="attribute">#[serde(default = <span class="string">&quot;generate_cookie_secret&quot;</span>, skip)]
     </span>api_cookie_secret: String,
+    <span class="doccomment">/// OAuth2 Resource server name
+    </span><span class="kw">pub </span>oauth2_client_id: String,
+    <span class="attribute">#[serde(skip_serializing)]
+    </span><span class="doccomment">/// Oauth2 Secret
+    </span><span class="kw">pub </span>oauth2_secret: String,
+    <span class="doccomment">/// OIDC Discovery URL, eg for Kanidm you&#39;d use `https://idm.example.com/oauth2/openid/:client_id:/.well-known/openid-configuration`
+    </span><span class="attribute">#[serde(default)]
+    </span><span class="kw">pub </span>oauth2_config_url: String,
+    <span class="attribute">#[serde(default)]
+    </span><span class="doccomment">/// A list of scopes to request from the IdP
+    </span><span class="kw">pub </span>oauth2_user_scopes: Vec&lt;String&gt;,
+    <span class="doccomment">/// Log things sometimes
+    </span><span class="kw">pub </span>sql_log_statements: bool,
+    <span class="doccomment">/// When queries take more than this many seconds, log them
+    </span><span class="kw">pub </span>sql_log_slow_duration: u64,
+    <span class="doccomment">/// Clean up sessions table every n seconds
+    </span><span class="kw">pub </span>sql_session_cleanup_seconds: u64,
+    <span class="doccomment">/// Administrator contact details
+    </span><span class="kw">pub </span>admin_contact: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="doccomment">/// Allow auto-provisioning of users
+    </span><span class="kw">pub </span>user_auto_provisioning: bool,
 }
 
 <span class="kw">fn </span>generate_cookie_secret() -&gt; String {
@@ -363,6 +452,14 @@
 
     <span class="kw">pub fn </span>api_cookie_secret(<span class="self">self</span>) -&gt; String {
         <span class="self">self</span>.api_cookie_secret
+    }
+
+    <span class="kw">pub fn </span>status_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Url {
+        Url::from_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+            <span class="string">&quot;https://{}:{}/status&quot;</span>,
+            <span class="self">self</span>.hostname, <span class="self">self</span>.api_port
+        ))
+        .unwrap()
     }
 }
 
@@ -390,6 +487,15 @@
             api_tls_key: PathBuf::from(<span class="string">&quot;./certificates/key.pem&quot;</span>),
             api_static_dir: String::from(<span class="string">&quot;./static_files/&quot;</span>),
             api_cookie_secret: generate_cookie_secret(),
+            oauth2_client_id: String::from(<span class="string">&quot;&quot;</span>),
+            oauth2_secret: String::from(<span class="string">&quot;&quot;</span>),
+            oauth2_config_url: String::from(<span class="string">&quot;&quot;</span>),
+            oauth2_user_scopes: <span class="macro">vec!</span>[<span class="string">&quot;openid&quot;</span>.to_string(), <span class="string">&quot;email&quot;</span>.to_string()],
+            sql_log_slow_duration: <span class="number">5</span>,
+            sql_log_statements: <span class="bool-val">false</span>,
+            sql_session_cleanup_seconds: <span class="number">3600</span>, <span class="comment">// one hour
+            </span>admin_contact: Default::default(),
+            user_auto_provisioning: <span class="bool-val">false</span>,
         }
     }
 }
@@ -409,8 +515,8 @@
             }
         };
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;hostname=\&quot;{}\&quot; listening_address=\&quot;{}:{}\&quot; capturing_pcaps={} Log_level={}, {api_details}&quot;</span>,
-            <span class="self">self</span>.hostname, <span class="self">self</span>.address, <span class="self">self</span>.port, <span class="self">self</span>.capture_packets, <span class="self">self</span>.log_level
+            <span class="string">&quot;hostname=\&quot;{}\&quot; listening_address=\&quot;{}:{}\&quot; capturing_pcaps={} Log_level={}, admin_contact={:?} {api_details}&quot;</span>,
+            <span class="self">self</span>.hostname, <span class="self">self</span>.address, <span class="self">self</span>.port, <span class="self">self</span>.capture_packets, <span class="self">self</span>.log_level, <span class="self">self</span>.admin_contact,
         ))
     }
 }
@@ -450,6 +556,33 @@
                 .get(<span class="string">&quot;api_static_dir&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().api_static_dir),
             api_cookie_secret: generate_cookie_secret(),
+            oauth2_client_id: config
+                .get(<span class="string">&quot;oauth2_client_id&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().oauth2_client_id),
+            oauth2_secret: config
+                .get(<span class="string">&quot;oauth2_secret&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().oauth2_secret),
+            oauth2_config_url: config
+                .get(<span class="string">&quot;oauth2_config_url&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().oauth2_config_url),
+            oauth2_user_scopes: config
+                .get(<span class="string">&quot;oauth2_user_scopes&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().oauth2_user_scopes),
+            sql_log_slow_duration: config
+                .get(<span class="string">&quot;sql_log_slow_duration&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().sql_log_slow_duration),
+            sql_log_statements: config
+                .get(<span class="string">&quot;sql_log_statements&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().sql_log_statements),
+            sql_session_cleanup_seconds: config
+                .get(<span class="string">&quot;sql_session_cleanup_seconds&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().sql_session_cleanup_seconds),
+            admin_contact: config
+                .get(<span class="string">&quot;admin_contact&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().admin_contact),
+            user_auto_provisioning: config
+                .get(<span class="string">&quot;user_auto_provisioning&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().user_auto_provisioning),
         }
     }
 }
@@ -462,7 +595,7 @@
 <span class="doccomment">/// Loads the configuration from a given file or from some default locations.
 ///
 /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
-</span><span class="kw">pub fn </span>get_config(config_path: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt;) -&gt; ConfigFile {
+</span><span class="kw">pub fn </span>get_config(config_path: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;ConfigFile, String&gt; {
     <span class="kw">let </span>file_locations = <span class="kw">match </span>config_path {
         <span class="prelude-val">Some</span>(value) =&gt; <span class="macro">vec!</span>[value.to_owned()],
         <span class="prelude-val">None </span>=&gt; CONFIG_LOCATIONS.iter().map(|x| x.to_string()).collect(),
@@ -482,17 +615,20 @@
 
                 <span class="kw">match </span>builder.build() {
                     <span class="prelude-val">Ok</span>(config) =&gt; {
-                        <span class="macro">println!</span>(<span class="string">&quot;Successfully loaded config from: {}&quot;</span>, config_filename);
-                        <span class="kw">return </span>config.into();
+                        <span class="macro">eprintln!</span>(<span class="string">&quot;Successfully loaded config from: {}&quot;</span>, config_filename);
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(ConfigFile::from(config));
                     }
                     <span class="prelude-val">Err</span>(error) =&gt; {
-                        <span class="macro">eprintln!</span>(<span class="string">&quot;Couldn&#39;t load config from {}: {:?}&quot;</span>, config_filename, error);
+                        <span class="kw">let </span>err =
+                            <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t load config from {}: {:?}&quot;</span>, config_filename, error);
+                        <span class="macro">log::error!</span>(<span class="string">&quot;{err}&quot;</span>);
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(err);
                     }
                 }
             }
         }
     }
-    ConfigFile::default()
+    <span class="prelude-val">Ok</span>(ConfigFile::default())
 }
 
 <span class="kw">pub fn </span>check_config(config: <span class="kw-2">&amp;mut </span>ConfigFile) -&gt; <span class="prelude-ty">Result</span>&lt;ConfigFile, Vec&lt;String&gt;&gt; {
@@ -530,6 +666,29 @@
     }
 }
 
+<span class="kw">pub fn </span>setup_logging(
+    config: <span class="kw-2">&amp;</span>ConfigFile,
+    clap_results: <span class="kw-2">&amp;</span>ArgMatches,
+) -&gt; <span class="prelude-ty">Result</span>&lt;LoggerHandle, String&gt; {
+    <span class="comment">// force the log level to info if we&#39;re testing config
+    </span><span class="kw">let </span>log_level = <span class="kw">match </span>clap_results.get_flag(<span class="string">&quot;configcheck&quot;</span>) {
+        <span class="bool-val">true </span>=&gt; <span class="string">&quot;info&quot;</span>.to_string(),
+        <span class="bool-val">false </span>=&gt; config.log_level.to_ascii_lowercase(),
+    };
+
+    <span class="kw">match </span>flexi_logger::Logger::try_with_str(<span class="kw-2">&amp;</span>log_level).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>)) {
+        <span class="prelude-val">Ok</span>(logger) =&gt; logger
+            .write_mode(flexi_logger::WriteMode::Async)
+            .filter(Box::new(LogFilter {
+                filters: <span class="macro">vec!</span>[<span class="string">&quot;h2&quot;</span>, <span class="string">&quot;hyper::proto&quot;</span>],
+            }))
+            .set_palette(<span class="string">&quot;b1;3;2;6;5&quot;</span>.to_string())
+            .start()
+            .map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>)),
+        <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to start logger! {error:?}&quot;</span>)),
+    }
+}
+
 <span class="kw">pub struct </span>LogFilter {
     filters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
 }
@@ -551,29 +710,6 @@
         }
         log_line_writer.write(now, record)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
-    }
-}
-
-<span class="kw">pub fn </span>setup_logging(
-    config: <span class="kw-2">&amp;</span>ConfigFile,
-    clap_results: <span class="kw-2">&amp;</span>ArgMatches,
-) -&gt; <span class="prelude-ty">Result</span>&lt;LoggerHandle, String&gt; {
-    <span class="comment">// force the log level to info if we&#39;re testing config
-    </span><span class="kw">let </span>log_level = <span class="kw">match </span>clap_results.get_flag(<span class="string">&quot;configcheck&quot;</span>) {
-        <span class="bool-val">true </span>=&gt; <span class="string">&quot;info&quot;</span>.to_string(),
-        <span class="bool-val">false </span>=&gt; config.log_level.to_ascii_lowercase(),
-    };
-
-    <span class="kw">match </span>flexi_logger::Logger::try_with_str(<span class="kw-2">&amp;</span>log_level).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>)) {
-        <span class="prelude-val">Ok</span>(logger) =&gt; logger
-            .write_mode(flexi_logger::WriteMode::Async)
-            .filter(Box::new(LogFilter {
-                filters: <span class="macro">vec!</span>[<span class="string">&quot;h2&quot;</span>, <span class="string">&quot;hyper::proto&quot;</span>],
-            }))
-            .set_palette(<span class="string">&quot;b1;3;2;6;5&quot;</span>.to_string())
-            .start()
-            .map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>)),
-        <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to start logger! {error:?}&quot;</span>)),
     }
 }
 </code></pre></div>

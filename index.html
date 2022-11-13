@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html" class="active"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">2.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">3.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="rrtypes.html"><strong aria-hidden="true">4.</strong> Supported RRTypes</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">5.</strong> References</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html" class="active"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">2.</strong> Configuration</a></li><li class="chapter-item expanded affix "><li class="part-title">Development Notes</li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">3.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">4.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="rrtypes.html"><strong aria-hidden="true">5.</strong> Supported RRTypes</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">6.</strong> References</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -149,7 +149,7 @@
 <h2 id="crate-documentation"><a class="header" href="#crate-documentation">Crate Documentation</a></h2>
 <p>Auto-generated and available here: <a href="https://yaleman.github.io/goatns/rustdoc/goatns/">https://yaleman.github.io/goatns/rustdoc/goatns</a></p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<p>Look at <code>zones.json</code> and <code>goatns.json</code> for examples.</p>
+<p>Look at <code>zones.json</code> and <code>goatns.example.json</code> for examples.</p>
 <p>The configuration file's fields are best found here: <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the <code>ip_allow_list</code> field is a nested map.</p>
 <h2 id="testing"><a class="header" href="#testing">Testing</a></h2>
 <p>Rust tests are run using cargo.</p>
@@ -176,6 +176,8 @@ API things
 <ul>
 <li><input disabled="" type="checkbox"/>
 Oauth for management/UI things</li>
+<li><input disabled="" type="checkbox"/>
+web_hostname field for config so that the NS and web hostnames can be different?</li>
 </ul>
 </li>
 <li><input disabled="" type="checkbox"/>
@@ -225,12 +227,15 @@ build the response packets in a nice way that doesn't blow up</li>
 </ul>
 </li>
 </ul>
+<p>Old sessions:</p>
+<pre><code class="language-sql">select strftime('%s') as now, expires-strftime('%s') as diff, * from sessions where expires &gt; now;
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="next" href="packet_header.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="configuration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
@@ -239,7 +244,7 @@ build the response packets in a nice way that doesn't blow up</li>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="next" href="packet_header.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="configuration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
