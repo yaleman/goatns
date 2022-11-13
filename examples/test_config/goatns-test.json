@@ -1,5 +1,6 @@
 {
 	"addr" : "127.0.0.1",
+	"hostname" : "localhost",
 	"port" : 15353,
 	"log_level" : "TRACE",
 	"capture_packets" :false,

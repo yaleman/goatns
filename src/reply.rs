@@ -1,4 +1,5 @@
-use crate::resourcerecord::InternalResourceRecord;
+use crate::enums::{PacketType, Rcode};
+use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::{Header, Question};
 use crate::{ResourceRecord, UDP_BUFFER_SIZE};
 use log::error;
@@ -103,4 +104,49 @@ impl Reply {
         }
         self.clone()
     }
+}
+
+/// Want a generic empty reply with an ID and an RCODE? Here's your function.
+pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, String> {
+    let header = Header {
+        id,
+        qr: PacketType::Answer,
+        rcode,
+        ..Default::default()
+    };
+    Ok(Reply {
+        header,
+        question: None,
+        answers: vec![],
+        authorities: vec![],
+        additional: vec![],
+    })
+}
+
+pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
+    reply_builder(id, Rcode::NameError)
+}
+
+/// Reply to an ANY request with a HINFO "RFC8482" "" response
+pub fn reply_any(id: u16, question: Question) -> Result<Reply, String> {
+    Ok(Reply {
+        header: Header {
+            id,
+            qr: PacketType::Answer,
+            rcode: Rcode::NoError,
+            authoritative: true,
+            qdcount: 1,
+            ancount: 1,
+            ..Header::default()
+        },
+        question: Some(question.clone()),
+        answers: vec![InternalResourceRecord::HINFO {
+            cpu: Some(DNSCharString::from("RFC8482")),
+            os: Some(DNSCharString::from("")),
+            ttl: 3789,
+            rclass: question.qclass,
+        }],
+        authorities: vec![],
+        additional: vec![],
+    })
 }

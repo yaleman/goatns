@@ -28,7 +28,6 @@ pub struct DomainName {
 
 impl DomainName {
     /// Push the DomainName through the name_as_bytes function
-    // TODO:
     pub fn as_bytes(
         &self,
         compress_target: Option<u16>,
@@ -130,14 +129,12 @@ impl From<DNSCharString> for Vec<u8> {
 }
 
 impl DNSCharString {
-    /// Returns the bytes for a packet, ie - the length and then the string (automagically truncated to 255 bytes)
+    /// Returns the bytes for a packet, ie - the length and then the string
     fn as_bytes(&self) -> Vec<u8> {
-        let mut res: Vec<u8> = vec![self.data.len() as u8];
-        res.extend(&self.data);
+        let mut res: Vec<u8> = self.data.to_vec();
         // <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
-        res.truncate(257);
-
-        // TODO: I wonder if we can automagically split this and return it as individual records? it'd have to happen up the stack.
+        res.truncate(255);
+        res.insert(0, res.len() as u8);
         res
     }
 }
@@ -290,7 +287,6 @@ pub enum InternalResourceRecord {
 
 impl TryFrom<FileZoneRecord> for InternalResourceRecord {
     type Error = String;
-    // TODO: This should be a try_into because we're parsing text
     /// This is where we convert from the JSON blob in the file to an internal representation of the data.
     fn try_from(record: FileZoneRecord) -> Result<Self, String> {
         if check_long_labels(&record.name) {
@@ -574,11 +570,9 @@ impl InternalResourceRecord {
                 minimum,
                 ..
             } => {
-                // TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
                 let zone_as_bytes = zone.name.as_bytes().to_vec();
                 let mut res: Vec<u8> =
                     mname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes));
-                // TODO: the name_as_bytes needs to be able to take a source DomainName to work out the bytes compression stuff
                 res.extend(rname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes)));
                 res.extend(serial.to_be_bytes());
                 res.extend(refresh.to_be_bytes());
@@ -633,8 +627,10 @@ impl InternalResourceRecord {
                 mx_bytes.extend(exchange.as_bytes(Some(HEADER_BYTES as u16), Some(question)));
                 mx_bytes
             }
-            InternalResourceRecord::AXFR { .. } => todo!(),
-            InternalResourceRecord::InvalidType => todo!(),
+            InternalResourceRecord::AXFR { .. } => unimplemented!(), // TODO: handle axfr records
+            InternalResourceRecord::InvalidType => {
+                panic!("Somehow people are requesting InvalidType records as bytes!")
+            }
             InternalResourceRecord::CAA {
                 flag, tag, value, ..
             } => {

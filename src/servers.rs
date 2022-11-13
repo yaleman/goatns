@@ -10,9 +10,8 @@ use tokio::time::timeout;
 use crate::config::ConfigFile;
 use crate::datastore::Command;
 use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
-use crate::reply::Reply;
+use crate::reply::{reply_any, reply_builder, reply_nxdomain, Reply};
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
-use crate::utils::*;
 use crate::zones::ZoneRecord;
 use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
@@ -319,7 +318,8 @@ pub async fn tcp_server(
                 Duration::from_secs(loop_config.tcp_client_timeout),
                 tcp_conn_handler(&mut stream, addr, loop_tx, loop_agent_tx, loop_config),
             )
-            .await.is_err()
+            .await
+            .is_err()
             {
                 log::warn!(
                     "TCP Connection from {addr:?} terminated after {} seconds.",
@@ -392,7 +392,7 @@ async fn get_result(
         return Err(format!("Invalid OPCODE, got {:?}", header.opcode));
     };
 
-    let question = match Question::from_packets(&buf[HEADER_BYTES..len]).await {
+    let question = match Question::from_packets(&buf[HEADER_BYTES..len]) {
         Ok(value) => {
             log::trace!("Parsed question: {:?}", value);
             value
@@ -454,7 +454,7 @@ async fn get_result(
     // here we talk to the datastore to pull the result
     match datastore.send(ds_req).await {
         Ok(_) => log::trace!("Sent a request to the datastore!"),
-        // TODO: handle this properly
+        // TODO: handle errors sending to the DS properly
         Err(error) => log::error!("Error sending to datastore: {:?}", error),
     };
 
@@ -481,19 +481,19 @@ async fn get_result(
             id: header.id,
             qr: PacketType::Answer,
             opcode: header.opcode,
-            authoritative: false, // TODO: are we authoritative
-            truncated: false,     // TODO: work out if it's truncated (ie, UDP)
+            authoritative: true,
+            truncated: false, // TODO: work out if it's truncated (ie, UDP)
             recursion_desired: header.recursion_desired,
-            recursion_available: header.recursion_desired, // TODO: work this out
+            recursion_available: header.recursion_available, // TODO: work this out
             z: false,
             ad: true, // TODO: decide how the ad flag should be set -  "authentic data" - This requests the server to return whether all of the answer and
             // authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all
             // records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer
             // was insecure or not validated. This bit is set by default.
             cd: false, // TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
-            rcode: Rcode::NoError, // TODO: this could be something to return if we don't die half way through
+            rcode: Rcode::NoError,
             qdcount: 1,
-            ancount: record.typerecords.len() as u16, // TODO: work out how many we'll return
+            ancount: record.typerecords.len() as u16,
             nscount: 0,
             arcount: 0,
         },

@@ -1,0 +1,22 @@
+{% extends "dashboard.html" %}
+{% block content %}
+<h1>Login</h1>
+
+<!-- <p>{{redirect_url}}</p> -->
+
+{% for error in errors %}
+<div class="alert alert-error">{{error}}</div>
+{% endfor %}
+
+<p>Welcome, {{displayname}}!</p>
+
+<p>We see you haven't appeared in our database yet, please confirm you'd like to have an account created by clicking "Accept" below!</p>
+
+<p>Just to confirm, we have your email address as: {{email}}</p>
+
+<form action="/auth/signup", method="POST">
+    <input type="hidden" value="{{state}}" name="state" />
+    <input type="hidden" value="{{code}}" name="code" />
+    <button class="btn btn-success" type="submit">Accept</button>
+</form>
+{% endblock content %}

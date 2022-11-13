@@ -2,7 +2,7 @@ use std::str::from_utf8;
 use std::sync::Arc;
 
 use crate::config::ConfigFile;
-use crate::db::{self, DBEntity, ZoneOwnership};
+use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
 use crate::zones::{FileZone, ZoneRecord};
 use clap::ArgMatches;
@@ -28,6 +28,9 @@ pub enum Command {
         resp: Responder<Option<FileZone>>,
     },
     GetZoneNames {
+        user: User,
+        offset: i64,
+        limit: i64,
         resp: Responder<Vec<FileZone>>,
     },
     ImportFile {
@@ -42,6 +45,13 @@ pub enum Command {
     PatchZone,
 
     DeleteUser,
+    CreateUser {
+        username: String,
+        authref: String,
+        admin: bool,
+        disabled: bool,
+        resp: Responder<bool>,
+    },
     GetUser {
         id: Option<i64>,
         username: Option<String>,
@@ -179,15 +189,21 @@ async fn handle_get_zone(
 }
 
 async fn handle_get_zone_names(
+    user: User,
     tx: oneshot::Sender<Vec<FileZone>>,
     pool: &Pool<Sqlite>,
+    offset: i64,
+    limit: i64,
 ) -> Result<(), String> {
     let mut txn = pool.begin().await.map_err(|e| format!("{e:?}"))?;
 
-    let zones = crate::db::get_zones_with_txn(&mut txn, 100, 0)
+    log::debug!("handle_get_zone_names: user={user:?}");
+    let zones = user
+        .get_zones_for_user(&mut txn, offset, limit)
         .await
         .map_err(|e| format!("{e:?}"))?;
 
+    log::debug!("handle_get_zone_names: {zones:?}");
     tx.send(zones).map_err(|e| format!("{e:?}"))
 }
 
@@ -215,8 +231,13 @@ pub async fn manager(
                     log::error!("{e:?}")
                 };
             }
-            Command::GetZoneNames { resp } => {
-                let res = handle_get_zone_names(resp, &connpool).await;
+            Command::GetZoneNames {
+                resp,
+                user,
+                offset,
+                limit,
+            } => {
+                let res = handle_get_zone_names(user, resp, &connpool, offset, limit).await;
                 if let Err(e) = res {
                     log::error!("{e:?}")
                 };
@@ -259,19 +280,37 @@ pub async fn manager(
             Command::PostZone => todo!(),
             Command::DeleteZone => todo!(),
             Command::PatchZone => todo!(),
+            Command::CreateUser {
+                username,
+                authref,
+                admin,
+                disabled,
+                resp,
+            } => {
+                let new_user = User {
+                    username: username.clone(),
+                    authref: Some(authref.clone()),
+                    admin,
+                    disabled,
+                    ..Default::default()
+                };
+                log::debug!("Creating: {new_user:?}");
+                let res = match new_user.save(&connpool).await {
+                    Ok(_) => true,
+                    Err(error) => {
+                        log::error!("Failed to create {username}: {error:?}");
+                        false
+                    }
+                };
+                if let Err(error) = resp.send(res) {
+                    log::error!("Failed to send message back to caller: {error:?}");
+                }
+            }
             Command::DeleteUser => todo!(),
-            Command::GetUser {
-                username: _,
-                id: _,
-                resp: _,
-            } => todo!(),
+            Command::GetUser { .. } => todo!(),
             Command::PostUser => todo!(),
             Command::PatchUser => todo!(),
-            Command::DeleteOwnership {
-                zoneid: _,
-                userid: _,
-                resp: _,
-            } => todo!(),
+            Command::DeleteOwnership { .. } => todo!(),
             Command::GetOwnership {
                 zoneid: _,
                 userid,
@@ -290,11 +329,7 @@ pub async fn manager(
                     log::error!("Unmatched arm in getownership")
                 }
             }
-            Command::PostOwnership {
-                zoneid: _,
-                userid: _,
-                resp: _,
-            } => todo!(),
+            Command::PostOwnership { .. } => todo!(),
         }
     }
 

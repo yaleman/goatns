@@ -7,8 +7,9 @@
 - [ ] APL (42) RFC3123 (Experimental)
 - [ ] AXFR (252) RFC1035
   - [ ] add an allow-list in the config file (CIDRs)
-- [ ] ANY (255) RFC8482
-  - [ ] should return a hinfo value of "RFC8482", can't be stored
+- [x] ANY (255) RFC8482
+  - [ ] should check for zones, is currently just YOLOing a response to any request
+  - [x] return a HINFO record of "RFC8482", can't be stored
 - [x] CAA (257) RFC6844
 - [ ] CDNSKEY (60) RFC7344 Child copy of DNSKEY record, for transfer to parent
 - [ ] CDNSKEY (59) RFC7344 Child copy of DS record, for transfer to parent

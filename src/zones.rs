@@ -17,7 +17,7 @@ use std::str::from_utf8;
 pub struct FileZone {
     /// Database row ID
     #[serde(default = "default_id")]
-    pub id: u64,
+    pub id: i64,
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
     #[serde(rename(serialize = "MNAME"))]
     pub name: String,
@@ -64,10 +64,10 @@ pub fn rname_default() -> String {
 pub struct FileZoneRecord {
     /// Foreign key to id in [FileZone::id]
     #[serde(default = "default_id")]
-    pub zoneid: u64,
+    pub zoneid: i64,
     /// Database row ID
     #[serde(default)]
-    pub id: u64,
+    pub id: i64,
     #[serde(default = "default_record_name")]
     pub name: String,
     pub rrtype: String,
@@ -78,7 +78,7 @@ pub struct FileZoneRecord {
 }
 
 /// If you don't specify a name, it's the root.
-fn default_id() -> u64 {
+fn default_id() -> i64 {
     1
 }
 /// If you don't specify a name, it's the root.
@@ -102,8 +102,6 @@ impl Display for FileZoneRecord {
 impl TryFrom<SqliteRow> for FileZoneRecord {
     type Error = String;
     fn try_from(row: SqliteRow) -> Result<Self, String> {
-        let zoneid: i64 = row.get("zoneid");
-        let id: i64 = row.get("id");
         let name: String = row.get("name");
         let rrtype: i32 = row.get("rrtype");
         let rrtype = RecordType::from(&(rrtype as u16));
@@ -113,9 +111,13 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
         let rdata: String = row.get("rdata");
         let ttl: u32 = row.get("ttl");
 
+        if let RecordType::ANY = rrtype {
+            return Err("Cannot serve ANY records".to_string());
+        }
+
         Ok(FileZoneRecord {
-            zoneid: zoneid as u64,
-            id: id as u64,
+            zoneid: row.get("zoneid"),
+            id: row.get("id"),
             name,
             rrtype: rrtype.to_string(),
             class: RecordClass::from(&class),

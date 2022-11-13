@@ -1,0 +1,15 @@
+{% extends "dashboard.html" %}
+{% block content %}
+<h1>Login</h1>
+
+<p>{{redirect_url}}</p>
+
+{% for error in errors %}
+<div class="alert alert-error">{{error}}</div>
+{% endfor %}
+
+<a href="{{redirect_url}}">
+    <button class="btn btn-success">Click here to login, or wait a sec...</button>
+</a>
+
+{% endblock content %}

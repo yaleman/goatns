@@ -9,16 +9,20 @@ async fn test_create_user() -> Result<(), sqlx::Error> {
 
     start_db(&pool).await?;
 
-    let user = User {
+    let mut user = User {
         username: "yaleman".to_string(),
         email: "billy@hello.goat".to_string(),
-        owned_zones: vec![],
+        disabled: true,
         ..User::default()
     };
 
-    user.create(&pool).await?;
+    println!("Creating user the first time");
+    user.save(&pool).await?;
 
-    let res = user.clone().create(&pool).await;
+    user.disabled = false;
+
+    println!("Creating user the second time");
+    let res = user.save(&pool).await;
     assert!(res.is_err());
 
     Ok(())
@@ -28,7 +32,7 @@ async fn test_create_user() -> Result<(), sqlx::Error> {
 /// create a zone example.com
 async fn test_create_example_com_records(
     pool: &SqlitePool,
-    zoneid: u64,
+    zoneid: i64,
     num_records: usize,
 ) -> Result<(), sqlx::Error> {
     use rand::distributions::{Alphanumeric, DistString};
@@ -45,7 +49,7 @@ async fn test_create_example_com_records(
             rrtype: RecordType::A.to_string(),
             class: RecordClass::Internet,
             rdata,
-            id: i as u64,
+            id: i as i64,
             ttl: i as u32,
         }
         .save(&pool)
@@ -253,7 +257,15 @@ async fn test_load_zone() -> Result<(), sqlx::Error> {
     let zone_second = get_zone(&pool, zone.clone().name).await?.unwrap();
 
     assert_ne!(zone_first, zone_second);
-    // TODO: work out how to compare the full record list
+
+    // compare the record lists
+    println!("comparing the list of records in each zone");
+    for record in zone_first.records.iter() {
+        assert!(zone_second.records.contains(&record));
+    }
+    for record in zone_second.records.iter() {
+        assert!(zone_first.records.contains(&record));
+    }
 
     Ok(())
 }

@@ -1,8 +1,13 @@
 [package]
 name = "goatns"
-version = "0.1.5"
+description = "Yet another authoritative DNS name server. But with goat references."
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.64"
+license = "MIT"
+repository = "https://github.com/yaleman/goatns.git"
+keywords = ["dns","server","tokio","api","oauth2","oidc"]
+categories = ["network-programming"]
 
 [lib]
 bench=false
@@ -13,16 +18,20 @@ opt-level = 3
 
 [dependencies]
 askama = { version="0.11.1"}
+async-sqlx-session = { git="https://github.com/jbr/async-sqlx-session.git", rev="3f2e1cf", default-features = false, features = ["sqlite"] }
 async-trait = "0.1.58"
-axum = { version="0.5.17", features=["http2", "headers"] }
+axum = { version="0.5.17", features=["http2", "headers", "original-uri"] }
 axum-extra = { version = "0.3.7", features = ["spa"] }
+# axum-login = { version = "0.2.0", features = ["sqlite"] }
 axum-macros = "0.2.3"
 axum-server = { version = "0.4.3", features = [ "tls-rustls"] }
+axum-sessions = "0.3.1"
 bit-vec = "0.6.3"
 bytes = "1.2.1"
-chrono = "0.4.22"
+chrono = { version = "0.4.22", features = ["clock"] }
 clap = { version="4.0.19", features=["cargo"]}
 config = { version = "0.13", features = ["json"] }
+dialoguer = "0.10.2"
 enum-iterator = "1.2.0"
 flexi_logger = { version = "0.24", features = ["async", "default"] }
 gethostname = "0.4.0"
@@ -31,25 +40,32 @@ json5 = "0.4.1"
 lazy_static = "1.4.0"
 log = "0.4.17"
 num-traits = "0.2.15"
+oauth2 = "4.3.0"
+openidconnect = "2.4.0"
 packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
 rand = "0.8.5"
 regex = "1.6.0"
+reqwest = { version = "0.11.12", features = ["blocking", "json", "rustls-tls"] }
 serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
 serde_derive = "1.0.145"
 serde_json = "1.0.86"
 shellexpand = "2.1.2"
-sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "sqlite" ] }
-sqlx-core = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite"] }
+sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite"], default-features=false }
+# sqlx-core = { version = "0.6.2", features = ["runtime-tokio-rustls", "sqlite"], default-features=false }
 tokio = { version = "1.21.2", features = ["full"] }
+tokio-cron-scheduler = "0.8.1"
 tokio-stream = { version = "0.1.11", features = ["net"] }
 tokio-util = { version = "0.7.4", features = ["full"] }
+tower = "0.4.13"
+tower-http = { version = "0.3.4", features = ["trace","add-extension","compression-gzip"] }
+tracing = "0.1.37"
+url = { version = "2.3.1", features = ["serde"] }
 
 
 
 [dev-dependencies]
 criterion = "^0.4"
-reqwest = { version = "0.11.12", features = ["blocking", "json", "rustls-tls"] }
 scopeguard = "1.1.0"
 trust-dns-resolver = "0.22.0"
 

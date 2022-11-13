@@ -1,20 +1,24 @@
 {% extends "dashboard.html" %}
 {% block content %}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="/ui/zones/list">Zones</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{zone.name}}</li>
+    </ol>
+</nav>
+
 <h1>Zone: {{zone.name}}</h1>
 
-<p><a href="/ui/zones/list">Back to zones list</a></p>
+<div class="row">
+    <div class="col-2">Responsible Name (RNAME)</div>
+    <div class="col">{{zone.rname}}</div>
+</div>
 
-<table class="table">
-        <tr>
-            <th scope="col">Name</th>
-            <td class="text-truncate">{{zone.name}}</td>
-            </tr>
-        <tr>
-            <th scope="col">RName</th>
-            <td>{{zone.rname}}</td>
-        </tr>
-</table>
-
+{% if zone.records.is_empty() %}
+<div class="alert alert-warning" role="alert">No zone records found!</div>
+{% else %}
 <div class="table-responsive">
 <table class="table">
     <thead>
@@ -35,5 +39,6 @@
         </tr>
     {% endfor %}
 </table>
+{% endif %}
 </div>
 {% endblock content %}

@@ -1,6 +1,10 @@
+use flexi_logger::LoggerHandle;
 use log::{error, info};
+use sqlx::Pool;
+use sqlx::Sqlite;
 use std::io;
 use std::net::SocketAddr;
+use tokio::task::JoinHandle;
 
 use axum_server::tls_rustls::RustlsConfig;
 use tokio::sync::broadcast;
@@ -18,7 +22,10 @@ use tokio::time::sleep;
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let clap_results = clap_parser();
-    let mut config: ConfigFile = get_config(clap_results.get_one::<String>("config"));
+    let mut config: ConfigFile = match get_config(clap_results.get_one::<String>("config")) {
+        Ok(value) => value,
+        Err(_) => return Ok(()),
+    };
 
     let logger = match setup_logging(&config, &clap_results) {
         Ok(logger) => logger,
@@ -42,6 +49,9 @@ async fn main() -> io::Result<()> {
                 log::error!("{error:}")
             }
             log::error!("Shutting down!");
+            logger.flush();
+            sleep(std::time::Duration::from_millis(250)).await;
+            logger.flush();
             return Ok(());
         }
         Ok(c) => {
@@ -54,20 +64,10 @@ async fn main() -> io::Result<()> {
 
     info!("Configuration: {}", config);
 
-    let listen_addr = format!("{}:{}", config.address, config.port);
-
-    let bind_address = match listen_addr.parse::<SocketAddr>() {
-        Ok(value) => value,
-        Err(error) => {
-            error!("Failed to parse address: {:?}", error);
-            return Ok(());
-        }
-    };
-
     // agent signalling
-    let agent_tx: tokio::sync::broadcast::Sender<AgentState>;
+    let agent_tx: broadcast::Sender<AgentState>;
     #[allow(unused_variables)]
-    let _agent_rx: tokio::sync::broadcast::Receiver<AgentState>;
+    let _agent_rx: broadcast::Receiver<AgentState>;
     (agent_tx, _agent_rx) = broadcast::channel(32);
     let tx: mpsc::Sender<datastore::Command>;
     let rx: mpsc::Receiver<datastore::Command>;
@@ -102,6 +102,38 @@ async fn main() -> io::Result<()> {
         }
     };
 
+    start(
+        logger,
+        config,
+        system_state,
+        tx,
+        agent_tx,
+        connpool,
+        datastore_manager,
+    )
+    .await?;
+
+    Ok(())
+}
+
+async fn start(
+    logger: LoggerHandle,
+    config: ConfigFile,
+    system_state: SystemState,
+    tx: mpsc::Sender<datastore::Command>,
+    agent_tx: broadcast::Sender<AgentState>,
+    connpool: Pool<Sqlite>,
+    datastore_manager: JoinHandle<Result<(), String>>,
+) -> io::Result<()> {
+    let listen_addr = format!("{}:{}", config.address, config.port);
+
+    let bind_address = match listen_addr.parse::<SocketAddr>() {
+        Ok(value) => value,
+        Err(error) => {
+            error!("Failed to parse address: {:?}", error);
+            return Ok(());
+        }
+    };
     log::debug!("System state: {system_state:?}");
     // if we got this far we can shut down again
     match system_state {
@@ -109,6 +141,8 @@ async fn main() -> io::Result<()> {
             logger.flush();
             if let Err(error) = tx.send(datastore::Command::Shutdown).await {
                 eprintln!("failed to tell Datastore to shut down! {error:?} Bailing!");
+                logger.flush();
+                sleep(std::time::Duration::from_millis(500)).await;
                 logger.flush();
                 return Ok(());
             };
@@ -209,8 +243,6 @@ async fn main() -> io::Result<()> {
             }
         }
     }
-    logger.flush();
-    sleep(std::time::Duration::from_secs(1)).await;
     logger.flush();
     Ok(())
 }

@@ -3,7 +3,6 @@ use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
 use flexi_logger::{DeferredNow, LoggerHandle};
 use gethostname::gethostname;
-// use ipnet::IpNet;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -11,6 +10,7 @@ use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
+use url::Url;
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 /// Allow-listing ranges for making particular kinds of requests
@@ -60,6 +60,27 @@ pub struct ConfigFile {
     /// Secret for cookie storage - don't hard code this, it'll randomly generate on startup
     #[serde(default = "generate_cookie_secret", skip)]
     api_cookie_secret: String,
+    /// OAuth2 Resource server name
+    pub oauth2_client_id: String,
+    #[serde(skip_serializing)]
+    /// Oauth2 Secret
+    pub oauth2_secret: String,
+    /// OIDC Discovery URL, eg for Kanidm you'd use https://idm.example.com/oauth2/openid/:client_id:/.well-known/openid-configuration
+    #[serde(default)]
+    pub oauth2_config_url: String,
+    #[serde(default)]
+    /// A list of scopes to request from the IdP
+    pub oauth2_user_scopes: Vec<String>,
+    /// Log things sometimes
+    pub sql_log_statements: bool,
+    /// When queries take more than this many seconds, log them
+    pub sql_log_slow_duration: u64,
+    /// Clean up sessions table every n seconds
+    pub sql_session_cleanup_seconds: u64,
+    /// Administrator contact details
+    pub admin_contact: Option<String>,
+    /// Allow auto-provisioning of users
+    pub user_auto_provisioning: bool,
 }
 
 fn generate_cookie_secret() -> String {
@@ -74,6 +95,14 @@ impl ConfigFile {
 
     pub fn api_cookie_secret(self) -> String {
         self.api_cookie_secret
+    }
+
+    pub fn status_url(&self) -> Url {
+        Url::from_str(&format!(
+            "https://{}:{}/status",
+            self.hostname, self.api_port
+        ))
+        .unwrap()
     }
 }
 
@@ -101,6 +130,15 @@ impl Default for ConfigFile {
             api_tls_key: PathBuf::from("./certificates/key.pem"),
             api_static_dir: String::from("./static_files/"),
             api_cookie_secret: generate_cookie_secret(),
+            oauth2_client_id: String::from(""),
+            oauth2_secret: String::from(""),
+            oauth2_config_url: String::from(""),
+            oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
+            sql_log_slow_duration: 5,
+            sql_log_statements: false,
+            sql_session_cleanup_seconds: 3600, // one hour
+            admin_contact: Default::default(),
+            user_auto_provisioning: false,
         }
     }
 }
@@ -120,8 +158,8 @@ impl Display for ConfigFile {
             }
         };
         f.write_fmt(format_args!(
-            "hostname=\"{}\" listening_address=\"{}:{}\" capturing_pcaps={} Log_level={}, {api_details}",
-            self.hostname, self.address, self.port, self.capture_packets, self.log_level
+            "hostname=\"{}\" listening_address=\"{}:{}\" capturing_pcaps={} Log_level={}, admin_contact={:?} {api_details}",
+            self.hostname, self.address, self.port, self.capture_packets, self.log_level, self.admin_contact,
         ))
     }
 }
@@ -161,6 +199,33 @@ impl From<Config> for ConfigFile {
                 .get("api_static_dir")
                 .unwrap_or(Self::default().api_static_dir),
             api_cookie_secret: generate_cookie_secret(),
+            oauth2_client_id: config
+                .get("oauth2_client_id")
+                .unwrap_or(Self::default().oauth2_client_id),
+            oauth2_secret: config
+                .get("oauth2_secret")
+                .unwrap_or(Self::default().oauth2_secret),
+            oauth2_config_url: config
+                .get("oauth2_config_url")
+                .unwrap_or(Self::default().oauth2_config_url),
+            oauth2_user_scopes: config
+                .get("oauth2_user_scopes")
+                .unwrap_or(Self::default().oauth2_user_scopes),
+            sql_log_slow_duration: config
+                .get("sql_log_slow_duration")
+                .unwrap_or(Self::default().sql_log_slow_duration),
+            sql_log_statements: config
+                .get("sql_log_statements")
+                .unwrap_or(Self::default().sql_log_statements),
+            sql_session_cleanup_seconds: config
+                .get("sql_session_cleanup_seconds")
+                .unwrap_or(Self::default().sql_session_cleanup_seconds),
+            admin_contact: config
+                .get("admin_contact")
+                .unwrap_or(Self::default().admin_contact),
+            user_auto_provisioning: config
+                .get("user_auto_provisioning")
+                .unwrap_or(Self::default().user_auto_provisioning),
         }
     }
 }
@@ -173,7 +238,7 @@ lazy_static! {
 /// Loads the configuration from a given file or from some default locations.
 ///
 /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
-pub fn get_config(config_path: Option<&String>) -> ConfigFile {
+pub fn get_config(config_path: Option<&String>) -> Result<ConfigFile, String> {
     let file_locations = match config_path {
         Some(value) => vec![value.to_owned()],
         None => CONFIG_LOCATIONS.iter().map(|x| x.to_string()).collect(),
@@ -194,16 +259,19 @@ pub fn get_config(config_path: Option<&String>) -> ConfigFile {
                 match builder.build() {
                     Ok(config) => {
                         println!("Successfully loaded config from: {}", config_filename);
-                        return config.into();
+                        return Ok(ConfigFile::from(config));
                     }
                     Err(error) => {
-                        eprintln!("Couldn't load config from {}: {:?}", config_filename, error);
+                        let err =
+                            format!("Couldn't load config from {}: {:?}", config_filename, error);
+                        log::error!("{err}");
+                        return Err(err);
                     }
                 }
             }
         }
     }
-    ConfigFile::default()
+    Ok(ConfigFile::default())
 }
 
 pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> {
@@ -241,6 +309,29 @@ pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> 
     }
 }
 
+pub fn setup_logging(
+    config: &ConfigFile,
+    clap_results: &ArgMatches,
+) -> Result<LoggerHandle, String> {
+    // force the log level to info if we're testing config
+    let log_level = match clap_results.get_flag("configcheck") {
+        true => "info".to_string(),
+        false => config.log_level.to_ascii_lowercase(),
+    };
+
+    match flexi_logger::Logger::try_with_str(&log_level).map_err(|e| format!("{e:?}")) {
+        Ok(logger) => logger
+            .write_mode(flexi_logger::WriteMode::Async)
+            .filter(Box::new(LogFilter {
+                filters: vec!["h2", "hyper::proto"],
+            }))
+            .set_palette("b1;3;2;6;5".to_string())
+            .start()
+            .map_err(|e| format!("{e:?}")),
+        Err(error) => Err(format!("Failed to start logger! {error:?}")),
+    }
+}
+
 pub struct LogFilter {
     filters: Vec<&'static str>,
 }
@@ -262,28 +353,5 @@ impl LogLineFilter for LogFilter {
         }
         log_line_writer.write(now, record)?;
         Ok(())
-    }
-}
-
-pub fn setup_logging(
-    config: &ConfigFile,
-    clap_results: &ArgMatches,
-) -> Result<LoggerHandle, String> {
-    // force the log level to info if we're testing config
-    let log_level = match clap_results.get_flag("configcheck") {
-        true => "info".to_string(),
-        false => config.log_level.to_ascii_lowercase(),
-    };
-
-    match flexi_logger::Logger::try_with_str(&log_level).map_err(|e| format!("{e:?}")) {
-        Ok(logger) => logger
-            .write_mode(flexi_logger::WriteMode::Async)
-            .filter(Box::new(LogFilter {
-                filters: vec!["h2", "hyper::proto"],
-            }))
-            .set_palette("b1;3;2;6;5".to_string())
-            .start()
-            .map_err(|e| format!("{e:?}")),
-        Err(error) => Err(format!("Failed to start logger! {error:?}")),
     }
 }

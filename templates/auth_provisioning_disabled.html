@@ -1,0 +1,22 @@
+{% extends "dashboard.html" %}
+{% block content %}
+
+<h1>Hi there!</h1>
+
+<p>Automatic provisioning is disabled on this service, please
+
+    contact {{admin_contact}}. to create your account</p>
+
+<h3>Include these details:</h3>
+
+<table>
+    <tr>
+        <td>Username:</td>
+        <td>{{username}}</td>
+    </tr>
+    <tr>
+        <td>Authentication Reference:</td>
+        <td>{{ authref }}</td>
+    </tr>
+</table>
+{% endblock content %}

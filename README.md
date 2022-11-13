@@ -14,7 +14,7 @@ Auto-generated and available here: [https://yaleman.github.io/goatns/rustdoc/goa
 
 ## Configuration
 
-Look at `zones.json` and `goatns.json` for examples.
+Look at `zones.json` and `goatns.example.json` for examples.
 
 The configuration file's fields are best found here: <https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html>. Note that the `ip_allow_list` field is a nested map.
 
@@ -52,6 +52,7 @@ This list is now [in the book](https://goatns.dotgoat.net/rrtypes.html).
   - [ ] test records for every rrtype
   - [ ] API things
     - [ ] Oauth for management/UI things
+    - [ ] web_hostname field for config so that the NS and web hostnames can be different?
   - [ ] support all record-classes
   - [ ] rewrite ttl handling so you don't *have* to specify it per-record and it uses zone data
    - [?] SOA minimum overrides RR TTL - RFC1035 3.3.13 - "Whenever a RR is sent in a response to a query, the TTL field is set to the maximum of the TTL field from the RR and the MINIMUM field in the appropriate SOA." - this is done in the database view currently
@@ -68,3 +69,9 @@ This list is now [in the book](https://goatns.dotgoat.net/rrtypes.html).
   - [ ] support VERSION/VERSION.BIND requests
     - [x] allow list config
     - [ ] build the response packets in a nice way that doesn't blow up
+
+Old sessions:
+
+```sql
+select strftime('%s') as now, expires-strftime('%s') as diff, * from sessions where expires > now;
+```

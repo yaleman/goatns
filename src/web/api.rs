@@ -64,13 +64,10 @@ pub async fn ownership_get(
 
     log::debug!("ownership_get userid={userid} zoneid={zoneid}");
     todo!();
-    // let response = serde_json::to_string(&NotImplemented::default()).unwrap();
-    // tide_result_json!(response, 403)
-    // Json::from<None>
 }
 pub async fn ownership_get_user(
     Path(userid): Path<String>,
-    state: SharedState,
+    Extension(state): Extension<SharedState>,
 ) -> Result<Json<Vec<Arc<ZoneOwnership>>>, String> {
     log::debug!("starting ownership_get_user");
     let userid: i64 = userid.parse().unwrap();
@@ -81,7 +78,8 @@ pub async fn ownership_get_user(
         userid: Some(userid),
         resp: tx_oneshot,
     };
-    if let Err(err) = state.tx.send(cmd).await {
+    let state_writer = state.write().await;
+    if let Err(err) = state_writer.tx.send(cmd).await {
         log::error!("Failed to send GetOwnership for userid: {userid} {err:?}");
         let res = format!("Failed to send GetOwnership for userid: {userid} {err:?}");
         return Err(res);
@@ -154,9 +152,8 @@ pub async fn version_get() -> Json<GoatNSVersion> {
     Json::from(GoatNSVersion::default())
 }
 
-pub fn new(shared_state: Arc<SharedState>) -> Router {
+pub fn new() -> Router {
     Router::new()
-        .layer(Extension(shared_state))
         // just zone things
         .route("/zone/:id", get(zone_get))
         .route("/zone/:id", delete(zone_delete))
