@@ -24,39 +24,6 @@ where
     s.serialize_str(&addr.to_string())
 }
 
-// /// Implements the deserializer for ContactDetails
-// pub fn from_string<'de, D>(deserializer: D) -> Result<ContactDetails, D::Error>
-// where
-//     D: de::Deserializer<'de>,
-// {
-//     let s: String = match de::Deserialize::deserialize(deserializer) {
-//         Ok(val) => {
-//             eprintln!("contact details deser: {val}");
-//             val
-//         }
-//         Err(error) => {
-//             eprintln!("contact details deser error: {error:?}");
-//             return Err(error);
-//         }
-//     };
-
-//     let res = ContactDetails::try_from(s.clone());
-//     eprintln!("deser input='{}' result='{:?}'", s, res);
-//     match res {
-//         Ok(val) => Ok(val),
-//         Err(err) => match err {
-//             crate::enums::ContactDetailsDeserializerError::InputLengthWrong { msg, len } => {
-//                 Err(de::Error::invalid_length(len, &msg))
-//             }
-//             crate::enums::ContactDetailsDeserializerError::InputFormatWrong { unexp, exp } => {
-//                 Err(de::Error::invalid_value(de::Unexpected::Str(&unexp), &exp))
-//             }
-//             crate::enums::ContactDetailsDeserializerError::WrongContactType(_msg) => {
-//                 todo!()
-//             }
-//         },
-//     }
-// }
 
 impl<'de> de::Deserialize<'de> for ContactDetails {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -65,7 +32,7 @@ impl<'de> de::Deserialize<'de> for ContactDetails {
     {
         let s: String = de::Deserialize::deserialize(deserializer)?;
         let res = ContactDetails::try_from(s.clone());
-        eprintln!("deser input='{}' result='{:?}'", s, res);
+        log::trace!("deser input='{}' result='{:?}'", s, res);
         match res {
             Ok(val) => Ok(val),
             Err(err) => match err {

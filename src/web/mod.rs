@@ -45,7 +45,7 @@ pub const STATUS_OK: &str = "Ok";
 type SharedState = Arc<RwLock<State>>;
 
 #[async_trait]
-trait SharedStateTrait {
+pub trait SharedStateTrait {
     async fn connpool(&self) -> Pool<Sqlite>;
     async fn config(&self) -> ConfigFile;
     async fn oidc_config(&self) -> Option<CustomProviderMetadata>;
@@ -53,7 +53,7 @@ trait SharedStateTrait {
     async fn pop_verifier(&self, csrftoken: String) -> Option<(PkceCodeVerifier, Nonce)>;
     async fn oauth2_client_id(&self) -> ClientId;
     async fn oauth2_secret(&self) -> Option<ClientSecret>;
-    async fn oauth2_redirect_url(&self) -> RedirectUrl;
+    async fn oauth2_redirect(&self) -> RedirectUrl;
     // async fn oauth2_introspection_url(&self) -> IntrospectionUrl;
     async fn push_verifier(&self, csrftoken: String, verifier: (PkceCodeVerifier, Nonce));
 }
@@ -93,8 +93,17 @@ impl SharedStateTrait for SharedState {
         Some(ClientSecret::new(client_secret))
     }
 
-    async fn oauth2_redirect_url(&self) -> RedirectUrl {
+    /// The URL that this instance will tell the OIDC IDP to send auth requests back to
+    async fn oauth2_redirect(&self) -> RedirectUrl {
         let config = self.config().await;
+
+        if let Some(mut url) = config.oauth2_redirect_url {
+            // update the URL with the final auth path
+            url.set_path("/auth/login");
+            log::debug!("OAuth2 Redirect URL: {url:?}");
+            return RedirectUrl::from_url(url);
+        }
+
         let baseurl = match config.api_port {
             443 => format!("https://{}", config.hostname),
             _ => format!("https://{}:{}", config.hostname, config.api_port),
