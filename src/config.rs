@@ -64,6 +64,8 @@ pub struct ConfigFile {
     api_cookie_secret: String,
     /// OAuth2 Resource server name
     pub oauth2_client_id: String,
+    /// If your instance is behind a proxy/load balancer/whatever, you need to specify this, eg `https://example.com:12345`
+    pub oauth2_redirect_url: Option<Url>,
     #[serde(skip_serializing)]
     /// Oauth2 Secret
     pub oauth2_secret: String,
@@ -133,6 +135,7 @@ impl Default for ConfigFile {
             api_static_dir: String::from("./static_files/"),
             api_cookie_secret: generate_cookie_secret(),
             oauth2_client_id: String::from(""),
+            oauth2_redirect_url: None,
             oauth2_secret: String::from(""),
             oauth2_config_url: String::from(""),
             oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
@@ -204,6 +207,9 @@ impl From<Config> for ConfigFile {
             oauth2_client_id: config
                 .get("oauth2_client_id")
                 .unwrap_or(Self::default().oauth2_client_id),
+            oauth2_redirect_url: config
+                .get("oauth2_redirect_url")
+                .unwrap_or(Self::default().oauth2_redirect_url),
             oauth2_secret: config
                 .get("oauth2_secret")
                 .unwrap_or(Self::default().oauth2_secret),
