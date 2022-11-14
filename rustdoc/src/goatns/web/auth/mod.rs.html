@@ -467,6 +467,7 @@
 <span id="467">467</span>
 <span id="468">468</span>
 <span id="469">469</span>
+<span id="470">470</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span><span class="kw">super</span>::utils::{redirect_to_dashboard, redirect_to_home};
@@ -571,7 +572,8 @@
     ClaimsVerificationError { content: ClaimsVerificationError },
 }
 
-<span class="kw">pub async fn </span>oauth_get_discover(state: <span class="kw-2">&amp;</span>SharedState) -&gt; <span class="prelude-ty">Result</span>&lt;CustomProviderMetadata, String&gt; {
+<span class="doccomment">/// Pull the OIDC Discovery details
+</span><span class="kw">pub async fn </span>oauth_get_discover(state: <span class="kw-2">&amp;</span>SharedState) -&gt; <span class="prelude-ty">Result</span>&lt;CustomProviderMetadata, String&gt; {
     <span class="kw">let </span>issuer_url = IssuerUrl::new(state.config().<span class="kw">await</span>.oauth2_config_url);
     CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client)
         .<span class="kw">await
@@ -609,7 +611,7 @@
     )
     <span class="comment">// This example will be running its own server at localhost:8080.
     // See below for the server implementation.
-    </span>.set_redirect_uri(state.oauth2_redirect_url().<span class="kw">await</span>);
+    </span>.set_redirect_uri(state.oauth2_redirect().<span class="kw">await</span>);
 
     <span class="comment">// Generate the authorization URL to which we&#39;ll redirect the user.
     </span><span class="kw">let </span>(authorize_url, csrf_state, nonce) = client
@@ -651,7 +653,7 @@
         shared_state.oauth2_client_id().<span class="kw">await</span>,
         shared_state.oauth2_secret().<span class="kw">await</span>,
     )
-    .set_redirect_uri(shared_state.oauth2_redirect_url().<span class="kw">await</span>);
+    .set_redirect_uri(shared_state.oauth2_redirect().<span class="kw">await</span>);
     <span class="kw">let </span>verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
     <span class="macro">assert_eq!</span>(verifier_copy.secret(), pkce_verifier.secret());
     <span class="comment">// Now you can exchange it for an access token and ID token.

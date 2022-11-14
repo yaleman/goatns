@@ -375,6 +375,12 @@
 <span id="375">375</span>
 <span id="376">376</span>
 <span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
 </pre><pre class="rust"><code><span class="kw">use </span>clap::ArgMatches;
 <span class="kw">use </span>config::{Config, File};
 <span class="kw">use </span>flexi_logger::filter::{LogLineFilter, LogLineWriter};
@@ -441,6 +447,8 @@
     </span>api_cookie_secret: String,
     <span class="doccomment">/// OAuth2 Resource server name
     </span><span class="kw">pub </span>oauth2_client_id: String,
+    <span class="doccomment">/// If your instance is behind a proxy/load balancer/whatever, you need to specify this, eg `https://example.com:12345`
+    </span><span class="kw">pub </span>oauth2_redirect_url: <span class="prelude-ty">Option</span>&lt;Url&gt;,
     <span class="attribute">#[serde(skip_serializing)]
     </span><span class="doccomment">/// Oauth2 Secret
     </span><span class="kw">pub </span>oauth2_secret: String,
@@ -510,6 +518,7 @@
             api_static_dir: String::from(<span class="string">&quot;./static_files/&quot;</span>),
             api_cookie_secret: generate_cookie_secret(),
             oauth2_client_id: String::from(<span class="string">&quot;&quot;</span>),
+            oauth2_redirect_url: <span class="prelude-val">None</span>,
             oauth2_secret: String::from(<span class="string">&quot;&quot;</span>),
             oauth2_config_url: String::from(<span class="string">&quot;&quot;</span>),
             oauth2_user_scopes: <span class="macro">vec!</span>[<span class="string">&quot;openid&quot;</span>.to_string(), <span class="string">&quot;email&quot;</span>.to_string()],
@@ -581,6 +590,9 @@
             oauth2_client_id: config
                 .get(<span class="string">&quot;oauth2_client_id&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().oauth2_client_id),
+            oauth2_redirect_url: config
+                .get(<span class="string">&quot;oauth2_redirect_url&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().oauth2_redirect_url),
             oauth2_secret: config
                 .get(<span class="string">&quot;oauth2_secret&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().oauth2_secret),

@@ -208,6 +208,15 @@
 <span id="208">208</span>
 <span id="209">209</span>
 <span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::datastore;
 <span class="kw">use </span>async_trait::async_trait;
@@ -255,7 +264,7 @@
 </span><span class="kw">type </span>SharedState = Arc&lt;RwLock&lt;State&gt;&gt;;
 
 <span class="attribute">#[async_trait]
-</span><span class="kw">trait </span>SharedStateTrait {
+</span><span class="kw">pub trait </span>SharedStateTrait {
     <span class="kw">async fn </span>connpool(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Pool&lt;Sqlite&gt;;
     <span class="kw">async fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ConfigFile;
     <span class="kw">async fn </span>oidc_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;CustomProviderMetadata&gt;;
@@ -263,7 +272,7 @@
     <span class="kw">async fn </span>pop_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String) -&gt; <span class="prelude-ty">Option</span>&lt;(PkceCodeVerifier, Nonce)&gt;;
     <span class="kw">async fn </span>oauth2_client_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ClientId;
     <span class="kw">async fn </span>oauth2_secret(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;ClientSecret&gt;;
-    <span class="kw">async fn </span>oauth2_redirect_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedirectUrl;
+    <span class="kw">async fn </span>oauth2_redirect(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedirectUrl;
     <span class="comment">// async fn oauth2_introspection_url(&amp;self) -&gt; IntrospectionUrl;
     </span><span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String, verifier: (PkceCodeVerifier, Nonce));
 }
@@ -303,8 +312,17 @@
         <span class="prelude-val">Some</span>(ClientSecret::new(client_secret))
     }
 
-    <span class="kw">async fn </span>oauth2_redirect_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedirectUrl {
+    <span class="doccomment">/// The URL that this instance will tell the OIDC IDP to send auth requests back to
+    </span><span class="kw">async fn </span>oauth2_redirect(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedirectUrl {
         <span class="kw">let </span>config = <span class="self">self</span>.config().<span class="kw">await</span>;
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>url) = config.oauth2_redirect_url {
+            <span class="comment">// update the URL with the final auth path
+            </span>url.set_path(<span class="string">&quot;/auth/login&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">&quot;OAuth2 Redirect URL: {url:?}&quot;</span>);
+            <span class="kw">return </span>RedirectUrl::from_url(url);
+        }
+
         <span class="kw">let </span>baseurl = <span class="kw">match </span>config.api_port {
             <span class="number">443 </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}&quot;</span>, config.hostname),
             <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}:{}&quot;</span>, config.hostname, config.api_port),
