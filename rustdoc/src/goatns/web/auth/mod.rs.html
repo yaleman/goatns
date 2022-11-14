@@ -746,12 +746,12 @@
                             <span class="kw">if </span>!state.config().<span class="kw">await</span>.user_auto_provisioning {
                                 <span class="comment">// TODO: show a &quot;sorry&quot; page when auto-provisioning&#39;s not enabled
                                 // log::warn!(&quot;User attempted login when auto-provisioning is not enabled, yeeting them to the home page.&quot;);
-                                </span><span class="kw">let </span>admin_contact = state.config().<span class="kw">await</span>.admin_contact;
-                                <span class="kw">let </span>admin_contact = <span class="kw">match </span>admin_contact {
-                                    <span class="prelude-val">Some</span>(value) =&gt; value,
-                                    <span class="prelude-val">None </span>=&gt; <span class="string">&quot;the administrator&quot;</span>.to_string(),
-                                };
-                                <span class="kw">let </span>context = AuthProvisioningDisabledTemplate {
+                                </span><span class="kw">let </span>admin_contact = state.config().<span class="kw">await</span>.admin_contact.to_string();
+                                <span class="comment">// let admin_contact = match admin_contact {
+                                //     Some(value) =&gt; value.to_string(),
+                                //     None =&gt; &quot;the administrator&quot;.to_string(),
+                                // };
+                                </span><span class="kw">let </span>context = AuthProvisioningDisabledTemplate {
                                     username: claims.get_username(),
                                     authref: claims.subject().to_string(),
                                     admin_contact,

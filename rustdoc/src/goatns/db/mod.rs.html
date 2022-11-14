@@ -1268,7 +1268,37 @@
 <span id="1268">1268</span>
 <span id="1269">1269</span>
 <span id="1270">1270</span>
-</pre><pre class="rust"><code><span class="kw">use </span>std::str::FromStr;
+<span id="1271">1271</span>
+<span id="1272">1272</span>
+<span id="1273">1273</span>
+<span id="1274">1274</span>
+<span id="1275">1275</span>
+<span id="1276">1276</span>
+<span id="1277">1277</span>
+<span id="1278">1278</span>
+<span id="1279">1279</span>
+<span id="1280">1280</span>
+<span id="1281">1281</span>
+<span id="1282">1282</span>
+<span id="1283">1283</span>
+<span id="1284">1284</span>
+<span id="1285">1285</span>
+<span id="1286">1286</span>
+<span id="1287">1287</span>
+<span id="1288">1288</span>
+<span id="1289">1289</span>
+<span id="1290">1290</span>
+<span id="1291">1291</span>
+<span id="1292">1292</span>
+<span id="1293">1293</span>
+<span id="1294">1294</span>
+<span id="1295">1295</span>
+<span id="1296">1296</span>
+<span id="1297">1297</span>
+<span id="1298">1298</span>
+<span id="1299">1299</span>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::resourcerecord::SetTTL;
+<span class="kw">use </span>std::str::FromStr;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::time::Duration;
 
@@ -1285,7 +1315,7 @@
 <span class="kw">use </span>sqlx::{Arguments, ConnectOptions, Connection, Pool, Row, Sqlite, SqlitePool, Transaction};
 
 <span class="attribute">#[cfg(test)]
-</span><span class="kw">mod </span>test;
+</span><span class="kw">pub mod </span>test;
 
 <span class="kw">const </span>SQL_VIEW_RECORDS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;records_merged&quot;</span>;
 
@@ -1886,11 +1916,15 @@
     }
 }
 
-<span class="kw">pub async fn </span>get_records(
+<span class="doccomment">/// Pull a vec of [InternalResourceRecords] directly from the database
+///
+/// Setting normalize_ttls=true sets the TTL on all records to the LOWEST of the returned records.
+</span><span class="kw">pub async fn </span>get_records(
     conn: <span class="kw-2">&amp;</span>Pool&lt;Sqlite&gt;,
     name: String,
     rrtype: RecordType,
     rclass: RecordClass,
+    normalize_ttls: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;InternalResourceRecord&gt;, sqlx::Error&gt; {
     <span class="kw">let </span>res = sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
         <span class="string">&quot;SELECT
@@ -1918,7 +1952,31 @@
             results.push(irr);
         }
     }
-    <span class="macro">log::trace!</span>(<span class="string">&quot;results: {results:?}&quot;</span>);
+
+    <span class="comment">// skip the normalisation step if we&#39;ve got 0 or 1 result.
+    </span><span class="kw">if </span>results.len() &lt;= <span class="number">1 </span>{
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(results);
+    }
+
+    <span class="kw">let </span>results = <span class="kw">match </span>normalize_ttls {
+        <span class="bool-val">true </span>=&gt; {
+            <span class="kw">let </span>min_ttl = results.iter().map(|r| r.ttl()).min();
+            <span class="kw">let </span>min_ttl = <span class="kw">match </span>min_ttl {
+                <span class="prelude-val">Some</span>(val) =&gt; val.to_owned(),
+                <span class="prelude-val">None </span>=&gt; {
+                    <span class="macro">log::error!</span>(<span class="string">&quot;Somehow failed to get minimum TTL from query&quot;</span>);
+                    <span class="number">1
+                </span>}
+            };
+
+            results
+                .to_vec()
+                .iter()
+                .map(|r| r.clone().set_ttl(min_ttl))
+                .collect()
+        }
+        <span class="bool-val">false </span>=&gt; results,
+    };
     <span class="prelude-val">Ok</span>(results)
 }
 

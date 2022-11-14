@@ -335,6 +335,7 @@
 <span id="335">335</span>
 <span id="336">336</span>
 <span id="337">337</span>
+<span id="338">338</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::str::from_utf8;
 <span class="kw">use </span>std::sync::Arc;
 
@@ -447,7 +448,7 @@
         typerecords: <span class="macro">vec!</span>[],
     };
 
-    <span class="kw">match </span>db::get_records(conn, db_name.to_string(), rrtype, rclass).<span class="kw">await </span>{
+    <span class="kw">match </span>db::get_records(conn, db_name.to_string(), rrtype, rclass, <span class="bool-val">true</span>).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; zr.typerecords.extend(value),
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">log::error!</span>(<span class="string">&quot;Failed to query db: {err:?}&quot;</span>)
@@ -476,7 +477,8 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">async fn </span>handle_import_file(
+<span class="doccomment">/// Import a file direclty into the database. Normally, you shouldn&#39;t use this directly, call it through calls to the datastore.
+</span><span class="kw">pub async fn </span>handle_import_file(
     pool: <span class="kw-2">&amp;</span>Pool&lt;Sqlite&gt;,
     filename: String,
     zone_name: <span class="prelude-ty">Option</span>&lt;String&gt;,

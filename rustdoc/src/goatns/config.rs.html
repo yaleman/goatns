@@ -355,6 +355,26 @@
 <span id="355">355</span>
 <span id="356">356</span>
 <span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
 </pre><pre class="rust"><code><span class="kw">use </span>clap::ArgMatches;
 <span class="kw">use </span>config::{Config, File};
 <span class="kw">use </span>flexi_logger::filter::{LogLineFilter, LogLineWriter};
@@ -368,6 +388,8 @@
 <span class="kw">use </span>std::path::PathBuf;
 <span class="kw">use </span>std::str::FromStr;
 <span class="kw">use </span>url::Url;
+
+<span class="kw">use </span><span class="kw">crate</span>::enums::ContactDetails;
 
 <span class="attribute">#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 </span><span class="doccomment">/// Allow-listing ranges for making particular kinds of requests
@@ -435,7 +457,7 @@
     <span class="doccomment">/// Clean up sessions table every n seconds
     </span><span class="kw">pub </span>sql_session_cleanup_seconds: u64,
     <span class="doccomment">/// Administrator contact details
-    </span><span class="kw">pub </span>admin_contact: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    </span><span class="kw">pub </span>admin_contact: ContactDetails,
     <span class="doccomment">/// Allow auto-provisioning of users
     </span><span class="kw">pub </span>user_auto_provisioning: bool,
 }
@@ -584,6 +606,24 @@
                 .get(<span class="string">&quot;user_auto_provisioning&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().user_auto_provisioning),
         }
+    }
+}
+
+<span class="kw">impl </span>FromStr <span class="kw">for </span>ConfigFile {
+    <span class="kw">type </span><span class="prelude-val">Err </span>= String;
+
+    <span class="kw">fn </span>from_str(input: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+        <span class="comment">// let res =Config::try_from(&amp;input);
+
+        </span><span class="kw">let </span>configfile = File::from_str(input, config::FileFormat::Json);
+
+        <span class="kw">let </span>res = Config::builder()
+            .add_source(configfile)
+            .build()
+            .map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>res: ConfigFile = res.into();
+        <span class="prelude-val">Ok</span>(res)
     }
 }
 
