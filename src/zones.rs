@@ -128,7 +128,7 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-/// This is used when storing a set of records in the memory-based datastore
+/// A list of records associated with a given name - ie `foo.example.com -> [A { 1.2.3.4}, AAAA { 2000:cafe:beef }` etc
 pub struct ZoneRecord {
     /// the full name including the zone
     pub name: Vec<u8>,

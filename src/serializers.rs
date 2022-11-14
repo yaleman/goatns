@@ -1,5 +1,8 @@
-use serde::Serializer;
+use serde::{de, Serializer};
+
 use std::net::{IpAddr, Ipv6Addr};
+
+use crate::enums::ContactDetails;
 
 /// Convert a u32 to a string representation of an ipv4 address
 pub fn a_to_ip<S>(address: &u32, s: S) -> Result<S::Ok, S::Error>
@@ -19,4 +22,63 @@ where
     let addr_bytes = address.to_be_bytes();
     let addr = Ipv6Addr::from(addr_bytes);
     s.serialize_str(&addr.to_string())
+}
+
+// /// Implements the deserializer for ContactDetails
+// pub fn from_string<'de, D>(deserializer: D) -> Result<ContactDetails, D::Error>
+// where
+//     D: de::Deserializer<'de>,
+// {
+//     let s: String = match de::Deserialize::deserialize(deserializer) {
+//         Ok(val) => {
+//             eprintln!("contact details deser: {val}");
+//             val
+//         }
+//         Err(error) => {
+//             eprintln!("contact details deser error: {error:?}");
+//             return Err(error);
+//         }
+//     };
+
+//     let res = ContactDetails::try_from(s.clone());
+//     eprintln!("deser input='{}' result='{:?}'", s, res);
+//     match res {
+//         Ok(val) => Ok(val),
+//         Err(err) => match err {
+//             crate::enums::ContactDetailsDeserializerError::InputLengthWrong { msg, len } => {
+//                 Err(de::Error::invalid_length(len, &msg))
+//             }
+//             crate::enums::ContactDetailsDeserializerError::InputFormatWrong { unexp, exp } => {
+//                 Err(de::Error::invalid_value(de::Unexpected::Str(&unexp), &exp))
+//             }
+//             crate::enums::ContactDetailsDeserializerError::WrongContactType(_msg) => {
+//                 todo!()
+//             }
+//         },
+//     }
+// }
+
+impl<'de> de::Deserialize<'de> for ContactDetails {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let s: String = de::Deserialize::deserialize(deserializer)?;
+        let res = ContactDetails::try_from(s.clone());
+        eprintln!("deser input='{}' result='{:?}'", s, res);
+        match res {
+            Ok(val) => Ok(val),
+            Err(err) => match err {
+                crate::enums::ContactDetailsDeserializerError::InputLengthWrong { msg, len } => {
+                    Err(de::Error::invalid_length(len, &msg))
+                }
+                crate::enums::ContactDetailsDeserializerError::InputFormatWrong { unexp, exp } => {
+                    Err(de::Error::invalid_value(de::Unexpected::Str(&unexp), &exp))
+                }
+                crate::enums::ContactDetailsDeserializerError::WrongContactType(_msg) => {
+                    todo!()
+                }
+            },
+        }
+    }
 }

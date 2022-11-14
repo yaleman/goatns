@@ -110,7 +110,7 @@ async fn handle_get_command(
         typerecords: vec![],
     };
 
-    match db::get_records(conn, db_name.to_string(), rrtype, rclass).await {
+    match db::get_records(conn, db_name.to_string(), rrtype, rclass, true).await {
         Ok(value) => zr.typerecords.extend(value),
         Err(err) => {
             log::error!("Failed to query db: {err:?}")
@@ -139,7 +139,8 @@ async fn handle_get_command(
     Ok(())
 }
 
-async fn handle_import_file(
+/// Import a file direclty into the database. Normally, you shouldn't use this directly, call it through calls to the datastore.
+pub async fn handle_import_file(
     pool: &Pool<Sqlite>,
     filename: String,
     zone_name: Option<String>,

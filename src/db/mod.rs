@@ -1,3 +1,4 @@
+use crate::resourcerecord::SetTTL;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,7 +16,7 @@ use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
 use sqlx::{Arguments, ConnectOptions, Connection, Pool, Row, Sqlite, SqlitePool, Transaction};
 
 #[cfg(test)]
-mod test;
+pub mod test;
 
 const SQL_VIEW_RECORDS: &str = "records_merged";
 
@@ -616,11 +617,15 @@ impl TryFrom<SqliteRow> for InternalResourceRecord {
     }
 }
 
+/// Pull a vec of [InternalResourceRecords] directly from the database
+///
+/// Setting normalize_ttls=true sets the TTL on all records to the LOWEST of the returned records.
 pub async fn get_records(
     conn: &Pool<Sqlite>,
     name: String,
     rrtype: RecordType,
     rclass: RecordClass,
+    normalize_ttls: bool,
 ) -> Result<Vec<InternalResourceRecord>, sqlx::Error> {
     let res = sqlx::query(&format!(
         "SELECT
@@ -648,7 +653,31 @@ pub async fn get_records(
             results.push(irr);
         }
     }
-    log::trace!("results: {results:?}");
+
+    // skip the normalisation step if we've got 0 or 1 result.
+    if results.len() <= 1 {
+        return Ok(results);
+    }
+
+    let results = match normalize_ttls {
+        true => {
+            let min_ttl = results.iter().map(|r| r.ttl()).min();
+            let min_ttl = match min_ttl {
+                Some(val) => val.to_owned(),
+                None => {
+                    log::error!("Somehow failed to get minimum TTL from query");
+                    1
+                }
+            };
+
+            results
+                .to_vec()
+                .iter()
+                .map(|r| r.clone().set_ttl(min_ttl))
+                .collect()
+        }
+        false => results,
+    };
     Ok(results)
 }
 
