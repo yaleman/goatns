@@ -2,8 +2,8 @@
 //!
 
 use clap::{arg, command, value_parser, Arg, ArgMatches};
-use dialoguer::{Input, Confirm};
 use dialoguer::theme::ColorfulTheme;
+use dialoguer::{Confirm, Input};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
@@ -12,7 +12,6 @@ use crate::config::ConfigFile;
 use crate::datastore::Command;
 use crate::enums::SystemState;
 use crate::zones::FileZone;
-
 
 /// Handles the command-line arguments.
 pub fn clap_parser() -> ArgMatches {
@@ -92,7 +91,6 @@ pub async fn cli_commands(
         default_config();
         return Ok(SystemState::ShuttingDown);
     }
-
 
     if let Some(zone_name) = clap_results.get_one::<String>("export_zone") {
         if let Some(output_filename) = clap_results.get_one::<String>("filename") {

@@ -141,6 +141,7 @@ impl DNSCharString {
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+/// Internal representation of a resource record
 pub enum InternalResourceRecord {
     /// A single host address
     A {
@@ -617,7 +618,7 @@ impl InternalResourceRecord {
                 };
                 hinfo_bytes
             }
-            // InternalResourceRecord::MINFO {  } => todo!(),
+            // InternalResourceRecord::MINFO { ttl, .. } => ttl(),
             InternalResourceRecord::MX {
                 preference,
                 exchange,
@@ -648,6 +649,180 @@ impl InternalResourceRecord {
 
     pub fn hexdump(self) {
         hexdump(self.as_bytes(&vec![]));
+    }
+
+    pub fn ttl(&self) -> &u32 {
+        match self {
+            InternalResourceRecord::A { ttl, .. } => ttl,
+            InternalResourceRecord::AAAA { ttl, .. } => ttl,
+            InternalResourceRecord::AXFR { ttl, .. } => ttl,
+            InternalResourceRecord::CAA { ttl, .. } => ttl,
+            InternalResourceRecord::CNAME { ttl, .. } => ttl,
+            InternalResourceRecord::LOC { ttl, .. } => ttl,
+            InternalResourceRecord::NAPTR { ttl, .. } => ttl,
+            InternalResourceRecord::NS { ttl, .. } => ttl,
+            InternalResourceRecord::SOA { minimum, .. } => minimum,
+            InternalResourceRecord::PTR { ttl, .. } => ttl,
+            InternalResourceRecord::HINFO { ttl, .. } => ttl,
+            InternalResourceRecord::MX { ttl, .. } => ttl,
+            InternalResourceRecord::TXT { ttl, .. } => ttl,
+            InternalResourceRecord::URI { ttl, .. } => ttl,
+            InternalResourceRecord::InvalidType => &0,
+        }
+    }
+}
+
+pub trait SetTTL {
+    fn set_ttl(self, ttl: u32) -> Self;
+}
+
+impl SetTTL for InternalResourceRecord {
+    fn set_ttl(self, ttl: u32) -> Self {
+        match self {
+            Self::A {
+                address, rclass, ..
+            } => Self::A {
+                ttl,
+                address,
+                rclass,
+            },
+            Self::AAAA {
+                address, rclass, ..
+            } => Self::AAAA {
+                address,
+                rclass,
+                ttl,
+            },
+            Self::AXFR { rclass, .. } => Self::AXFR { ttl, rclass },
+            Self::CAA {
+                flag,
+                tag,
+                value,
+                rclass,
+                ..
+            } => Self::CAA {
+                flag,
+                tag,
+                value,
+                rclass,
+                ttl,
+            },
+            Self::CNAME { cname, rclass, .. } => Self::CNAME { cname, ttl, rclass },
+            Self::LOC {
+                rclass,
+                version,
+                size,
+                horiz_pre,
+                vert_pre,
+                latitude,
+                longitude,
+                altitude,
+                ..
+            } => Self::LOC {
+                ttl,
+                rclass,
+                version,
+                size,
+                horiz_pre,
+                vert_pre,
+                latitude,
+                longitude,
+                altitude,
+            },
+            Self::NAPTR {
+                rclass,
+                domain,
+                order,
+                preference,
+                flags,
+                ..
+            } => Self::NAPTR {
+                rclass,
+                domain,
+                order,
+                preference,
+                flags,
+                ttl,
+            },
+            Self::NS {
+                nsdname, rclass, ..
+            } => Self::NS {
+                nsdname,
+                ttl,
+                rclass,
+            },
+            Self::SOA {
+                zone,
+                mname,
+                rname,
+                serial,
+                refresh,
+                retry,
+                expire,
+                rclass,
+                ..
+            } => Self::SOA {
+                zone,
+                mname,
+                rname,
+                serial,
+                refresh,
+                retry,
+                expire,
+                minimum: ttl,
+                rclass,
+            },
+            Self::PTR {
+                ptrdname, rclass, ..
+            } => Self::PTR {
+                ptrdname,
+                ttl,
+                rclass,
+            },
+            Self::HINFO {
+                cpu,
+                os,
+                ttl,
+                rclass,
+                ..
+            } => Self::HINFO {
+                cpu,
+                os,
+                rclass,
+                ttl,
+            },
+            Self::MX {
+                preference,
+                exchange,
+                rclass,
+                ..
+            } => Self::MX {
+                preference,
+                exchange,
+                ttl,
+                rclass,
+            },
+            Self::TXT { txtdata, class, .. } => Self::TXT {
+                txtdata,
+                class,
+                ttl,
+            },
+            Self::URI {
+                priority,
+                weight,
+                target,
+                rclass,
+                ..
+            } => Self::URI {
+                priority,
+                weight,
+                target,
+                rclass,
+                ttl,
+            },
+            //  Self::InvalidType => &0,
+            _ => todo!(),
+        }
     }
 }
 

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::enums::ContactDetails;
 
 #[test]
@@ -28,4 +30,43 @@ fn test_contactdetails() {
     assert!(ContactDetails::try_from("asdfasdf".to_string()).is_err());
     assert!(ContactDetails::try_from("foo:asdfasdf".to_string()).is_err());
     assert!(ContactDetails::try_from("foo:asdfasdfÚ:asdfasdfd".to_string()).is_err());
+}
+
+#[test]
+fn test_contactdetails_deser() {
+    use crate::config::ConfigFile;
+
+    let configfile = r#"{
+	"admin_contact" : "asdfadsf"
+}
+"#;
+    print!("Parsing config file...");
+    let configfile = ConfigFile::from_str(configfile).unwrap();
+    println!("OK");
+
+    println!(
+        "Checking that {:?} = {:?}",
+        configfile.admin_contact,
+        ContactDetails::None
+    );
+    assert_eq!(configfile.admin_contact, ContactDetails::None);
+
+    let configfile = r#"{
+	"admin_contact" : "Mastodon:yaleman@mastodon.social"
+}
+"#;
+    print!("Parsing config file...");
+    let configfile = ConfigFile::from_str(configfile).unwrap();
+    println!("OK");
+
+    let expected_result: ContactDetails = ContactDetails::Mastodon {
+        contact: "yaleman".to_string(),
+        server: "mastodon.social".to_string(),
+    };
+
+    println!(
+        "Checking that {:?} = {expected_result:?}",
+        configfile.admin_contact
+    );
+    assert_eq!(configfile.admin_contact, expected_result);
 }

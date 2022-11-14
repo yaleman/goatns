@@ -277,11 +277,11 @@ pub async fn login(
                             if !state.config().await.user_auto_provisioning {
                                 // TODO: show a "sorry" page when auto-provisioning's not enabled
                                 // log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
-                                let admin_contact = state.config().await.admin_contact;
-                                let admin_contact = match admin_contact {
-                                    Some(value) => value,
-                                    None => "the administrator".to_string(),
-                                };
+                                let admin_contact = state.config().await.admin_contact.to_string();
+                                // let admin_contact = match admin_contact {
+                                //     Some(value) => value.to_string(),
+                                //     None => "the administrator".to_string(),
+                                // };
                                 let context = AuthProvisioningDisabledTemplate {
                                     username: claims.get_username(),
                                     authref: claims.subject().to_string(),

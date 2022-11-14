@@ -370,11 +370,18 @@ impl From<bool> for PacketType {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, PartialEq, Eq, Clone)]
 pub enum ContactDetails {
     Mastodon { contact: String, server: String },
     Email { contact: String },
     Twitter { contact: String },
+    None,
+}
+
+impl Default for ContactDetails {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 impl ToString for ContactDetails {
@@ -389,21 +396,31 @@ impl ToString for ContactDetails {
             ContactDetails::Twitter { contact } => {
                 format!(r#"<a href="https://twitter.com/{contact}">{contact}</a>"#)
             }
+            ContactDetails::None => "".to_string(),
         }
     }
 }
 
+#[derive(Debug)]
+/// Errors returned from trying to turn a String into a [ContactDetails]
+pub enum ContactDetailsDeserializerError {
+    InputLengthWrong { msg: &'static str, len: usize },
+    InputFormatWrong { unexp: String, exp: &'static str },
+    WrongContactType(String),
+}
+
 impl TryFrom<String> for ContactDetails {
-    type Error = String;
+    type Error = ContactDetailsDeserializerError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let mut split_value = value.split(':');
         let contact_type = split_value.next();
         let contact_value = split_value.next();
         if contact_type.is_none() || contact_value.is_none() {
-            return Err(
-                "Length of input is wrong please ensure it's in the format type:username@server (server for Mastodon)".to_string(),
-            );
+            return Err(ContactDetailsDeserializerError::InputLengthWrong{
+                msg: "Length of input is wrong please ensure it's in the format type:username@server (server for Mastodon)",
+                len: split_value.count(),
+            });
         }
         let contact_value = contact_value.unwrap();
         match contact_type.unwrap() {
@@ -415,9 +432,8 @@ impl TryFrom<String> for ContactDetails {
                     )
                 };
                 if !contact_value.contains('@') {
-                    return Err(
-                        "Input format is wrong please ensure it's in the format Mastodon:username@server for Mastodon".to_string(),
-                    );
+                    return Err(ContactDetailsDeserializerError::InputFormatWrong{unexp: contact_value.to_string(),exp: "Input format is wrong please ensure it's in the format Mastodon:username@server for Mastodon",
+                });
                 }
 
                 let mut contact_split = contact_value.split('@');
@@ -437,7 +453,10 @@ impl TryFrom<String> for ContactDetails {
 
             },
             &_ => {
-                Err(format!("Contact type ({}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon", contact_type.unwrap()))
+                Err(ContactDetailsDeserializerError::WrongContactType(format!(
+                        "Contact type ({}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon",
+                        contact_type.unwrap()
+                        ) ))
             }
         }
     }

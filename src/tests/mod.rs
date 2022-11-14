@@ -2,18 +2,21 @@ mod db;
 mod e2e_test;
 mod enums;
 mod resourcerecord;
+pub mod test_harness;
 mod utils;
 
+use crate::db::test::test_get_sqlite_memory;
+use crate::db::*;
 use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::{InternalResourceRecord, LocRecord};
+use crate::tests::test_harness::*;
 use crate::utils::name_as_bytes;
 use crate::{get_question_qname, PacketType, Question};
 use ipnet::IpNet;
+use log::debug;
 use packed_struct::prelude::*;
 use std::net::IpAddr;
 use std::str::FromStr;
-
-use log::debug;
 
 #[test]
 /// test my assumptions about ipnet things
@@ -638,4 +641,84 @@ async fn test_question_from_bytes() {
             panic!("This should bail!");
         }
     }
+}
+
+#[tokio::test]
+/// this test checks that all TTLs in the record are the same when we set normalise_ttls = true
+async fn test_normalize_ttls() {
+    // use crate::zones::FileZoneRecord;
+    let pool = test_get_sqlite_memory().await;
+
+    start_db(&pool).await.unwrap();
+    import_test_zone_file(&pool).await.unwrap();
+
+    let response = get_records(
+        &pool,
+        "ttltest.hello.goat".to_string(),
+        RecordType::A,
+        RecordClass::Internet,
+        true,
+    )
+    .await
+    .unwrap();
+
+    print!("Checking that we got three records...");
+    assert!(response.iter().len() == 3);
+    println!(" OK");
+
+    // first we just check we got three records from the db
+    let mut found_records: Vec<u32> = vec![];
+    for record in response {
+        println!("found record {record:?}");
+        if let InternalResourceRecord::A { ttl, .. } = record {
+            if !found_records.contains(&ttl) {
+                found_records.push(ttl);
+            }
+        } else {
+            println!("We found a record that wasn't an A record, that's cool I guess?")
+        }
+    }
+    print!("Checking that we found a single ttl...");
+    assert!(found_records.len() == 1);
+    println!(" OK");
+}
+
+#[tokio::test]
+/// this test checks that all TTLs in the record are the same when we set normalise_ttls = true
+async fn test_dont_normalize_ttls() {
+    // use crate::zones::FileZoneRecord;
+    let pool = test_get_sqlite_memory().await;
+
+    start_db(&pool).await.unwrap();
+    import_test_zone_file(&pool).await.unwrap();
+
+    let response = get_records(
+        &pool,
+        "ttltest.hello.goat".to_string(),
+        RecordType::A,
+        RecordClass::Internet,
+        false,
+    )
+    .await
+    .unwrap();
+
+    print!("Checking that we got three records...");
+    assert!(response.iter().len() == 3);
+    println!(" OK");
+
+    // first we just check we got three records from the db
+    let mut found_records: Vec<u32> = vec![];
+    for record in response {
+        println!("found record {record:?}");
+        if let InternalResourceRecord::A { ttl, .. } = record {
+            if !found_records.contains(&ttl) {
+                found_records.push(ttl);
+            }
+        } else {
+            println!("We found a record that wasn't an A record, that's cool I guess?")
+        }
+    }
+    print!("Checking that we found three different ttls...");
+    assert!(found_records.len() == 3);
+    println!(" OK");
 }

@@ -12,6 +12,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use url::Url;
 
+use crate::enums::ContactDetails;
+
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 /// Allow-listing ranges for making particular kinds of requests
 pub struct IPAllowList {
@@ -78,7 +80,7 @@ pub struct ConfigFile {
     /// Clean up sessions table every n seconds
     pub sql_session_cleanup_seconds: u64,
     /// Administrator contact details
-    pub admin_contact: Option<String>,
+    pub admin_contact: ContactDetails,
     /// Allow auto-provisioning of users
     pub user_auto_provisioning: bool,
 }
@@ -227,6 +229,24 @@ impl From<Config> for ConfigFile {
                 .get("user_auto_provisioning")
                 .unwrap_or(Self::default().user_auto_provisioning),
         }
+    }
+}
+
+impl FromStr for ConfigFile {
+    type Err = String;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        // let res =Config::try_from(&input);
+
+        let configfile = File::from_str(input, config::FileFormat::Json);
+
+        let res = Config::builder()
+            .add_source(configfile)
+            .build()
+            .map_err(|e| format!("{e:?}"))?;
+
+        let res: ConfigFile = res.into();
+        Ok(res)
     }
 }
 

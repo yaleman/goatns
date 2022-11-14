@@ -206,6 +206,25 @@
                 "rrtype" : "TXT",
                 "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
                 "ttl" : 60
+            },
+            {
+                "name" : "ttltest",
+                "rrtype" : "A",
+                "rdata" : "1.1.1.1",
+                "ttl" : 1
+            },
+            {
+                "name" : "ttltest",
+                "rrtype" : "A",
+                "rdata" : "2.2.2.2",
+                "ttl" : 2
+            },
+            
+            {
+                "name" : "ttltest",
+                "rrtype" : "A",
+                "rdata" : "3.3.3.3",
+                "ttl" : 3
             }
 
         ]

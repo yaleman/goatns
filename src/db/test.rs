@@ -170,6 +170,7 @@ async fn test_db_create_records() -> Result<(), sqlx::Error> {
         "foo".to_string(),
         RecordType::TXT,
         RecordClass::Internet,
+        false,
     )
     .await?;
     println!("Record: {res:?}");
@@ -227,6 +228,7 @@ async fn test_all_db_things() -> Result<(), sqlx::Error> {
         String::from("foo.example.com"),
         RecordType::TXT,
         RecordClass::Internet,
+        false,
     )
     .await?;
     println!("Result: {result:?}");
