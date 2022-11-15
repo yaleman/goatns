@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use super::utils::{redirect_to_dashboard, redirect_to_home};
 use super::SharedState;
-use crate::config::ConfigFile;
 use crate::db::{DBEntity, User};
 use crate::web::SharedStateTrait;
 use crate::COOKIE_NAME;
@@ -368,7 +367,7 @@ pub async fn logout(mut session: WritableSession) -> impl IntoResponse {
 }
 
 pub async fn build_auth_stores(
-    config: &ConfigFile,
+    sql_session_cleanup_seconds: u64,
     connpool: Pool<Sqlite>,
 ) -> SessionLayer<SqliteSessionStore> {
     let mut secret: [u8; 128] = [0; 128];
@@ -382,7 +381,7 @@ pub async fn build_auth_stores(
         .expect("Could not migrate session store database on startup!");
 
     let _ = tokio::spawn(sessions::session_store_cleanup(
-        Duration::from_secs(config.sql_session_cleanup_seconds),
+        Duration::from_secs(sql_session_cleanup_seconds),
         session_store.clone(),
     ));
 

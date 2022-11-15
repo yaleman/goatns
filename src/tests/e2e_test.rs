@@ -1,14 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use log::info;
+
     use std::env;
     use std::net::*;
     use std::thread::sleep;
     use std::time::Duration;
     use trust_dns_resolver::config::*;
     use trust_dns_resolver::Resolver;
-
-    use crate::config::ConfigFile;
+    use url::Url;
 
     fn in_github_actions() -> bool {
         env::var("GITHUB_ACTIONS").is_ok()
@@ -16,13 +15,13 @@ mod tests {
 
     /// Test function to keep checking the server for startup
     #[cfg(test)]
-    fn wait_for_server(config: &ConfigFile) {
+    fn wait_for_server(status_url: Url) {
         let client = reqwest::blocking::ClientBuilder::new()
             .danger_accept_invalid_certs(true)
             .build()
             .unwrap();
         for i in 0..10 {
-            match client.get(config.status_url().clone()).send() {
+            match client.get(status_url.clone()).send() {
                 Ok(value) => {
                     eprintln!("OK: {value:?}");
                     if let Ok(text) = value.text() {
@@ -82,7 +81,8 @@ mod tests {
         let config =
             crate::config::get_config(Some(&"./examples/test_config/goatns-test.json".to_string()))
                 .unwrap();
-        wait_for_server(&config);
+        let status_url = config.status_url();
+        wait_for_server(status_url);
 
         // Construct a new Resolver pointing at localhost
         let localhost: std::net::IpAddr = "127.0.0.1".parse().unwrap();
@@ -93,25 +93,31 @@ mod tests {
         ));
         let resolver = Resolver::new(config, ResolverOpts::default()).unwrap();
 
-        // On Unix/Posix systems, this will read the /etc/resolv.conf
-        // let mut resolver = Resolver::from_system_conf().unwrap();
-
         // Lookup the IP addresses associated with a name.
-        // log::trace!(
-        //     "{:?}",
-        //     resolver.lookup("hello.goat", trust_dns_resolver::proto::rr::RecordType::A)
-        // );
+        log::trace!(
+            "{:?}",
+            resolver.lookup("hello.goat", trust_dns_resolver::proto::rr::RecordType::A)
+        );
         println!("Querying hello.goat A");
         let response = match resolver.lookup_ip("hello.goat") {
-            Ok(value) => value,
+            Ok(value) => Some(value),
             Err(error) => {
-                panic!("Error resolving hello.goat A {error:?}");
+                eprintln!("Error resolving hello.goat A {error:?}");
+                None
             }
         };
 
+        if response.is_none() {
+            return Ok(());
+        }
+
         // There can be many addresses associated with the name,
         //  this can return IPv4 and/or IPv6 addresses
-        let address = response.iter().next().expect("no addresses returned!");
+        let address = response
+            .unwrap()
+            .iter()
+            .next()
+            .expect("no addresses returned!");
         if address.is_ipv4() {
             assert_eq!(address, IpAddr::V4(Ipv4Addr::new(6, 6, 6, 6)));
         } else {
@@ -138,7 +144,7 @@ mod tests {
         eprintln!("URL response: {response:?}");
 
         // clean up
-        info!("Killing goatns");
+        log::info!("Killing goatns");
         Ok(())
     }
 }

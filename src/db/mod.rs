@@ -9,6 +9,7 @@ use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::{FileZone, FileZoneRecord};
 use async_trait::async_trait;
+use concread::cowcell::asynch::CowCellReadTxn;
 use openidconnect::SubjectIdentifier;
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolConnection;
@@ -20,8 +21,8 @@ pub mod test;
 
 const SQL_VIEW_RECORDS: &str = "records_merged";
 
-pub async fn get_conn(config: &ConfigFile) -> Result<Pool<Sqlite>, String> {
-    let db_path: &str = &shellexpand::full(&config.sqlite_path).unwrap();
+pub async fn get_conn(config_reader: CowCellReadTxn<ConfigFile>) -> Result<Pool<Sqlite>, String> {
+    let db_path: &str = &shellexpand::full(&config_reader.sqlite_path).unwrap();
     let db_url = format!("sqlite://{db_path}?mode=rwc");
     log::debug!("Opening Database: {db_url}");
 
@@ -29,7 +30,7 @@ pub async fn get_conn(config: &ConfigFile) -> Result<Pool<Sqlite>, String> {
         Ok(value) => value,
         Err(error) => return Err(format!("connection failed: {error:?}")),
     };
-    if config.sql_log_statements {
+    if config_reader.sql_log_statements {
         options.log_statements(log::LevelFilter::Trace);
     } else {
         options.log_statements(log::LevelFilter::Off);
@@ -37,7 +38,7 @@ pub async fn get_conn(config: &ConfigFile) -> Result<Pool<Sqlite>, String> {
     // log anything that takes longer than 1s
     options.log_slow_statements(
         log::LevelFilter::Warn,
-        Duration::from_secs(config.sql_log_slow_duration),
+        Duration::from_secs(config_reader.sql_log_slow_duration),
     );
 
     match SqlitePool::connect_with(options).await {

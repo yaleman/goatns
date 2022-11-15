@@ -1,4 +1,6 @@
+use axum_server::tls_rustls::RustlsConfig;
 use clap::ArgMatches;
+use concread::cowcell::asynch::{CowCell, CowCellReadTxn, CowCellWriteTxn};
 use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
 use flexi_logger::{DeferredNow, LoggerHandle};
@@ -61,7 +63,7 @@ pub struct ConfigFile {
     pub api_static_dir: String,
     /// Secret for cookie storage - don't hard code this, it'll randomly generate on startup
     #[serde(default = "generate_cookie_secret", skip)]
-    api_cookie_secret: String,
+    pub api_cookie_secret: String,
     /// OAuth2 Resource server name
     pub oauth2_client_id: String,
     /// If your instance is behind a proxy/load balancer/whatever, you need to specify this, eg `https://example.com:12345`
@@ -87,11 +89,61 @@ pub struct ConfigFile {
     pub user_auto_provisioning: bool,
 }
 
+// impl From<&CowCellReadTxn<ConfigFile>> for ConfigFile {
+//     fn from(input: &CowCellReadTxn<ConfigFile>) -> Self {
+//         ConfigFile {
+//             hostname: input.hostname.clone(),
+//             address: input.address.clone(),
+//             port: input.port,
+//             capture_packets: input.capture_packets,
+//             log_level: input.log_level.clone(),
+//             tcp_client_timeout: input.tcp_client_timeout,
+//             enable_hinfo: input.enable_hinfo,
+//             sqlite_path: input.sqlite_path.clone(),
+//             zone_file: input.zone_file.clone(),
+//             ip_allow_lists: input.ip_allow_lists.clone(),
+//             enable_api: input.enable_api,
+//             api_port: input.api_port,
+//             api_tls_cert: input.api_tls_cert.clone(),
+//             api_tls_key: input.api_tls_key.clone(),
+//             api_static_dir: input.api_static_dir.clone(),
+//             api_cookie_secret: input.api_cookie_secret.clone(),
+//             oauth2_client_id: input.oauth2_client_id.clone(),
+//             oauth2_redirect_url: input.oauth2_redirect_url.clone(),
+//             oauth2_secret: input.oauth2_secret.clone(),
+//             oauth2_config_url: input.oauth2_config_url.clone(),
+//             oauth2_user_scopes: input.oauth2_user_scopes.clone(),
+//             sql_log_statements: input.sql_log_statements.clone(),
+//             sql_log_slow_duration: input.sql_log_slow_duration.clone(),
+//             sql_session_cleanup_seconds: input.sql_session_cleanup_seconds,
+//             admin_contact: input.admin_contact.clone(),
+//             user_auto_provisioning: input.user_auto_provisioning,
+//         }
+//     }
+// }
+
 fn generate_cookie_secret() -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), 64)
 }
 
 impl ConfigFile {
+    /// JSONify the configfile in a pretty way using serde
+    pub fn as_json_pretty(&self) -> String {
+        serde_json::to_string_pretty(self)
+            .map_err(|e| format!("Failed to serialize config: {e:?}"))
+            .unwrap()
+    }
+
+    /// Get a bindable SocketAddr for use in the DNS listeners
+    pub fn dns_listener_address(&self) -> Result<SocketAddr, Option<String>> {
+        let listen_addr = format!("{}:{}", &self.address, &self.port);
+
+        listen_addr.parse::<SocketAddr>().map_err(|e| {
+            log::error!("Failed to parse address: {e:?}");
+            None
+        })
+    }
+
     /// get a string version of the listener address
     pub fn api_listener_address(&self) -> SocketAddr {
         SocketAddr::from_str(&format!("{}:{}", self.address, self.api_port)).unwrap()
@@ -107,6 +159,17 @@ impl ConfigFile {
             self.hostname, self.api_port
         ))
         .unwrap()
+    }
+
+    pub async fn get_tls_config(&self) -> RustlsConfig {
+        log::trace!(
+            "tls config: cert={:?} key={:?}",
+            self.api_tls_cert,
+            self.api_tls_key
+        );
+        RustlsConfig::from_pem_file(self.api_tls_cert.to_owned(), self.api_tls_key.to_owned())
+            .await
+            .unwrap()
     }
 }
 
@@ -264,6 +327,13 @@ lazy_static! {
 /// Loads the configuration from a given file or from some default locations.
 ///
 /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
+pub fn get_config_cowcell(config_path: Option<&String>) -> Result<CowCell<ConfigFile>, String> {
+    match get_config(config_path) {
+        Ok(value) => Ok(CowCell::new(value)),
+        Err(err) => Err(err),
+    }
+}
+
 pub fn get_config(config_path: Option<&String>) -> Result<ConfigFile, String> {
     let file_locations = match config_path {
         Some(value) => vec![value.to_owned()],
@@ -297,10 +367,11 @@ pub fn get_config(config_path: Option<&String>) -> Result<ConfigFile, String> {
             }
         }
     }
+
     Ok(ConfigFile::default())
 }
 
-pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> {
+pub async fn check_config(mut config: CowCellWriteTxn<'_, ConfigFile>) -> Result<(), Vec<String>> {
     let mut config_ok: bool = true;
     let mut errors: Vec<String> = vec![];
 
@@ -329,14 +400,15 @@ pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> 
         config_ok = false;
     };
 
+    config.commit().await;
     match config_ok {
-        true => Ok(config.to_owned()),
+        true => Ok(()),
         false => Err(errors),
     }
 }
 
-pub fn setup_logging(
-    config: &ConfigFile,
+pub async fn setup_logging(
+    config: CowCellReadTxn<ConfigFile>,
     clap_results: &ArgMatches,
 ) -> Result<LoggerHandle, String> {
     // force the log level to info if we're testing config

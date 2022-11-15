@@ -1,3 +1,4 @@
+use concread::cowcell::asynch::CowCellReadTxn;
 use packed_struct::prelude::*;
 use std::net::SocketAddr;
 use std::str::{from_utf8, FromStr};
@@ -22,11 +23,7 @@ lazy_static! {
 }
 
 /// this handles a shutdown CHAOS request
-async fn check_for_shutdown(
-    r: &Reply,
-    addr: &SocketAddr,
-    config: &ConfigFile,
-) -> Result<Reply, Option<Reply>> {
+async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<Reply, Option<Reply>> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
     if let Some(q) = &r.question {
         if q.qclass == RecordClass::Chaos {
@@ -41,16 +38,16 @@ async fn check_for_shutdown(
             // Just don't do this on UDP, because we can't really tell who it's coming from.
             if qname == "shutdown" {
                 // when we get a request, we update the response to say if we're going to do it or not
-                match config.ip_allow_lists.shutdown.contains(&addr.ip()) {
+                match allowed_shutdown {
                     true => {
-                        log::info!("Got CHAOS shutdown from {:?}, shutting down", addr.ip());
+                        log::info!("Got CHAOS shutdown, shutting down");
                         let mut chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_OK.clone());
                         return Ok(chaos_reply);
                     }
                     false => {
                         // get lost!  🤣
-                        log::warn!("Got CHAOS shutdown from {:?}, ignoring!", addr.ip());
+                        log::warn!("Got CHAOS shutdown, ignoring!");
                         let mut chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_NO.clone());
                         chaos_reply.header.rcode = Rcode::Refused;
@@ -84,13 +81,12 @@ async fn check_for_shutdown(
 // }
 
 pub async fn udp_server(
-    bind_address: SocketAddr,
-    config: ConfigFile,
+    config: CowCellReadTxn<ConfigFile>,
     datastore: mpsc::Sender<crate::datastore::Command>,
     _agent_tx: broadcast::Sender<AgentState>,
     mut _agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
-    let udp_sock = match UdpSocket::bind(bind_address).await {
+    let udp_sock = match UdpSocket::bind(config.dns_listener_address().unwrap()).await {
         Ok(value) => {
             log::info!("Started UDP listener on {}:{}", config.address, config.port);
             value
@@ -171,7 +167,8 @@ pub async fn tcp_conn_handler(
     addr: SocketAddr,
     tx: mpsc::Sender<Command>,
     agent_tx: broadcast::Sender<AgentState>,
-    config: ConfigFile,
+    capture_packets: bool,
+    allowed_shutdown: bool,
 ) -> io::Result<()> {
     let (mut reader, writer) = stream.split();
     let msg_length: usize = reader.read_u16().await?.into();
@@ -210,7 +207,7 @@ pub async fn tcp_conn_handler(
     let buf = &buf[0..msg_length];
     let result = match timeout(
         Duration::from_millis(REPLY_TIMEOUT_MS),
-        parse_query(tx.clone(), msg_length, buf, config.capture_packets),
+        parse_query(tx.clone(), msg_length, buf, capture_packets),
     )
     .await
     {
@@ -226,7 +223,7 @@ pub async fn tcp_conn_handler(
             log::debug!("TCP Result: {r:?}");
 
             // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
-            let r = match check_for_shutdown(&r, &addr, &config).await {
+            let r = match check_for_shutdown(&r, allowed_shutdown).await {
                 // no change here
                 Err(reply) => match reply {
                     None => r,
@@ -286,15 +283,17 @@ pub async fn tcp_conn_handler(
 ///
 /// Ref <https://www.rfc-editor.org/rfc/rfc7766>
 pub async fn tcp_server(
-    bind_address: SocketAddr,
-    config: ConfigFile,
+    config: CowCellReadTxn<ConfigFile>,
     tx: mpsc::Sender<crate::datastore::Command>,
     agent_tx: broadcast::Sender<AgentState>,
     mut agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
-    let tcpserver = match TcpListener::bind(bind_address).await {
+    let tcpserver = match TcpListener::bind(config.dns_listener_address().unwrap()).await {
         Ok(value) => {
-            log::info!("Started TCP listener on {}", bind_address);
+            log::info!(
+                "Started TCP listener on {}",
+                config.dns_listener_address().unwrap()
+            );
             value
         }
         Err(error) => {
@@ -303,27 +302,37 @@ pub async fn tcp_server(
         }
     };
 
+    let tcp_client_timeout = config.tcp_client_timeout;
+    let shutdown_ip_address_list = config.ip_allow_lists.shutdown.to_vec();
+    let capture_packets = config.capture_packets;
     loop {
         let (mut stream, addr) = match tcpserver.accept().await {
             Ok(value) => value,
             Err(error) => panic!("Couldn't get data from TcpStream: {:?}", error),
         };
 
+        let allowed_shutdown = shutdown_ip_address_list.contains(&addr.ip());
         log::debug!("TCP connection from {:?}", addr);
         let loop_tx = tx.clone();
-        let loop_config = config.clone();
         let loop_agent_tx = agent_tx.clone();
         tokio::spawn(async move {
             if timeout(
-                Duration::from_secs(loop_config.tcp_client_timeout),
-                tcp_conn_handler(&mut stream, addr, loop_tx, loop_agent_tx, loop_config),
+                Duration::from_secs(tcp_client_timeout),
+                tcp_conn_handler(
+                    &mut stream,
+                    addr,
+                    loop_tx,
+                    loop_agent_tx,
+                    capture_packets,
+                    allowed_shutdown,
+                ),
             )
             .await
             .is_err()
             {
                 log::warn!(
                     "TCP Connection from {addr:?} terminated after {} seconds.",
-                    config.tcp_client_timeout
+                    tcp_client_timeout
                 );
             }
         })

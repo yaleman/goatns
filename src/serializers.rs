@@ -24,7 +24,6 @@ where
     s.serialize_str(&addr.to_string())
 }
 
-
 impl<'de> de::Deserialize<'de> for ContactDetails {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

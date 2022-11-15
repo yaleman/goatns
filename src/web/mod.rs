@@ -12,7 +12,9 @@ use axum::{Extension, Router};
 ///
 /// Example using shared state: https://github.com/tokio-rs/axum/blob/axum-v0.5.17/examples/key-value-store/src/main.rs
 use axum_extra::routing::SpaRouter;
+use axum_server::tls_rustls::RustlsConfig;
 use chrono::{DateTime, NaiveDateTime, Utc};
+use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{ClientId, ClientSecret, PkceCodeVerifier, RedirectUrl};
 use openidconnect::Nonce;
 use sqlx::{Pool, Sqlite};
@@ -21,6 +23,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
@@ -133,9 +136,9 @@ pub struct State {
 
 pub async fn build(
     tx: Sender<datastore::Command>,
-    config: ConfigFile,
+    config: CowCellReadTxn<ConfigFile>,
     connpool: Pool<Sqlite>,
-) -> axum::Router {
+) -> Option<JoinHandle<Result<(), std::io::Error>>> {
     let config_dir: PathBuf = shellexpand::tilde(&config.api_static_dir)
         .to_string()
         .into();
@@ -172,12 +175,14 @@ pub async fn build(
 
     let static_router = SpaRouter::new("/ui/static", &config_dir);
 
-    let session_layer = auth::build_auth_stores(&config, connpool.clone()).await;
+    let session_layer =
+        auth::build_auth_stores(config.sql_session_cleanup_seconds, connpool.clone()).await;
 
+    // let config_clone: ConfigFile = ConfigFile::from(&config);
     let state: SharedState = Arc::new(RwLock::new(State {
         tx,
         connpool,
-        config,
+        config: (*config).clone(),
         oidc_config_updated: None,
         oidc_config: None,
         oidc_verifier: HashMap::new(),
@@ -199,7 +204,7 @@ pub async fn build(
             .into_response()
     }
 
-    Router::new()
+    let router = Router::new()
         .route("/", get(generic::index))
         .route("/status", get(generic::status))
         .merge(static_router)
@@ -215,5 +220,17 @@ pub async fn build(
                 .layer(session_layer)
                 .into_inner(),
         )
-        .fallback(handler_404.into_service())
+        .fallback(handler_404.into_service());
+
+    let tls_cert = &config.api_tls_cert.clone();
+    let tls_config = RustlsConfig::from_pem_file(&tls_cert, &config.api_tls_key)
+        .await
+        .unwrap();
+
+    let res = Some(tokio::spawn(
+        axum_server::bind_rustls(config.api_listener_address(), tls_config)
+            .serve(router.into_make_service()),
+    ));
+    log::debug!("Started Web server on {}", config.api_listener_address());
+    res
 }

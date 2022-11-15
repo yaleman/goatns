@@ -1,11 +1,9 @@
 use std::str::from_utf8;
 use std::sync::Arc;
 
-use crate::config::ConfigFile;
 use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
 use crate::zones::{FileZone, ZoneRecord};
-use clap::ArgMatches;
 use log::debug;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
@@ -150,7 +148,7 @@ pub async fn handle_import_file(
         .await
         .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
 
-    let zones: Vec<FileZone> = crate::zones::load_zones(filename.as_str())?;
+    let zones: Vec<FileZone> = crate::zones::load_zones(&filename)?;
 
     let zones = match zone_name {
         Some(name) => zones.into_iter().filter(|z| z.name == name).collect(),
@@ -211,17 +209,18 @@ async fn handle_get_zone_names(
 /// Manages the datastore, waits for signals from the server instances and responds with data
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
-    config: ConfigFile,
-    clap_results: ArgMatches,
+    zone_file: Option<String>,
+    use_zonefile: bool,
     connpool: Pool<Sqlite>,
 ) -> Result<(), String> {
     // Load the specified zone file on startup
-    if clap_results.get_flag("use_zonefile") && config.zone_file.is_some() {
-        let zone_file = config.zone_file.unwrap();
-        if let Err(err) = handle_import_file(&connpool, zone_file.to_string(), None).await {
-            log::error!("Failed to import {zone_file}: {err:?}");
-            return Ok(());
-        };
+    if use_zonefile {
+        if let Some(zone_file) = zone_file {
+            if let Err(err) = handle_import_file(&connpool, zone_file.clone(), None).await {
+                log::error!("Failed to import {}: {err:?}", zone_file);
+                return Ok(());
+            };
+        }
     }
 
     while let Some(cmd) = rx.recv().await {
