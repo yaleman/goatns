@@ -167,7 +167,7 @@ impl ConfigFile {
             self.api_tls_cert,
             self.api_tls_key
         );
-        RustlsConfig::from_pem_file(self.api_tls_cert.to_owned(), self.api_tls_key.to_owned())
+        RustlsConfig::from_pem_file(self.api_tls_cert.clone(), self.api_tls_key.clone())
             .await
             .unwrap()
     }
