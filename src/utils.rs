@@ -120,7 +120,7 @@ pub fn name_as_bytes(
         trace!("we got a compress target ({target}) but no reference we're just going to compress");
         // we need the first two bits to be 1, to mark it as compressed
         // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
-        let result: Vec<u8> = (0b1100000000000000 | target as u16).to_be_bytes().into();
+        let result: Vec<u8> = (0b1100000000000000 | target).to_be_bytes().into();
         trace!("result of name_as_bytes {result:?}");
         return result;
     };
@@ -167,7 +167,7 @@ pub fn name_as_bytes(
 
             // then we need to return the pointer to the tail
             if let Some(target) = compress_target {
-                let pointer_bytes: u16 = 0b1100000000000000 | target as u16;
+                let pointer_bytes: u16 = 0b1100000000000000 | target;
                 result.extend(pointer_bytes.to_be_bytes());
             } else {
                 #[cfg(debug)]
