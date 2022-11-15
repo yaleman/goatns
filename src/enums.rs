@@ -370,7 +370,7 @@ impl From<bool> for PacketType {
     }
 }
 
-#[derive(Debug, Serialize, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ContactDetails {
     Mastodon { contact: String, server: String },
     Email { contact: String },

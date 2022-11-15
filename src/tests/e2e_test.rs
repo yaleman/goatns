@@ -78,9 +78,10 @@ mod tests {
             };
         }
 
-        let config =
-            crate::config::get_config(Some(&"./examples/test_config/goatns-test.json".to_string()))
-                .unwrap();
+        let config = crate::config::ConfigFile::try_from(Some(
+            &"./examples/test_config/goatns-test.json".to_string(),
+        ))
+        .unwrap();
         let status_url = config.status_url();
         wait_for_server(status_url);
 

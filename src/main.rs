@@ -1,5 +1,5 @@
 use concread::cowcell::asynch::CowCell;
-use flexi_logger::LoggerHandle;
+use goatns::enums::SystemState;
 use sqlx::Pool;
 use sqlx::Sqlite;
 use std::io;
@@ -10,10 +10,10 @@ use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 
 use goatns::cli::clap_parser;
-use goatns::config::{check_config, get_config_cowcell, setup_logging, ConfigFile};
+use goatns::config::{setup_logging, ConfigFile};
 use goatns::datastore;
 use goatns::db;
-use goatns::enums::{Agent, AgentState, SystemState};
+use goatns::enums::{Agent, AgentState};
 use goatns::servers;
 use goatns::MAX_IN_FLIGHT;
 use tokio::time::sleep;
@@ -21,17 +21,13 @@ use tokio::time::sleep;
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let clap_results = clap_parser();
-    let config = match get_config_cowcell(clap_results.get_one::<String>("config")) {
-        Ok(value) => value,
-        Err(_) => return Ok(()),
-    };
 
-    let logger = match setup_logging(config.read().await, &clap_results).await {
-        Ok(logger) => logger,
-        Err(_) => return Ok(()),
-    };
+    let config = ConfigFile::try_as_cowcell(clap_results.get_one::<String>("config"))?;
 
-    let config_result = check_config(config.write().await).await;
+    let logger = setup_logging(config.read().await, &clap_results).await?;
+
+    let config_result = ConfigFile::check_config(config.write().await).await;
+
     if clap_results.get_flag("configcheck") {
         log::info!("{}", config.read().await.as_json_pretty());
         match config_result {
@@ -41,23 +37,18 @@ async fn main() -> io::Result<()> {
     }
 
     // sometimes you just have to print some errors
-    match check_config(config.write().await).await {
-        Err(errors) => {
-            for error in errors {
-                log::error!("{error:}")
-            }
-            log::error!("Shutting down!");
-            logger.flush();
-            sleep(std::time::Duration::from_millis(250)).await;
-            logger.flush();
-            return Ok(());
+    if let Err(errors) = config_result {
+        for error in errors {
+            log::error!("{error:}")
         }
-        Ok(value) => {
-            if clap_results.get_flag("configcheck") {
-                return Ok(());
-            };
-            value
-        }
+        log::error!("Shutting down!");
+        logger.flush();
+        sleep(std::time::Duration::from_millis(250)).await;
+        logger.shutdown();
+        return Ok(());
+    };
+    if clap_results.get_flag("configcheck") {
+        return Ok(());
     };
 
     log::info!("Configuration: {}", *config.read().await);
@@ -94,25 +85,22 @@ async fn main() -> io::Result<()> {
         connpool.clone(),
     ));
 
-    let system_state = match goatns::cli::cli_commands(tx.clone(), &clap_results).await {
-        Ok(value) => value,
+    match goatns::cli::cli_commands(tx.clone(), &clap_results).await {
+        Ok(resp) => {
+            match resp {
+                SystemState::Server => {
+                    start(config, tx, agent_tx, connpool, datastore_manager).await?
+                }
+                _ => {}
+            }
+        },
         Err(error) => {
-            log::trace!("{error}");
-            SystemState::ShuttingDown
+            log::trace!("{error}")
         }
     };
+    logger.flush();
 
-    start(
-        logger,
-        config,
-        system_state,
-        tx,
-        agent_tx,
-        connpool,
-        datastore_manager,
-    )
-    .await?;
-
+    logger.shutdown();
     Ok(())
 }
 
@@ -205,47 +193,39 @@ impl Servers {
 }
 
 async fn start(
-    logger: LoggerHandle,
     config: CowCell<ConfigFile>,
-    system_state: SystemState,
     tx: mpsc::Sender<datastore::Command>,
     agent_tx: broadcast::Sender<AgentState>,
     connpool: Pool<Sqlite>,
     datastore_manager: JoinHandle<Result<(), String>>,
 ) -> io::Result<()> {
-    log::debug!("System state: {system_state:?}");
-    // if we got this far we can shut down again
-    if system_state == SystemState::Server {
-        // Let's start up the listeners!
+    // Let's start up the listeners!
+    let udpserver = tokio::spawn(servers::udp_server(
+        config.read().await,
+        tx.clone(),
+        agent_tx.clone(),
+        agent_tx.subscribe(),
+    ));
+    let tcpserver = tokio::spawn(servers::tcp_server(
+        config.read().await,
+        tx.clone(),
+        agent_tx.clone(),
+        agent_tx.subscribe(),
+    ));
 
-        let udpserver = tokio::spawn(servers::udp_server(
-            config.read().await,
-            tx.clone(),
-            agent_tx.clone(),
-            agent_tx.subscribe(),
-        ));
-        let tcpserver = tokio::spawn(servers::tcp_server(
-            config.read().await,
-            tx.clone(),
-            agent_tx.clone(),
-            agent_tx.subscribe(),
-        ));
+    let apiserver = goatns::web::build(tx.clone(), config.read().await, connpool.clone()).await;
 
-        let apiserver = goatns::web::build(tx.clone(), config.read().await, connpool.clone()).await;
+    let servers = Servers::build(agent_tx)
+        .with_datastore(datastore_manager)
+        .with_udpserver(udpserver)
+        .with_tcpserver(tcpserver)
+        .with_apiserver(apiserver);
 
-        let servers = Servers::build(agent_tx)
-            .with_datastore(datastore_manager)
-            .with_udpserver(udpserver)
-            .with_tcpserver(tcpserver)
-            .with_apiserver(apiserver);
-
-        loop {
-            if servers.all_finished() {
-                break;
-            }
-            sleep(std::time::Duration::from_micros(500)).await;
+    loop {
+        if servers.all_finished() {
+            break;
         }
+        sleep(std::time::Duration::from_micros(500)).await;
     }
-    logger.flush();
     Ok(())
 }

@@ -48,3 +48,17 @@ impl<'de> de::Deserialize<'de> for ContactDetails {
         }
     }
 }
+
+impl serde::Serialize for ContactDetails {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer {
+            let string_repr = match self {
+                ContactDetails::Mastodon { contact, server } => format!("Mastodon:{contact}@{server}", ),
+                ContactDetails::Email { contact } => format!("Email:{contact}", ),
+                ContactDetails::Twitter { contact } => format!("Twitter:{contact}", ),
+                ContactDetails::None => "".to_string(),
+            };
+        serializer.serialize_str(&string_repr)
+    }
+}
