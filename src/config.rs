@@ -8,6 +8,7 @@ use gethostname::gethostname;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::io::ErrorKind;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -143,15 +144,18 @@ impl ConfigFile {
     pub async fn check_config(
         mut config: CowCellWriteTxn<'_, ConfigFile>,
     ) -> Result<(), Vec<String>> {
-        let mut config_ok: bool = true;
         let mut errors: Vec<String> = vec![];
 
         if config.api_tls_cert.starts_with("~") {
+            #[cfg(test)]
+            eprintln!("updating tls cert from {:#?} to shellex", config.api_tls_cert);
             config.api_tls_cert = PathBuf::from(
                 shellexpand::tilde(&config.api_tls_cert.to_str().unwrap()).to_string(),
             );
         }
         if config.api_tls_key.starts_with("~") {
+            #[cfg(test)]
+            eprintln!("updating tls key from {:#?} to shellex", config.api_tls_key);
             config.api_tls_key = PathBuf::from(
                 shellexpand::tilde(&config.api_tls_key.to_str().unwrap()).to_string(),
             );
@@ -162,7 +166,6 @@ impl ConfigFile {
                 "Failed to find API TLS Key file: {:?}",
                 config.api_tls_key
             ));
-            config_ok = false;
         };
 
         if !config.api_tls_cert.exists() {
@@ -170,11 +173,10 @@ impl ConfigFile {
                 "Failed to find API TLS cert file: {:?}",
                 config.api_tls_cert
             ));
-            config_ok = false;
         };
 
         config.commit().await;
-        match config_ok {
+        match errors.is_empty() {
             true => Ok(()),
             false => Err(errors),
         }
@@ -198,29 +200,42 @@ impl ConfigFile {
             None => CONFIG_LOCATIONS.iter().map(|x| x.to_string()).collect(),
         };
 
-        for filepath in file_locations {
-            let config_filename: String = shellexpand::tilde(&filepath).into_owned();
-            let config_filepath = std::path::Path::new(&config_filename);
-            match config_filepath.exists() {
+        // clean up the file paths and filter them by the ones that exist
+        let found_files: Vec<String> = file_locations.iter().filter_map(|f| {
+            let path = shellexpand::tilde(&f).into_owned();
+            let filepath = std::path::Path::new(&path);
+            match filepath.exists() {
                 false => {
-                    eprintln!("Config file {} doesn't exist, skipping.", config_filename)
-                }
-                true => {
-                    let builder = Config::builder()
-                        .add_source(File::new(&config_filename, config::FileFormat::Json))
-                        .add_source(config::Environment::with_prefix("goatns"));
-
-                    let config = builder.build().map_err(|e| {
-                        std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            format!("Couldn't load config from {config_filename}: {e:?}"),
-                        )
-                    })?;
-
-                    eprintln!("Successfully loaded config from: {}", config_filename);
-                    return Ok(ConfigFile::from(config));
-                }
+                    eprintln!("Config file {path} doesn't exist, skipping.");
+                    None
+                },
+                true => Some(path)
             }
+
+        }).collect();
+
+        if found_files.is_empty() {
+            eprintln!("No configuration files exist, giving up! Tried: {}", file_locations.join(", "));
+            return Err(std::io::Error::new(ErrorKind::NotFound, "No configuration files found"))
+        }
+
+        // check that at least one config file exists
+        for filepath in found_files {
+            let config_filename: String = shellexpand::tilde(&filepath).into_owned();
+
+            let builder = Config::builder()
+                .add_source(File::new(&config_filename, config::FileFormat::Json))
+                .add_source(config::Environment::with_prefix("goatns"));
+
+            let config = builder.build().map_err(|e| {
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Couldn't load config from {config_filename}: {e:?}"),
+                )
+            })?;
+
+            eprintln!("Successfully loaded config from: {}", config_filename);
+            return Ok(ConfigFile::from(config));
         }
 
         Ok(ConfigFile::default())

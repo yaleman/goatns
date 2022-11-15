@@ -80,25 +80,22 @@ mod tests {
 
         let config = crate::config::ConfigFile::try_from(Some(
             &"./examples/test_config/goatns-test.json".to_string(),
-        ))
-        .unwrap();
+        ))?;
+
         let status_url = config.status_url();
         wait_for_server(status_url);
 
         // Construct a new Resolver pointing at localhost
         let localhost: std::net::IpAddr = "127.0.0.1".parse().unwrap();
-        let mut config = ResolverConfig::new();
-        config.add_name_server(NameServerConfig::new(
+        let mut resolver_config = ResolverConfig::new();
+        resolver_config.add_name_server(NameServerConfig::new(
             SocketAddr::new(localhost, 15353),
             Protocol::Udp,
         ));
-        let resolver = Resolver::new(config, ResolverOpts::default()).unwrap();
+        let resolver = Resolver::new(resolver_config, ResolverOpts::default()).unwrap();
 
         // Lookup the IP addresses associated with a name.
-        log::trace!(
-            "{:?}",
-            resolver.lookup("hello.goat", trust_dns_resolver::proto::rr::RecordType::A)
-        );
+
         println!("Querying hello.goat A");
         let response = match resolver.lookup_ip("hello.goat") {
             Ok(value) => Some(value),
