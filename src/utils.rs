@@ -1,6 +1,9 @@
+use crate::datastore::Command;
+use crate::enums::AgentState;
 use crate::HEADER_BYTES;
 use log::{debug, trace};
 use std::str::from_utf8;
+use tokio::sync::{broadcast, mpsc};
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
     for (index, curr_byte) in search.iter().enumerate() {
@@ -120,7 +123,7 @@ pub fn name_as_bytes(
         trace!("we got a compress target ({target}) but no reference we're just going to compress");
         // we need the first two bits to be 1, to mark it as compressed
         // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
-        let result: Vec<u8> = (0b1100000000000000 | target as u16).to_be_bytes().into();
+        let result: Vec<u8> = (0b1100000000000000 | target).to_be_bytes().into();
         trace!("result of name_as_bytes {result:?}");
         return result;
     };
@@ -167,7 +170,7 @@ pub fn name_as_bytes(
 
             // then we need to return the pointer to the tail
             if let Some(target) = compress_target {
-                let pointer_bytes: u16 = 0b1100000000000000 | target as u16;
+                let pointer_bytes: u16 = 0b1100000000000000 | target;
                 result.extend(pointer_bytes.to_be_bytes());
             } else {
                 #[cfg(debug)]
@@ -294,4 +297,17 @@ pub fn loc_size_to_u8(input: f32) -> u8 {
     // turn it into the magic ugly numbers
     let retval: u8 = (mantissa << 4) | (exponent as u8);
     retval
+}
+
+/// Get all the widgets for agent signalling
+pub fn start_channels() -> (
+    broadcast::Sender<AgentState>,
+    mpsc::Sender<Command>,
+    mpsc::Receiver<Command>,
+) {
+    let (agent_tx, _) = broadcast::channel(32);
+    let datastore_sender: mpsc::Sender<Command>;
+    let datastore_receiver: mpsc::Receiver<Command>;
+    (datastore_sender, datastore_receiver) = mpsc::channel(crate::MAX_IN_FLIGHT);
+    (agent_tx, datastore_sender, datastore_receiver)
 }

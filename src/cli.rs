@@ -82,6 +82,7 @@ pub fn clap_parser() -> ArgMatches {
 pub async fn cli_commands(
     tx: mpsc::Sender<Command>,
     clap_results: &ArgMatches,
+    zone_file: &Option<String>,
 ) -> Result<SystemState, String> {
     if clap_results.get_flag("add_admin") {
         let _ = add_admin_user(tx).await;
@@ -90,6 +91,16 @@ pub async fn cli_commands(
     if clap_results.get_flag("export_config") {
         default_config();
         return Ok(SystemState::ShuttingDown);
+    }
+
+    // Load the specified zone file on startup
+    if clap_results.get_flag("use_zonefile") {
+        if let Some(zone_file) = zone_file {
+            if let Err(error) = import_zones(tx.clone(), zone_file.to_owned(), None).await {
+                log::error!("Failed to import zone file! {error:?}");
+                return Ok(SystemState::ShuttingDown);
+            }
+        }
     }
 
     if let Some(zone_name) = clap_results.get_one::<String>("export_zone") {

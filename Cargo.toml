@@ -30,6 +30,7 @@ bit-vec = "0.6.3"
 bytes = "1.2.1"
 chrono = { version = "0.4.22", features = ["clock"] }
 clap = { version="4.0.19", features=["cargo"]}
+concread = "0.4.0"
 config = { version = "0.13", features = ["json"] }
 dialoguer = "0.10.2"
 enum-iterator = "1.2.0"
@@ -67,7 +68,7 @@ url = { version = "2.3.1", features = ["serde"] }
 [dev-dependencies]
 criterion = "^0.4"
 scopeguard = "1.1.0"
-trust-dns-resolver = "0.22.0"
+trust-dns-resolver = { version = "0.22.0", features=["tokio", "tokio-runtime"] }
 
 [[bench]]
 name = "baselines"

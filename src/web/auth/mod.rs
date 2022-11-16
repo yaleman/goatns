@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use super::utils::{redirect_to_dashboard, redirect_to_home};
 use super::SharedState;
-use crate::config::ConfigFile;
 use crate::db::{DBEntity, User};
 use crate::web::SharedStateTrait;
 use crate::COOKIE_NAME;
@@ -141,7 +140,7 @@ pub async fn oauth_start(state: &SharedState) -> Result<url::Url, String> {
     )
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.
-    .set_redirect_uri(state.oauth2_redirect().await);
+    .set_redirect_uri(state.config().await.oauth2_redirect_url);
 
     // Generate the authorization URL to which we'll redirect the user.
     let (authorize_url, csrf_state, nonce) = client
@@ -183,7 +182,7 @@ pub async fn parse_state_code(
         shared_state.oauth2_client_id().await,
         shared_state.oauth2_secret().await,
     )
-    .set_redirect_uri(shared_state.oauth2_redirect().await);
+    .set_redirect_uri(shared_state.config().await.oauth2_redirect_url);
     let verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
     assert_eq!(verifier_copy.secret(), pkce_verifier.secret());
     // Now you can exchange it for an access token and ID token.
@@ -368,7 +367,7 @@ pub async fn logout(mut session: WritableSession) -> impl IntoResponse {
 }
 
 pub async fn build_auth_stores(
-    config: &ConfigFile,
+    sql_session_cleanup_seconds: u64,
     connpool: Pool<Sqlite>,
 ) -> SessionLayer<SqliteSessionStore> {
     let mut secret: [u8; 128] = [0; 128];
@@ -382,7 +381,7 @@ pub async fn build_auth_stores(
         .expect("Could not migrate session store database on startup!");
 
     let _ = tokio::spawn(sessions::session_store_cleanup(
-        Duration::from_secs(config.sql_session_cleanup_seconds),
+        Duration::from_secs(sql_session_cleanup_seconds),
         session_store.clone(),
     ));
 

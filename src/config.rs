@@ -1,11 +1,15 @@
+use axum_server::tls_rustls::RustlsConfig;
 use clap::ArgMatches;
+use concread::cowcell::asynch::{CowCell, CowCellReadTxn, CowCellWriteTxn};
 use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
 use flexi_logger::{DeferredNow, LoggerHandle};
 use gethostname::gethostname;
+use oauth2::RedirectUrl;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::io::ErrorKind;
 use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -65,7 +69,7 @@ pub struct ConfigFile {
     /// OAuth2 Resource server name
     pub oauth2_client_id: String,
     /// If your instance is behind a proxy/load balancer/whatever, you need to specify this, eg `https://example.com:12345`
-    pub oauth2_redirect_url: Option<Url>,
+    pub oauth2_redirect_url: RedirectUrl,
     #[serde(skip_serializing)]
     /// Oauth2 Secret
     pub oauth2_secret: String,
@@ -92,11 +96,29 @@ fn generate_cookie_secret() -> String {
 }
 
 impl ConfigFile {
+    /// JSONify the configfile in a pretty way using serde
+    pub fn as_json_pretty(&self) -> String {
+        serde_json::to_string_pretty(self)
+            .map_err(|e| format!("Failed to serialize config: {e:?}"))
+            .unwrap()
+    }
+
+    /// Get a bindable SocketAddr for use in the DNS listeners
+    pub fn dns_listener_address(&self) -> Result<SocketAddr, Option<String>> {
+        let listen_addr = format!("{}:{}", &self.address, &self.port);
+
+        listen_addr.parse::<SocketAddr>().map_err(|e| {
+            log::error!("Failed to parse address: {e:?}");
+            None
+        })
+    }
+
     /// get a string version of the listener address
     pub fn api_listener_address(&self) -> SocketAddr {
         SocketAddr::from_str(&format!("{}:{}", self.address, self.api_port)).unwrap()
     }
 
+    /// It's a sekret!
     pub fn api_cookie_secret(self) -> String {
         self.api_cookie_secret
     }
@@ -107,6 +129,133 @@ impl ConfigFile {
             self.hostname, self.api_port
         ))
         .unwrap()
+    }
+
+    pub async fn get_tls_config(&self) -> RustlsConfig {
+        log::trace!(
+            "tls config: cert={:?} key={:?}",
+            self.api_tls_cert,
+            self.api_tls_key
+        );
+        RustlsConfig::from_pem_file(self.api_tls_cert.clone(), self.api_tls_key.clone())
+            .await
+            .unwrap()
+    }
+
+    pub async fn check_config(
+        mut config: CowCellWriteTxn<'_, ConfigFile>,
+    ) -> Result<(), Vec<String>> {
+        let mut errors: Vec<String> = vec![];
+
+        if config.api_tls_cert.starts_with("~") {
+            #[cfg(test)]
+            eprintln!(
+                "updating tls cert from {:#?} to shellex",
+                config.api_tls_cert
+            );
+            config.api_tls_cert = PathBuf::from(
+                shellexpand::tilde(&config.api_tls_cert.to_str().unwrap()).to_string(),
+            );
+        }
+        if config.api_tls_key.starts_with("~") {
+            #[cfg(test)]
+            eprintln!("updating tls key from {:#?} to shellex", config.api_tls_key);
+            config.api_tls_key = PathBuf::from(
+                shellexpand::tilde(&config.api_tls_key.to_str().unwrap()).to_string(),
+            );
+        }
+
+        if !config.api_tls_key.exists() {
+            errors.push(format!(
+                "Failed to find API TLS Key file: {:?}",
+                config.api_tls_key
+            ));
+        };
+
+        if !config.api_tls_cert.exists() {
+            errors.push(format!(
+                "Failed to find API TLS cert file: {:?}",
+                config.api_tls_cert
+            ));
+        };
+
+        config.commit().await;
+        match errors.is_empty() {
+            true => Ok(()),
+            false => Err(errors),
+        }
+    }
+
+    /// Uses [Self::try_from] and wraps it in a CowCell (moo)
+    ///
+    /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
+    pub fn try_as_cowcell(
+        config_path: Option<&String>,
+    ) -> Result<CowCell<ConfigFile>, std::io::Error> {
+        Ok(CowCell::new(ConfigFile::try_from(config_path)?))
+    }
+
+    /// Loads the configuration from a given file or from some default locations.
+    ///
+    /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
+    pub fn try_from(config_path: Option<&String>) -> Result<ConfigFile, std::io::Error> {
+        let file_locations = match config_path {
+            Some(value) => vec![value.to_owned()],
+            None => CONFIG_LOCATIONS.iter().map(|x| x.to_string()).collect(),
+        };
+
+        // clean up the file paths and filter them by the ones that exist
+        let found_files: Vec<String> = file_locations
+            .iter()
+            .filter_map(|f| {
+                let path = shellexpand::tilde(&f).into_owned();
+                let filepath = std::path::Path::new(&path);
+                match filepath.exists() {
+                    false => {
+                        eprintln!("Config file {path} doesn't exist, skipping.");
+                        None
+                    }
+                    true => Some(path),
+                }
+            })
+            .collect();
+
+        if found_files.is_empty() {
+            eprintln!(
+                "No configuration files exist, giving up! Tried: {}",
+                file_locations.join(", ")
+            );
+            return Err(std::io::Error::new(
+                ErrorKind::NotFound,
+                "No configuration files found",
+            ));
+        }
+
+        // check that at least one config file exists
+        for filepath in found_files {
+            let config_filename: String = shellexpand::tilde(&filepath).into_owned();
+
+            let builder = Config::builder()
+                .add_source(File::new(&config_filename, config::FileFormat::Json))
+                .add_source(config::Environment::with_prefix("goatns"));
+
+            let config = builder.build().map_err(|e| {
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Couldn't load config from {config_filename}: {e:?}"),
+                )
+            });
+
+            match config {
+                Ok(config) => {
+                    eprintln!("Successfully loaded config from: {}", config_filename);
+                    return Ok(ConfigFile::from(config));
+                }
+                Err(err) => eprintln!("{err:?}"),
+            }
+        }
+
+        Ok(ConfigFile::default())
     }
 }
 
@@ -135,7 +284,11 @@ impl Default for ConfigFile {
             api_static_dir: String::from("./static_files/"),
             api_cookie_secret: generate_cookie_secret(),
             oauth2_client_id: String::from(""),
-            oauth2_redirect_url: None,
+            // TODO: this should be auto-generated from stuff
+            oauth2_redirect_url: RedirectUrl::from_url(
+                Url::from_str("https://example.com")
+                    .expect("Internal error parsing example.com into a URL?"),
+            ),
             oauth2_secret: String::from(""),
             oauth2_config_url: String::from(""),
             oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
@@ -171,8 +324,40 @@ impl Display for ConfigFile {
 
 impl From<Config> for ConfigFile {
     fn from(config: Config) -> Self {
+        let hostname = config.get("hostname").unwrap_or(Self::default().hostname);
+        let api_port = config.get("api_port").unwrap_or(Self::default().api_port);
+
+        // Figure out the oauth2 redirect URL
+        // TODO: test this with different values
+        let oauth2_redirect_url: Option<RedirectUrl> = match config.get("oauth2_redirect_url") {
+            Ok(value) => Some(value),
+            Err(_) => None,
+        };
+        let oauth2_redirect_url = match oauth2_redirect_url {
+            Some(mut url) => {
+                // update the URL with the final auth path
+                // eprintln!("OAuth2 Redirect URL: {url:?}");
+                if !url.url().path().ends_with("/auth/login") {
+                    let new_url = url.url().join("/auth/login").unwrap();
+                    url = RedirectUrl::from_url(new_url);
+                }
+                // eprintln!("OAuth2 Redirect URL after update: {url:?}");
+                url
+            }
+            None => {
+                // if they haven't set it in config, build it automagically
+                let baseurl = match api_port {
+                    443 => format!("https://{}", hostname),
+                    _ => format!("https://{}:{}", hostname, api_port),
+                };
+                let url = Url::parse(&format!("{}/auth/login", baseurl))
+                    .expect("Failed to parse hostname/api_port into a valid URL");
+                RedirectUrl::from_url(url)
+            }
+        };
+
         ConfigFile {
-            hostname: config.get("hostname").unwrap_or(Self::default().hostname),
+            hostname,
             address: config.get("address").unwrap_or(Self::default().address),
             port: config.get("port").unwrap_or_default(),
             capture_packets: config.get("capture_packets").unwrap_or_default(),
@@ -193,7 +378,7 @@ impl From<Config> for ConfigFile {
             enable_api: config
                 .get("enable_api")
                 .unwrap_or(Self::default().enable_api),
-            api_port: config.get("api_port").unwrap_or(Self::default().api_port),
+            api_port,
             api_tls_cert: config
                 .get("api_tls_cert")
                 .unwrap_or(Self::default().api_tls_cert),
@@ -207,9 +392,7 @@ impl From<Config> for ConfigFile {
             oauth2_client_id: config
                 .get("oauth2_client_id")
                 .unwrap_or(Self::default().oauth2_client_id),
-            oauth2_redirect_url: config
-                .get("oauth2_redirect_url")
-                .unwrap_or(Self::default().oauth2_redirect_url),
+            oauth2_redirect_url,
             oauth2_secret: config
                 .get("oauth2_secret")
                 .unwrap_or(Self::default().oauth2_secret),
@@ -261,101 +444,36 @@ lazy_static! {
         ["./goatns.json", "~/.config/goatns.json",].to_vec();
 }
 
-/// Loads the configuration from a given file or from some default locations.
-///
-/// The default locations are `~/.config/goatns.json` and `./goatns.json`.
-pub fn get_config(config_path: Option<&String>) -> Result<ConfigFile, String> {
-    let file_locations = match config_path {
-        Some(value) => vec![value.to_owned()],
-        None => CONFIG_LOCATIONS.iter().map(|x| x.to_string()).collect(),
-    };
-
-    for filepath in file_locations {
-        let config_filename: String = shellexpand::tilde(&filepath).into_owned();
-        let config_filepath = std::path::Path::new(&config_filename);
-        match config_filepath.exists() {
-            false => {
-                eprintln!("Config file {} doesn't exist, skipping.", config_filename)
-            }
-            true => {
-                let builder = Config::builder()
-                    .add_source(File::new(&config_filename, config::FileFormat::Json))
-                    .add_source(config::Environment::with_prefix("goatns"));
-
-                match builder.build() {
-                    Ok(config) => {
-                        eprintln!("Successfully loaded config from: {}", config_filename);
-                        return Ok(ConfigFile::from(config));
-                    }
-                    Err(error) => {
-                        let err =
-                            format!("Couldn't load config from {}: {:?}", config_filename, error);
-                        log::error!("{err}");
-                        return Err(err);
-                    }
-                }
-            }
-        }
-    }
-    Ok(ConfigFile::default())
-}
-
-pub fn check_config(config: &mut ConfigFile) -> Result<ConfigFile, Vec<String>> {
-    let mut config_ok: bool = true;
-    let mut errors: Vec<String> = vec![];
-
-    if config.api_tls_cert.starts_with("~") {
-        config.api_tls_cert =
-            PathBuf::from(shellexpand::tilde(&config.api_tls_cert.to_str().unwrap()).to_string());
-    }
-    if config.api_tls_key.starts_with("~") {
-        config.api_tls_key =
-            PathBuf::from(shellexpand::tilde(&config.api_tls_key.to_str().unwrap()).to_string());
-    }
-
-    if !config.api_tls_key.exists() {
-        errors.push(format!(
-            "Failed to find API TLS Key file: {:?}",
-            config.api_tls_key
-        ));
-        config_ok = false;
-    };
-
-    if !config.api_tls_cert.exists() {
-        errors.push(format!(
-            "Failed to find API TLS cert file: {:?}",
-            config.api_tls_cert
-        ));
-        config_ok = false;
-    };
-
-    match config_ok {
-        true => Ok(config.to_owned()),
-        false => Err(errors),
-    }
-}
-
-pub fn setup_logging(
-    config: &ConfigFile,
+pub async fn setup_logging(
+    config: CowCellReadTxn<ConfigFile>,
     clap_results: &ArgMatches,
-) -> Result<LoggerHandle, String> {
+) -> Result<LoggerHandle, std::io::Error> {
     // force the log level to info if we're testing config
     let log_level = match clap_results.get_flag("configcheck") {
         true => "info".to_string(),
         false => config.log_level.to_ascii_lowercase(),
     };
 
-    match flexi_logger::Logger::try_with_str(&log_level).map_err(|e| format!("{e:?}")) {
-        Ok(logger) => logger
-            .write_mode(flexi_logger::WriteMode::Async)
-            .filter(Box::new(LogFilter {
-                filters: vec!["h2", "hyper::proto"],
-            }))
-            .set_palette("b1;3;2;6;5".to_string())
-            .start()
-            .map_err(|e| format!("{e:?}")),
-        Err(error) => Err(format!("Failed to start logger! {error:?}")),
-    }
+    let logger = flexi_logger::Logger::try_with_str(log_level).map_err(|e| {
+        std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("Failed to start logger! {e:?}"),
+        )
+    })?;
+
+    logger
+        .write_mode(flexi_logger::WriteMode::Async)
+        .filter(Box::new(LogFilter {
+            filters: vec!["h2", "hyper::proto"],
+        }))
+        .set_palette("b1;3;2;6;5".to_string())
+        .start()
+        .map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to start logger! {e:?}"),
+            )
+        })
 }
 
 pub struct LogFilter {
