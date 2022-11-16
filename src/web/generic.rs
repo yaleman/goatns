@@ -1,5 +1,5 @@
 use super::*;
-
+use crate::enums::ContactDetails;
 use askama::Template;
 use axum::response::Html;
 use axum_macros::debug_handler;
@@ -16,15 +16,15 @@ struct IndexTemplate {
 
 #[debug_handler]
 pub async fn index(Extension(state): Extension<SharedState>) -> Result<Html<String>, ()> {
-    // let admin_contact = match state.config().await.admin_contact {
-    //     None => "".to_string(),
-    //     Some(contact) => match ContactDetails::try_from(contact) {
-    //         Ok(value) => format!("This instance cared for by {}", value.to_string()),
-    //         Err(_) => "".to_string(),
-    //     },
-    // };
+    let admin_contact = state.config().await.admin_contact;
+    let admin_contact = match admin_contact {
+        ContactDetails::None => "".to_string(),
+        _ => {
+            format!("- instance cared for by {}", admin_contact.to_string())
+        },
+    };
     let context = IndexTemplate {
-        admin_contact: state.config().await.admin_contact.to_string(),
+        admin_contact,
     };
     Ok(Html::from(context.render().unwrap()))
 }
