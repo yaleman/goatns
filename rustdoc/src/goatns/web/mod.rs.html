@@ -211,12 +211,6 @@
 <span id="211">211</span>
 <span id="212">212</span>
 <span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::datastore;
 <span class="kw">use </span>async_trait::async_trait;
@@ -231,8 +225,10 @@
 ///
 /// Example using shared state: https://github.com/tokio-rs/axum/blob/axum-v0.5.17/examples/key-value-store/src/main.rs
 </span><span class="kw">use </span>axum_extra::routing::SpaRouter;
+<span class="kw">use </span>axum_server::tls_rustls::RustlsConfig;
 <span class="kw">use </span>chrono::{DateTime, NaiveDateTime, Utc};
-<span class="kw">use </span>oauth2::{ClientId, ClientSecret, PkceCodeVerifier, RedirectUrl};
+<span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
+<span class="kw">use </span>oauth2::{ClientId, ClientSecret, PkceCodeVerifier};
 <span class="kw">use </span>openidconnect::Nonce;
 <span class="kw">use </span>sqlx::{Pool, Sqlite};
 <span class="kw">use </span>std::collections::HashMap;
@@ -240,11 +236,11 @@
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>tokio::sync::mpsc::Sender;
 <span class="kw">use </span>tokio::sync::RwLock;
+<span class="kw">use </span>tokio::task::JoinHandle;
 <span class="kw">use </span>tower::ServiceBuilder;
 <span class="kw">use </span>tower_http::compression::CompressionLayer;
 <span class="kw">use </span>tower_http::trace::{DefaultMakeSpan, TraceLayer};
 <span class="kw">use </span>tracing::Level;
-<span class="kw">use </span>url::Url;
 
 <span class="kw">use </span><span class="self">self</span>::auth::CustomProviderMetadata;
 
@@ -272,9 +268,7 @@
     <span class="kw">async fn </span>pop_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String) -&gt; <span class="prelude-ty">Option</span>&lt;(PkceCodeVerifier, Nonce)&gt;;
     <span class="kw">async fn </span>oauth2_client_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ClientId;
     <span class="kw">async fn </span>oauth2_secret(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;ClientSecret&gt;;
-    <span class="kw">async fn </span>oauth2_redirect(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedirectUrl;
-    <span class="comment">// async fn oauth2_introspection_url(&amp;self) -&gt; IntrospectionUrl;
-    </span><span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String, verifier: (PkceCodeVerifier, Nonce));
+    <span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String, verifier: (PkceCodeVerifier, Nonce));
 }
 
 <span class="attribute">#[async_trait]
@@ -312,26 +306,6 @@
         <span class="prelude-val">Some</span>(ClientSecret::new(client_secret))
     }
 
-    <span class="doccomment">/// The URL that this instance will tell the OIDC IDP to send auth requests back to
-    </span><span class="kw">async fn </span>oauth2_redirect(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RedirectUrl {
-        <span class="kw">let </span>config = <span class="self">self</span>.config().<span class="kw">await</span>;
-
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>url) = config.oauth2_redirect_url {
-            <span class="comment">// update the URL with the final auth path
-            </span>url.set_path(<span class="string">&quot;/auth/login&quot;</span>);
-            <span class="macro">log::debug!</span>(<span class="string">&quot;OAuth2 Redirect URL: {url:?}&quot;</span>);
-            <span class="kw">return </span>RedirectUrl::from_url(url);
-        }
-
-        <span class="kw">let </span>baseurl = <span class="kw">match </span>config.api_port {
-            <span class="number">443 </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}&quot;</span>, config.hostname),
-            <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}:{}&quot;</span>, config.hostname, config.api_port),
-        };
-        <span class="kw">let </span>url = Url::parse(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}/auth/login&quot;</span>, baseurl))
-            .expect(<span class="string">&quot;Failed to parse config into an OAuth Redirect URL&quot;</span>);
-        RedirectUrl::from_url(url)
-    }
-
     <span class="doccomment">/// Store the PKCE verifier details server-side for when the user comes back with their auth token
     </span><span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String, verifier: (PkceCodeVerifier, Nonce)) {
         <span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="self">self</span>.write().<span class="kw">await</span>;
@@ -352,9 +326,9 @@
 
 <span class="kw">pub async fn </span>build(
     tx: Sender&lt;datastore::Command&gt;,
-    config: ConfigFile,
+    config: CowCellReadTxn&lt;ConfigFile&gt;,
     connpool: Pool&lt;Sqlite&gt;,
-) -&gt; axum::Router {
+) -&gt; <span class="prelude-ty">Option</span>&lt;JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), std::io::Error&gt;&gt;&gt; {
     <span class="kw">let </span>config_dir: PathBuf = shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_static_dir)
         .to_string()
         .into();
@@ -391,12 +365,14 @@
 
     <span class="kw">let </span>static_router = SpaRouter::new(<span class="string">&quot;/ui/static&quot;</span>, <span class="kw-2">&amp;</span>config_dir);
 
-    <span class="kw">let </span>session_layer = auth::build_auth_stores(<span class="kw-2">&amp;</span>config, connpool.clone()).<span class="kw">await</span>;
+    <span class="kw">let </span>session_layer =
+        auth::build_auth_stores(config.sql_session_cleanup_seconds, connpool.clone()).<span class="kw">await</span>;
 
-    <span class="kw">let </span>state: SharedState = Arc::new(RwLock::new(State {
+    <span class="comment">// let config_clone: ConfigFile = ConfigFile::from(&amp;config);
+    </span><span class="kw">let </span>state: SharedState = Arc::new(RwLock::new(State {
         tx,
         connpool,
-        config,
+        config: (<span class="kw-2">*</span>config).clone(),
         oidc_config_updated: <span class="prelude-val">None</span>,
         oidc_config: <span class="prelude-val">None</span>,
         oidc_verifier: HashMap::new(),
@@ -418,7 +394,7 @@
             .into_response()
     }
 
-    Router::new()
+    <span class="kw">let </span>router = Router::new()
         .route(<span class="string">&quot;/&quot;</span>, get(generic::index))
         .route(<span class="string">&quot;/status&quot;</span>, get(generic::status))
         .merge(static_router)
@@ -434,7 +410,19 @@
                 </span>.layer(session_layer)
                 .into_inner(),
         )
-        .fallback(handler_404.into_service())
+        .fallback(handler_404.into_service());
+
+    <span class="kw">let </span>tls_cert = <span class="kw-2">&amp;</span>config.api_tls_cert.clone();
+    <span class="kw">let </span>tls_config = RustlsConfig::from_pem_file(<span class="kw-2">&amp;</span>tls_cert, <span class="kw-2">&amp;</span>config.api_tls_key)
+        .<span class="kw">await
+        </span>.unwrap();
+
+    <span class="kw">let </span>res = <span class="prelude-val">Some</span>(tokio::spawn(
+        axum_server::bind_rustls(config.api_listener_address(), tls_config)
+            .serve(router.into_make_service()),
+    ));
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Started Web server on {}&quot;</span>, config.api_listener_address());
+    res
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

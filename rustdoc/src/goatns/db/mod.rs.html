@@ -1297,7 +1297,20 @@
 <span id="1297">1297</span>
 <span id="1298">1298</span>
 <span id="1299">1299</span>
+<span id="1300">1300</span>
+<span id="1301">1301</span>
+<span id="1302">1302</span>
+<span id="1303">1303</span>
+<span id="1304">1304</span>
+<span id="1305">1305</span>
+<span id="1306">1306</span>
+<span id="1307">1307</span>
+<span id="1308">1308</span>
+<span id="1309">1309</span>
+<span id="1310">1310</span>
+<span id="1311">1311</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::resourcerecord::SetTTL;
+<span class="kw">use </span>std::io::ErrorKind;
 <span class="kw">use </span>std::str::FromStr;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::time::Duration;
@@ -1308,6 +1321,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::resourcerecord::InternalResourceRecord;
 <span class="kw">use </span><span class="kw">crate</span>::zones::{FileZone, FileZoneRecord};
 <span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
 <span class="kw">use </span>openidconnect::SubjectIdentifier;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>sqlx::pool::PoolConnection;
@@ -1319,16 +1333,23 @@
 
 <span class="kw">const </span>SQL_VIEW_RECORDS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;records_merged&quot;</span>;
 
-<span class="kw">pub async fn </span>get_conn(config: <span class="kw-2">&amp;</span>ConfigFile) -&gt; <span class="prelude-ty">Result</span>&lt;Pool&lt;Sqlite&gt;, String&gt; {
-    <span class="kw">let </span>db_path: <span class="kw-2">&amp;</span>str = <span class="kw-2">&amp;</span>shellexpand::full(<span class="kw-2">&amp;</span>config.sqlite_path).unwrap();
+<span class="kw">pub async fn </span>get_conn(
+    config_reader: CowCellReadTxn&lt;ConfigFile&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Pool&lt;Sqlite&gt;, std::io::Error&gt; {
+    <span class="kw">let </span>db_path: <span class="kw-2">&amp;</span>str = <span class="kw-2">&amp;</span>shellexpand::full(<span class="kw-2">&amp;</span>config_reader.sqlite_path).unwrap();
     <span class="kw">let </span>db_url = <span class="macro">format!</span>(<span class="string">&quot;sqlite://{db_path}?mode=rwc&quot;</span>);
     <span class="macro">log::debug!</span>(<span class="string">&quot;Opening Database: {db_url}&quot;</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>options = <span class="kw">match </span>SqliteConnectOptions::from_str(<span class="kw-2">&amp;</span>db_url) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
-        <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;connection failed: {error:?}&quot;</span>)),
+        <span class="prelude-val">Err</span>(error) =&gt; {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(std::io::Error::new(
+                ErrorKind::Other,
+                <span class="macro">format!</span>(<span class="string">&quot;connection failed: {error:?}&quot;</span>),
+            ))
+        }
     };
-    <span class="kw">if </span>config.sql_log_statements {
+    <span class="kw">if </span>config_reader.sql_log_statements {
         options.log_statements(log::LevelFilter::Trace);
     } <span class="kw">else </span>{
         options.log_statements(log::LevelFilter::Off);
@@ -1336,12 +1357,15 @@
     <span class="comment">// log anything that takes longer than 1s
     </span>options.log_slow_statements(
         log::LevelFilter::Warn,
-        Duration::from_secs(config.sql_log_slow_duration),
+        Duration::from_secs(config_reader.sql_log_slow_duration),
     );
 
     <span class="kw">match </span>SqlitePool::connect_with(options).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; <span class="prelude-val">Ok</span>(value),
-        <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Error opening SQLite DB ({db_url:?}): {err:?}&quot;</span>)),
+        <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(std::io::Error::new(
+            ErrorKind::Other,
+            <span class="macro">format!</span>(<span class="string">&quot;Error opening SQLite DB ({db_url:?}): {err:?}&quot;</span>),
+        )),
     }
 }
 

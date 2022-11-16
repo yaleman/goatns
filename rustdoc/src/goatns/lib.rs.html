@@ -352,11 +352,11 @@
 #[macro_use]
 </span><span class="kw">extern crate </span>lazy_static;
 
-<span class="attribute">#[cfg(test)]
-#[macro_use(defer)]
-</span><span class="kw">extern crate </span>scopeguard;
+<span class="comment">// #[cfg(test)]
+// #[macro_use(defer)]
+// extern crate scopeguard;
 
-<span class="kw">use </span><span class="kw">crate</span>::enums::<span class="kw-2">*</span>;
+</span><span class="kw">use </span><span class="kw">crate</span>::enums::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::utils::<span class="kw-2">*</span>;
 <span class="kw">use </span>log::trace;
 <span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;

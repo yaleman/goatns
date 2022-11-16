@@ -467,12 +467,10 @@
 <span id="467">467</span>
 <span id="468">468</span>
 <span id="469">469</span>
-<span id="470">470</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span><span class="kw">super</span>::utils::{redirect_to_dashboard, redirect_to_home};
 <span class="kw">use </span><span class="kw">super</span>::SharedState;
-<span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
 <span class="kw">use </span><span class="kw">crate</span>::web::SharedStateTrait;
 <span class="kw">use </span><span class="kw">crate</span>::COOKIE_NAME;
@@ -611,7 +609,7 @@
     )
     <span class="comment">// This example will be running its own server at localhost:8080.
     // See below for the server implementation.
-    </span>.set_redirect_uri(state.oauth2_redirect().<span class="kw">await</span>);
+    </span>.set_redirect_uri(state.config().<span class="kw">await</span>.oauth2_redirect_url);
 
     <span class="comment">// Generate the authorization URL to which we&#39;ll redirect the user.
     </span><span class="kw">let </span>(authorize_url, csrf_state, nonce) = client
@@ -653,7 +651,7 @@
         shared_state.oauth2_client_id().<span class="kw">await</span>,
         shared_state.oauth2_secret().<span class="kw">await</span>,
     )
-    .set_redirect_uri(shared_state.oauth2_redirect().<span class="kw">await</span>);
+    .set_redirect_uri(shared_state.config().<span class="kw">await</span>.oauth2_redirect_url);
     <span class="kw">let </span>verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
     <span class="macro">assert_eq!</span>(verifier_copy.secret(), pkce_verifier.secret());
     <span class="comment">// Now you can exchange it for an access token and ID token.
@@ -838,7 +836,7 @@
 }
 
 <span class="kw">pub async fn </span>build_auth_stores(
-    config: <span class="kw-2">&amp;</span>ConfigFile,
+    sql_session_cleanup_seconds: u64,
     connpool: Pool&lt;Sqlite&gt;,
 ) -&gt; SessionLayer&lt;SqliteSessionStore&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>secret: [u8; <span class="number">128</span>] = [<span class="number">0</span>; <span class="number">128</span>];
@@ -852,7 +850,7 @@
         </span>.expect(<span class="string">&quot;Could not migrate session store database on startup!&quot;</span>);
 
     <span class="kw">let _ </span>= tokio::spawn(sessions::session_store_cleanup(
-        Duration::from_secs(config.sql_session_cleanup_seconds),
+        Duration::from_secs(sql_session_cleanup_seconds),
         session_store.clone(),
     ));
 

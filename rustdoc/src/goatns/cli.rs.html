@@ -297,6 +297,17 @@
 <span id="297">297</span>
 <span id="298">298</span>
 <span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Code related to CLI things
 //!
 
@@ -381,6 +392,7 @@
 </span><span class="kw">pub async fn </span>cli_commands(
     tx: mpsc::Sender&lt;Command&gt;,
     clap_results: <span class="kw-2">&amp;</span>ArgMatches,
+    zone_file: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;SystemState, String&gt; {
     <span class="kw">if </span>clap_results.get_flag(<span class="string">&quot;add_admin&quot;</span>) {
         <span class="kw">let _ </span>= add_admin_user(tx).<span class="kw">await</span>;
@@ -389,6 +401,16 @@
     <span class="kw">if </span>clap_results.get_flag(<span class="string">&quot;export_config&quot;</span>) {
         default_config();
         <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
+    }
+
+    <span class="comment">// Load the specified zone file on startup
+    </span><span class="kw">if </span>clap_results.get_flag(<span class="string">&quot;use_zonefile&quot;</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(zone_file) = zone_file {
+            <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = import_zones(tx.clone(), zone_file.to_owned(), <span class="prelude-val">None</span>).<span class="kw">await </span>{
+                <span class="macro">log::error!</span>(<span class="string">&quot;Failed to import zone file! {error:?}&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
+            }
+        }
     }
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(zone_name) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;export_zone&quot;</span>) {

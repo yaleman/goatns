@@ -503,13 +503,120 @@
 <span id="503">503</span>
 <span id="504">504</span>
 <span id="505">505</span>
-</pre><pre class="rust"><code><span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+</pre><pre class="rust"><code><span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
+<span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>std::io::Error;
 <span class="kw">use </span>std::net::SocketAddr;
 <span class="kw">use </span>std::str::{from_utf8, FromStr};
 <span class="kw">use </span>std::time::Duration;
 <span class="kw">use </span>tokio::io::{<span class="self">self</span>, AsyncReadExt};
 <span class="kw">use </span>tokio::net::{TcpListener, TcpStream, UdpSocket};
 <span class="kw">use </span>tokio::sync::{broadcast, mpsc, oneshot};
+<span class="kw">use </span>tokio::task::JoinHandle;
 <span class="kw">use </span>tokio::time::timeout;
 
 <span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
@@ -527,11 +634,7 @@
 </span>}
 
 <span class="doccomment">/// this handles a shutdown CHAOS request
-</span><span class="kw">async fn </span>check_for_shutdown(
-    r: <span class="kw-2">&amp;</span>Reply,
-    addr: <span class="kw-2">&amp;</span>SocketAddr,
-    config: <span class="kw-2">&amp;</span>ConfigFile,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, <span class="prelude-ty">Option</span>&lt;Reply&gt;&gt; {
+</span><span class="kw">async fn </span>check_for_shutdown(r: <span class="kw-2">&amp;</span>Reply, allowed_shutdown: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, <span class="prelude-ty">Option</span>&lt;Reply&gt;&gt; {
     <span class="comment">// when you get a CHAOS from localhost with &quot;shutdown&quot; break dat loop
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(q) = <span class="kw-2">&amp;</span>r.question {
         <span class="kw">if </span>q.qclass == RecordClass::Chaos {
@@ -546,16 +649,16 @@
             <span class="comment">// Just don&#39;t do this on UDP, because we can&#39;t really tell who it&#39;s coming from.
             </span><span class="kw">if </span>qname == <span class="string">&quot;shutdown&quot; </span>{
                 <span class="comment">// when we get a request, we update the response to say if we&#39;re going to do it or not
-                </span><span class="kw">match </span>config.ip_allow_lists.shutdown.contains(<span class="kw-2">&amp;</span>addr.ip()) {
+                </span><span class="kw">match </span>allowed_shutdown {
                     <span class="bool-val">true </span>=&gt; {
-                        <span class="macro">log::info!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, shutting down&quot;</span>, addr.ip());
+                        <span class="macro">log::info!</span>(<span class="string">&quot;Got CHAOS shutdown, shutting down&quot;</span>);
                         <span class="kw">let </span><span class="kw-2">mut </span>chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_OK.clone());
                         <span class="kw">return </span><span class="prelude-val">Ok</span>(chaos_reply);
                     }
                     <span class="bool-val">false </span>=&gt; {
                         <span class="comment">// get lost!  🤣
-                        </span><span class="macro">log::warn!</span>(<span class="string">&quot;Got CHAOS shutdown from {:?}, ignoring!&quot;</span>, addr.ip());
+                        </span><span class="macro">log::warn!</span>(<span class="string">&quot;Got CHAOS shutdown, ignoring!&quot;</span>);
                         <span class="kw">let </span><span class="kw-2">mut </span>chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_NO.clone());
                         chaos_reply.header.rcode = Rcode::Refused;
@@ -589,13 +692,11 @@
 // }
 
 </span><span class="kw">pub async fn </span>udp_server(
-    bind_address: SocketAddr,
-    config: ConfigFile,
-    datastore: mpsc::Sender&lt;<span class="kw">crate</span>::datastore::Command&gt;,
+    config: CowCellReadTxn&lt;ConfigFile&gt;,
+    datastore_sender: mpsc::Sender&lt;<span class="kw">crate</span>::datastore::Command&gt;,
     _agent_tx: broadcast::Sender&lt;AgentState&gt;,
-    <span class="kw-2">mut </span>_agent_rx: broadcast::Receiver&lt;AgentState&gt;,
 ) -&gt; io::Result&lt;()&gt; {
-    <span class="kw">let </span>udp_sock = <span class="kw">match </span>UdpSocket::bind(bind_address).<span class="kw">await </span>{
+    <span class="kw">let </span>udp_sock = <span class="kw">match </span>UdpSocket::bind(config.dns_listener_address().unwrap()).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; {
             <span class="macro">log::info!</span>(<span class="string">&quot;Started UDP listener on {}:{}&quot;</span>, config.address, config.port);
             value
@@ -621,7 +722,12 @@
 
         <span class="kw">let </span>udp_result = <span class="kw">match </span>timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
-            parse_query(datastore.clone(), len, <span class="kw-2">&amp;</span>udp_buffer, config.capture_packets),
+            parse_query(
+                datastore_sender.clone(),
+                len,
+                <span class="kw-2">&amp;</span>udp_buffer,
+                config.capture_packets,
+            ),
         )
         .<span class="kw">await
         </span>{
@@ -674,9 +780,10 @@
 <span class="kw">pub async fn </span>tcp_conn_handler(
     stream: <span class="kw-2">&amp;mut </span>TcpStream,
     addr: SocketAddr,
-    tx: mpsc::Sender&lt;Command&gt;,
+    datastore_sender: mpsc::Sender&lt;Command&gt;,
     agent_tx: broadcast::Sender&lt;AgentState&gt;,
-    config: ConfigFile,
+    capture_packets: bool,
+    allowed_shutdown: bool,
 ) -&gt; io::Result&lt;()&gt; {
     <span class="kw">let </span>(<span class="kw-2">mut </span>reader, writer) = stream.split();
     <span class="kw">let </span>msg_length: usize = reader.read_u16().<span class="kw">await</span><span class="question-mark">?</span>.into();
@@ -715,7 +822,7 @@
     </span><span class="kw">let </span>buf = <span class="kw-2">&amp;</span>buf[<span class="number">0</span>..msg_length];
     <span class="kw">let </span>result = <span class="kw">match </span>timeout(
         Duration::from_millis(REPLY_TIMEOUT_MS),
-        parse_query(tx.clone(), msg_length, buf, config.capture_packets),
+        parse_query(datastore_sender.clone(), msg_length, buf, capture_packets),
     )
     .<span class="kw">await
     </span>{
@@ -731,7 +838,7 @@
             <span class="macro">log::debug!</span>(<span class="string">&quot;TCP Result: {r:?}&quot;</span>);
 
             <span class="comment">// when you get a CHAOS from the allow-list with &quot;shutdown&quot; it&#39;s quitting time
-            </span><span class="kw">let </span>r = <span class="kw">match </span>check_for_shutdown(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>addr, <span class="kw-2">&amp;</span>config).<span class="kw">await </span>{
+            </span><span class="kw">let </span>r = <span class="kw">match </span>check_for_shutdown(<span class="kw-2">&amp;</span>r, allowed_shutdown).<span class="kw">await </span>{
                 <span class="comment">// no change here
                 </span><span class="prelude-val">Err</span>(reply) =&gt; <span class="kw">match </span>reply {
                     <span class="prelude-val">None </span>=&gt; r,
@@ -743,7 +850,7 @@
                     }) {
                         <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send UDPServer shutdown message: {error:?}&quot;</span>);
                     };
-                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = tx.send(Command::Shutdown).<span class="kw">await </span>{
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = datastore_sender.send(Command::Shutdown).<span class="kw">await </span>{
                         <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send shutdown command to datastore.. {error:?}&quot;</span>);
                     };
                     reply
@@ -791,15 +898,18 @@
 ///
 /// Ref &lt;https://www.rfc-editor.org/rfc/rfc7766&gt;
 </span><span class="kw">pub async fn </span>tcp_server(
-    bind_address: SocketAddr,
-    config: ConfigFile,
+    config: CowCellReadTxn&lt;ConfigFile&gt;,
     tx: mpsc::Sender&lt;<span class="kw">crate</span>::datastore::Command&gt;,
     agent_tx: broadcast::Sender&lt;AgentState&gt;,
-    <span class="kw-2">mut </span>agent_rx: broadcast::Receiver&lt;AgentState&gt;,
-) -&gt; io::Result&lt;()&gt; {
-    <span class="kw">let </span>tcpserver = <span class="kw">match </span>TcpListener::bind(bind_address).<span class="kw">await </span>{
+    <span class="comment">// mut agent_rx: broadcast::Receiver&lt;AgentState&gt;,
+</span>) -&gt; io::Result&lt;()&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>agent_rx = agent_tx.subscribe();
+    <span class="kw">let </span>tcpserver = <span class="kw">match </span>TcpListener::bind(config.dns_listener_address().unwrap()).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Started TCP listener on {}&quot;</span>, bind_address);
+            <span class="macro">log::info!</span>(
+                <span class="string">&quot;Started TCP listener on {}&quot;</span>,
+                config.dns_listener_address().unwrap()
+            );
             value
         }
         <span class="prelude-val">Err</span>(error) =&gt; {
@@ -808,27 +918,37 @@
         }
     };
 
+    <span class="kw">let </span>tcp_client_timeout = config.tcp_client_timeout;
+    <span class="kw">let </span>shutdown_ip_address_list = config.ip_allow_lists.shutdown.to_vec();
+    <span class="kw">let </span>capture_packets = config.capture_packets;
     <span class="kw">loop </span>{
         <span class="kw">let </span>(<span class="kw-2">mut </span>stream, addr) = <span class="kw">match </span>tcpserver.accept().<span class="kw">await </span>{
             <span class="prelude-val">Ok</span>(value) =&gt; value,
             <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t get data from TcpStream: {:?}&quot;</span>, error),
         };
 
+        <span class="kw">let </span>allowed_shutdown = shutdown_ip_address_list.contains(<span class="kw-2">&amp;</span>addr.ip());
         <span class="macro">log::debug!</span>(<span class="string">&quot;TCP connection from {:?}&quot;</span>, addr);
         <span class="kw">let </span>loop_tx = tx.clone();
-        <span class="kw">let </span>loop_config = config.clone();
         <span class="kw">let </span>loop_agent_tx = agent_tx.clone();
         tokio::spawn(<span class="kw">async move </span>{
             <span class="kw">if </span>timeout(
-                Duration::from_secs(loop_config.tcp_client_timeout),
-                tcp_conn_handler(<span class="kw-2">&amp;mut </span>stream, addr, loop_tx, loop_agent_tx, loop_config),
+                Duration::from_secs(tcp_client_timeout),
+                tcp_conn_handler(
+                    <span class="kw-2">&amp;mut </span>stream,
+                    addr,
+                    loop_tx,
+                    loop_agent_tx,
+                    capture_packets,
+                    allowed_shutdown,
+                ),
             )
             .<span class="kw">await
             </span>.is_err()
             {
                 <span class="macro">log::warn!</span>(
                     <span class="string">&quot;TCP Connection from {addr:?} terminated after {} seconds.&quot;</span>,
-                    config.tcp_client_timeout
+                    tcp_client_timeout
                 );
             }
         })
@@ -1007,6 +1127,94 @@
         authorities: <span class="macro">vec!</span>[],
         additional: <span class="macro">vec!</span>[],
     })
+}
+
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Servers {
+    <span class="kw">pub </span>datastore: <span class="prelude-ty">Option</span>&lt;JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), String&gt;&gt;&gt;,
+    <span class="kw">pub </span>udpserver: <span class="prelude-ty">Option</span>&lt;JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), Error&gt;&gt;&gt;,
+    <span class="kw">pub </span>tcpserver: <span class="prelude-ty">Option</span>&lt;JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), Error&gt;&gt;&gt;,
+    <span class="kw">pub </span>apiserver: <span class="prelude-ty">Option</span>&lt;JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), Error&gt;&gt;&gt;,
+    <span class="kw">pub </span>agent_tx: broadcast::Sender&lt;AgentState&gt;,
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>Servers {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>(agent_tx, <span class="kw">_</span>) = broadcast::channel(<span class="number">10000</span>);
+        <span class="self">Self </span>{
+            datastore: <span class="prelude-val">None</span>,
+            udpserver: <span class="prelude-val">None</span>,
+            tcpserver: <span class="prelude-val">None</span>,
+            apiserver: <span class="prelude-val">None</span>,
+            agent_tx,
+        }
+    }
+}
+
+<span class="kw">impl </span>Servers {
+    <span class="kw">pub fn </span>build(agent_tx: broadcast::Sender&lt;AgentState&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            agent_tx,
+            ..Default::default()
+        }
+    }
+    <span class="kw">pub fn </span>with_apiserver(<span class="self">self</span>, apiserver: <span class="prelude-ty">Option</span>&lt;JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), Error&gt;&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ apiserver, ..<span class="self">self </span>}
+    }
+    <span class="kw">pub fn </span>with_datastore(<span class="self">self</span>, datastore: JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), String&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            datastore: <span class="prelude-val">Some</span>(datastore),
+            ..<span class="self">self
+        </span>}
+    }
+    <span class="kw">pub fn </span>with_tcpserver(<span class="self">self</span>, tcpserver: JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), Error&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            tcpserver: <span class="prelude-val">Some</span>(tcpserver),
+            ..<span class="self">self
+        </span>}
+    }
+    <span class="kw">pub fn </span>with_udpserver(<span class="self">self</span>, udpserver: JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), Error&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            udpserver: <span class="prelude-val">Some</span>(udpserver),
+            ..<span class="self">self
+        </span>}
+    }
+
+    <span class="kw">fn </span>send_shutdown(<span class="kw-2">&amp;</span><span class="self">self</span>, agent: Agent) {
+        <span class="macro">log::info!</span>(<span class="string">&quot;{agent:?} shut down&quot;</span>);
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = <span class="self">self</span>.agent_tx.send(AgentState::Stopped { agent }) {
+            <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send agent shutdown message: {error:?}&quot;</span>);
+        };
+    }
+
+    <span class="kw">pub fn </span>all_finished(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="kw">let </span><span class="kw-2">mut </span>results = <span class="macro">vec!</span>[];
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="kw-2">&amp;</span><span class="self">self</span>.apiserver {
+            <span class="kw">if </span>server.is_finished() {
+                <span class="self">self</span>.send_shutdown(Agent::API);
+            }
+            results.push(server.is_finished())
+        }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="kw-2">&amp;</span><span class="self">self</span>.datastore {
+            <span class="kw">if </span>server.is_finished() {
+                <span class="self">self</span>.send_shutdown(Agent::Datastore);
+            }
+            results.push(server.is_finished())
+        }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="kw-2">&amp;</span><span class="self">self</span>.tcpserver {
+            <span class="kw">if </span>server.is_finished() {
+                <span class="self">self</span>.send_shutdown(Agent::TCPServer);
+            }
+            results.push(server.is_finished())
+        }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="kw-2">&amp;</span><span class="self">self</span>.udpserver {
+            <span class="kw">if </span>server.is_finished() {
+                <span class="self">self</span>.send_shutdown(Agent::UDPServer);
+            }
+            results.push(server.is_finished())
+        }
+        results.iter().any(|<span class="kw-2">&amp;</span>r| r)
+    }
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
