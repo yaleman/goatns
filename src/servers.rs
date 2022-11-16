@@ -1,11 +1,13 @@
 use concread::cowcell::asynch::CowCellReadTxn;
 use packed_struct::prelude::*;
+use std::io::Error;
 use std::net::SocketAddr;
 use std::str::{from_utf8, FromStr};
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
 use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::{broadcast, mpsc, oneshot};
+use tokio::task::JoinHandle;
 use tokio::time::timeout;
 
 use crate::config::ConfigFile;
@@ -82,9 +84,8 @@ async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<Reply, 
 
 pub async fn udp_server(
     config: CowCellReadTxn<ConfigFile>,
-    datastore: mpsc::Sender<crate::datastore::Command>,
+    datastore_sender: mpsc::Sender<crate::datastore::Command>,
     _agent_tx: broadcast::Sender<AgentState>,
-    mut _agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
     let udp_sock = match UdpSocket::bind(config.dns_listener_address().unwrap()).await {
         Ok(value) => {
@@ -112,7 +113,12 @@ pub async fn udp_server(
 
         let udp_result = match timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
-            parse_query(datastore.clone(), len, &udp_buffer, config.capture_packets),
+            parse_query(
+                datastore_sender.clone(),
+                len,
+                &udp_buffer,
+                config.capture_packets,
+            ),
         )
         .await
         {
@@ -165,7 +171,7 @@ pub async fn udp_server(
 pub async fn tcp_conn_handler(
     stream: &mut TcpStream,
     addr: SocketAddr,
-    tx: mpsc::Sender<Command>,
+    datastore_sender: mpsc::Sender<Command>,
     agent_tx: broadcast::Sender<AgentState>,
     capture_packets: bool,
     allowed_shutdown: bool,
@@ -207,7 +213,7 @@ pub async fn tcp_conn_handler(
     let buf = &buf[0..msg_length];
     let result = match timeout(
         Duration::from_millis(REPLY_TIMEOUT_MS),
-        parse_query(tx.clone(), msg_length, buf, capture_packets),
+        parse_query(datastore_sender.clone(), msg_length, buf, capture_packets),
     )
     .await
     {
@@ -235,7 +241,7 @@ pub async fn tcp_conn_handler(
                     }) {
                         eprintln!("Failed to send UDPServer shutdown message: {error:?}");
                     };
-                    if let Err(error) = tx.send(Command::Shutdown).await {
+                    if let Err(error) = datastore_sender.send(Command::Shutdown).await {
                         eprintln!("Failed to send shutdown command to datastore.. {error:?}");
                     };
                     reply
@@ -286,8 +292,9 @@ pub async fn tcp_server(
     config: CowCellReadTxn<ConfigFile>,
     tx: mpsc::Sender<crate::datastore::Command>,
     agent_tx: broadcast::Sender<AgentState>,
-    mut agent_rx: broadcast::Receiver<AgentState>,
+    // mut agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
+    let mut agent_rx = agent_tx.subscribe();
     let tcpserver = match TcpListener::bind(config.dns_listener_address().unwrap()).await {
         Ok(value) => {
             log::info!(
@@ -511,4 +518,92 @@ async fn get_result(
         authorities: vec![],
         additional: vec![],
     })
+}
+
+#[derive(Debug)]
+pub struct Servers {
+    pub datastore: Option<JoinHandle<Result<(), String>>>,
+    pub udpserver: Option<JoinHandle<Result<(), Error>>>,
+    pub tcpserver: Option<JoinHandle<Result<(), Error>>>,
+    pub apiserver: Option<JoinHandle<Result<(), Error>>>,
+    pub agent_tx: broadcast::Sender<AgentState>,
+}
+
+impl Default for Servers {
+    fn default() -> Self {
+        let (agent_tx, _) = broadcast::channel(10000);
+        Self {
+            datastore: None,
+            udpserver: None,
+            tcpserver: None,
+            apiserver: None,
+            agent_tx,
+        }
+    }
+}
+
+impl Servers {
+    pub fn build(agent_tx: broadcast::Sender<AgentState>) -> Self {
+        Self {
+            agent_tx,
+            ..Default::default()
+        }
+    }
+    pub fn with_apiserver(self, apiserver: Option<JoinHandle<Result<(), Error>>>) -> Self {
+        Self { apiserver, ..self }
+    }
+    pub fn with_datastore(self, datastore: JoinHandle<Result<(), String>>) -> Self {
+        Self {
+            datastore: Some(datastore),
+            ..self
+        }
+    }
+    pub fn with_tcpserver(self, tcpserver: JoinHandle<Result<(), Error>>) -> Self {
+        Self {
+            tcpserver: Some(tcpserver),
+            ..self
+        }
+    }
+    pub fn with_udpserver(self, udpserver: JoinHandle<Result<(), Error>>) -> Self {
+        Self {
+            udpserver: Some(udpserver),
+            ..self
+        }
+    }
+
+    fn send_shutdown(&self, agent: Agent) {
+        log::info!("{agent:?} shut down");
+        if let Err(error) = self.agent_tx.send(AgentState::Stopped { agent }) {
+            eprintln!("Failed to send agent shutdown message: {error:?}");
+        };
+    }
+
+    pub fn all_finished(&self) -> bool {
+        let mut results = vec![];
+        if let Some(server) = &self.apiserver {
+            if server.is_finished() {
+                self.send_shutdown(Agent::API);
+            }
+            results.push(server.is_finished())
+        }
+        if let Some(server) = &self.datastore {
+            if server.is_finished() {
+                self.send_shutdown(Agent::Datastore);
+            }
+            results.push(server.is_finished())
+        }
+        if let Some(server) = &self.tcpserver {
+            if server.is_finished() {
+                self.send_shutdown(Agent::TCPServer);
+            }
+            results.push(server.is_finished())
+        }
+        if let Some(server) = &self.udpserver {
+            if server.is_finished() {
+                self.send_shutdown(Agent::UDPServer);
+            }
+            results.push(server.is_finished())
+        }
+        results.iter().any(|&r| r)
+    }
 }

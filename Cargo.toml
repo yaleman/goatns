@@ -68,7 +68,7 @@ url = { version = "2.3.1", features = ["serde"] }
 [dev-dependencies]
 criterion = "^0.4"
 scopeguard = "1.1.0"
-trust-dns-resolver = "0.22.0"
+trust-dns-resolver = { version = "0.22.0", features=["tokio", "tokio-runtime"] }
 
 [[bench]]
 name = "baselines"
