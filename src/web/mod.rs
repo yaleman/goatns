@@ -15,7 +15,7 @@ use axum_extra::routing::SpaRouter;
 use axum_server::tls_rustls::RustlsConfig;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
-use oauth2::{ClientId, ClientSecret, PkceCodeVerifier, RedirectUrl};
+use oauth2::{ClientId, ClientSecret, PkceCodeVerifier};
 use openidconnect::Nonce;
 use sqlx::{Pool, Sqlite};
 use std::collections::HashMap;
@@ -28,7 +28,6 @@ use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing::Level;
-use url::Url;
 
 use self::auth::CustomProviderMetadata;
 
@@ -56,8 +55,6 @@ pub trait SharedStateTrait {
     async fn pop_verifier(&self, csrftoken: String) -> Option<(PkceCodeVerifier, Nonce)>;
     async fn oauth2_client_id(&self) -> ClientId;
     async fn oauth2_secret(&self) -> Option<ClientSecret>;
-    async fn oauth2_redirect(&self) -> RedirectUrl;
-    // async fn oauth2_introspection_url(&self) -> IntrospectionUrl;
     async fn push_verifier(&self, csrftoken: String, verifier: (PkceCodeVerifier, Nonce));
 }
 
@@ -94,26 +91,6 @@ impl SharedStateTrait for SharedState {
     async fn oauth2_secret(&self) -> Option<ClientSecret> {
         let client_secret = self.read().await.config.oauth2_secret.clone();
         Some(ClientSecret::new(client_secret))
-    }
-
-    /// The URL that this instance will tell the OIDC IDP to send auth requests back to
-    async fn oauth2_redirect(&self) -> RedirectUrl {
-        let config = self.config().await;
-
-        if let Some(mut url) = config.oauth2_redirect_url {
-            // update the URL with the final auth path
-            url.set_path("/auth/login");
-            log::debug!("OAuth2 Redirect URL: {url:?}");
-            return RedirectUrl::from_url(url);
-        }
-
-        let baseurl = match config.api_port {
-            443 => format!("https://{}", config.hostname),
-            _ => format!("https://{}:{}", config.hostname, config.api_port),
-        };
-        let url = Url::parse(&format!("{}/auth/login", baseurl))
-            .expect("Failed to parse config into an OAuth Redirect URL");
-        RedirectUrl::from_url(url)
     }
 
     /// Store the PKCE verifier details server-side for when the user comes back with their auth token

@@ -1,4 +1,5 @@
 use crate::resourcerecord::SetTTL;
+use std::io::ErrorKind;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -21,14 +22,21 @@ pub mod test;
 
 const SQL_VIEW_RECORDS: &str = "records_merged";
 
-pub async fn get_conn(config_reader: CowCellReadTxn<ConfigFile>) -> Result<Pool<Sqlite>, String> {
+pub async fn get_conn(
+    config_reader: CowCellReadTxn<ConfigFile>,
+) -> Result<Pool<Sqlite>, std::io::Error> {
     let db_path: &str = &shellexpand::full(&config_reader.sqlite_path).unwrap();
     let db_url = format!("sqlite://{db_path}?mode=rwc");
     log::debug!("Opening Database: {db_url}");
 
     let mut options = match SqliteConnectOptions::from_str(&db_url) {
         Ok(value) => value,
-        Err(error) => return Err(format!("connection failed: {error:?}")),
+        Err(error) => {
+            return Err(std::io::Error::new(
+                ErrorKind::Other,
+                format!("connection failed: {error:?}"),
+            ))
+        }
     };
     if config_reader.sql_log_statements {
         options.log_statements(log::LevelFilter::Trace);
@@ -43,7 +51,10 @@ pub async fn get_conn(config_reader: CowCellReadTxn<ConfigFile>) -> Result<Pool<
 
     match SqlitePool::connect_with(options).await {
         Ok(value) => Ok(value),
-        Err(err) => Err(format!("Error opening SQLite DB ({db_url:?}): {err:?}")),
+        Err(err) => Err(std::io::Error::new(
+            ErrorKind::Other,
+            format!("Error opening SQLite DB ({db_url:?}): {err:?}"),
+        )),
     }
 }
 

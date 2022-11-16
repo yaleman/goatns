@@ -209,20 +209,8 @@ async fn handle_get_zone_names(
 /// Manages the datastore, waits for signals from the server instances and responds with data
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
-    zone_file: Option<String>,
-    use_zonefile: bool,
     connpool: Pool<Sqlite>,
 ) -> Result<(), String> {
-    // Load the specified zone file on startup
-    if use_zonefile {
-        if let Some(zone_file) = zone_file {
-            if let Err(err) = handle_import_file(&connpool, zone_file.clone(), None).await {
-                log::error!("Failed to import {}: {err:?}", zone_file);
-                return Ok(());
-            };
-        }
-    }
-
     while let Some(cmd) = rx.recv().await {
         match cmd {
             Command::GetZone { id, name, resp } => {

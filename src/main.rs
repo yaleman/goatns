@@ -1,5 +1,6 @@
 use concread::cowcell::asynch::CowCell;
 use goatns::enums::SystemState;
+use goatns::utils::start_channels;
 use sqlx::Pool;
 use sqlx::Sqlite;
 use std::io;
@@ -15,7 +16,6 @@ use goatns::datastore;
 use goatns::db;
 use goatns::enums::{Agent, AgentState};
 use goatns::servers;
-use goatns::MAX_IN_FLIGHT;
 use tokio::time::sleep;
 
 #[tokio::main]
@@ -53,47 +53,38 @@ async fn main() -> io::Result<()> {
 
     log::info!("Configuration: {}", *config.read().await);
 
-    // agent signalling
-    let agent_tx: broadcast::Sender<AgentState>;
-    #[allow(unused_variables)]
-    let _agent_rx: broadcast::Receiver<AgentState>;
-    (agent_tx, _agent_rx) = broadcast::channel(32);
-    let tx: mpsc::Sender<datastore::Command>;
-    let rx: mpsc::Receiver<datastore::Command>;
-    (tx, rx) = mpsc::channel(MAX_IN_FLIGHT);
+    let (agent_tx, datastore_sender, datastore_receiver) = start_channels();
 
     // start up the DB
-    let connpool = match db::get_conn(config.read().await).await {
-        Ok(value) => value,
-        Err(err) => {
-            log::error!("Failed to start sqlite connection tool: {err}");
-            return Ok(());
-        }
-    };
+    let connpool = db::get_conn(config.read().await).await?;
+
     if let Err(err) = db::start_db(&connpool).await {
         log::error!("{err}");
         return Ok(());
     };
 
     // start all the things!
-    let zone_file = config.read().await;
-    let zone_file = zone_file.zone_file.clone();
-    let datastore_manager = tokio::spawn(datastore::manager(
-        rx,
-        zone_file,
-        clap_results.get_flag("use_zonefile"),
-        connpool.clone(),
-    ));
+    let datastore_manager = tokio::spawn(datastore::manager(datastore_receiver, connpool.clone()));
 
-    match goatns::cli::cli_commands(tx.clone(), &clap_results).await {
+    match goatns::cli::cli_commands(
+        datastore_sender.clone(),
+        &clap_results,
+        &config.read().await.zone_file,
+    )
+    .await
+    {
         Ok(resp) => {
-            match resp {
-                SystemState::Server => {
-                    start(config, tx, agent_tx, connpool, datastore_manager).await?
-                }
-                _ => {}
+            if resp == SystemState::Server {
+                start(
+                    config,
+                    datastore_sender,
+                    agent_tx,
+                    connpool,
+                    datastore_manager,
+                )
+                .await?
             }
-        },
+        }
         Err(error) => {
             log::trace!("{error}")
         }

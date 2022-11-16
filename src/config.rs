@@ -5,6 +5,7 @@ use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
 use flexi_logger::{DeferredNow, LoggerHandle};
 use gethostname::gethostname;
+use oauth2::RedirectUrl;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -68,7 +69,7 @@ pub struct ConfigFile {
     /// OAuth2 Resource server name
     pub oauth2_client_id: String,
     /// If your instance is behind a proxy/load balancer/whatever, you need to specify this, eg `https://example.com:12345`
-    pub oauth2_redirect_url: Option<Url>,
+    pub oauth2_redirect_url: RedirectUrl,
     #[serde(skip_serializing)]
     /// Oauth2 Secret
     pub oauth2_secret: String,
@@ -148,7 +149,10 @@ impl ConfigFile {
 
         if config.api_tls_cert.starts_with("~") {
             #[cfg(test)]
-            eprintln!("updating tls cert from {:#?} to shellex", config.api_tls_cert);
+            eprintln!(
+                "updating tls cert from {:#?} to shellex",
+                config.api_tls_cert
+            );
             config.api_tls_cert = PathBuf::from(
                 shellexpand::tilde(&config.api_tls_cert.to_str().unwrap()).to_string(),
             );
@@ -201,22 +205,30 @@ impl ConfigFile {
         };
 
         // clean up the file paths and filter them by the ones that exist
-        let found_files: Vec<String> = file_locations.iter().filter_map(|f| {
-            let path = shellexpand::tilde(&f).into_owned();
-            let filepath = std::path::Path::new(&path);
-            match filepath.exists() {
-                false => {
-                    eprintln!("Config file {path} doesn't exist, skipping.");
-                    None
-                },
-                true => Some(path)
-            }
-
-        }).collect();
+        let found_files: Vec<String> = file_locations
+            .iter()
+            .filter_map(|f| {
+                let path = shellexpand::tilde(&f).into_owned();
+                let filepath = std::path::Path::new(&path);
+                match filepath.exists() {
+                    false => {
+                        eprintln!("Config file {path} doesn't exist, skipping.");
+                        None
+                    }
+                    true => Some(path),
+                }
+            })
+            .collect();
 
         if found_files.is_empty() {
-            eprintln!("No configuration files exist, giving up! Tried: {}", file_locations.join(", "));
-            return Err(std::io::Error::new(ErrorKind::NotFound, "No configuration files found"))
+            eprintln!(
+                "No configuration files exist, giving up! Tried: {}",
+                file_locations.join(", ")
+            );
+            return Err(std::io::Error::new(
+                ErrorKind::NotFound,
+                "No configuration files found",
+            ));
         }
 
         // check that at least one config file exists
@@ -232,10 +244,15 @@ impl ConfigFile {
                     std::io::ErrorKind::Other,
                     format!("Couldn't load config from {config_filename}: {e:?}"),
                 )
-            })?;
+            });
 
-            eprintln!("Successfully loaded config from: {}", config_filename);
-            return Ok(ConfigFile::from(config));
+            match config {
+                Ok(config) => {
+                    eprintln!("Successfully loaded config from: {}", config_filename);
+                    return Ok(ConfigFile::from(config));
+                }
+                Err(err) => eprintln!("{err:?}"),
+            }
         }
 
         Ok(ConfigFile::default())
@@ -267,7 +284,11 @@ impl Default for ConfigFile {
             api_static_dir: String::from("./static_files/"),
             api_cookie_secret: generate_cookie_secret(),
             oauth2_client_id: String::from(""),
-            oauth2_redirect_url: None,
+            // TODO: this should be auto-generated from stuff
+            oauth2_redirect_url: RedirectUrl::from_url(
+                Url::from_str("https://example.com")
+                    .expect("Internal error parsing example.com into a URL?"),
+            ),
             oauth2_secret: String::from(""),
             oauth2_config_url: String::from(""),
             oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
@@ -303,8 +324,40 @@ impl Display for ConfigFile {
 
 impl From<Config> for ConfigFile {
     fn from(config: Config) -> Self {
+        let hostname = config.get("hostname").unwrap_or(Self::default().hostname);
+        let api_port = config.get("api_port").unwrap_or(Self::default().api_port);
+
+        // Figure out the oauth2 redirect URL
+        // TODO: test this with different values
+        let oauth2_redirect_url: Option<RedirectUrl> = match config.get("oauth2_redirect_url") {
+            Ok(value) => Some(value),
+            Err(_) => None,
+        };
+        let oauth2_redirect_url = match oauth2_redirect_url {
+            Some(mut url) => {
+                // update the URL with the final auth path
+                // eprintln!("OAuth2 Redirect URL: {url:?}");
+                if !url.url().path().ends_with("/auth/login") {
+                    let new_url = url.url().join("/auth/login").unwrap();
+                    url = RedirectUrl::from_url(new_url);
+                }
+                // eprintln!("OAuth2 Redirect URL after update: {url:?}");
+                url
+            }
+            None => {
+                // if they haven't set it in config, build it automagically
+                let baseurl = match api_port {
+                    443 => format!("https://{}", hostname),
+                    _ => format!("https://{}:{}", hostname, api_port),
+                };
+                let url = Url::parse(&format!("{}/auth/login", baseurl))
+                    .expect("Failed to parse hostname/api_port into a valid URL");
+                RedirectUrl::from_url(url)
+            }
+        };
+
         ConfigFile {
-            hostname: config.get("hostname").unwrap_or(Self::default().hostname),
+            hostname,
             address: config.get("address").unwrap_or(Self::default().address),
             port: config.get("port").unwrap_or_default(),
             capture_packets: config.get("capture_packets").unwrap_or_default(),
@@ -325,7 +378,7 @@ impl From<Config> for ConfigFile {
             enable_api: config
                 .get("enable_api")
                 .unwrap_or(Self::default().enable_api),
-            api_port: config.get("api_port").unwrap_or(Self::default().api_port),
+            api_port,
             api_tls_cert: config
                 .get("api_tls_cert")
                 .unwrap_or(Self::default().api_tls_cert),
@@ -339,9 +392,7 @@ impl From<Config> for ConfigFile {
             oauth2_client_id: config
                 .get("oauth2_client_id")
                 .unwrap_or(Self::default().oauth2_client_id),
-            oauth2_redirect_url: config
-                .get("oauth2_redirect_url")
-                .unwrap_or(Self::default().oauth2_redirect_url),
+            oauth2_redirect_url,
             oauth2_secret: config
                 .get("oauth2_secret")
                 .unwrap_or(Self::default().oauth2_secret),

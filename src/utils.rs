@@ -1,6 +1,9 @@
+use crate::datastore::Command;
+use crate::enums::AgentState;
 use crate::HEADER_BYTES;
 use log::{debug, trace};
 use std::str::from_utf8;
+use tokio::sync::{broadcast, mpsc};
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
     for (index, curr_byte) in search.iter().enumerate() {
@@ -294,4 +297,17 @@ pub fn loc_size_to_u8(input: f32) -> u8 {
     // turn it into the magic ugly numbers
     let retval: u8 = (mantissa << 4) | (exponent as u8);
     retval
+}
+
+/// Get all the widgets for agent signalling
+pub fn start_channels() -> (
+    broadcast::Sender<AgentState>,
+    mpsc::Sender<Command>,
+    mpsc::Receiver<Command>,
+) {
+    let (agent_tx, _) = broadcast::channel(32);
+    let datastore_sender: mpsc::Sender<Command>;
+    let datastore_receiver: mpsc::Receiver<Command>;
+    (datastore_sender, datastore_receiver) = mpsc::channel(crate::MAX_IN_FLIGHT);
+    (agent_tx, datastore_sender, datastore_receiver)
 }
