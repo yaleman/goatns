@@ -1,5 +1,7 @@
 # GoatNS
 
+![GoatNS Logo](./static_files/img/apple-touch-icon.png)
+
 Yet another authoritative DNS name server. But with goat references.
 
 Built in Rust, thanks to some great packages
