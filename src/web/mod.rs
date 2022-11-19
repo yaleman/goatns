@@ -157,8 +157,7 @@ pub async fn build(
 
     let static_router = SpaRouter::new("/static", &config_dir);
 
-    let session_layer =
-        auth::build_auth_stores(config.sql_session_cleanup_seconds, connpool.clone()).await;
+    let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await;
 
     let csp_matchers = vec![CspUrlMatcher::default_self(
         RegexSet::new([r"^(/|/ui)"]).unwrap(),

@@ -13,6 +13,8 @@ use axum_sessions::extractors::WritableSession;
 
 use super::SharedState;
 
+mod user_settings;
+
 #[derive(Template)]
 #[template(path = "view_zones.html")]
 struct TemplateViewZones {
@@ -169,6 +171,7 @@ pub async fn dashboard(
 pub fn new() -> Router {
     Router::new()
         .route("/", get(dashboard))
+        .route("/settings", get(user_settings::settings))
         .route("/zones/:id", get(zone_view))
         .route("/zones/list", get(zones_list))
 }
