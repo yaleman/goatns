@@ -267,7 +267,9 @@ name = "axum-csp"
 version = "0.0.1"
 dependencies = [
  "axum",
+ "axum-server",
  "http",
+ "lazy_static",
  "regex",
  "tokio",
 ]

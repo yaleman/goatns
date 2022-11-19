@@ -9,11 +9,18 @@ repository = "https://github.com/yaleman/goatns.git"
 keywords = ["dns","server","tokio","api","oauth2","oidc"]
 categories = ["network-programming"]
 
+
+[workspace]
+members = [
+    ".",
+    "axum-csp",
+]
+
 [lib]
 bench=false
 
 [profile.release]
-lto = "thin"
+lto = "fat"
 opt-level = 3
 
 [dependencies]

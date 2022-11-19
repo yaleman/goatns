@@ -125,6 +125,23 @@ impl CspDirective {
     }
 }
 
+impl ToString for CspDirective {
+    fn to_string(&self) -> String {
+        let mut res = String::new();
+        for val in self.values.iter() {
+            res.push_str(&format!(" {}", String::from(val.to_owned())));
+        }
+        res.push(';');
+        res
+    }
+}
+
+impl From<CspDirective> for HeaderValue {
+    fn from(input: CspDirective) -> HeaderValue {
+        HeaderValue::from_str(&input.to_string()).unwrap()
+    }
+}
+
 /// Build these to find urls to add headers to
 #[derive(Clone, Debug)]
 pub struct CspUrlMatcher {
@@ -143,6 +160,22 @@ impl CspUrlMatcher {
     pub fn with_directive(&mut self, directive: CspDirective) -> &mut Self {
         self.directives.push(directive);
         self
+    }
+
+    /// Exposes the internal matcher.is_match as a struct method
+    pub fn is_match(&self, text: &str) -> bool {
+        self.matcher.is_match(text)
+    }
+
+    /// build a matcher which will emit `default-src 'self';` for all matches
+    pub fn default_all_self() -> Self {
+        Self {
+            matcher: RegexSet::new([r#".*"#]).unwrap(),
+            directives: vec![CspDirective {
+                directive_type: CspDirectiveType::DefaultSrc,
+                values: vec![CspValue::SelfSite],
+            }],
+        }
     }
 }
 
@@ -165,6 +198,7 @@ impl From<CspUrlMatcher> for HeaderValue {
 /// Enum for [CSP source values](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources)
 pub enum CspValue {
     None,
+    /// Equivalent to 'self' but can't just `Self` in rust
     SelfSite,
     StrictDynamic,
     ReportSample,

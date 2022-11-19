@@ -115,7 +115,7 @@ pub struct State {
     pub oidc_config_updated: Option<DateTime<Utc>>,
     pub oidc_config: Option<auth::CustomProviderMetadata>,
     pub oidc_verifier: HashMap<String, (PkceCodeVerifier, Nonce)>,
-    pub csp_headers: Vec<CspUrlMatcher>,
+    pub csp_matchers: Vec<CspUrlMatcher>,
 }
 
 pub async fn build(
@@ -162,7 +162,7 @@ pub async fn build(
     let session_layer =
         auth::build_auth_stores(config.sql_session_cleanup_seconds, connpool.clone()).await;
 
-    let csp_headers = vec![CspUrlMatcher {
+    let csp_matchers = vec![CspUrlMatcher {
         matcher: RegexSet::new([r"^/ui"]).unwrap(),
         directives: vec![CspDirective::from(
             CspDirectiveType::MediaSrc,
@@ -178,7 +178,7 @@ pub async fn build(
         oidc_config_updated: None,
         oidc_config: None,
         oidc_verifier: HashMap::new(),
-        csp_headers,
+        csp_matchers,
     }));
 
     // add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html

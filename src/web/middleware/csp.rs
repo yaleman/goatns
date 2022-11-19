@@ -13,7 +13,7 @@ pub async fn cspheaders<B>(req: Request<B>, next: Next<B>) -> Result<Response, S
             log::error!("Couldn't get state in request :(");
             None
         }
-        Some(state) => state.read().await.csp_headers.iter().find_map(|c| {
+        Some(state) => state.read().await.csp_matchers.iter().find_map(|c| {
             if c.matcher.is_match(&uri) {
                 Some(c.to_owned())
             } else {
