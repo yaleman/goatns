@@ -33,7 +33,7 @@ axum-extra = { version = "0.3.7", features = ["spa"] }
 # axum-login = { version = "0.2.0", features = ["sqlite"] }
 axum-macros = "0.2.3"
 axum-server = { version = "0.4.3", features = [ "tls-rustls"] }
-axum-sessions = "0.3.1"
+axum-sessions = "0.3.2"
 bit-vec = "0.6.3"
 bytes = "1.2.1"
 chrono = { version = "0.4.23", features = ["clock"] }
