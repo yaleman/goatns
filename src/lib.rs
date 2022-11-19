@@ -3,7 +3,6 @@
 #![warn(clippy::complexity)]
 // #![warn(clippy::cargo)]
 #![warn(clippy::perf)]
-// #![warn(clippy::pedantic)]
 #![deny(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
 

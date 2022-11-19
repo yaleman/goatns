@@ -1,0 +1,40 @@
+---
+name: Clippy
+
+# Trigger the workflow on push or pull request
+"on":
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  clippy:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Restore our cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          default: true
+      - name: "Run clippy for goatns"
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+

@@ -1,0 +1,23 @@
+[package]
+name = "axum-csp"
+description = "Some widgets for use with axum to create Content-Security-Policy headers and reduce silly typos."
+readme = "README.md"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/yaleman/goatns.git/axum-csp"
+keywords = ["http", "server","tokio","api"]
+categories = ["network-programming"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "0.5.17", default-features = false, features = ["headers", "original-uri"] }
+http = "0.2.8"
+regex = "1.7.0"
+tokio = { version = "1.22.0", default-features = false, features = ["sync"] }
+
+[dev-dependencies]
+axum-server = "0.4.4"
+lazy_static = "1.4.0"
+tokio = { version = "1.22.0", default-features = false, features = ["full"] }

@@ -5,7 +5,6 @@ use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
 use flexi_logger::{DeferredNow, LoggerHandle};
 use gethostname::gethostname;
-use oauth2::RedirectUrl;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -31,6 +30,7 @@ pub struct IPAllowList {
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Clone, Serialize)]
+/// The main config blob for GoatNS, write this as a JSON file and load it and it'll make things go.
 pub struct ConfigFile {
     /// The server's hostname when generating an SOA record, defaults to the results of gethostname()
     pub hostname: String,
@@ -69,7 +69,7 @@ pub struct ConfigFile {
     /// OAuth2 Resource server name
     pub oauth2_client_id: String,
     /// If your instance is behind a proxy/load balancer/whatever, you need to specify this, eg `https://example.com:12345`
-    pub oauth2_redirect_url: RedirectUrl,
+    pub oauth2_redirect_url: Url,
     #[serde(skip_serializing)]
     /// Oauth2 Secret
     pub oauth2_secret: String,
@@ -285,10 +285,8 @@ impl Default for ConfigFile {
             api_cookie_secret: generate_cookie_secret(),
             oauth2_client_id: String::from(""),
             // TODO: this should be auto-generated from stuff
-            oauth2_redirect_url: RedirectUrl::from_url(
-                Url::from_str("https://example.com")
-                    .expect("Internal error parsing example.com into a URL?"),
-            ),
+            oauth2_redirect_url: Url::from_str("https://example.com")
+                .expect("Internal error parsing example.com into a URL"),
             oauth2_secret: String::from(""),
             oauth2_config_url: String::from(""),
             oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
@@ -316,8 +314,8 @@ impl Display for ConfigFile {
             }
         };
         f.write_fmt(format_args!(
-            "hostname=\"{}\" listening_address=\"{}:{}\" capturing_pcaps={} Log_level={}, admin_contact={:?} {api_details}",
-            self.hostname, self.address, self.port, self.capture_packets, self.log_level, self.admin_contact,
+            "hostname=\"{}\" listening_address=\"{}:{}\" capturing_pcaps={} Log_level={}, admin_contact={:?} {api_details} oauth2_redirect_url={}",
+            self.hostname, self.address, self.port, self.capture_packets, self.log_level, self.admin_contact, self.oauth2_redirect_url
         ))
     }
 }
@@ -327,19 +325,23 @@ impl From<Config> for ConfigFile {
         let hostname = config.get("hostname").unwrap_or(Self::default().hostname);
         let api_port = config.get("api_port").unwrap_or(Self::default().api_port);
 
-        // Figure out the oauth2 redirect URL
+        // The OAuth2 redirect URL is a magical pony.
+
         // TODO: test this with different values
-        let oauth2_redirect_url: Option<RedirectUrl> = match config.get("oauth2_redirect_url") {
-            Ok(value) => Some(value),
+        let oauth2_redirect_url: Option<Url> = match config.get("oauth2_redirect_url") {
+            Ok(value) => {
+                // println!("Found url in config: {:?}", value);
+                Some(value)
+            }
             Err(_) => None,
         };
         let oauth2_redirect_url = match oauth2_redirect_url {
             Some(mut url) => {
                 // update the URL with the final auth path
                 // eprintln!("OAuth2 Redirect URL: {url:?}");
-                if !url.url().path().ends_with("/auth/login") {
-                    let new_url = url.url().join("/auth/login").unwrap();
-                    url = RedirectUrl::from_url(new_url);
+                if !url.path().ends_with("/auth/login") {
+                    // println!("Adding authlogin tail");
+                    url = url.join("/auth/login").unwrap();
                 }
                 // eprintln!("OAuth2 Redirect URL after update: {url:?}");
                 url
@@ -350,9 +352,8 @@ impl From<Config> for ConfigFile {
                     443 => format!("https://{}", hostname),
                     _ => format!("https://{}:{}", hostname, api_port),
                 };
-                let url = Url::parse(&format!("{}/auth/login", baseurl))
-                    .expect("Failed to parse hostname/api_port into a valid URL");
-                RedirectUrl::from_url(url)
+                Url::parse(&format!("{}/auth/login", baseurl))
+                    .expect("Failed to parse hostname/api_port into a valid URL")
             }
         };
 

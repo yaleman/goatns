@@ -4,9 +4,20 @@ language = "en"
 multilingual = false
 src = "src"
 title = "Goat NS"
+description = "Documentation for the GoatNS DNS Server."
+
+[rust]
+edition = "2021"
+
+[build]
+create-missing = true
+
+
+[output.html]
+edit-url-template = "https://github.com/yaleman/goatns/edit/main/docs/{path}"
+git-repository-url = "https://github.com/yaleman/goatns"
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
 
 [preprocessor.mermaid]
 command = "mdbook-mermaid"
 
-[output.html]
-additional-js = ["mermaid.min.js", "mermaid-init.js"]
