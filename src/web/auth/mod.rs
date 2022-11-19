@@ -27,7 +27,6 @@ use openidconnect::{
 use openidconnect::{
     AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
 };
-use rand::Rng;
 use serde::Deserialize;
 use sqlx::{Pool, Sqlite};
 
@@ -397,7 +396,6 @@ pub async fn build_auth_stores(
 }
 
 #[derive(Deserialize, Debug)]
-#[allow(dead_code)]
 /// This handles the POST from "would you like to create your user"
 pub struct SignupForm {
     pub state: String,
@@ -462,9 +460,6 @@ pub async fn signup(
 }
 
 pub fn new() -> Router {
-    let mut secret: [u8; 64] = [0; 64];
-    rand::thread_rng().fill(&mut secret);
-
     Router::new()
         .route("/login", get(login))
         .route("/logout", get(logout))

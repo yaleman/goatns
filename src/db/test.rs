@@ -88,7 +88,7 @@ async fn test_get_zone_records() -> Result<(), sqlx::Error> {
 async fn test_get_zone_empty() -> Result<(), sqlx::Error> {
     let pool = test_get_sqlite_memory().await;
     println!("Creating Zones Table");
-    create_zones_table(&pool).await?;
+    FileZone::create_table(&pool).await?;
     let zone_data = get_zone(&pool, "example.org".to_string()).await?;
     println!("{:?}", zone_data);
     assert_eq!(zone_data, None);
@@ -99,9 +99,9 @@ async fn test_get_zone_empty() -> Result<(), sqlx::Error> {
 #[tokio::test]
 async fn test_db_create_table_zones() -> Result<(), sqlx::Error> {
     let pool = test_get_sqlite_memory().await;
-    create_zones_table(&pool).await?;
-    create_zones_table(&pool).await?;
-    Ok(create_zones_table(&pool).await?)
+    FileZone::create_table(&pool).await?;
+    FileZone::create_table(&pool).await?;
+    Ok(FileZone::create_table(&pool).await?)
 }
 
 /// Checks that the table create process works and is idempotent
@@ -109,9 +109,9 @@ async fn test_db_create_table_zones() -> Result<(), sqlx::Error> {
 async fn test_db_create_table_records() -> Result<(), sqlx::Error> {
     let pool = test_get_sqlite_memory().await;
     println!("Creating Records Table");
-    create_records_table(&pool).await?;
-    create_records_table(&pool).await?;
-    Ok(create_records_table(&pool).await?)
+    FileZoneRecord::create_table(&pool).await?;
+    FileZoneRecord::create_table(&pool).await?;
+    Ok(FileZoneRecord::create_table(&pool).await?)
 }
 
 /// An example zone for testing
@@ -183,9 +183,9 @@ async fn test_all_db_things() -> Result<(), sqlx::Error> {
     let pool = test_get_sqlite_memory().await;
 
     println!("Creating Zones Table");
-    create_zones_table(&pool).await?;
+    FileZone::create_table(&pool).await?;
     println!("Creating Records Table");
-    create_records_table(&pool).await?;
+    FileZoneRecord::create_table(&pool).await?;
     println!("Successfully created tables!");
 
     let zone = test_example_com_zone();

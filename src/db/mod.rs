@@ -10,6 +10,7 @@ use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::{FileZone, FileZoneRecord};
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use openidconnect::SubjectIdentifier;
 use serde::{Deserialize, Serialize};
@@ -60,41 +61,15 @@ pub async fn get_conn(
 
 /// Do the basic setup and checks (if we write any)
 pub async fn start_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    create_zones_table(pool).await?;
-    create_users_table(pool).await?;
-    create_records_table(pool).await?;
-    create_ownership_table(pool).await?;
+    FileZone::create_table(pool).await?;
+    User::create_table(pool).await?;
+    UserAuthToken::create_table(pool).await?;
+    FileZoneRecord::create_table(pool).await?;
+    ZoneOwnership::create_table(pool).await?;
     log::info!("Completed DB Startup!");
     Ok(())
 }
 
-pub async fn create_users_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    log::debug!("Ensuring DB Users table exists");
-    sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS
-        users (
-            id  INTEGER PRIMARY KEY,
-            displayname TEXT NOT NULL,
-            username TEXT NOT NULL,
-            email TEXT NOT NULL,
-            disabled BOOL NOT NULL,
-            authref TEXT,
-            admin BOOL DEFAULT 0
-        )"#,
-    )
-    .execute(&mut pool.acquire().await?)
-    .await?;
-
-    sqlx::query(
-        "CREATE UNIQUE INDEX IF NOT EXISTS
-        ind_users_fields
-        ON users ( username, email )",
-    )
-    .execute(&mut pool.acquire().await?)
-    .await?;
-
-    Ok(())
-}
 #[derive(Clone, Deserialize, Serialize, Debug, sqlx::FromRow)]
 pub struct User {
     pub id: Option<i64>,
@@ -304,129 +279,6 @@ impl ZoneOwnership {
         // TODO: delete all ownership records
         todo!();
     }
-}
-
-pub async fn create_ownership_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    let mut tx = pool.begin().await.unwrap();
-
-    #[cfg(test)]
-    eprintln!("Ensuring DB Ownership table exists");
-    log::debug!("Ensuring DB Ownership table exists");
-    sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS
-        ownership (
-            id   INTEGER PRIMARY KEY,
-            zoneid INTEGER NOT NULL,
-            userid INTEGER NOT NULL,
-            FOREIGN KEY(zoneid) REFERENCES zones(id),
-            FOREIGN KEY(userid) REFERENCES users(id)
-        )"#,
-    )
-    .execute(&mut tx)
-    .await?;
-
-    #[cfg(test)]
-    eprintln!("Ensuring DB Ownership index exists");
-    log::debug!("Ensuring DB Ownership index exists");
-    sqlx::query(
-        "CREATE UNIQUE INDEX
-        IF NOT EXISTS
-        ind_ownership
-        ON ownership (
-            zoneid,
-            userid
-        )",
-    )
-    .execute(&mut tx)
-    .await?;
-
-    tx.commit().await
-}
-
-pub async fn create_zones_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    let mut tx = pool.begin().await.unwrap();
-
-    log::debug!("Ensuring DB Zones table exists");
-    sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS
-        zones (
-            id   INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            rname TEXT NOT NULL,
-            serial INTEGER NOT NULL,
-            refresh INTEGER NOT NULL,
-            retry INTEGER NOT NULL,
-            expire INTEGER NOT NULL,
-            minimum INTEGER NOT NULL
-        )"#,
-    )
-    .execute(&mut tx)
-    .await?;
-
-    // .execute(tx).await;
-    log::debug!("Ensuring DB Records index exists");
-    sqlx::query(
-        "CREATE UNIQUE INDEX
-        IF NOT EXISTS
-        ind_zones
-        ON zones (
-            id,name
-        )",
-    )
-    .execute(&mut tx)
-    .await?;
-    tx.commit().await?;
-    Ok(())
-}
-
-pub async fn create_records_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    log::debug!("Ensuring DB Records table exists");
-
-    let mut tx = pool.begin().await.unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS
-        records (
-            id      INTEGER PRIMARY KEY,
-            zoneid  INTEGER NOT NULL,
-            name    TEXT, /* this can be null for apex records */
-            ttl     INTEGER,
-            rrtype  INTEGER NOT NULL,
-            rclass  INTEGER NOT NULL,
-            rdata   TEXT NOT NULL,
-            FOREIGN KEY(zoneid) REFERENCES zones(id)
-        )",
-    )
-    .execute(&mut tx)
-    .await?;
-    log::debug!("Ensuring DB Records index exists");
-    sqlx::query(
-        "CREATE UNIQUE INDEX
-        IF NOT EXISTS
-        ind_records
-        ON records (
-            id,zoneid,name,rrtype,rclass
-        )",
-    )
-    .execute(&mut tx)
-    .await?;
-    log::debug!("Ensuring DB Records view exists");
-    // this view lets us query based on the full name
-    sqlx::query(
-        &format!("CREATE VIEW IF NOT EXISTS {} ( record_id, zoneid, rrtype, rclass, rdata, name, ttl ) as
-        SELECT records.id as record_id, zones.id as zoneid, records.rrtype, records.rclass ,records.rdata,
-        CASE
-            WHEN records.name is NULL THEN zones.name
-            ELSE records.name || '.' || zones.name
-        END AS name,
-        CASE WHEN records.ttl is NULL then zones.minimum
-            WHEN records.ttl > zones.minimum THEN records.ttl
-            ELSE records.ttl
-        END AS ttl
-        from records, zones where records.zoneid = zones.id", SQL_VIEW_RECORDS)
-    ).execute(&mut tx).await?;
-    tx.commit().await?;
-    Ok(())
 }
 
 // pub async fn create_zone_with_conn(
@@ -769,7 +621,9 @@ pub async fn export_zone_json(conn: PoolConnection<Sqlite>, zoneid: i64) -> Resu
 
 #[async_trait]
 pub trait DBEntity: Send {
-    fn table_name() -> &'static str;
+    const TABLE: &'static str;
+
+    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error>;
 
     /// Get the entity
     async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error>;
@@ -799,8 +653,42 @@ pub trait DBEntity: Send {
 
 #[async_trait]
 impl DBEntity for FileZone {
-    fn table_name() -> &'static str {
-        "zones"
+    const TABLE: &'static str = "zones";
+
+    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        let mut tx = pool.begin().await.unwrap();
+
+        log::debug!("Ensuring DB Zones table exists");
+        sqlx::query(
+            r#"CREATE TABLE IF NOT EXISTS
+            zones (
+                id   INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                rname TEXT NOT NULL,
+                serial INTEGER NOT NULL,
+                refresh INTEGER NOT NULL,
+                retry INTEGER NOT NULL,
+                expire INTEGER NOT NULL,
+                minimum INTEGER NOT NULL
+            )"#,
+        )
+        .execute(&mut tx)
+        .await?;
+
+        // .execute(tx).await;
+        log::debug!("Ensuring DB Records index exists");
+        sqlx::query(
+            "CREATE UNIQUE INDEX
+            IF NOT EXISTS
+            ind_zones
+            ON zones (
+                id,name
+            )",
+        )
+        .execute(&mut tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     /// Get by id
@@ -957,7 +845,7 @@ impl DBEntity for FileZone {
             .await?;
 
         // finally delete the zone
-        let query = format!("DELETE FROM {} where id = ?", FileZone::table_name());
+        let query = format!("DELETE FROM {} where id = ?", FileZone::TABLE);
         sqlx::query(&query).bind(self.id).execute(&mut *txn).await?;
 
         Ok(1)
@@ -966,8 +854,56 @@ impl DBEntity for FileZone {
 
 #[async_trait]
 impl DBEntity for FileZoneRecord {
-    fn table_name() -> &'static str {
-        "records"
+    const TABLE: &'static str = "records";
+
+    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        log::debug!("Ensuring DB Records table exists");
+
+        let mut tx = pool.begin().await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS
+        records (
+            id      INTEGER PRIMARY KEY,
+            zoneid  INTEGER NOT NULL,
+            name    TEXT, /* this can be null for apex records */
+            ttl     INTEGER,
+            rrtype  INTEGER NOT NULL,
+            rclass  INTEGER NOT NULL,
+            rdata   TEXT NOT NULL,
+            FOREIGN KEY(zoneid) REFERENCES zones(id)
+        )",
+        )
+        .execute(&mut tx)
+        .await?;
+        log::debug!("Ensuring DB Records index exists");
+        sqlx::query(
+            "CREATE UNIQUE INDEX
+        IF NOT EXISTS
+        ind_records
+        ON records (
+            id,zoneid,name,rrtype,rclass
+        )",
+        )
+        .execute(&mut tx)
+        .await?;
+        log::debug!("Ensuring DB Records view exists");
+        // this view lets us query based on the full name
+        sqlx::query(
+        &format!("CREATE VIEW IF NOT EXISTS {} ( record_id, zoneid, rrtype, rclass, rdata, name, ttl ) as
+        SELECT records.id as record_id, zones.id as zoneid, records.rrtype, records.rclass ,records.rdata,
+        CASE
+            WHEN records.name is NULL THEN zones.name
+            ELSE records.name || '.' || zones.name
+        END AS name,
+        CASE WHEN records.ttl is NULL then zones.minimum
+            WHEN records.ttl > zones.minimum THEN records.ttl
+            ELSE records.ttl
+        END AS ttl
+        from records, zones where records.zoneid = zones.id", SQL_VIEW_RECORDS)
+    ).execute(&mut tx).await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     /// Get by id
@@ -1073,7 +1009,7 @@ impl DBEntity for FileZoneRecord {
     }
 
     async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<i64, sqlx::Error> {
-        let res = sqlx::query(format!("DELETE FROM {} WHERE id = ?", Self::table_name()).as_str())
+        let res = sqlx::query(format!("DELETE FROM {} WHERE id = ?", Self::TABLE).as_str())
             .bind(self.id)
             .execute(&mut *txn)
             .await?;
@@ -1160,8 +1096,43 @@ impl From<SqliteRow> for ZoneOwnership {
 
 #[async_trait]
 impl DBEntity for ZoneOwnership {
-    fn table_name() -> &'static str {
-        "ownership"
+    const TABLE: &'static str = "ownership";
+    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        let mut tx = pool.begin().await.unwrap();
+
+        #[cfg(test)]
+        eprintln!("Ensuring DB {} table exists", Self::TABLE);
+        log::debug!("Ensuring DB {} table exists", Self::TABLE);
+        sqlx::query(&format!(
+            r#"CREATE TABLE IF NOT EXISTS
+                {} (
+                    id   INTEGER PRIMARY KEY,
+                    zoneid INTEGER NOT NULL,
+                    userid INTEGER NOT NULL,
+                    FOREIGN KEY(zoneid) REFERENCES zones(id),
+                    FOREIGN KEY(userid) REFERENCES users(id)
+                )"#,
+            Self::TABLE
+        ))
+        .execute(&mut tx)
+        .await?;
+
+        #[cfg(test)]
+        eprintln!("Ensuring DB Ownership index exists");
+        log::debug!("Ensuring DB Ownership index exists");
+        sqlx::query(
+            "CREATE UNIQUE INDEX
+                IF NOT EXISTS
+                ind_ownership
+                ON ownership (
+                    zoneid,
+                    userid
+                )",
+        )
+        .execute(&mut tx)
+        .await?;
+
+        tx.commit().await
     }
 
     /// Get an ownership record by its id
@@ -1180,7 +1151,7 @@ impl DBEntity for ZoneOwnership {
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
         let mut conn = pool.acquire().await?;
 
-        let res = sqlx::query("SELECT id, zoneid, userid from ownership where id = ?")
+        let res = sqlx::query("SELECT * from ownership where id = ?")
             .bind(id)
             .fetch_all(&mut conn)
             .await?;
@@ -1227,17 +1198,43 @@ impl DBEntity for ZoneOwnership {
 
 #[async_trait]
 impl DBEntity for User {
-    fn table_name() -> &'static str {
-        "users"
-    }
+    const TABLE: &'static str = "users";
 
+    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        log::debug!("Ensuring DB Users table exists");
+        sqlx::query(&format!(
+            r#"CREATE TABLE IF NOT EXISTS
+        {} (
+            id  INTEGER PRIMARY KEY,
+            displayname TEXT NOT NULL,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL,
+            disabled BOOL NOT NULL,
+            authref TEXT,
+            admin BOOL DEFAULT 0
+        )"#,
+            Self::TABLE
+        ))
+        .execute(&mut pool.acquire().await?)
+        .await?;
+
+        sqlx::query(
+            "CREATE UNIQUE INDEX IF NOT EXISTS
+        ind_users_fields
+        ON users ( username, email )",
+        )
+        .execute(&mut pool.acquire().await?)
+        .await?;
+
+        Ok(())
+    }
     /// Get an ownership record by its id
     async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error> {
         let mut conn = pool.acquire().await?;
 
         let res: User = sqlx::query(&format!(
             "SELECT id, displayname, username, email, disabled from {} where id = ?",
-            Self::table_name()
+            Self::TABLE
         ))
         .bind(id)
         .fetch_one(&mut conn)
@@ -1251,7 +1248,7 @@ impl DBEntity for User {
 
         let res = sqlx::query(&format!(
             "SELECT id, zoneid, userid from {} where id = ?",
-            Self::table_name()
+            Self::TABLE
         ))
         .bind(id)
         .fetch_all(&mut conn)
@@ -1307,5 +1304,123 @@ impl DBEntity for User {
         Self: Serialize,
     {
         serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct UserAuthToken {
+    id: i64,
+    issued: DateTime<Utc>,
+    expiry: Option<DateTime<Utc>>,
+    userid: i64,
+    tokenhash: String,
+}
+
+#[async_trait]
+impl DBEntity for UserAuthToken {
+    const TABLE: &'static str = "user_tokens";
+
+    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        let mut tx = pool.begin().await.unwrap();
+
+        log::debug!("Ensuring DB user_tokens table exists");
+        sqlx::query(
+            r#"CREATE TABLE IF NOT EXISTS
+            user_tokens (
+                id INTEGER PRIMARY KEY,
+                issued TEXT NOT NULL,
+                expiry TEXT NOT NULL,
+                tokenhash TEXT NOT NULL,
+                userid INTEGER NOT NULL,
+                FOREIGN KEY(userid) REFERENCES users(id)
+            )"#,
+        )
+        .execute(&mut tx)
+        .await?;
+        Ok(())
+    }
+
+    /// Get the entity
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error> {
+        Ok(Arc::new(
+            sqlx::query(&format!("SELECT * from {} where id = ?", Self::TABLE))
+                .bind(id)
+                .fetch_one(pool)
+                .await?
+                .into(),
+        ))
+    }
+
+    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+        let res = sqlx::query(&format!("SELECT * from {} where userid = ?", Self::TABLE))
+            .bind(id)
+            .fetch_all(pool)
+            .await?;
+        let res: Vec<Arc<UserAuthToken>> = res
+            .into_iter()
+            .map(|r| Arc::new(UserAuthToken::from(r)))
+            .collect();
+        Ok(res)
+    }
+
+    /// save the entity to the database
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+        let mut txn = pool.begin().await?;
+        let res = self.save_with_txn(&mut txn).await?;
+        txn.commit().await?;
+        Ok(res)
+    }
+
+    /// save the entity to the database, but you're in a transaction
+    async fn save_with_txn<'t>(
+        &self,
+        txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        let res = sqlx::query(&format!(
+            "INSERT INTO {} issued, expiry, userid, tokenhash VALUES (?, ?, ?, ?)",
+            Self::TABLE
+        ))
+        .bind(self.issued)
+        .bind(self.expiry)
+        .bind(self.userid)
+        .bind(&self.tokenhash)
+        .execute(txn)
+        .await?;
+        Ok(res.rows_affected() as i64)
+    }
+
+    /// delete the entity from the database
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+        let mut txn = pool.begin().await?;
+        let res = self.delete_with_txn(&mut txn).await?;
+        txn.commit().await?;
+        Ok(res)
+    }
+    /// delete the entity from the database, but you're in a transaction
+    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<i64, sqlx::Error> {
+        let res = sqlx::query(&format!("DELETE FROM {} where id = ?", &Self::TABLE))
+            .bind(self.id)
+            .execute(txn)
+            .await?;
+        Ok(res.rows_affected() as i64)
+    }
+
+    fn json(&self) -> Result<String, String>
+    where
+        Self: Serialize,
+    {
+        serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
+    }
+}
+
+impl From<SqliteRow> for UserAuthToken {
+    fn from(input: SqliteRow) -> Self {
+        Self {
+            id: input.get("id"),
+            issued: input.get("issued"),
+            expiry: input.get("expiry"),
+            userid: input.get("userid"),
+            tokenhash: input.get("tokenhash"),
+        }
     }
 }

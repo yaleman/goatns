@@ -171,7 +171,7 @@ pub async fn dashboard(
 pub fn new() -> Router {
     Router::new()
         .route("/", get(dashboard))
-        .route("/settings", get(user_settings::settings))
+        .nest("/settings", user_settings::router())
         .route("/zones/:id", get(zone_view))
         .route("/zones/list", get(zones_list))
 }

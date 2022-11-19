@@ -2,12 +2,18 @@
 {% block content %}
 <h1>API Tokens</h1>
 
-{#
+<form method="POST">
+    <input type="hidden" name="csrftoken" value="{{csrftoken}}" />
+    <input type="hidden" name="state" value="Start" />
+    <button type="submit" class="btn btn-primary">New API Token</button>
+</form>
+
 <ul>
-    <li><a class="link-dark" href="/ui/settings/api_tokens">
-        <i data-feather="key"></i> API Tokens</li>
-    </a>
+    {% for token in token_details %}
+    <li>{{token}}</li>
+    {% endfor %}
 </ul>
-#}
+
+
 
 {% endblock content %}
