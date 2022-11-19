@@ -123,6 +123,14 @@ impl CspDirective {
             values,
         }
     }
+
+    /// Build a default-src 'self' directive
+    pub fn default_self() -> Self {
+        Self {
+            directive_type: CspDirectiveType::DefaultSrc,
+            values: vec![CspValue::SelfSite],
+        }
+    }
 }
 
 impl ToString for CspDirective {
@@ -171,6 +179,17 @@ impl CspUrlMatcher {
     pub fn default_all_self() -> Self {
         Self {
             matcher: RegexSet::new([r#".*"#]).unwrap(),
+            directives: vec![CspDirective {
+                directive_type: CspDirectiveType::DefaultSrc,
+                values: vec![CspValue::SelfSite],
+            }],
+        }
+    }
+
+    /// build a matcher which will emit `default-src 'self';` for given matches
+    pub fn default_self(matcher: RegexSet) -> Self {
+        Self {
+            matcher,
             directives: vec![CspDirective {
                 directive_type: CspDirectiveType::DefaultSrc,
                 values: vec![CspValue::SelfSite],

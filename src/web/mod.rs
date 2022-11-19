@@ -1,3 +1,7 @@
+//! # Web things
+//!
+//! Uses axum/tower for protocol, askama for templating, confusion for the rest.
+//!
 use crate::config::ConfigFile;
 use crate::datastore;
 use crate::web::middleware::csp;
@@ -8,12 +12,7 @@ use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Extension, Router};
-use axum_csp::{CspDirective, CspDirectiveType, CspUrlMatcher, CspValue};
-/// # Web things
-///
-/// Uses axum/tower for protocol, askama for templating, confusion for the rest.
-///
-/// Example using shared state: https://github.com/tokio-rs/axum/blob/axum-v0.5.17/examples/key-value-store/src/main.rs
+use axum_csp::CspUrlMatcher;
 use axum_extra::routing::SpaRouter;
 use axum_server::tls_rustls::RustlsConfig;
 use chrono::{DateTime, NaiveDateTime, Utc};
@@ -21,7 +20,6 @@ use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{ClientId, ClientSecret, PkceCodeVerifier};
 use openidconnect::Nonce;
 use regex::RegexSet;
-// use regex::RegexSet;
 use sqlx::{Pool, Sqlite};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -162,13 +160,9 @@ pub async fn build(
     let session_layer =
         auth::build_auth_stores(config.sql_session_cleanup_seconds, connpool.clone()).await;
 
-    let csp_matchers = vec![CspUrlMatcher {
-        matcher: RegexSet::new([r"^/ui"]).unwrap(),
-        directives: vec![CspDirective::from(
-            CspDirectiveType::MediaSrc,
-            vec![CspValue::SelfSite],
-        )],
-    }];
+    let csp_matchers = vec![CspUrlMatcher::default_self(
+        RegexSet::new([r"^(/|/ui)"]).unwrap(),
+    )];
 
     // let config_clone: ConfigFile = ConfigFile::from(&config);
     let state: SharedState = Arc::new(RwLock::new(State {
@@ -197,22 +191,8 @@ pub async fn build(
             .into_response()
     }
 
-    // let cspheaderlayer: CspHeaderLayer = CspHeaderLayer {
-    //     rules: vec![
-    //         CspUrlMatcher {
-    //             matcher: RegexSet::new([r"^/ui"]).unwrap(),
-    //             directives: vec![CspDirective::from(
-    //                 CspDirectiveType::MediaSrc,
-    //                 vec![CspValue::SelfSite],
-    //             ),
-    //             ]
-    //         }
-    //     ]
-    // };
-
     let router = Router::new()
         .route("/", get(generic::index))
-        .route("/status", get(generic::status))
         .nest("/ui", ui::new())
         .nest("/api", api::new())
         .nest("/auth", auth::new())
@@ -224,6 +204,7 @@ pub async fn build(
                 .layer(session_layer)
                 .into_inner(),
         )
+        .route("/status", get(generic::status))
         .merge(static_router)
         .layer(CompressionLayer::new())
         .fallback(handler_404.into_service());
