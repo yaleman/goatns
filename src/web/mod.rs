@@ -1,11 +1,14 @@
 use crate::config::ConfigFile;
 use crate::datastore;
+use crate::web::middleware::csp;
 use async_trait::async_trait;
 use axum::handler::Handler;
 use axum::http::StatusCode;
+use axum::middleware::from_fn;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Extension, Router};
+use axum_csp::{CspDirective, CspDirectiveType, CspUrlMatcher, CspValue};
 /// # Web things
 ///
 /// Uses axum/tower for protocol, askama for templating, confusion for the rest.
@@ -17,6 +20,8 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{ClientId, ClientSecret, PkceCodeVerifier};
 use openidconnect::Nonce;
+use regex::RegexSet;
+// use regex::RegexSet;
 use sqlx::{Pool, Sqlite};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -37,6 +42,7 @@ pub mod macros;
 pub mod api;
 pub mod auth;
 pub mod generic;
+pub mod middleware;
 pub mod ui;
 pub mod utils;
 
@@ -109,6 +115,7 @@ pub struct State {
     pub oidc_config_updated: Option<DateTime<Utc>>,
     pub oidc_config: Option<auth::CustomProviderMetadata>,
     pub oidc_verifier: HashMap<String, (PkceCodeVerifier, Nonce)>,
+    pub csp_headers: Vec<CspUrlMatcher>,
 }
 
 pub async fn build(
@@ -150,10 +157,18 @@ pub async fn build(
         },
     }
 
-    let static_router = SpaRouter::new("/ui/static", &config_dir);
+    let static_router = SpaRouter::new("/static", &config_dir);
 
     let session_layer =
         auth::build_auth_stores(config.sql_session_cleanup_seconds, connpool.clone()).await;
+
+    let csp_headers = vec![CspUrlMatcher {
+        matcher: RegexSet::new([r"^/ui"]).unwrap(),
+        directives: vec![CspDirective::from(
+            CspDirectiveType::MediaSrc,
+            vec![CspValue::SelfSite],
+        )],
+    }];
 
     // let config_clone: ConfigFile = ConfigFile::from(&config);
     let state: SharedState = Arc::new(RwLock::new(State {
@@ -163,6 +178,7 @@ pub async fn build(
         oidc_config_updated: None,
         oidc_config: None,
         oidc_verifier: HashMap::new(),
+        csp_headers,
     }));
 
     // add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html
@@ -181,22 +197,35 @@ pub async fn build(
             .into_response()
     }
 
+    // let cspheaderlayer: CspHeaderLayer = CspHeaderLayer {
+    //     rules: vec![
+    //         CspUrlMatcher {
+    //             matcher: RegexSet::new([r"^/ui"]).unwrap(),
+    //             directives: vec![CspDirective::from(
+    //                 CspDirectiveType::MediaSrc,
+    //                 vec![CspValue::SelfSite],
+    //             ),
+    //             ]
+    //         }
+    //     ]
+    // };
+
     let router = Router::new()
         .route("/", get(generic::index))
         .route("/status", get(generic::status))
-        .merge(static_router)
         .nest("/ui", ui::new())
         .nest("/api", api::new())
         .nest("/auth", auth::new())
         .layer(
             ServiceBuilder::new()
                 .layer(trace_layer)
-                .layer(CompressionLayer::new())
                 .layer(Extension(state))
-                // .layer(Extension(auth_layer))
+                .layer(from_fn(csp::cspheaders))
                 .layer(session_layer)
                 .into_inner(),
         )
+        .merge(static_router)
+        .layer(CompressionLayer::new())
         .fallback(handler_404.into_service());
 
     let tls_cert = &config.api_tls_cert.clone();
@@ -208,6 +237,9 @@ pub async fn build(
         axum_server::bind_rustls(config.api_listener_address(), tls_config)
             .serve(router.into_make_service()),
     ));
-    log::debug!("Started Web server on {}", config.api_listener_address());
+    log::debug!(
+        "Started Web server on https://{}",
+        config.api_listener_address()
+    );
     res
 }

@@ -8,7 +8,7 @@ CONTAINER_BUILD_ARGS ?=
 # Example of using redis with sccache
 CONTAINER_TOOL ?= docker
 
-BOOK_VERSION ?= master
+
 
 .DEFAULT: help
 help:
@@ -16,7 +16,9 @@ help:
 
 container:	## Build the kanidmd docker image locally
 container:
+	$(eval GITHUB_SHA:=$(shell  git rev-parse HEAD))
 	@$(CONTAINER_TOOL) build $(CONTAINER_TOOL_ARGS) \
+	--build-arg GITHUB_SHA="${GITHUB_SHA}" \
 	-t $(IMAGE_BASE)/server:$(IMAGE_VERSION) $(CONTAINER_BUILD_ARGS) .
 
 build: ## Build binaries

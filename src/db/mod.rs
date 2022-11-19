@@ -629,7 +629,7 @@ impl TryFrom<SqliteRow> for InternalResourceRecord {
     }
 }
 
-/// Pull a vec of [InternalResourceRecords] directly from the database
+/// Pull a vec of [InternalResourceRecord]s directly from the database
 ///
 /// Setting normalize_ttls=true sets the TTL on all records to the LOWEST of the returned records.
 pub async fn get_records(

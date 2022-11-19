@@ -286,7 +286,7 @@ impl Default for ConfigFile {
             oauth2_client_id: String::from(""),
             // TODO: this should be auto-generated from stuff
             oauth2_redirect_url: Url::from_str("https://example.com")
-                    .expect("Internal error parsing example.com into a URL"),
+                .expect("Internal error parsing example.com into a URL"),
             oauth2_secret: String::from(""),
             oauth2_config_url: String::from(""),
             oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
@@ -332,7 +332,7 @@ impl From<Config> for ConfigFile {
             Ok(value) => {
                 // println!("Found url in config: {:?}", value);
                 Some(value)
-            },
+            }
             Err(_) => None,
         };
         let oauth2_redirect_url = match oauth2_redirect_url {
@@ -342,7 +342,6 @@ impl From<Config> for ConfigFile {
                 if !url.path().ends_with("/auth/login") {
                     // println!("Adding authlogin tail");
                     url = url.join("/auth/login").unwrap();
-
                 }
                 // eprintln!("OAuth2 Redirect URL after update: {url:?}");
                 url

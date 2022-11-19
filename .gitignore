@@ -17,3 +17,5 @@ static_files/css/*
 static_files/js/*
 !static_files/js/bootstrap.bundle.min.js
 goatns.json
+
+axum-csp/target/*

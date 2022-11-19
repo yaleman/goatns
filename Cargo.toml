@@ -21,6 +21,7 @@ askama = { version="0.11.1"}
 async-sqlx-session = { git="https://github.com/jbr/async-sqlx-session.git", rev="3f2e1cf", default-features = false, features = ["sqlite"] }
 async-trait = "0.1.58"
 axum = { version="0.5.17", features=["http2", "headers", "original-uri"] }
+axum-csp = { version="^0.0.1", path="axum-csp/"}
 axum-extra = { version = "0.3.7", features = ["spa"] }
 # axum-login = { version = "0.2.0", features = ["sqlite"] }
 axum-macros = "0.2.3"
@@ -35,7 +36,10 @@ config = { version = "0.13", features = ["json"] }
 dialoguer = "0.10.2"
 enum-iterator = "1.2.0"
 flexi_logger = { version = "0.24", features = ["async", "default"] }
+futures = "0.3.25"
+futures-util = "0.3.25"
 gethostname = "0.4.0"
+http = "0.2.8"
 ipnet = { version = "2.5.0", features = [ "json", "serde" ] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"

@@ -21,10 +21,8 @@ pub async fn index(Extension(state): Extension<SharedState>) -> Result<Html<Stri
         ContactDetails::None => "".to_string(),
         _ => {
             format!("- instance cared for by {}", admin_contact.to_string())
-        },
+        }
     };
-    let context = IndexTemplate {
-        admin_contact,
-    };
+    let context = IndexTemplate { admin_contact };
     Ok(Html::from(context.render().unwrap()))
 }
