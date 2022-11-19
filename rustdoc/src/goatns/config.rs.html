@@ -499,6 +499,7 @@
 <span id="499">499</span>
 <span id="500">500</span>
 <span id="501">501</span>
+<span id="502">502</span>
 </pre><pre class="rust"><code><span class="kw">use </span>axum_server::tls_rustls::RustlsConfig;
 <span class="kw">use </span>clap::ArgMatches;
 <span class="kw">use </span>concread::cowcell::asynch::{CowCell, CowCellReadTxn, CowCellWriteTxn};
@@ -506,7 +507,6 @@
 <span class="kw">use </span>flexi_logger::filter::{LogLineFilter, LogLineWriter};
 <span class="kw">use </span>flexi_logger::{DeferredNow, LoggerHandle};
 <span class="kw">use </span>gethostname::gethostname;
-<span class="kw">use </span>oauth2::RedirectUrl;
 <span class="kw">use </span>rand::distributions::{Alphanumeric, DistString};
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>std::fmt::Display;
@@ -532,6 +532,7 @@
 }
 
 <span class="attribute">#[derive(Debug, Deserialize, Eq, PartialEq, Clone, Serialize)]
+</span><span class="doccomment">/// The main config blob for GoatNS, write this as a JSON file and load it and it&#39;ll make things go.
 </span><span class="kw">pub struct </span>ConfigFile {
     <span class="doccomment">/// The server&#39;s hostname when generating an SOA record, defaults to the results of gethostname()
     </span><span class="kw">pub </span>hostname: String,
@@ -570,7 +571,7 @@
     <span class="doccomment">/// OAuth2 Resource server name
     </span><span class="kw">pub </span>oauth2_client_id: String,
     <span class="doccomment">/// If your instance is behind a proxy/load balancer/whatever, you need to specify this, eg `https://example.com:12345`
-    </span><span class="kw">pub </span>oauth2_redirect_url: RedirectUrl,
+    </span><span class="kw">pub </span>oauth2_redirect_url: Url,
     <span class="attribute">#[serde(skip_serializing)]
     </span><span class="doccomment">/// Oauth2 Secret
     </span><span class="kw">pub </span>oauth2_secret: String,
@@ -786,10 +787,8 @@
             api_cookie_secret: generate_cookie_secret(),
             oauth2_client_id: String::from(<span class="string">&quot;&quot;</span>),
             <span class="comment">// TODO: this should be auto-generated from stuff
-            </span>oauth2_redirect_url: RedirectUrl::from_url(
-                Url::from_str(<span class="string">&quot;https://example.com&quot;</span>)
-                    .expect(<span class="string">&quot;Internal error parsing example.com into a URL?&quot;</span>),
-            ),
+            </span>oauth2_redirect_url: Url::from_str(<span class="string">&quot;https://example.com&quot;</span>)
+                .expect(<span class="string">&quot;Internal error parsing example.com into a URL&quot;</span>),
             oauth2_secret: String::from(<span class="string">&quot;&quot;</span>),
             oauth2_config_url: String::from(<span class="string">&quot;&quot;</span>),
             oauth2_user_scopes: <span class="macro">vec!</span>[<span class="string">&quot;openid&quot;</span>.to_string(), <span class="string">&quot;email&quot;</span>.to_string()],
@@ -817,8 +816,8 @@
             }
         };
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;hostname=\&quot;{}\&quot; listening_address=\&quot;{}:{}\&quot; capturing_pcaps={} Log_level={}, admin_contact={:?} {api_details}&quot;</span>,
-            <span class="self">self</span>.hostname, <span class="self">self</span>.address, <span class="self">self</span>.port, <span class="self">self</span>.capture_packets, <span class="self">self</span>.log_level, <span class="self">self</span>.admin_contact,
+            <span class="string">&quot;hostname=\&quot;{}\&quot; listening_address=\&quot;{}:{}\&quot; capturing_pcaps={} Log_level={}, admin_contact={:?} {api_details} oauth2_redirect_url={}&quot;</span>,
+            <span class="self">self</span>.hostname, <span class="self">self</span>.address, <span class="self">self</span>.port, <span class="self">self</span>.capture_packets, <span class="self">self</span>.log_level, <span class="self">self</span>.admin_contact, <span class="self">self</span>.oauth2_redirect_url
         ))
     }
 }
@@ -828,19 +827,23 @@
         <span class="kw">let </span>hostname = config.get(<span class="string">&quot;hostname&quot;</span>).unwrap_or(<span class="self">Self</span>::default().hostname);
         <span class="kw">let </span>api_port = config.get(<span class="string">&quot;api_port&quot;</span>).unwrap_or(<span class="self">Self</span>::default().api_port);
 
-        <span class="comment">// Figure out the oauth2 redirect URL
+        <span class="comment">// The OAuth2 redirect URL is a magical pony.
+
         // TODO: test this with different values
-        </span><span class="kw">let </span>oauth2_redirect_url: <span class="prelude-ty">Option</span>&lt;RedirectUrl&gt; = <span class="kw">match </span>config.get(<span class="string">&quot;oauth2_redirect_url&quot;</span>) {
-            <span class="prelude-val">Ok</span>(value) =&gt; <span class="prelude-val">Some</span>(value),
+        </span><span class="kw">let </span>oauth2_redirect_url: <span class="prelude-ty">Option</span>&lt;Url&gt; = <span class="kw">match </span>config.get(<span class="string">&quot;oauth2_redirect_url&quot;</span>) {
+            <span class="prelude-val">Ok</span>(value) =&gt; {
+                <span class="comment">// println!(&quot;Found url in config: {:?}&quot;, value);
+                </span><span class="prelude-val">Some</span>(value)
+            }
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
         };
         <span class="kw">let </span>oauth2_redirect_url = <span class="kw">match </span>oauth2_redirect_url {
             <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>url) =&gt; {
                 <span class="comment">// update the URL with the final auth path
                 // eprintln!(&quot;OAuth2 Redirect URL: {url:?}&quot;);
-                </span><span class="kw">if </span>!url.url().path().ends_with(<span class="string">&quot;/auth/login&quot;</span>) {
-                    <span class="kw">let </span>new_url = url.url().join(<span class="string">&quot;/auth/login&quot;</span>).unwrap();
-                    url = RedirectUrl::from_url(new_url);
+                </span><span class="kw">if </span>!url.path().ends_with(<span class="string">&quot;/auth/login&quot;</span>) {
+                    <span class="comment">// println!(&quot;Adding authlogin tail&quot;);
+                    </span>url = url.join(<span class="string">&quot;/auth/login&quot;</span>).unwrap();
                 }
                 <span class="comment">// eprintln!(&quot;OAuth2 Redirect URL after update: {url:?}&quot;);
                 </span>url
@@ -851,9 +854,8 @@
                     <span class="number">443 </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}&quot;</span>, hostname),
                     <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}:{}&quot;</span>, hostname, api_port),
                 };
-                <span class="kw">let </span>url = Url::parse(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}/auth/login&quot;</span>, baseurl))
-                    .expect(<span class="string">&quot;Failed to parse hostname/api_port into a valid URL&quot;</span>);
-                RedirectUrl::from_url(url)
+                Url::parse(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}/auth/login&quot;</span>, baseurl))
+                    .expect(<span class="string">&quot;Failed to parse hostname/api_port into a valid URL&quot;</span>)
             }
         };
 

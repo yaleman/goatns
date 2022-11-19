@@ -211,25 +211,41 @@
 <span id="211">211</span>
 <span id="212">212</span>
 <span id="213">213</span>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+</pre><pre class="rust"><code><span class="doccomment">//! # Web things
+//!
+//! Uses axum/tower for protocol, askama for templating, confusion for the rest.
+//!
+</span><span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::datastore;
+<span class="kw">use </span><span class="kw">crate</span>::web::middleware::csp;
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>axum::handler::Handler;
 <span class="kw">use </span>axum::http::StatusCode;
+<span class="kw">use </span>axum::middleware::from_fn;
 <span class="kw">use </span>axum::response::IntoResponse;
 <span class="kw">use </span>axum::routing::get;
 <span class="kw">use </span>axum::{Extension, Router};
-<span class="doccomment">/// # Web things
-///
-/// Uses axum/tower for protocol, askama for templating, confusion for the rest.
-///
-/// Example using shared state: https://github.com/tokio-rs/axum/blob/axum-v0.5.17/examples/key-value-store/src/main.rs
-</span><span class="kw">use </span>axum_extra::routing::SpaRouter;
+<span class="kw">use </span>axum_csp::CspUrlMatcher;
+<span class="kw">use </span>axum_extra::routing::SpaRouter;
 <span class="kw">use </span>axum_server::tls_rustls::RustlsConfig;
 <span class="kw">use </span>chrono::{DateTime, NaiveDateTime, Utc};
 <span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
 <span class="kw">use </span>oauth2::{ClientId, ClientSecret, PkceCodeVerifier};
 <span class="kw">use </span>openidconnect::Nonce;
+<span class="kw">use </span>regex::RegexSet;
 <span class="kw">use </span>sqlx::{Pool, Sqlite};
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::path::PathBuf;
@@ -250,6 +266,7 @@
 <span class="kw">pub mod </span>api;
 <span class="kw">pub mod </span>auth;
 <span class="kw">pub mod </span>generic;
+<span class="kw">pub mod </span>middleware;
 <span class="kw">pub mod </span>ui;
 <span class="kw">pub mod </span>utils;
 
@@ -322,6 +339,7 @@
     <span class="kw">pub </span>oidc_config_updated: <span class="prelude-ty">Option</span>&lt;DateTime&lt;Utc&gt;&gt;,
     <span class="kw">pub </span>oidc_config: <span class="prelude-ty">Option</span>&lt;auth::CustomProviderMetadata&gt;,
     <span class="kw">pub </span>oidc_verifier: HashMap&lt;String, (PkceCodeVerifier, Nonce)&gt;,
+    <span class="kw">pub </span>csp_matchers: Vec&lt;CspUrlMatcher&gt;,
 }
 
 <span class="kw">pub async fn </span>build(
@@ -363,10 +381,14 @@
         },
     }
 
-    <span class="kw">let </span>static_router = SpaRouter::new(<span class="string">&quot;/ui/static&quot;</span>, <span class="kw-2">&amp;</span>config_dir);
+    <span class="kw">let </span>static_router = SpaRouter::new(<span class="string">&quot;/static&quot;</span>, <span class="kw-2">&amp;</span>config_dir);
 
     <span class="kw">let </span>session_layer =
         auth::build_auth_stores(config.sql_session_cleanup_seconds, connpool.clone()).<span class="kw">await</span>;
+
+    <span class="kw">let </span>csp_matchers = <span class="macro">vec!</span>[CspUrlMatcher::default_self(
+        RegexSet::new([<span class="string">r&quot;^(/|/ui)&quot;</span>]).unwrap(),
+    )];
 
     <span class="comment">// let config_clone: ConfigFile = ConfigFile::from(&amp;config);
     </span><span class="kw">let </span>state: SharedState = Arc::new(RwLock::new(State {
@@ -376,6 +398,7 @@
         oidc_config_updated: <span class="prelude-val">None</span>,
         oidc_config: <span class="prelude-val">None</span>,
         oidc_verifier: HashMap::new(),
+        csp_matchers,
     }));
 
     <span class="comment">// add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html
@@ -396,20 +419,20 @@
 
     <span class="kw">let </span>router = Router::new()
         .route(<span class="string">&quot;/&quot;</span>, get(generic::index))
-        .route(<span class="string">&quot;/status&quot;</span>, get(generic::status))
-        .merge(static_router)
         .nest(<span class="string">&quot;/ui&quot;</span>, ui::new())
         .nest(<span class="string">&quot;/api&quot;</span>, api::new())
         .nest(<span class="string">&quot;/auth&quot;</span>, auth::new())
         .layer(
             ServiceBuilder::new()
                 .layer(trace_layer)
-                .layer(CompressionLayer::new())
                 .layer(Extension(state))
-                <span class="comment">// .layer(Extension(auth_layer))
-                </span>.layer(session_layer)
+                .layer(from_fn(csp::cspheaders))
+                .layer(session_layer)
                 .into_inner(),
         )
+        .route(<span class="string">&quot;/status&quot;</span>, get(generic::status))
+        .merge(static_router)
+        .layer(CompressionLayer::new())
         .fallback(handler_404.into_service());
 
     <span class="kw">let </span>tls_cert = <span class="kw-2">&amp;</span>config.api_tls_cert.clone();
@@ -421,7 +444,10 @@
         axum_server::bind_rustls(config.api_listener_address(), tls_config)
             .serve(router.into_make_service()),
     ));
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Started Web server on {}&quot;</span>, config.api_listener_address());
+    <span class="macro">log::debug!</span>(
+        <span class="string">&quot;Started Web server on https://{}&quot;</span>,
+        config.api_listener_address()
+    );
     res
 }
 </code></pre></div>

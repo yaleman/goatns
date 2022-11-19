@@ -26,10 +26,8 @@
 <span id="26">26</span>
 <span id="27">27</span>
 <span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
-
+<span class="kw">use </span><span class="kw">crate</span>::enums::ContactDetails;
 <span class="kw">use </span>askama::Template;
 <span class="kw">use </span>axum::response::Html;
 <span class="kw">use </span>axum_macros::debug_handler;
@@ -46,16 +44,14 @@
 
 <span class="attribute">#[debug_handler]
 </span><span class="kw">pub async fn </span>index(Extension(state): Extension&lt;SharedState&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, ()&gt; {
-    <span class="comment">// let admin_contact = match state.config().await.admin_contact {
-    //     None =&gt; &quot;&quot;.to_string(),
-    //     Some(contact) =&gt; match ContactDetails::try_from(contact) {
-    //         Ok(value) =&gt; format!(&quot;This instance cared for by {}&quot;, value.to_string()),
-    //         Err(_) =&gt; &quot;&quot;.to_string(),
-    //     },
-    // };
-    </span><span class="kw">let </span>context = IndexTemplate {
-        admin_contact: state.config().<span class="kw">await</span>.admin_contact.to_string(),
+    <span class="kw">let </span>admin_contact = state.config().<span class="kw">await</span>.admin_contact;
+    <span class="kw">let </span>admin_contact = <span class="kw">match </span>admin_contact {
+        ContactDetails::None =&gt; <span class="string">&quot;&quot;</span>.to_string(),
+        <span class="kw">_ </span>=&gt; {
+            <span class="macro">format!</span>(<span class="string">&quot;- instance cared for by {}&quot;</span>, admin_contact.to_string())
+        }
     };
+    <span class="kw">let </span>context = IndexTemplate { admin_contact };
     <span class="prelude-val">Ok</span>(Html::from(context.render().unwrap()))
 }
 </code></pre></div>

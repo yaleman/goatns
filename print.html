@@ -7,7 +7,7 @@
         <meta name="robots" content="noindex" />
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <meta name="description" content="">
+        <meta name="description" content="Documentation for the GoatNS DNS Server.">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
@@ -111,6 +111,9 @@
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
+                        <a href="https://github.com/yaleman/goatns" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
                     </div>
                 </div>
 
@@ -136,18 +139,27 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="goatns"><a class="header" href="#goatns">GoatNS</a></h1>
+<p><img src="./static_files/img/apple-touch-icon.png" alt="GoatNS Logo" /></p>
 <p>Yet another authoritative DNS name server. But with goat references.</p>
+<p>Built in Rust, thanks to some great packages</p>
 <ul>
-<li>Built in Rust, thanks to some great packages
+<li>Networking features use <a href="https://crates.io/crates/tokio">tokio</a></li>
+<li>DNS Packets are largely decoded/encoded with <a href="https://crates.io/crates/packed_struct">packed_struct</a></li>
+<li>HTTP things use:
 <ul>
-<li>DNS features use <a href="https://crates.io/crates/tokio">tokio</a> and <a href="https://crates.io/crates/packed_struct">packed_struct</a></li>
-<li>HTTP things use <a href="https://crates.io/crates/tide">tide</a> / <a href="https://crates.io/crates/askama">Askama</a></li>
-<li>Database - <a href="https://crates.io/crates/sqlx">sqlx</a> for async sqlite goodness.</li>
-<li>Logging - <a href="https://crates.io/crates/flexi_logger">flexi_logger</a></li>
+<li><a href="https://crates.io/crates/tide">tide</a></li>
+<li><a href="https://crates.io/crates/askama">Askama</a></li>
+<li><a href="https://getbootstrap.com">Bootstrap 5</a></li>
+<li><a href="https://feathericons.com">Feather icons</a></li>
 </ul>
 </li>
+<li>Database - <a href="https://crates.io/crates/sqlx">sqlx</a> for async SQLite goodness.</li>
+<li>Logging - <a href="https://crates.io/crates/flexi_logger">flexi_logger</a></li>
 </ul>
-<h2 id="crate-documentation"><a class="header" href="#crate-documentation">Crate Documentation</a></h2>
+<h2 id="help"><a class="header" href="#help">Help?</a></h2>
+<p>Found a bug, want to change something, the sky is falling? <a href="https://github.com/yaleman/goatns/issues/new">Create an issue!</a>.</p>
+<p>Wondering how something works, need a chat, or are curious there's so many goat references? <a href="https://github.com/yaleman/goatns/discussions">Discussions are great for that</a>.</p>
+<h2 id="rust-crate-documentation"><a class="header" href="#rust-crate-documentation">Rust Crate Documentation</a></h2>
 <p>Auto-generated and available here: <a href="https://yaleman.github.io/goatns/rustdoc/goatns/">https://yaleman.github.io/goatns/rustdoc/goatns</a></p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>Look at <code>zones.json</code> and <code>goatns.example.json</code> for examples.</p>
@@ -156,7 +168,7 @@
 <p>Rust tests are run using cargo.</p>
 <pre><code class="language-shell">cargo test
 </code></pre>
-<p>A handy test tool is <a href="https://github.com/jedisct1/dnsblast">dnsblast</a>. This'll run 50,000 &quot;valid&quot; queries, 1500 packets per second, to port 15353:</p>
+<p>A handy load testing tool is <a href="https://github.com/jedisct1/dnsblast">dnsblast</a>. This'll run 50,000 &quot;valid&quot; queries, 1500 packets per second, to port 15353:</p>
 <pre><code class="language-shell">./dnsblast 127.0.0.1 50000 1500 15353
 </code></pre>
 <p>Or if you want to fuzz the server and test that it doesn't blow up:</p>
@@ -166,71 +178,6 @@
 <p>There's a dockerfile at <code>ghcr.io/yaleman/goatns:latest</code> and a docker-compose.yml file if that's your thing.</p>
 <h2 id="supported-requestrecord-types"><a class="header" href="#supported-requestrecord-types">Supported request/record types</a></h2>
 <p>This list is now <a href="https://goatns.dotgoat.net/rrtypes.html">in the book</a>.</p>
-<h2 id="todo"><a class="header" href="#todo">TODO</a></h2>
-<ul>
-<li><input disabled="" type="checkbox"/>
-set config.hostname as authority on SOA records</li>
-<li><input disabled="" type="checkbox"/>
-test records for every rrtype</li>
-<li><input disabled="" type="checkbox"/>
-API things
-<ul>
-<li><input disabled="" type="checkbox"/>
-Oauth for management/UI things</li>
-<li><input disabled="" type="checkbox"/>
-web_hostname field for config so that the NS and web hostnames can be different?</li>
-</ul>
-</li>
-<li><input disabled="" type="checkbox"/>
-support all record-classes</li>
-<li><input disabled="" type="checkbox"/>
-rewrite ttl handling so you don't <em>have</em> to specify it per-record and it uses zone data</li>
-<li>[?] SOA minimum overrides RR TTL - RFC1035 3.3.13 - &quot;Whenever a RR is sent in a response to a query, the TTL field is set to the maximum of the TTL field from the RR and the MINIMUM field in the appropriate SOA.&quot; - this is done in the database view currently</li>
-<li><input disabled="" type="checkbox"/>
-write tests for this</li>
-<li><input disabled="" type="checkbox"/>
-response caching to save the lookups and parsing
-<ul>
-<li><input disabled="" type="checkbox"/>
-concread?</li>
-</ul>
-</li>
-<li><input disabled="" type="checkbox"/>
-good e2e tests for LOC records from zone files
-<ul>
-<li><input disabled="" type="checkbox"/>
-a converter from InternalResourceRecord::LOC to FileZoneRecord::LOC</li>
-</ul>
-</li>
-<li><input disabled="" type="checkbox"/>
-cleaner ctrl-c handling or shutdown in general
-<ul>
-<li><input disabled="" type="checkbox"/>
-thinking I need to set up a broadcast tokio channel which the threads consume and shutdown from 
-<ul>
-<li><input disabled="" type="checkbox"/>
-<code>datastore</code> just needs to know to write out anything it's working on at the time, which may need an internal state flag for &quot;are we shutting down&quot; so any new write transactions are rejected</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><input disabled="" type="checkbox"/>
-maaaaybe support flattening of apex records?</li>
-<li><input disabled="" type="checkbox"/>
-stats?</li>
-<li><input disabled="" type="checkbox"/>
-support VERSION/VERSION.BIND requests
-<ul>
-<li><input disabled="" type="checkbox" checked=""/>
-allow list config</li>
-<li><input disabled="" type="checkbox"/>
-build the response packets in a nice way that doesn't blow up</li>
-</ul>
-</li>
-</ul>
-<p>Old sessions:</p>
-<pre><code class="language-sql">select strftime('%s') as now, expires-strftime('%s') as diff, * from sessions where expires &gt; now;
-</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h1>
 <p>I'll totally forget to update this, so check <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">the rustdoc for ConfigFile</a> for up-to-date information.</p>
 <p>To write out a &quot;default&quot; config file, run <code>goatns --export-default-config</code> which will dump the contents of the system defaults.</p>
