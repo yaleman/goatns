@@ -16,7 +16,9 @@ use openidconnect::SubjectIdentifier;
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
-use sqlx::{Arguments, ConnectOptions, Connection, Pool, Row, Sqlite, SqlitePool, Transaction, FromRow};
+use sqlx::{
+    Arguments, ConnectOptions, Connection, FromRow, Pool, Row, Sqlite, SqlitePool, Transaction,
+};
 use tokio::time;
 
 #[cfg(test)]
@@ -205,8 +207,10 @@ impl User {
         Ok(rows)
     }
 
-
-    pub async fn get_tokens_by_username(pool: &mut Pool<Sqlite>, username: &String) -> Result<Vec<TokenSearchRow>,sqlx::Error> {
+    pub async fn get_tokens_by_username(
+        pool: &mut Pool<Sqlite>,
+        username: &String,
+    ) -> Result<Vec<TokenSearchRow>, sqlx::Error> {
         let res: Vec<TokenSearchRow> = sqlx::query_as(
             "SELECT users.id as userid, users.displayname,  users.username, users.authref, users.email, users.disabled, users.authref, users.admin, tokenhash
             FROM user_tokens, users
@@ -220,7 +224,6 @@ impl User {
         Ok(res)
     }
 }
-
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TokenSearchRow {

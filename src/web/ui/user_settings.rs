@@ -1,6 +1,6 @@
 use crate::db::{DBEntity, User};
 use crate::web::ui::check_logged_in;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -328,9 +328,7 @@ pub async fn api_tokens_post(
             log::debug!("generating hash");
             // Argon2 with default params (Argon2id v19)
             let argon2 = Argon2::default();
-            let password_hash = argon2
-                .hash_password(&api_token.as_bytes(), &salt)
-                .unwrap();
+            let password_hash = argon2.hash_password(api_token.as_bytes(), &salt).unwrap();
 
             let password_hash_string = password_hash.to_string();
             log::debug!("done");

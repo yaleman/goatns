@@ -1,10 +1,9 @@
-
 use super::*;
 // use crate::db::DBEntity;
 
 use crate::zones::FileZone;
 use axum::extract::Extension;
-use axum::routing::{/*delete, get, patch, */post};
+use axum::routing::post;
 use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
@@ -24,7 +23,7 @@ impl Default for NotImplemented {
     }
 }
 
-#[derive(Debug,Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(dead_code)]
 pub struct ErrorResult {
     #[allow(dead_code)]
@@ -33,19 +32,23 @@ pub struct ErrorResult {
 
 #[async_trait]
 trait APIEntity {
-    async fn api_save(state: Extension<SharedState>, Json(payload): Json<serde_json::Value>) -> Result<Json<String>,Json<ErrorResult>>;
+    async fn api_save(
+        state: Extension<SharedState>,
+        Json(payload): Json<serde_json::Value>,
+    ) -> Result<Json<String>, Json<ErrorResult>>;
     // async fn api_get(pool: &Pool<Sqlite>, id: i64) -> Result<Json<String>, Json<ErrorResult>>;
-    async fn api_delete(state: Extension<SharedState>, Json(payload): Json<serde_json::Value>) -> Result<Json<String>,Json<ErrorResult>>;
+    async fn api_delete(
+        state: Extension<SharedState>,
+        Json(payload): Json<serde_json::Value>,
+    ) -> Result<Json<String>, Json<ErrorResult>>;
 }
 
 #[async_trait]
-impl APIEntity for FileZone  {
+impl APIEntity for FileZone {
     async fn api_save(
         _state: Extension<SharedState>,
-        Json(payload): Json<serde_json::Value>
-    ) -> Result<Json<String>,Json<ErrorResult>> {
-
-
+        Json(payload): Json<serde_json::Value>,
+    ) -> Result<Json<String>, Json<ErrorResult>> {
         log::debug!("Got payload: {payload:?}");
         log::debug!("Hello? {:?}", payload.get("hello"));
 
@@ -53,16 +56,23 @@ impl APIEntity for FileZone  {
             Ok(val) => val,
             Err(err) => {
                 log::debug!("Failed to deser payload: {err:?}");
-                return Err(Json(ErrorResult{ message: format!("Invalid payload: {err:?}")}));
+                return Err(Json(ErrorResult {
+                    message: format!("Invalid payload: {err:?}"),
+                }));
             }
         };
         log::debug!("Zone: {zone:?}");
-        return Err(Json(ErrorResult{ message: "Invalid payload".to_string()}))
+        return Err(Json(ErrorResult {
+            message: "Invalid payload".to_string(),
+        }));
     }
     // async fn api_get(&self, pool: &Pool<Sqlite>) -> Result<Json<String>, Json<ErrorResult>>{
-        // todo!()
+    // todo!()
     // }
-    async fn api_delete(_state: Extension<SharedState>, Json(_payload): Json<serde_json::Value>) -> Result<Json<String>,Json<ErrorResult>> {
+    async fn api_delete(
+        _state: Extension<SharedState>,
+        Json(_payload): Json<serde_json::Value>,
+    ) -> Result<Json<String>, Json<ErrorResult>> {
         todo!()
     }
 }
@@ -222,6 +232,4 @@ pub fn new() -> Router {
         // .route("/user/:id", patch(user_patch))
         .layer(from_fn(auth::check_auth))
         .route("/login", post(auth::login))
-
 }
-

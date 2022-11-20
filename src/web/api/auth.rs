@@ -1,9 +1,9 @@
 use std::str::from_utf8;
 
-use argon2::{Argon2, PasswordVerifier, PasswordHash};
-use axum::{Extension, Json};
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::middleware::Next;
 use axum::response::Response;
+use axum::{Extension, Json};
 use axum_macros::debug_handler;
 use axum_sessions::extractors::WritableSession;
 use http::{Request, StatusCode};
@@ -12,21 +12,19 @@ use serde::{Deserialize, Serialize};
 use crate::db::User;
 use crate::web::SharedState;
 
-
 pub async fn check_auth<B>(req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
-
-    let auth_header = match req.headers().get("Authorization"){
+    let auth_header = match req.headers().get("Authorization") {
         None => return Err(StatusCode::UNAUTHORIZED),
         Some(val) => from_utf8(val.as_bytes()).unwrap(),
     };
 
     if !auth_header.starts_with("Bearer") {
-        return Err(StatusCode::BAD_REQUEST)
+        return Err(StatusCode::BAD_REQUEST);
     }
 
     let auth_token = match auth_header.split(' ').nth(1) {
         Some(val) => val,
-        None => return Err(StatusCode::BAD_REQUEST)
+        None => return Err(StatusCode::BAD_REQUEST),
     };
 
     log::debug!("Got auth header with bearer token: {auth_token:?}");
@@ -40,18 +38,17 @@ pub struct AuthPayload {
     pub token: String,
 }
 
-#[derive(Debug, Deserialize,Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct AuthResponse {
-    pub message: String
+    pub message: String,
 }
-
 
 #[debug_handler]
 pub async fn login(
     state: Extension<SharedState>,
     payload: Json<AuthPayload>,
     mut session: WritableSession,
-) -> Result<Json<AuthResponse>,Json<AuthResponse>> {
+) -> Result<Json<AuthResponse>, Json<AuthResponse>> {
     log::debug!("Got payload: {payload:?}");
 
     let pool = state.read().await;
@@ -60,30 +57,34 @@ pub async fn login(
         Ok(val) => val,
         Err(err) => {
             log::debug!("Failed to get rows for {}: {err:?}", payload.username);
-            let resp = AuthResponse{message: "failed".to_string()};
+            let resp = AuthResponse {
+                message: "failed".to_string(),
+            };
             return Err(Json(resp));
-        },
+        }
     };
 
     if tokens.is_empty() {
         session.destroy();
         log::info!("action=api_login user={} result=failure reason=\"no tokens found in database for user\"", payload.username);
-        return Err(Json(AuthResponse{message: "failure".to_string()}));
+        return Err(Json(AuthResponse {
+            message: "failure".to_string(),
+        }));
     }
 
     for token in tokens {
-        let passwordhash = match PasswordHash::parse(
-            &token.tokenhash,
-            argon2::password_hash::Encoding::B64) {
+        let passwordhash =
+            match PasswordHash::parse(&token.tokenhash, argon2::password_hash::Encoding::B64) {
                 Ok(val) => val,
                 Err(err) => {
                     log::error!("Failed to parse token ({token:?}) from database: {err:?}");
-                    continue
+                    continue;
                 }
             };
-        if Argon2::default().verify_password(payload.token.as_bytes(), &passwordhash).is_ok() {
-
-
+        if Argon2::default()
+            .verify_password(payload.token.as_bytes(), &passwordhash)
+            .is_ok()
+        {
             let session_user = session.insert("user", &token.user);
             let session_authref = session.insert("authref", token.user.authref);
             let session_signin = session.insert("signed_in", true);
@@ -92,18 +93,30 @@ pub async fn login(
                 session.destroy();
                 log::error!("Failed to store fresh session for user");
                 log::info!("action=api_login user={} result=failure", payload.username);
-                return Err(Json(AuthResponse{message: "failure".to_string()}))
+                return Err(Json(AuthResponse {
+                    message: "failure".to_string(),
+                }));
             };
 
             log::info!("action=api_login user={} result=success", payload.username);
-            return Ok(Json(AuthResponse{message: "success".to_string()}))
+            return Ok(Json(AuthResponse {
+                message: "success".to_string(),
+            }));
         } else {
-            log::debug!("Failed to validate token {:?} for user {}",token, payload.username);
+            log::debug!(
+                "Failed to validate token {:?} for user {}",
+                token,
+                payload.username
+            );
         }
     }
 
     session.destroy();
-    log::info!("action=api_login user={} result=failure reason=\"no tokens found\"", payload.username);
-    return Err(Json(AuthResponse{message: "failure".to_string()}))
+    log::info!(
+        "action=api_login user={} result=failure reason=\"no tokens found\"",
+        payload.username
+    );
+    Err(Json(AuthResponse {
+        message: "failure".to_string(),
+    }))
 }
-
