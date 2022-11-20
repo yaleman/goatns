@@ -9,6 +9,11 @@
 
 {% if state == ApiTokenPageState::Start %}
 <div class="mb-3">
+    <label for="token_name" class="form-label">Name your token</label>
+
+    <input type="text" id="token_name" name="token_name" class="form-control" aria-label="Name your token" />
+</div>
+<div class="mb-3">
     <label for="lifetime" class="form-label">Select your token's lifetime</label>
 
     <select id="lifetime" name="lifetime" class="form-select form-select-lg mb-3" aria-label="Select your token's lifetime">

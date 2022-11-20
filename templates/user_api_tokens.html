@@ -8,11 +8,18 @@
     <button type="submit" class="btn btn-primary">New API Token</button>
 </form>
 
-<ul>
-    {% for token in token_details %}
-    <li>{{token}}</li>
+{% for token in tokens %}
+<div class="row">
+    <div class="col"><strong>{{token.name}}</strong></div>
+    <div class="col-4">Created: {{token.issued.to_rfc3339()}}</div>
+    {% if token.expiry.is_some() %}
+    <div class="col-4">Expires: {{token.expiry.unwrap().to_rfc3339()}}</div>
+    {% else %}
+    <div class="col-4">Expires: Never!</div>
+    {% endif %}
+    <div class="col-2 py-1"><a href="/ui/settings/api_tokens/delete/{{token.id.unwrap()}}"><button type="button" class="btn btn-sm btn-outline-danger">Delete</button></a></div>
+</div>
     {% endfor %}
-</ul>
 
 
 

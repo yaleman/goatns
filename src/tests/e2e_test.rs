@@ -98,14 +98,17 @@ mod tests {
             agent_sender.clone(),
         ));
 
-        println!("Starting Databsae Connection Pool");
+        println!("Starting database connection pool");
         let connpool = crate::db::get_conn(config.read().await).await.unwrap();
 
         println!("Starting datastore");
 
         // start all the things!
-        let datastore_manager =
-            tokio::spawn(crate::datastore::manager(datastore_rx, connpool.clone()));
+        let datastore_manager = tokio::spawn(crate::datastore::manager(
+            datastore_rx,
+            connpool.clone(),
+            None,
+        ));
 
         println!("Starting API Server");
         let apiserver =
@@ -180,8 +183,6 @@ mod tests {
         assert!(!response.records().is_empty());
         eprintln!("URL response: {response:?}");
 
-        // clean up
-        log::info!("Killing goatns");
         Ok(())
     }
 }

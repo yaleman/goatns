@@ -84,7 +84,7 @@ pub struct ConfigFile {
     /// When queries take more than this many seconds, log them
     pub sql_log_slow_duration: u64,
     /// Clean up sessions table every n seconds
-    pub sql_session_cleanup_seconds: u64,
+    pub sql_db_cleanup_seconds: u64,
     /// Administrator contact details
     pub admin_contact: ContactDetails,
     /// Allow auto-provisioning of users
@@ -292,7 +292,7 @@ impl Default for ConfigFile {
             oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
             sql_log_slow_duration: 5,
             sql_log_statements: false,
-            sql_session_cleanup_seconds: 3600, // one hour
+            sql_db_cleanup_seconds: 3600, // one hour
             admin_contact: Default::default(),
             user_auto_provisioning: false,
         }
@@ -411,9 +411,9 @@ impl From<Config> for ConfigFile {
             sql_log_statements: config
                 .get("sql_log_statements")
                 .unwrap_or(Self::default().sql_log_statements),
-            sql_session_cleanup_seconds: config
-                .get("sql_session_cleanup_seconds")
-                .unwrap_or(Self::default().sql_session_cleanup_seconds),
+            sql_db_cleanup_seconds: config
+                .get("sql_db_cleanup_seconds")
+                .unwrap_or(Self::default().sql_db_cleanup_seconds),
             admin_contact: config
                 .get("admin_contact")
                 .unwrap_or(Self::default().admin_contact),

@@ -1,5 +1,6 @@
 use std::str::from_utf8;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
@@ -210,7 +211,13 @@ async fn handle_get_zone_names(
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
     connpool: Pool<Sqlite>,
+    cron_db_cleanup_timer: Option<Duration>,
 ) -> Result<(), String> {
+    if let Some(timer) = cron_db_cleanup_timer {
+        log::debug!("Spawning DB cron cleanup task");
+        let _ = tokio::spawn(db::cron_db_cleanup(connpool.clone(), timer));
+    }
+
     while let Some(cmd) = rx.recv().await {
         match cmd {
             Command::GetZone { id, name, resp } => {

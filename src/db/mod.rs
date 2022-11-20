@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
 use sqlx::{Arguments, ConnectOptions, Connection, Pool, Row, Sqlite, SqlitePool, Transaction};
+use tokio::time;
 
 #[cfg(test)]
 pub mod test;
@@ -1097,6 +1098,7 @@ impl From<SqliteRow> for ZoneOwnership {
 #[async_trait]
 impl DBEntity for ZoneOwnership {
     const TABLE: &'static str = "ownership";
+
     async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         let mut tx = pool.begin().await.unwrap();
 
@@ -1308,12 +1310,72 @@ impl DBEntity for User {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct UserAuthToken {
-    id: i64,
-    issued: DateTime<Utc>,
-    expiry: Option<DateTime<Utc>>,
-    userid: i64,
-    tokenhash: String,
+pub struct UserAuthToken {
+    pub id: Option<i64>,
+    pub name: String,
+    pub issued: DateTime<Utc>,
+    pub expiry: Option<DateTime<Utc>>,
+    pub userid: i64,
+    pub tokenhash: String,
+}
+
+impl UserAuthToken {
+    pub async fn get_by_tokenhash(
+        pool: &SqlitePool,
+        tokenhash: String,
+        userid: Option<i64>,
+    ) -> Result<UserAuthToken, sqlx::Error> {
+        let mut query_string = format!(
+            "select id, issued, expiry, tokenhash, userid from {} where tokenhash = ?",
+            Self::TABLE
+        );
+
+        if userid.is_some() {
+            query_string.push_str(" AND userid = ?");
+        }
+
+        let mut query = sqlx::query(&query_string).bind(tokenhash);
+        if let Some(userid) = userid {
+            query = query.bind(userid);
+        }
+        let res = query.fetch_one(&mut pool.acquire().await?).await?;
+
+        Ok(res.into())
+    }
+
+    pub async fn cleanup(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        let current_time = Utc::now();
+        log::debug!(
+            "Starting cleanup of {} table for sessions expiring before {}",
+            Self::TABLE,
+            current_time.to_rfc3339()
+        );
+
+        match sqlx::query(&format!(
+            "DELETE FROM {} where expiry NOT NULL and expiry < ?",
+            Self::TABLE
+        ))
+        .bind(current_time.timestamp())
+        .execute(&mut pool.acquire().await?)
+        .await
+        {
+            Ok(res) => {
+                log::info!(
+                    "Cleanup of {} table complete, {} rows deleted.",
+                    Self::TABLE,
+                    res.rows_affected()
+                );
+                Ok(())
+            }
+            Err(error) => {
+                log::error!(
+                    "Failed to complete cleanup of {} table: {error:?}",
+                    Self::TABLE
+                );
+                Err(error)
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -1321,22 +1383,71 @@ impl DBEntity for UserAuthToken {
     const TABLE: &'static str = "user_tokens";
 
     async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        let mut tx = pool.begin().await.unwrap();
+        let mut conn = pool.acquire().await?;
+        log::debug!("Ensuring DB {} table exists", Self::TABLE);
 
-        log::debug!("Ensuring DB user_tokens table exists");
-        sqlx::query(
-            r#"CREATE TABLE IF NOT EXISTS
-            user_tokens (
-                id INTEGER PRIMARY KEY,
-                issued TEXT NOT NULL,
-                expiry TEXT NOT NULL,
-                tokenhash TEXT NOT NULL,
-                userid INTEGER NOT NULL,
-                FOREIGN KEY(userid) REFERENCES users(id)
-            )"#,
-        )
-        .execute(&mut tx)
+        match sqlx::query(&format!(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='{}'",
+            Self::TABLE
+        ))
+        .fetch_optional(&mut conn)
+        .await?
+        {
+            None => {
+                log::debug!("Creating table");
+                sqlx::query(&format!(
+                    r#"CREATE TABLE IF NOT EXISTS
+                    {} (
+                        id INTEGER PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        issued TEXT NOT NULL,
+                        expiry TEXT,
+                        tokenhash TEXT NOT NULL,
+                        userid INTEGER NOT NULL,
+                        FOREIGN KEY(userid) REFERENCES users(id)
+                    )"#,
+                    Self::TABLE
+                ))
+                .execute(&mut conn)
+                .await?;
+            }
+            Some(_) => {
+                log::debug!("Updating the table");
+                // get the columns in the table
+                let res = sqlx::query(&format!("PRAGMA table_info({})", Self::TABLE))
+                    .fetch_all(&mut conn)
+                    .await?;
+
+                let mut found_name = false;
+                for row in res.iter() {
+                    let rowname: &str = row.get("name");
+                    if rowname == "name" {
+                        log::info!("Found the name column in the {} table", Self::TABLE);
+                        found_name = true;
+                    }
+                }
+
+                if !found_name {
+                    log::info!("Adding the name column to the user_tokens table");
+                    sqlx::query(&format!(
+                        "ALTER TABLE \"{}\" ADD COLUMN name TEXT NOT NULL DEFAULT \"Token Name\"",
+                        Self::TABLE
+                    ))
+                    .execute(&mut conn)
+                    .await?;
+                }
+            }
+        };
+
+        sqlx::query(&format!(
+            "CREATE UNIQUE INDEX IF NOT EXISTS
+        ind_{0}_fields
+        ON {0} ( tokenhash )",
+            Self::TABLE
+        ))
+        .execute(&mut pool.acquire().await?)
         .await?;
+
         Ok(())
     }
 
@@ -1376,12 +1487,16 @@ impl DBEntity for UserAuthToken {
         &self,
         txn: &mut Transaction<'t, Sqlite>,
     ) -> Result<i64, sqlx::Error> {
+        let expiry = self.expiry.map(|v| v.timestamp());
+        let issued = self.issued.timestamp();
+
         let res = sqlx::query(&format!(
-            "INSERT INTO {} issued, expiry, userid, tokenhash VALUES (?, ?, ?, ?)",
+            "INSERT INTO {} (name, issued, expiry, userid, tokenhash) VALUES (?, ?, ?, ?, ?)",
             Self::TABLE
         ))
-        .bind(self.issued)
-        .bind(self.expiry)
+        .bind(&self.name)
+        .bind(issued)
+        .bind(expiry)
         .bind(self.userid)
         .bind(&self.tokenhash)
         .execute(txn)
@@ -1415,12 +1530,40 @@ impl DBEntity for UserAuthToken {
 
 impl From<SqliteRow> for UserAuthToken {
     fn from(input: SqliteRow) -> Self {
+        let expiry: Option<String> = input.get("expiry");
+        let expiry: Option<DateTime<Utc>> = match expiry {
+            None => None,
+            Some(val) => {
+                let expiry = chrono::NaiveDateTime::parse_from_str(&val, "%s").unwrap();
+                let expiry: DateTime<Utc> = chrono::DateTime::from_utc(expiry, Utc);
+                Some(expiry)
+            }
+        };
+
+        let issued: String = input.get("issued");
+
+        let issued = chrono::NaiveDateTime::parse_from_str(&issued, "%s").unwrap();
+        let issued: DateTime<Utc> = chrono::DateTime::from_utc(issued, Utc);
+
         Self {
             id: input.get("id"),
-            issued: input.get("issued"),
-            expiry: input.get("expiry"),
+            name: input.get("name"),
+            issued,
+            expiry,
             userid: input.get("userid"),
             tokenhash: input.get("tokenhash"),
+        }
+    }
+}
+
+/// Run this periodically to clean up expired DB things
+pub async fn cron_db_cleanup(pool: Pool<Sqlite>, period: Duration) {
+    let mut interval = time::interval(period);
+    loop {
+        interval.tick().await;
+
+        if let Err(error) = UserAuthToken::cleanup(&pool).await {
+            log::error!("Failed to clean up UserAuthToken objects in DB cron: {error:?}");
         }
     }
 }
