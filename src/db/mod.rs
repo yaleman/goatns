@@ -16,7 +16,7 @@ use openidconnect::SubjectIdentifier;
 use serde::{Deserialize, Serialize};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
-use sqlx::{Arguments, ConnectOptions, Connection, Pool, Row, Sqlite, SqlitePool, Transaction};
+use sqlx::{Arguments, ConnectOptions, Connection, Pool, Row, Sqlite, SqlitePool, Transaction, FromRow};
 use tokio::time;
 
 #[cfg(test)]
@@ -203,6 +203,46 @@ impl User {
             Ok(rows) => rows.iter().map(|row| row.into()).collect(),
         };
         Ok(rows)
+    }
+
+
+    pub async fn get_tokens_by_username(pool: &mut Pool<Sqlite>, username: &String) -> Result<Vec<TokenSearchRow>,sqlx::Error> {
+        let res: Vec<TokenSearchRow> = sqlx::query_as(
+            "SELECT users.id as userid, users.displayname,  users.username, users.authref, users.email, users.disabled, users.authref, users.admin, tokenhash
+            FROM user_tokens, users
+            WHERE
+                users.disabled=0 AND
+                users.username=? AND
+                user_tokens.userid=users.id")
+            .bind(username)
+            .fetch_all(&mut pool.acquire().await?).await?;
+
+        Ok(res)
+    }
+}
+
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TokenSearchRow {
+    pub tokenhash: String,
+    pub user: User,
+}
+
+impl FromRow<'_, SqliteRow> for TokenSearchRow {
+    fn from_row(input: &SqliteRow) -> Result<Self, sqlx::Error> {
+        let user = User {
+            id: input.get("userid"),
+            displayname: input.get("displayname"),
+            username: input.get("username"),
+            email: input.get("email"),
+            disabled: input.get("disabled"),
+            authref: input.get("authref"),
+            admin: input.get("admin"),
+        };
+        Ok(TokenSearchRow {
+            tokenhash: input.get("tokenhash"),
+            user,
+        })
     }
 }
 

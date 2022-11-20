@@ -40,7 +40,12 @@ trait APIEntity {
 
 #[async_trait]
 impl APIEntity for FileZone  {
-    async fn api_save(_state: Extension<SharedState>, Json(payload): Json<serde_json::Value>) -> Result<Json<String>,Json<ErrorResult>> {
+    async fn api_save(
+        _state: Extension<SharedState>,
+        Json(payload): Json<serde_json::Value>
+    ) -> Result<Json<String>,Json<ErrorResult>> {
+
+
         log::debug!("Got payload: {payload:?}");
         log::debug!("Hello? {:?}", payload.get("hello"));
 
@@ -216,4 +221,7 @@ pub fn new() -> Router {
         // .route("/user/", post(user_post))
         // .route("/user/:id", patch(user_patch))
         .layer(from_fn(auth::check_auth))
+        .route("/login", post(auth::login))
+
 }
+
