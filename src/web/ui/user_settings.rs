@@ -195,8 +195,9 @@ impl ApiTokenLifetime {
     }
 }
 
+/// WHere are they in their token-creation-lifecycle?
 #[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub enum ApiTokenPageState {
+pub enum ApiTokenCreatePageState {
     Start,
     Generating,
     Showing,
@@ -204,32 +205,32 @@ pub enum ApiTokenPageState {
     Error,
 }
 
-impl Display for ApiTokenPageState {
+impl Display for ApiTokenCreatePageState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ApiTokenPageState::Start => f.write_fmt(format_args!("Start")),
-            ApiTokenPageState::Generating => f.write_fmt(format_args!("Generating")),
-            ApiTokenPageState::Showing => f.write_fmt(format_args!("Showing")),
-            ApiTokenPageState::Finished => f.write_fmt(format_args!("Finished")),
-            ApiTokenPageState::Error => f.write_fmt(format_args!("Error")),
+            ApiTokenCreatePageState::Start => f.write_fmt(format_args!("Start")),
+            ApiTokenCreatePageState::Generating => f.write_fmt(format_args!("Generating")),
+            ApiTokenCreatePageState::Showing => f.write_fmt(format_args!("Showing")),
+            ApiTokenCreatePageState::Finished => f.write_fmt(format_args!("Finished")),
+            ApiTokenCreatePageState::Error => f.write_fmt(format_args!("Error")),
         }
     }
 }
 
-impl Default for ApiTokenPageState {
+impl Default for ApiTokenCreatePageState {
     fn default() -> Self {
         Self::Start
     }
 }
 
-impl ApiTokenPageState {
+impl ApiTokenCreatePageState {
     pub fn next(&self) -> Self {
         match &self {
-            ApiTokenPageState::Start => Self::Generating,
-            ApiTokenPageState::Generating => Self::Showing,
-            ApiTokenPageState::Showing => Self::Finished,
-            ApiTokenPageState::Finished => Self::Error,
-            ApiTokenPageState::Error => Self::Start,
+            ApiTokenCreatePageState::Start => Self::Generating,
+            ApiTokenCreatePageState::Generating => Self::Showing,
+            ApiTokenCreatePageState::Showing => Self::Finished,
+            ApiTokenCreatePageState::Finished => Self::Error,
+            ApiTokenCreatePageState::Error => Self::Start,
         }
     }
 }
@@ -238,11 +239,12 @@ impl ApiTokenPageState {
 #[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Template, Default)]
 #[template(path = "user_api_token_form.html")]
 pub struct ApiTokenPage {
-    pub state: ApiTokenPageState,
-    pub csrftoken: String,
     pub token_name: Option<String>,
+    pub csrftoken: String,
+    pub state: ApiTokenCreatePageState,
+    /// When the user selects the lifetime in the creation form
     pub lifetime: Option<ApiTokenLifetime>,
-    // TODO: this could be an empty vec, but the template is weird.
+    /// Used to show the possible lifetimes in the creation form
     pub lifetimes: Option<Vec<(String, String)>>,
 }
 
@@ -269,7 +271,7 @@ pub async fn api_tokens_post(
 
     let context = match form.state {
         // Present the "select a lifetime" page
-        ApiTokenPageState::Start => {
+        ApiTokenCreatePageState::Start => {
             // present the user with the lifetime form
             let lifetimes: Vec<(String, String)> = enum_iterator::all::<ApiTokenLifetime>()
                 .into_iter()
@@ -278,14 +280,14 @@ pub async fn api_tokens_post(
             eprintln!("Lifetimes: {lifetimes:?}");
             ApiTokenPage {
                 csrftoken: store_api_csrf_token(&mut session, None).unwrap(),
-                state: ApiTokenPageState::Start,
+                state: ApiTokenCreatePageState::Start,
                 token_name: None,
                 lifetimes: Some(lifetimes),
                 lifetime: None,
             }
         }
         // The user has set a lifetime and we're generating a token
-        ApiTokenPageState::Generating => {
+        ApiTokenCreatePageState::Generating => {
             log::debug!("In the 'Generating' state");
 
             // generate the credential
@@ -370,9 +372,9 @@ pub async fn api_tokens_post(
             )));
         }
         // We're showing the token to the user
-        ApiTokenPageState::Showing => todo!(),
-        ApiTokenPageState::Finished => todo!(),
-        ApiTokenPageState::Error => todo!(),
+        ApiTokenCreatePageState::Showing => todo!(),
+        ApiTokenCreatePageState::Finished => todo!(),
+        ApiTokenCreatePageState::Error => todo!(),
     };
     Ok(Html::from(context.render().unwrap()))
 
@@ -382,9 +384,9 @@ pub async fn api_tokens_post(
 #[derive(Deserialize, Serialize, Debug, Clone, Template)]
 #[template(path = "user_api_token_delete.html")]
 pub struct ApiTokenDelete {
-    pub csrftoken: String,
     pub id: i64,
     pub token_name: Option<String>,
+    pub csrftoken: String,
 }
 
 #[debug_handler]

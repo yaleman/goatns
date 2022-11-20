@@ -7,7 +7,7 @@
     <input type="hidden" name="csrftoken" value="{{csrftoken}}" />
     <input type="hidden" name="state" value="{{state.next()}}" />
 
-{% if state == ApiTokenPageState::Start %}
+{% if state == ApiTokenCreatePageState::Start %}
 <div class="mb-3">
     <label for="token_name" class="form-label">Name your token</label>
 
@@ -26,7 +26,7 @@
     <button type="submit" class="btn btn-primary">New API Token</button>
 </div>
 </form>
-{% else if state == ApiTokenPageState::Generating %}
+{% else if state == ApiTokenCreatePageState::Generating %}
 Somehow you got to a page you shouldn't have. Weird.
 {% else %}
 Got page state: {{state}}
