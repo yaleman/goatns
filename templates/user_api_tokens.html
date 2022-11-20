@@ -2,6 +2,26 @@
 {% block content %}
 <h1>API Tokens</h1>
 
+{% if token_value.is_some() %}
+
+<div class="row">
+    <div class="col">
+        <h2>Here's your token!</h2>
+
+        <p>Please ensure you take a copy, it won't be shown again.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="alert alert-warning" role="alert">
+            <p class="font-monospace">{{ token_value.as_ref().unwrap() }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
 <form method="POST">
     <input type="hidden" name="csrftoken" value="{{csrftoken}}" />
     <input type="hidden" name="state" value="Start" />

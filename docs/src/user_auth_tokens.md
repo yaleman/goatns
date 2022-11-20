@@ -10,12 +10,19 @@ Schema:
 - issued (Not null)
 - expiry (Maybe null, if it won't expire)
 - userid (Foreign key users(id))
-- tokenhash - an Argon2 hash of the following:
-  - the system cookie secret
-  - the userid
-  - issuance time
-  - expiry (if set)
-  - a random number? maybe?
+- tokenhash - String (Argon2id of the token)
+
+How the token's generated
+
+1. take the following strings and concatenate them with dashes in between:
+   - the system cookie secret
+   - the userid
+   - issuance time
+   - expiry (if set)
+   - a random number? maybe?
+2. Sha512 it
+3. append "goatns_"
+4. Send it to the farm
 
 Issuance method:
 

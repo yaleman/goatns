@@ -186,7 +186,7 @@ impl User {
                     LIMIT ?1 OFFSET ?2"
             }
         };
-        log::debug!(
+        log::trace!(
             "get_zones_for_user query: {:?}",
             query_string.replace('\n', "")
         );

@@ -1,5 +1,6 @@
 use crate::db::{DBEntity, User};
 use crate::web::ui::check_logged_in;
+use sha2::{Sha256, Digest};
 use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -41,6 +42,7 @@ pub async fn settings(Extension(_state): Extension<SharedState>) -> Html<String>
 struct ApiTokensGetPage {
     csrftoken: String,
     tokens: Vec<Arc<UserAuthToken>>,
+    token_value: Option<String>,
 }
 
 pub fn validate_csrf_expiry(user_input: &str, session: &mut WritableSession) -> bool {
@@ -140,6 +142,11 @@ pub async fn api_tokens_get(
     let user: User = session.get("user").unwrap();
     log::debug!("Got user: {user:?}");
 
+    // pull token from the session store new_api_token
+
+    let token_value: Option<String> = session.get("new_api_token");
+    session.remove("new_api_token");
+
     let tokens =
         match UserAuthToken::get_all_user(&state.read().await.connpool, user.id.unwrap()).await {
             Err(error) => {
@@ -149,7 +156,11 @@ pub async fn api_tokens_get(
             Ok(val) => val,
         };
 
-    let context = ApiTokensGetPage { csrftoken, tokens };
+    let context = ApiTokensGetPage {
+        csrftoken,
+        tokens,
+        token_value,
+    };
 
     Ok(Html::from(context.render().unwrap()))
 }
@@ -200,7 +211,6 @@ impl ApiTokenLifetime {
 pub enum ApiTokenCreatePageState {
     Start,
     Generating,
-    Showing,
     Finished,
     Error,
 }
@@ -210,7 +220,6 @@ impl Display for ApiTokenCreatePageState {
         match self {
             ApiTokenCreatePageState::Start => f.write_fmt(format_args!("Start")),
             ApiTokenCreatePageState::Generating => f.write_fmt(format_args!("Generating")),
-            ApiTokenCreatePageState::Showing => f.write_fmt(format_args!("Showing")),
             ApiTokenCreatePageState::Finished => f.write_fmt(format_args!("Finished")),
             ApiTokenCreatePageState::Error => f.write_fmt(format_args!("Error")),
         }
@@ -227,8 +236,7 @@ impl ApiTokenCreatePageState {
     pub fn next(&self) -> Self {
         match &self {
             ApiTokenCreatePageState::Start => Self::Generating,
-            ApiTokenCreatePageState::Generating => Self::Showing,
-            ApiTokenCreatePageState::Showing => Self::Finished,
+            ApiTokenCreatePageState::Generating => Self::Finished,
             ApiTokenCreatePageState::Finished => Self::Error,
             ApiTokenCreatePageState::Error => Self::Start,
         }
@@ -240,6 +248,8 @@ impl ApiTokenCreatePageState {
 #[template(path = "user_api_token_form.html")]
 pub struct ApiTokenPage {
     pub token_name: Option<String>,
+    /// For when we want show the token
+    pub token_value: Option<String>,
     pub csrftoken: String,
     pub state: ApiTokenCreatePageState,
     /// When the user selects the lifetime in the creation form
@@ -284,6 +294,7 @@ pub async fn api_tokens_post(
                 token_name: None,
                 lifetimes: Some(lifetimes),
                 lifetime: None,
+                token_value: None,
             }
         }
         // The user has set a lifetime and we're generating a token
@@ -306,6 +317,11 @@ pub async fn api_tokens_post(
 
             let api_token_to_hash = format!("{cookie_token:?}-{userid:?}-{issued:?}-{lifetime:?}-");
 
+            let api_token = hex::encode(Sha256::digest(api_token_to_hash));
+
+            let api_token = format!("goatns_{api_token}");
+            log::trace!("Final token: {api_token}");
+
             // TODO: is rand_core the thing we want to use for generating randomness?
             let salt = SaltString::generate(&mut OsRng);
 
@@ -313,7 +329,7 @@ pub async fn api_tokens_post(
             // Argon2 with default params (Argon2id v19)
             let argon2 = Argon2::default();
             let password_hash = argon2
-                .hash_password(api_token_to_hash.as_bytes(), &salt)
+                .hash_password(&api_token.as_bytes(), &salt)
                 .unwrap();
 
             let password_hash_string = password_hash.to_string();
@@ -345,7 +361,7 @@ pub async fn api_tokens_post(
                 Err(error) => todo!("Need to handle this! {error:?}"),
                 Ok(_) => {
                     // store the api token in the session store
-                    if let Err(error) = session.insert("new_api_token", &password_hash_string) {
+                    if let Err(error) = session.insert("new_api_token", &api_token) {
                         log::error!(
                             "Failed to store new API token in the session, ruh roh? {error:?}"
                         );
@@ -368,11 +384,10 @@ pub async fn api_tokens_post(
             // redirect the user to the display page
             let csrftoken = store_api_csrf_token(&mut session, Some(30)).unwrap();
             return Err(Redirect::to(&format!(
-                "/ui/settings/api_tokens?state={csrftoken}"
+                "/ui/settings/api_tokens?state={csrftoken}?token_created=1"
             )));
         }
-        // We're showing the token to the user
-        ApiTokenCreatePageState::Showing => todo!(),
+
         ApiTokenCreatePageState::Finished => todo!(),
         ApiTokenCreatePageState::Error => todo!(),
     };

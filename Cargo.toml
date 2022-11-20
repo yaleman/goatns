@@ -14,6 +14,7 @@ categories = ["network-programming"]
 members = [
     ".",
     "axum-csp",
+    "goatns-macros",
 ]
 
 [lib]
@@ -46,6 +47,7 @@ flexi_logger = { version = "0.24", features = ["async", "default"] }
 futures = "0.3.25"
 futures-util = "0.3.25"
 gethostname = "0.4.0"
+hex = "0.4.3"
 http = "0.2.8"
 ipnet = { version = "2.5.0", features = [ "json", "serde" ] }
 json5 = "0.4.1"
@@ -63,6 +65,7 @@ serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
 serde_derive = "1.0.145"
 serde_json = "1.0.88"
+sha2 = { version = "0.10.6", features = ["asm", "asm-aarch64"] }
 shellexpand = "2.1.2"
 sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite"], default-features=false }
 tokio = { version = "1.21.2", features = ["full"] }
