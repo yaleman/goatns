@@ -1,0 +1,26 @@
+{% extends "dashboard.html" %}
+{% block content %}
+<h1>API Tokens Deletion</h1>
+
+<form method="POST">
+    <input type="hidden" name="csrftoken" value="{{csrftoken}}" />
+    <input type="hidden" name="id" value="{{id}}" />
+
+
+    <div class="row">
+        <div class="col-4 py-2">
+            Are you sure you want to delete the token called "{{token_name.as_ref().unwrap()}}"
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-4  mb-3 text-center">
+            <button type="submit" class="btn btn-danger">Confirm</button>
+            <a href="/ui/settings/api_tokens>
+                <button type="button" class="btn btn-outline-primary">Cancel</button>
+                </a>
+        </div>
+    </div>
+</form>
+
+{% endblock content %}

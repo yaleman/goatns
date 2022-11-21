@@ -13,6 +13,8 @@ use axum_sessions::extractors::WritableSession;
 
 use super::SharedState;
 
+mod user_settings;
+
 #[derive(Template)]
 #[template(path = "view_zones.html")]
 struct TemplateViewZones {
@@ -27,7 +29,7 @@ struct TemplateViewZone {
 
 macro_rules! check_logged_in {
     ( $state:tt, $session:tt, $path:tt ) => {
-        if let Err(e) = check_logged_in(&$state, &mut $session, $path).await {
+        if let Err(e) = check_logged_in(&mut $session, $path).await {
             return e.into_response();
         }
     };
@@ -90,7 +92,7 @@ pub async fn zone_view(
     mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    if let Err(e) = check_logged_in(&state, &mut session, path).await {
+    if let Err(e) = check_logged_in(&mut session, path).await {
         return e.into_response();
     }
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
@@ -124,11 +126,7 @@ struct DashboardTemplate /*<'a>*/ {
     // name: &'a str,
 }
 
-pub async fn check_logged_in(
-    _state: &SharedState,
-    session: &mut WritableSession,
-    path: Uri,
-) -> Result<(), Redirect> {
+pub async fn check_logged_in(session: &mut WritableSession, path: Uri) -> Result<(), Redirect> {
     let authref = session.get::<String>("authref");
 
     let redirect_path = Some(path.path_and_query().unwrap().to_string());
@@ -149,11 +147,11 @@ pub async fn check_logged_in(
 
 #[debug_handler]
 pub async fn dashboard(
-    Extension(state): Extension<SharedState>,
+    // Extension(_state): Extension<SharedState>,
     mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    if let Err(e) = check_logged_in(&state, &mut session, path).await {
+    if let Err(e) = check_logged_in(&mut session, path).await {
         return e.into_response();
     }
 
@@ -169,6 +167,7 @@ pub async fn dashboard(
 pub fn new() -> Router {
     Router::new()
         .route("/", get(dashboard))
+        .nest("/settings", user_settings::router())
         .route("/zones/:id", get(zone_view))
         .route("/zones/list", get(zones_list))
 }

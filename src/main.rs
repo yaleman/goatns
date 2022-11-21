@@ -1,6 +1,7 @@
 use goatns::enums::SystemState;
 use goatns::utils::start_channels;
 use std::io;
+use std::time::Duration;
 
 use goatns::cli::clap_parser;
 use goatns::config::{setup_logging, ConfigFile};
@@ -55,7 +56,13 @@ async fn main() -> io::Result<()> {
     };
 
     // start all the things!
-    let datastore_manager = tokio::spawn(datastore::manager(datastore_receiver, connpool.clone()));
+    let datastore_manager = tokio::spawn(datastore::manager(
+        datastore_receiver,
+        connpool.clone(),
+        Some(Duration::from_secs(
+            config.read().await.sql_db_cleanup_seconds,
+        )),
+    ));
 
     match goatns::cli::cli_commands(
         datastore_sender.clone(),

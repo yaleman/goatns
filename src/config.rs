@@ -63,8 +63,8 @@ pub struct ConfigFile {
     pub api_tls_key: PathBuf,
     /// Static File Directory for api things
     pub api_static_dir: String,
-    /// Secret for cookie storage - don't hard code this, it'll randomly generate on startup
-    #[serde(default = "generate_cookie_secret", skip)]
+    /// Secret for cookie storage - it'll randomly generate on startup by default
+    #[serde(default = "generate_cookie_secret", skip_serializing)]
     api_cookie_secret: String,
     /// OAuth2 Resource server name
     pub oauth2_client_id: String,
@@ -84,7 +84,7 @@ pub struct ConfigFile {
     /// When queries take more than this many seconds, log them
     pub sql_log_slow_duration: u64,
     /// Clean up sessions table every n seconds
-    pub sql_session_cleanup_seconds: u64,
+    pub sql_db_cleanup_seconds: u64,
     /// Administrator contact details
     pub admin_contact: ContactDetails,
     /// Allow auto-provisioning of users
@@ -119,8 +119,8 @@ impl ConfigFile {
     }
 
     /// It's a sekret!
-    pub fn api_cookie_secret(self) -> String {
-        self.api_cookie_secret
+    pub fn api_cookie_secret(&self) -> &[u8] {
+        self.api_cookie_secret.as_bytes()
     }
 
     pub fn status_url(&self) -> Url {
@@ -292,7 +292,7 @@ impl Default for ConfigFile {
             oauth2_user_scopes: vec!["openid".to_string(), "email".to_string()],
             sql_log_slow_duration: 5,
             sql_log_statements: false,
-            sql_session_cleanup_seconds: 3600, // one hour
+            sql_db_cleanup_seconds: 3600, // one hour
             admin_contact: Default::default(),
             user_auto_provisioning: false,
         }
@@ -389,7 +389,9 @@ impl From<Config> for ConfigFile {
             api_static_dir: config
                 .get("api_static_dir")
                 .unwrap_or(Self::default().api_static_dir),
-            api_cookie_secret: generate_cookie_secret(),
+            api_cookie_secret: config
+                .get("api_cookie_secret")
+                .unwrap_or(Self::default().api_cookie_secret),
             oauth2_client_id: config
                 .get("oauth2_client_id")
                 .unwrap_or(Self::default().oauth2_client_id),
@@ -409,9 +411,9 @@ impl From<Config> for ConfigFile {
             sql_log_statements: config
                 .get("sql_log_statements")
                 .unwrap_or(Self::default().sql_log_statements),
-            sql_session_cleanup_seconds: config
-                .get("sql_session_cleanup_seconds")
-                .unwrap_or(Self::default().sql_session_cleanup_seconds),
+            sql_db_cleanup_seconds: config
+                .get("sql_db_cleanup_seconds")
+                .unwrap_or(Self::default().sql_db_cleanup_seconds),
             admin_contact: config
                 .get("admin_contact")
                 .unwrap_or(Self::default().admin_contact),

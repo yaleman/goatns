@@ -12,7 +12,7 @@ use std::path::Path;
 use std::str::from_utf8;
 
 /// A DNS Zone
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename(serialize = "UPPERCASE"))]
 pub struct FileZone {
     /// Database row ID

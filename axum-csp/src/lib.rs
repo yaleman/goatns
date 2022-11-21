@@ -1,6 +1,6 @@
 //! Some items for implementing [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/) headers with [axum](https://crates.io/crates/axum)
 #![warn(clippy::complexity)]
-#![warn(clippy::cargo)]
+// #![warn(clippy::cargo)]
 #![warn(clippy::perf)]
 #![deny(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]

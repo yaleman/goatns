@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use super::utils::{redirect_to_dashboard, redirect_to_home};
 use super::SharedState;
+use crate::config::ConfigFile;
 use crate::db::{DBEntity, User};
 use crate::web::SharedStateTrait;
 use crate::COOKIE_NAME;
@@ -16,6 +17,7 @@ use axum_macros::debug_handler;
 use axum_sessions::extractors::WritableSession;
 use axum_sessions::SessionLayer;
 use chrono::{DateTime, Utc};
+use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{PkceCodeChallenge, PkceCodeVerifier, RedirectUrl};
 use openidconnect::reqwest::async_http_client;
 use openidconnect::EmptyAdditionalProviderMetadata;
@@ -25,7 +27,6 @@ use openidconnect::{
 use openidconnect::{
     AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
 };
-use rand::Rng;
 use serde::Deserialize;
 use sqlx::{Pool, Sqlite};
 
@@ -371,12 +372,9 @@ pub async fn logout(mut session: WritableSession) -> impl IntoResponse {
 }
 
 pub async fn build_auth_stores(
-    sql_session_cleanup_seconds: u64,
+    config: CowCellReadTxn<ConfigFile>,
     connpool: Pool<Sqlite>,
 ) -> SessionLayer<SqliteSessionStore> {
-    let mut secret: [u8; 128] = [0; 128];
-    rand::thread_rng().fill(&mut secret);
-
     let session_store = SqliteSessionStore::from_client(connpool).with_table_name("sessions");
 
     session_store
@@ -385,11 +383,11 @@ pub async fn build_auth_stores(
         .expect("Could not migrate session store database on startup!");
 
     let _ = tokio::spawn(sessions::session_store_cleanup(
-        Duration::from_secs(sql_session_cleanup_seconds),
+        Duration::from_secs(config.sql_db_cleanup_seconds.to_owned()),
         session_store.clone(),
     ));
 
-    SessionLayer::new(session_store, &secret)
+    SessionLayer::new(session_store, config.api_cookie_secret())
         .with_secure(true)
         // TODO: cookie domain isn't working because it sets .(hostname) for some reason.
         // .with_cookie_domain(config.hostname.clone())
@@ -398,7 +396,6 @@ pub async fn build_auth_stores(
 }
 
 #[derive(Deserialize, Debug)]
-#[allow(dead_code)]
 /// This handles the POST from "would you like to create your user"
 pub struct SignupForm {
     pub state: String,
@@ -463,9 +460,6 @@ pub async fn signup(
 }
 
 pub fn new() -> Router {
-    let mut secret: [u8; 64] = [0; 64];
-    rand::thread_rng().fill(&mut secret);
-
     Router::new()
         .route("/login", get(login))
         .route("/logout", get(logout))

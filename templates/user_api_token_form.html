@@ -1,0 +1,35 @@
+{% extends "dashboard.html" %}
+{% block content %}
+<h1>API Tokens</h1>
+
+
+<form method="POST">
+    <input type="hidden" name="csrftoken" value="{{csrftoken}}" />
+    <input type="hidden" name="state" value="{{state.next()}}" />
+
+{% if state == ApiTokenCreatePageState::Start %}
+<div class="mb-3">
+    <label for="token_name" class="form-label">Name your token</label>
+
+    <input type="text" id="token_name" name="token_name" class="form-control" aria-label="Name your token" />
+</div>
+<div class="mb-3">
+    <label for="lifetime" class="form-label">Select your token's lifetime</label>
+
+    <select id="lifetime" name="lifetime" class="form-select form-select-lg mb-3" aria-label="Select your token's lifetime">
+        {% for (title, value) in lifetimes.as_ref().unwrap() %}
+        <option value="{{value}}">{{title}}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="mb-3 text-center">
+    <button type="submit" class="btn btn-primary">New API Token</button>
+</div>
+</form>
+{% else if state == ApiTokenCreatePageState::Generating %}
+Somehow you got to a page you shouldn't have. Weird.
+{% else %}
+Got page state: {{state}}
+{% endif %}
+
+{% endblock content %}
