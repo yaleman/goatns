@@ -31,14 +31,15 @@ async fn userauthtoken_saves() -> Result<(), sqlx::Error> {
     test_harness::create_test_user(&pool).await?;
 
     println!("Creating UAT Object");
-    let tokenhash = "hello world".to_string();
+
     let uat = UserAuthToken {
         name: "Test Token".to_string(),
         id: None,
         issued: Utc::now(),
         expiry: None,
         userid: 1,
-        tokenhash,
+        tokenkey: "tokenkey".to_string(),
+        tokenhash: "hello world".to_string(),
     };
     println!("Saving UAT Object to DB: {uat:?}");
 
@@ -77,6 +78,7 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
         issued: Utc::now(),
         expiry: Some(expiry),
         userid: 1,
+        tokenkey: "hello world".to_string(),
         tokenhash,
     };
     println!("Saving UAT Object to DB: {uat:?}");
@@ -90,6 +92,7 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
         issued: Utc::now(),
         expiry: Some(expiry),
         userid: 1,
+        tokenkey: "hello world".to_string(),
         tokenhash,
     };
     println!("Saving UAT Object to DB: {uat:?}");

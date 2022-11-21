@@ -30,13 +30,17 @@ pub struct ErrorResult {
     pub message: String,
 }
 
+/// This gets applied to DBEntities
 #[async_trait]
 trait APIEntity {
-    async fn api_save(
+    /// Save the
+    async fn api_create(
         state: Extension<SharedState>,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, Json<ErrorResult>>;
+    // async fn api_update(pool: &Pool<Sqlite>, id: i64) -> Result<Json<String>, Json<ErrorResult>>;
     // async fn api_get(pool: &Pool<Sqlite>, id: i64) -> Result<Json<String>, Json<ErrorResult>>;
+    /// Delete an object
     async fn api_delete(
         state: Extension<SharedState>,
         Json(payload): Json<serde_json::Value>,
@@ -45,7 +49,7 @@ trait APIEntity {
 
 #[async_trait]
 impl APIEntity for FileZone {
-    async fn api_save(
+    async fn api_create(
         _state: Extension<SharedState>,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, Json<ErrorResult>> {
@@ -213,7 +217,7 @@ pub fn new() -> Router {
     Router::new()
         // just zone things
         // .route("/zone/:id", get(zone_get))
-        .route("/zone", post(FileZone::api_save))
+        .route("/zone", post(FileZone::api_create))
         // .route("/zone", post(zone_post))
         // .route("/zone/:id", patch(zone_patch))
         // // zone ownership

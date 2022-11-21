@@ -13,8 +13,20 @@
 </div>
 
 <div class="row">
-    <div class="col">
-        <div class="alert alert-warning" role="alert">
+    <div class="alert alert-warning" role="alert">
+        <div class="col">
+            Token Key:
+        </div>
+        <div class="col">
+            <p class="font-monospace">{{ tokenkey.as_ref().unwrap() }}</p>
+        </div>
+    </div>
+<div class="row">
+    <div class="alert alert-warning" role="alert">
+        <div class="col">
+            Token Secret:
+        </div>
+        <div class="col">
             <p class="font-monospace">{{ token_value.as_ref().unwrap() }}</p>
         </div>
     </div>

@@ -207,19 +207,20 @@ impl User {
         Ok(rows)
     }
 
-    pub async fn get_tokens_by_username(
+    pub async fn get_token(
         pool: &mut Pool<Sqlite>,
-        username: &String,
-    ) -> Result<Vec<TokenSearchRow>, sqlx::Error> {
-        let res: Vec<TokenSearchRow> = sqlx::query_as(
-            "SELECT users.id as userid, users.displayname,  users.username, users.authref, users.email, users.disabled, users.authref, users.admin, tokenhash
+        tokenkey: &String,
+    ) -> Result<TokenSearchRow, sqlx::Error> {
+        let mut txn = pool.begin().await?;
+        let res: TokenSearchRow = sqlx::query_as(
+            "SELECT users.id as userid, users.displayname,  users.username, users.authref, users.email, users.disabled, users.authref, users.admin, tokenhash, tokenkey
             FROM user_tokens, users
             WHERE
                 users.disabled=0 AND
-                users.username=? AND
+                user_tokens.tokenkey=? AND
                 user_tokens.userid=users.id")
-            .bind(username)
-            .fetch_all(&mut pool.acquire().await?).await?;
+            .bind(tokenkey)
+            .fetch_one(&mut txn).await?;
 
         Ok(res)
     }
@@ -229,6 +230,7 @@ impl User {
 pub struct TokenSearchRow {
     pub tokenhash: String,
     pub user: User,
+    pub tokenkey: String,
 }
 
 impl FromRow<'_, SqliteRow> for TokenSearchRow {
@@ -243,6 +245,7 @@ impl FromRow<'_, SqliteRow> for TokenSearchRow {
             admin: input.get("admin"),
         };
         Ok(TokenSearchRow {
+            tokenkey: input.get("tokenkey"),
             tokenhash: input.get("tokenhash"),
             user,
         })
@@ -1359,30 +1362,22 @@ pub struct UserAuthToken {
     pub issued: DateTime<Utc>,
     pub expiry: Option<DateTime<Utc>>,
     pub userid: i64,
+    pub tokenkey: String,
     pub tokenhash: String,
 }
 
 impl UserAuthToken {
-    pub async fn get_by_tokenhash(
+    pub async fn get_authtoken(
         pool: &SqlitePool,
-        tokenhash: String,
-        userid: Option<i64>,
+        tokenkey: String,
     ) -> Result<UserAuthToken, sqlx::Error> {
-        let mut query_string = format!(
-            "select id, issued, expiry, tokenhash, userid from {} where tokenhash = ?",
+        let res = sqlx::query(&format!(
+            "select id, issued, expiry, tokenkey, tokenhash, userid from {} where tokenkey = ?",
             Self::TABLE
-        );
-
-        if userid.is_some() {
-            query_string.push_str(" AND userid = ?");
-        }
-
-        let mut query = sqlx::query(&query_string).bind(tokenhash);
-        if let Some(userid) = userid {
-            query = query.bind(userid);
-        }
-        let res = query.fetch_one(&mut pool.acquire().await?).await?;
-
+        ))
+        .bind(tokenkey)
+        .fetch_one(&mut pool.acquire().await?)
+        .await?;
         Ok(res.into())
     }
 
@@ -1437,7 +1432,7 @@ impl DBEntity for UserAuthToken {
         .await?
         {
             None => {
-                log::debug!("Creating table");
+                log::debug!("Creating {} table", Self::TABLE);
                 sqlx::query(&format!(
                     r#"CREATE TABLE IF NOT EXISTS
                     {} (
@@ -1445,6 +1440,7 @@ impl DBEntity for UserAuthToken {
                         name TEXT NOT NULL,
                         issued TEXT NOT NULL,
                         expiry TEXT,
+                        tokenkey TEXT NOT NULL,
                         tokenhash TEXT NOT NULL,
                         userid INTEGER NOT NULL,
                         FOREIGN KEY(userid) REFERENCES users(id)
@@ -1462,18 +1458,52 @@ impl DBEntity for UserAuthToken {
                     .await?;
 
                 let mut found_name = false;
+                let mut found_tokenkey = false;
                 for row in res.iter() {
                     let rowname: &str = row.get("name");
                     if rowname == "name" {
-                        log::info!("Found the name column in the {} table", Self::TABLE);
+                        log::debug!("Found the name column in the {} table", Self::TABLE);
                         found_name = true;
+                    }
+
+                    let rowname: &str = row.get("name");
+                    if rowname == "tokenkey" {
+                        log::debug!("Found the tokenkey column in the {} table", Self::TABLE);
+                        found_tokenkey = true;
                     }
                 }
 
                 if !found_name {
-                    log::info!("Adding the name column to the user_tokens table");
+                    log::info!("Adding the name column to the {} table", Self::TABLE);
                     sqlx::query(&format!(
                         "ALTER TABLE \"{}\" ADD COLUMN name TEXT NOT NULL DEFAULT \"Token Name\"",
+                        Self::TABLE
+                    ))
+                    .execute(&mut conn)
+                    .await?;
+                }
+                if !found_tokenkey {
+                    log::info!("Adding the tokenkey column to the {} table, this will drop the contents of the API tokens table, because of the format change.", Self::TABLE);
+
+                    match dialoguer::Confirm::new()
+                        .with_prompt("Please confirm that you want to take this action")
+                        .interact()
+                    {
+                        Ok(value) => {
+                            if !value {
+                                return Err(sqlx::Error::Protocol("Cancelled".to_string()));
+                            }
+                        }
+                        Err(error) => {
+                            log::error!("Cancelled! {error:?}");
+                            return Err(sqlx::Error::Protocol("Cancelled".to_string()));
+                        }
+                    };
+                    sqlx::query(&format!("DELETE FROM {}", Self::TABLE))
+                        .execute(&mut conn)
+                        .await?;
+                    sqlx::query(&format!(
+                        "ALTER TABLE \"{}\" ADD COLUMN tokenkey TEXT NOT NULL DEFAULT \"old_tokenkey\"",
                         Self::TABLE
                     ))
                     .execute(&mut conn)
@@ -1482,13 +1512,35 @@ impl DBEntity for UserAuthToken {
             }
         };
 
+        match sqlx::query(&format!("DROP INDEX ind_{}_fields", Self::TABLE))
+            .execute(&mut conn)
+            .await
+        {
+            Ok(_) => log::trace!(
+                "Didn't find  ind_{}_fields index, no action required",
+                Self::TABLE
+            ),
+            Err(err) => match err {
+                sqlx::Error::Database(zzz) => {
+                    if zzz.message() != "no such index: ind_user_tokens_fields" {
+                        log::error!("Database Error: {:?}", zzz);
+                        panic!();
+                    }
+                }
+                _ => {
+                    log::error!("{err:?}");
+                    panic!();
+                }
+            },
+        };
+
         sqlx::query(&format!(
             "CREATE UNIQUE INDEX IF NOT EXISTS
-        ind_{0}_fields
-        ON {0} ( tokenhash )",
+        ind_{0}_findit
+        ON {0} ( userid, tokenkey, tokenhash )",
             Self::TABLE
         ))
-        .execute(&mut pool.acquire().await?)
+        .execute(&mut conn)
         .await?;
 
         Ok(())
@@ -1534,13 +1586,14 @@ impl DBEntity for UserAuthToken {
         let issued = self.issued.timestamp();
 
         let res = sqlx::query(&format!(
-            "INSERT INTO {} (name, issued, expiry, userid, tokenhash) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO {} (name, issued, expiry, userid, tokenkey, tokenhash) VALUES (?, ?, ?, ?, ?, ?)",
             Self::TABLE
         ))
         .bind(&self.name)
         .bind(issued)
         .bind(expiry)
         .bind(self.userid)
+        .bind(&self.tokenkey)
         .bind(&self.tokenhash)
         .execute(txn)
         .await?;
@@ -1594,6 +1647,7 @@ impl From<SqliteRow> for UserAuthToken {
             issued,
             expiry,
             userid: input.get("userid"),
+            tokenkey: input.get("tokenkey"),
             tokenhash: input.get("tokenhash"),
         }
     }

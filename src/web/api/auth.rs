@@ -34,7 +34,7 @@ pub async fn check_auth<B>(req: Request<B>, next: Next<B>) -> Result<Response, S
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AuthPayload {
-    pub username: String,
+    pub tokenkey: String,
     pub token: String,
 }
 
@@ -53,70 +53,68 @@ pub async fn login(
 
     let pool = state.read().await;
     let mut pool = pool.connpool.clone();
-    let tokens = match User::get_tokens_by_username(&mut pool, &payload.username).await {
+    let token = match User::get_token(&mut pool, &payload.tokenkey).await {
         Ok(val) => val,
         Err(err) => {
-            log::debug!("Failed to get rows for {}: {err:?}", payload.username);
+            log::info!(
+                "action=api_login tokenkey={} result=failure reason=\"no token found\"",
+                payload.tokenkey
+            );
+            log::debug!("Error: {err:?}");
+            session.destroy();
             let resp = AuthResponse {
-                message: "failed".to_string(),
+                message: "token not found".to_string(),
             };
             return Err(Json(resp));
         }
     };
 
-    if tokens.is_empty() {
-        session.destroy();
-        log::info!("action=api_login user={} result=failure reason=\"no tokens found in database for user\"", payload.username);
-        return Err(Json(AuthResponse {
-            message: "failure".to_string(),
-        }));
-    }
+    let passwordhash = match PasswordHash::parse(
+        &token.tokenhash,
+        argon2::password_hash::Encoding::B64,
+    ) {
+        Ok(val) => val,
+        Err(err) => {
+            log::error!("Failed to parse token ({token:?}) from database: {err:?}");
+            log::info!("action=api_login tokenkey={} result=failure reason=\"failed to parse token from dtatabase\"", payload.tokenkey);
 
-    for token in tokens {
-        let passwordhash =
-            match PasswordHash::parse(&token.tokenhash, argon2::password_hash::Encoding::B64) {
-                Ok(val) => val,
-                Err(err) => {
-                    log::error!("Failed to parse token ({token:?}) from database: {err:?}");
-                    continue;
-                }
+            session.destroy();
+            let resp = AuthResponse {
+                message: "token error".to_string(),
             };
-        if Argon2::default()
-            .verify_password(payload.token.as_bytes(), &passwordhash)
-            .is_ok()
-        {
+            return Err(Json(resp));
+        }
+    };
+    match Argon2::default().verify_password(payload.token.as_bytes(), &passwordhash) {
+        Ok(_) => {
             let session_user = session.insert("user", &token.user);
             let session_authref = session.insert("authref", token.user.authref);
             let session_signin = session.insert("signed_in", true);
 
             if session_authref.is_err() | session_user.is_err() | session_signin.is_err() {
                 session.destroy();
-                log::error!("Failed to store fresh session for user");
-                log::info!("action=api_login user={} result=failure", payload.username);
+                log::info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.tokenkey);
                 return Err(Json(AuthResponse {
-                    message: "failure".to_string(),
+                    message: "system failure, please contact an admin".to_string(),
                 }));
             };
 
-            log::info!("action=api_login user={} result=success", payload.username);
-            return Ok(Json(AuthResponse {
+            log::info!("action=api_login user={} result=success", payload.tokenkey);
+            Ok(Json(AuthResponse {
                 message: "success".to_string(),
-            }));
-        } else {
-            log::debug!(
-                "Failed to validate token {:?} for user {}",
-                token,
-                payload.username
-            );
+            }))
+        }
+        Err(_) => {
+            session.destroy();
+            log::error!(
+        "action=api_login username={} userid={} tokenkey=\"{:?}\" result=failure reason=\"failed to match token\"",
+        token.user.username,
+        token.user.id.unwrap(),
+        payload.tokenkey,
+    );
+            Err(Json(AuthResponse {
+                message: "system failure, please contact an admin".to_string(),
+            }))
         }
     }
-
-    session.destroy();
-    log::info!(
-        "action=api_login user={} result=failure reason=\"no tokens found\"",
-        payload.username
-    );
-    Err(Json(AuthResponse {
-        message: "failure".to_string(),
-    }))
 }

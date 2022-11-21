@@ -1,5 +1,6 @@
 use crate::db::{DBEntity, User};
 use crate::web::ui::check_logged_in;
+use rand::distributions::{Alphanumeric, DistString};
 use sha2::{Digest, Sha256};
 use std::fmt::Display;
 use std::str::FromStr;
@@ -42,6 +43,7 @@ pub async fn settings(Extension(_state): Extension<SharedState>) -> Html<String>
 struct ApiTokensGetPage {
     csrftoken: String,
     tokens: Vec<Arc<UserAuthToken>>,
+    tokenkey: Option<String>,
     token_value: Option<String>,
 }
 
@@ -147,6 +149,9 @@ pub async fn api_tokens_get(
     let token_value: Option<String> = session.get("new_api_token");
     session.remove("new_api_token");
 
+    let tokenkey: Option<String> = session.get("new_api_tokenkey");
+    session.remove("new_api_tokenkey");
+
     let tokens =
         match UserAuthToken::get_all_user(&state.read().await.connpool, user.id.unwrap()).await {
             Err(error) => {
@@ -159,6 +164,7 @@ pub async fn api_tokens_get(
     let context = ApiTokensGetPage {
         csrftoken,
         tokens,
+        tokenkey,
         token_value,
     };
 
@@ -248,6 +254,7 @@ impl ApiTokenCreatePageState {
 #[template(path = "user_api_token_form.html")]
 pub struct ApiTokenPage {
     pub token_name: Option<String>,
+    pub tokenkey: Option<String>,
     /// For when we want show the token
     pub token_value: Option<String>,
     pub csrftoken: String,
@@ -294,6 +301,7 @@ pub async fn api_tokens_post(
                 token_name: None,
                 lifetimes: Some(lifetimes),
                 lifetime: None,
+                tokenkey: None,
                 token_value: None,
             }
         }
@@ -333,17 +341,22 @@ pub async fn api_tokens_post(
             let password_hash_string = password_hash.to_string();
             log::debug!("done");
 
+            // TODO: Generate tokenkey
+            let tokenkey = Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
+            let tokenkey = format!("GA{}", tokenkey);
+
             // store the token in the database
             log::trace!("Starting to store token in the DB, grabbing writer...");
             let state_writer = &state.read().await;
             println!("got writer...");
             let uat = UserAuthToken {
                 id: None,
-                name: form.token_name.unwrap(), // TODO: fix this
+                name: form.token_name.unwrap(),
                 issued,
                 expiry,
                 userid,
-                tokenhash: password_hash_string.to_owned(),
+                tokenkey: tokenkey.to_string(),
+                tokenhash: password_hash_string.to_string(),
             };
             log::trace!("Starting to store token in the DB, grabbing transaction...");
 
@@ -373,6 +386,24 @@ pub async fn api_tokens_post(
                         // TODO: bail, which should roll back the txn
                         todo!("Failed to store new API token in the session, ruh roh? {error:?}");
                     };
+
+                    if let Err(error) = session.insert("new_api_tokenkey", &tokenkey) {
+                        log::error!(
+                            "Failed to store new API tokenkey in the session, ruh roh? {error:?}"
+                        );
+                        txn.rollback()
+                            .await
+                            .map_err(|e| {
+                                log::error!("Txn rollback fail: {e:?}");
+                                todo!()
+                            })
+                            .unwrap();
+                        // TODO: bail, which should roll back the txn
+                        todo!(
+                            "Failed to store new API tokenkey in the session, ruh roh? {error:?}"
+                        );
+                    };
+
                     if let Err(error) = txn.commit().await {
                         log::error!("Failed to save the API token to storage, oh no?");
                         todo!("Failed to save the API token to storage, oh no? {error:?}");
