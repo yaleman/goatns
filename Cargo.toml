@@ -1,7 +1,7 @@
 [package]
 name = "goatns"
 description = "Yet another authoritative DNS name server. But with goat references."
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 rust-version = "1.64"
 license = "MIT"

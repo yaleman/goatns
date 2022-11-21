@@ -593,17 +593,6 @@ pub async fn get_records(
 }
 
 impl FileZone {
-    ///Hand it a filezone and it'll update the things
-    // pub async fn load_zone(
-    //     &self,
-    //     mut conn: PoolConnection<Sqlite>,
-    // ) -> Result<i64, sqlx::Error> {
-    //     let mut txn = conn.begin().await?;
-    //     let res = self.create_with_txn(&mut txn).await?;
-
-    //     txn.commit().await?;
-    //     Ok(res)
-    // }
     pub async fn get_zone_records(
         &self,
         txn: &mut Transaction<'_, Sqlite>,
@@ -675,6 +664,8 @@ pub trait DBEntity: Send {
     /// Get the entity
     async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error>;
 
+    async fn get_by_name<'t>(txn: &mut Transaction<'t, Sqlite>,name: &str) -> Result<Arc<Self>, sqlx::Error>;
+
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error>;
 
     /// save the entity to the database
@@ -696,6 +687,7 @@ pub trait DBEntity: Send {
     {
         serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
     }
+
 }
 
 #[async_trait]
@@ -746,6 +738,14 @@ impl DBEntity for FileZone {
             None => Err(sqlx::Error::RowNotFound),
         }
     }
+
+    async fn get_by_name<'t>(txn: &mut Transaction<'t, Sqlite>,name: &str) -> Result<Arc<Self>, sqlx::Error>{
+        let res = sqlx::query(&format!("SELECT * from {} where name=?", Self::TABLE)).bind(name).fetch_one(txn).await?;
+
+        let res: Self = res.into();
+        Ok(Arc::new(res))
+    }
+
     async fn get_all_user(
         _pool: &Pool<Sqlite>,
         _userid: i64,
@@ -899,6 +899,22 @@ impl DBEntity for FileZone {
     }
 }
 
+impl Into<FileZone> for SqliteRow {
+    fn into(self) -> FileZone {
+        FileZone {
+            id: self.get("id"),
+            name: self.get("name"),
+            rname: self.get("rname"),
+            serial: self.get("serial"),
+            refresh: self.get("refresh"),
+            retry: self.get("retry"),
+            expire: self.get("expire"),
+            minimum: self.get("minimum"),
+            records: vec![], // can't fill this out yet
+        }
+    }
+}
+
 #[async_trait]
 impl DBEntity for FileZoneRecord {
     const TABLE: &'static str = "records";
@@ -957,6 +973,9 @@ impl DBEntity for FileZoneRecord {
     async fn get(_pool: &Pool<Sqlite>, _id: i64) -> Result<Arc<Self>, sqlx::Error> {
         todo!();
         // get_records(conn, name, rrtype, rclass)
+    }
+    async fn get_by_name<'t>(_txn: &mut Transaction<'t, Sqlite>,_name: &str) -> Result<Arc<Self>, sqlx::Error>{
+        todo!()
     }
     async fn get_all_user(
         _pool: &Pool<Sqlite>,
@@ -1071,75 +1090,6 @@ impl DBEntity for FileZoneRecord {
     }
 }
 
-pub async fn get_zones_with_txn(
-    txn: &mut Transaction<'_, Sqlite>,
-    lim: i64,
-    offset: i64,
-) -> Result<Vec<FileZone>, sqlx::Error> {
-    let result = sqlx::query(
-        "SELECT
-        *
-        FROM zones
-        LIMIT ? OFFSET ? ",
-    )
-    .bind(lim)
-    .bind(offset)
-    .fetch_all(&mut *txn)
-    .await?;
-
-    let rows: Vec<FileZone> = result
-        .iter()
-        .map(|row| {
-            #[cfg(test)]
-            eprintln!("Building FileZone");
-            FileZone {
-                id: row.get("id"),
-                name: row.get("name"),
-                rname: row.get("rname"),
-                serial: row.get("serial"),
-                refresh: row.get("refresh"),
-                retry: row.get("retry"),
-                expire: row.get("expire"),
-                minimum: row.get("minimum"),
-                records: vec![],
-            }
-        })
-        .collect();
-    Ok(rows)
-
-    // let result = sqlx::query(
-    //     "SELECT
-    //     id, zoneid, name, ttl, rrtype, rclass, rdata
-    //     FROM records
-    //     WHERE zoneid = ?",
-    // )
-    // .bind(zone.id as i64)
-    // .fetch_all(&mut *txn)
-    // .await?;
-
-    // zone.records = result
-    //     .into_iter()
-    //     .filter_map(|r| match FileZoneRecord::try_from(r) {
-    //         Ok(val) => Some(val),
-    //         Err(_) => None,
-    //     })
-    //     .collect();
-    // Ok(Some(zone))
-}
-
-impl From<SqliteRow> for ZoneOwnership {
-    fn from(row: SqliteRow) -> Self {
-        let id: i64 = row.get("id");
-        let userid: i64 = row.get("userid");
-        let zoneid: i64 = row.get("zoneid");
-
-        ZoneOwnership {
-            id: Some(id),
-            zoneid,
-            userid,
-        }
-    }
-}
 
 #[async_trait]
 impl DBEntity for ZoneOwnership {
@@ -1195,6 +1145,10 @@ impl DBEntity for ZoneOwnership {
                 .into();
         Ok(Arc::new(res))
     }
+
+    async fn get_by_name<'t>(_txn: &mut Transaction<'t, Sqlite>,_name: &str) -> Result<Arc<Self>, sqlx::Error> {
+        unimplemented!("Not applicable for this!");
+    }
     /// Get an ownership record by its id
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
         let mut conn = pool.acquire().await?;
@@ -1218,9 +1172,11 @@ impl DBEntity for ZoneOwnership {
     /// save the entity to the database, but you're in a transaction
     async fn save_with_txn<'t>(
         &self,
-        _txn: &mut Transaction<'t, Sqlite>,
+        txn: &mut Transaction<'t, Sqlite>,
     ) -> Result<i64, sqlx::Error> {
-        todo!();
+        let res = sqlx::query(&format!("INSERT INTO {} (zoneid, userid) values ( ?, ? )", Self::TABLE)).bind(self.zoneid).bind(self.userid).execute(txn).await?;
+
+        return Ok(res.last_insert_rowid())
     }
 
     /// delete the entity from the database
@@ -1241,6 +1197,19 @@ impl DBEntity for ZoneOwnership {
         Self: Serialize,
     {
         serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
+    }
+}
+impl From<SqliteRow> for ZoneOwnership {
+    fn from(row: SqliteRow) -> Self {
+        let id: i64 = row.get("id");
+        let userid: i64 = row.get("userid");
+        let zoneid: i64 = row.get("zoneid");
+
+        ZoneOwnership {
+            id: Some(id),
+            zoneid,
+            userid,
+        }
     }
 }
 
@@ -1290,6 +1259,9 @@ impl DBEntity for User {
         .into();
         Ok(Arc::new(res))
     }
+    async fn get_by_name<'t>(_txn: &mut Transaction<'t, Sqlite>,_name: &str) -> Result<Arc<Self>, sqlx::Error> {
+        todo!()
+    }
     /// Get an ownership record by its id, which is slightly ironic in this case
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
         let mut conn = pool.acquire().await?;
@@ -1331,7 +1303,7 @@ impl DBEntity for User {
         .bind(self.admin)
         .execute(txn)
         .await?;
-        Ok(res.rows_affected() as i64)
+        Ok(res.last_insert_rowid())
     }
 
     /// delete the entity from the database
@@ -1557,6 +1529,11 @@ impl DBEntity for UserAuthToken {
         ))
     }
 
+    // TODO: maybe get by name gets it by the username?
+    async fn get_by_name<'t>(_txn: &mut Transaction<'t, Sqlite>,_name: &str) -> Result<Arc<Self>, sqlx::Error> {
+        todo!()
+    }
+
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
         let res = sqlx::query(&format!("SELECT * from {} where userid = ?", Self::TABLE))
             .bind(id)
@@ -1597,7 +1574,7 @@ impl DBEntity for UserAuthToken {
         .bind(&self.tokenhash)
         .execute(txn)
         .await?;
-        Ok(res.rows_affected() as i64)
+        Ok(res.last_insert_rowid())
     }
 
     /// delete the entity from the database
@@ -1663,4 +1640,33 @@ pub async fn cron_db_cleanup(pool: Pool<Sqlite>, period: Duration) {
             log::error!("Failed to clean up UserAuthToken objects in DB cron: {error:?}");
         }
     }
+}
+
+
+pub async fn get_zones_with_txn(
+    txn: &mut Transaction<'_, Sqlite>,
+    lim: i64,
+    offset: i64,
+) -> Result<Vec<FileZone>, sqlx::Error> {
+    let result = sqlx::query(
+        "SELECT
+        *
+        FROM zones
+        LIMIT ? OFFSET ? ",
+    )
+    .bind(lim)
+    .bind(offset)
+    .fetch_all(&mut *txn)
+    .await?;
+
+    let rows: Vec<FileZone> = result
+        .iter()
+        .map(|row| {
+            #[cfg(test)]
+            eprintln!("Building FileZone");
+            row.into()
+        })
+        .collect();
+    Ok(rows)
+
 }

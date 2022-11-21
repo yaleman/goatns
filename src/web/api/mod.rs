@@ -1,10 +1,13 @@
 use super::*;
-// use crate::db::DBEntity;
+use crate::db::DBEntity;
 
+use crate::db::User;
+use crate::db::ZoneOwnership;
 use crate::zones::FileZone;
 use axum::extract::Extension;
 use axum::routing::post;
 use axum::Json;
+use axum_sessions::extractors::ReadableSession;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -36,6 +39,7 @@ trait APIEntity {
     /// Save the
     async fn api_create(
         state: Extension<SharedState>,
+        session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, Json<ErrorResult>>;
     // async fn api_update(pool: &Pool<Sqlite>, id: i64) -> Result<Json<String>, Json<ErrorResult>>;
@@ -50,7 +54,8 @@ trait APIEntity {
 #[async_trait]
 impl APIEntity for FileZone {
     async fn api_create(
-        _state: Extension<SharedState>,
+        state: Extension<SharedState>,
+        session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, Json<ErrorResult>> {
         log::debug!("Got payload: {payload:?}");
@@ -65,14 +70,77 @@ impl APIEntity for FileZone {
                 }));
             }
         };
-        log::debug!("Zone: {zone:?}");
-        return Err(Json(ErrorResult {
-            message: "Invalid payload".to_string(),
-        }));
+
+        // check to see if the zone exists
+        let mut txn = state.connpool().await.begin().await.unwrap();
+
+        match FileZone::get_by_name(&mut txn, &zone.name).await {
+            Ok(_) => {
+                log::debug!("Zone {} already exists, user sent POST", zone.name);
+                    return Err(Json(ErrorResult {
+                    message: format!("Zone already exists!"),
+                    }));
+            },
+            Err(err) => {
+                match err {
+                sqlx::Error::RowNotFound => {
+
+                },
+                _ => {
+                    log::debug!("Couldn't get zone  {}, something went wrong: {err:?}", zone.name);
+                    return Err(Json(ErrorResult {
+                    message: format!("Server error querying zone!"),
+                    }));
+                }
+            }
+        }
+
+        };
+
+        // if they got here there were no issues with querying the DB and it doesn't exist already!
+
+        if let Err(err) = zone.save_with_txn(&mut txn).await {
+            log::debug!("Couldn't create zone  {}, something went wrong during save: {err:?}", zone.name);
+            return Err(Json(ErrorResult {
+            message: format!("Server error creating zone!"),
+            }));
+        }
+
+        if let Err(err) = txn.commit().await {
+            log::debug!("Couldn't create zone {}, something went wrong committing transaction: {err:?}", zone.name);
+            return Err(Json(ErrorResult {
+            message: format!("Server error creating zone!"),
+            }));
+        }
+        // start a new transaction!
+        let mut txn = state.connpool().await.begin().await.unwrap();
+
+        let user: User = session.get("user").unwrap();
+        let zone = FileZone::get_by_name(&mut txn, &zone.name).await.unwrap();
+
+        let ownership = ZoneOwnership{
+            id: None,
+            userid: user.id.unwrap(),
+            zoneid: zone.id,
+        };
+
+        if let Err(err) = ownership.save_with_txn(&mut txn).await {
+            log::debug!("Couldn't store zone ownership {ownership:?}, something went wrong: {err:?}");
+            return Err(Json(ErrorResult {
+            message: format!("Server error creating zone ownership, contact the admins!"),
+            }));
+        };
+
+        if let Err(err) = txn.commit().await {
+            log::debug!("Couldn't create zone {}, something went wrong committing transaction: {err:?}", zone.name);
+            return Err(Json(ErrorResult {
+            message: format!("Server error creating zone!"),
+            }));
+        }
+        log::debug!("Zone created by user={} zone={zone:?}", user.id.unwrap());
+        return Ok(Json("Zone creation completed!".to_string()));
     }
-    // async fn api_get(&self, pool: &Pool<Sqlite>) -> Result<Json<String>, Json<ErrorResult>>{
-    // todo!()
-    // }
+
     async fn api_delete(
         _state: Extension<SharedState>,
         Json(_payload): Json<serde_json::Value>,
