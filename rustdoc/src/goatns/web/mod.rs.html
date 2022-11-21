@@ -223,7 +223,6 @@
 <span id="223">223</span>
 <span id="224">224</span>
 <span id="225">225</span>
-<span id="226">226</span>
 </pre><pre class="rust"><code><span class="doccomment">//! # Web things
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
@@ -383,8 +382,7 @@
 
     <span class="kw">let </span>static_router = SpaRouter::new(<span class="string">&quot;/static&quot;</span>, <span class="kw-2">&amp;</span>config_dir);
 
-    <span class="kw">let </span>session_layer =
-        auth::build_auth_stores(config.sql_session_cleanup_seconds, connpool.clone()).<span class="kw">await</span>;
+    <span class="kw">let </span>session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).<span class="kw">await</span>;
 
     <span class="kw">let </span>csp_matchers = <span class="macro">vec!</span>[CspUrlMatcher::default_self(
         RegexSet::new([<span class="string">r&quot;^(/|/ui)&quot;</span>]).unwrap(),

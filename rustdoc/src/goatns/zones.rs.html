@@ -195,7 +195,7 @@
 <span class="kw">use </span>std::str::from_utf8;
 
 <span class="doccomment">/// A DNS Zone
-</span><span class="attribute">#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+</span><span class="attribute">#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename(serialize = <span class="string">&quot;UPPERCASE&quot;</span>))]
 </span><span class="kw">pub struct </span>FileZone {
     <span class="doccomment">/// Database row ID

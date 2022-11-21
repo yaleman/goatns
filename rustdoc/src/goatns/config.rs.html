@@ -500,6 +500,8 @@
 <span id="500">500</span>
 <span id="501">501</span>
 <span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
 </pre><pre class="rust"><code><span class="kw">use </span>axum_server::tls_rustls::RustlsConfig;
 <span class="kw">use </span>clap::ArgMatches;
 <span class="kw">use </span>concread::cowcell::asynch::{CowCell, CowCellReadTxn, CowCellWriteTxn};
@@ -565,8 +567,8 @@
     </span><span class="kw">pub </span>api_tls_key: PathBuf,
     <span class="doccomment">/// Static File Directory for api things
     </span><span class="kw">pub </span>api_static_dir: String,
-    <span class="doccomment">/// Secret for cookie storage - don&#39;t hard code this, it&#39;ll randomly generate on startup
-    </span><span class="attribute">#[serde(default = <span class="string">&quot;generate_cookie_secret&quot;</span>, skip)]
+    <span class="doccomment">/// Secret for cookie storage - it&#39;ll randomly generate on startup by default
+    </span><span class="attribute">#[serde(default = <span class="string">&quot;generate_cookie_secret&quot;</span>, skip_serializing)]
     </span>api_cookie_secret: String,
     <span class="doccomment">/// OAuth2 Resource server name
     </span><span class="kw">pub </span>oauth2_client_id: String,
@@ -586,7 +588,7 @@
     <span class="doccomment">/// When queries take more than this many seconds, log them
     </span><span class="kw">pub </span>sql_log_slow_duration: u64,
     <span class="doccomment">/// Clean up sessions table every n seconds
-    </span><span class="kw">pub </span>sql_session_cleanup_seconds: u64,
+    </span><span class="kw">pub </span>sql_db_cleanup_seconds: u64,
     <span class="doccomment">/// Administrator contact details
     </span><span class="kw">pub </span>admin_contact: ContactDetails,
     <span class="doccomment">/// Allow auto-provisioning of users
@@ -621,8 +623,8 @@
     }
 
     <span class="doccomment">/// It&#39;s a sekret!
-    </span><span class="kw">pub fn </span>api_cookie_secret(<span class="self">self</span>) -&gt; String {
-        <span class="self">self</span>.api_cookie_secret
+    </span><span class="kw">pub fn </span>api_cookie_secret(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
+        <span class="self">self</span>.api_cookie_secret.as_bytes()
     }
 
     <span class="kw">pub fn </span>status_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Url {
@@ -794,7 +796,7 @@
             oauth2_user_scopes: <span class="macro">vec!</span>[<span class="string">&quot;openid&quot;</span>.to_string(), <span class="string">&quot;email&quot;</span>.to_string()],
             sql_log_slow_duration: <span class="number">5</span>,
             sql_log_statements: <span class="bool-val">false</span>,
-            sql_session_cleanup_seconds: <span class="number">3600</span>, <span class="comment">// one hour
+            sql_db_cleanup_seconds: <span class="number">3600</span>, <span class="comment">// one hour
             </span>admin_contact: Default::default(),
             user_auto_provisioning: <span class="bool-val">false</span>,
         }
@@ -891,7 +893,9 @@
             api_static_dir: config
                 .get(<span class="string">&quot;api_static_dir&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().api_static_dir),
-            api_cookie_secret: generate_cookie_secret(),
+            api_cookie_secret: config
+                .get(<span class="string">&quot;api_cookie_secret&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().api_cookie_secret),
             oauth2_client_id: config
                 .get(<span class="string">&quot;oauth2_client_id&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().oauth2_client_id),
@@ -911,9 +915,9 @@
             sql_log_statements: config
                 .get(<span class="string">&quot;sql_log_statements&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().sql_log_statements),
-            sql_session_cleanup_seconds: config
-                .get(<span class="string">&quot;sql_session_cleanup_seconds&quot;</span>)
-                .unwrap_or(<span class="self">Self</span>::default().sql_session_cleanup_seconds),
+            sql_db_cleanup_seconds: config
+                .get(<span class="string">&quot;sql_db_cleanup_seconds&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().sql_db_cleanup_seconds),
             admin_contact: config
                 .get(<span class="string">&quot;admin_contact&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().admin_contact),

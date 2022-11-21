@@ -465,16 +465,11 @@
 <span id="465">465</span>
 <span id="466">466</span>
 <span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span><span class="kw">super</span>::utils::{redirect_to_dashboard, redirect_to_home};
 <span class="kw">use </span><span class="kw">super</span>::SharedState;
+<span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
 <span class="kw">use </span><span class="kw">crate</span>::web::SharedStateTrait;
 <span class="kw">use </span><span class="kw">crate</span>::COOKIE_NAME;
@@ -489,6 +484,7 @@
 <span class="kw">use </span>axum_sessions::extractors::WritableSession;
 <span class="kw">use </span>axum_sessions::SessionLayer;
 <span class="kw">use </span>chrono::{DateTime, Utc};
+<span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
 <span class="kw">use </span>oauth2::{PkceCodeChallenge, PkceCodeVerifier, RedirectUrl};
 <span class="kw">use </span>openidconnect::reqwest::async_http_client;
 <span class="kw">use </span>openidconnect::EmptyAdditionalProviderMetadata;
@@ -498,7 +494,6 @@
 <span class="kw">use </span>openidconnect::{
     AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
 };
-<span class="kw">use </span>rand::Rng;
 <span class="kw">use </span>serde::Deserialize;
 <span class="kw">use </span>sqlx::{Pool, Sqlite};
 
@@ -844,12 +839,9 @@
 }
 
 <span class="kw">pub async fn </span>build_auth_stores(
-    sql_session_cleanup_seconds: u64,
+    config: CowCellReadTxn&lt;ConfigFile&gt;,
     connpool: Pool&lt;Sqlite&gt;,
 ) -&gt; SessionLayer&lt;SqliteSessionStore&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>secret: [u8; <span class="number">128</span>] = [<span class="number">0</span>; <span class="number">128</span>];
-    rand::thread_rng().fill(<span class="kw-2">&amp;mut </span>secret);
-
     <span class="kw">let </span>session_store = SqliteSessionStore::from_client(connpool).with_table_name(<span class="string">&quot;sessions&quot;</span>);
 
     session_store
@@ -858,11 +850,11 @@
         </span>.expect(<span class="string">&quot;Could not migrate session store database on startup!&quot;</span>);
 
     <span class="kw">let _ </span>= tokio::spawn(sessions::session_store_cleanup(
-        Duration::from_secs(sql_session_cleanup_seconds),
+        Duration::from_secs(config.sql_db_cleanup_seconds.to_owned()),
         session_store.clone(),
     ));
 
-    SessionLayer::new(session_store, <span class="kw-2">&amp;</span>secret)
+    SessionLayer::new(session_store, config.api_cookie_secret())
         .with_secure(<span class="bool-val">true</span>)
         <span class="comment">// TODO: cookie domain isn&#39;t working because it sets .(hostname) for some reason.
         // .with_cookie_domain(config.hostname.clone())
@@ -871,7 +863,6 @@
 }
 
 <span class="attribute">#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
 </span><span class="doccomment">/// This handles the POST from &quot;would you like to create your user&quot;
 </span><span class="kw">pub struct </span>SignupForm {
     <span class="kw">pub </span>state: String,
@@ -936,9 +927,6 @@
 }
 
 <span class="kw">pub fn </span>new() -&gt; Router {
-    <span class="kw">let </span><span class="kw-2">mut </span>secret: [u8; <span class="number">64</span>] = [<span class="number">0</span>; <span class="number">64</span>];
-    rand::thread_rng().fill(<span class="kw-2">&amp;mut </span>secret);
-
     Router::new()
         .route(<span class="string">&quot;/login&quot;</span>, get(login))
         .route(<span class="string">&quot;/logout&quot;</span>, get(logout))
