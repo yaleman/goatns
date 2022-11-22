@@ -66,10 +66,8 @@ async fn test_get_zone_records() -> Result<(), sqlx::Error> {
     test_create_example_com_zone(&pool).await?;
     let testzone = test_example_com_zone();
 
-    let zone = match get_zone(&pool, testzone.name).await? {
-        Some(value) => value,
-        None => return Err(sqlx::Error::RowNotFound),
-    };
+    let mut txn = pool.begin().await?;
+    let zone = FileZone::get_by_name(&mut txn, &testzone.name).await?;
 
     test_create_example_com_records(&pool, zone.id, 1000).await?;
 
@@ -89,9 +87,9 @@ async fn test_get_zone_empty() -> Result<(), sqlx::Error> {
     let pool = test_get_sqlite_memory().await;
     println!("Creating Zones Table");
     FileZone::create_table(&pool).await?;
-    let zone_data = get_zone(&pool, "example.org".to_string()).await?;
+    let mut txn = pool.begin().await?;
+    let zone_data = FileZone::get_by_name(&mut txn, "example.org").await?;
     println!("{:?}", zone_data);
-    assert_eq!(zone_data, None);
     Ok(())
 }
 
@@ -144,9 +142,10 @@ async fn test_db_create_records() -> Result<(), sqlx::Error> {
         Err(err) => panic!("{err:?}"),
     };
 
+    let mut txn = pool.begin().await?;
     eprintln!(
         "Zone after create: {:?}",
-        get_zone(&pool, test_example_com_zone().name).await?
+        FileZone::get_by_name(&mut txn, &test_example_com_zone().name).await?
     );
 
     println!("Creating Record");
@@ -193,13 +192,14 @@ async fn test_all_db_things() -> Result<(), sqlx::Error> {
     println!("Creating a zone");
     zone.clone().save(&pool).await?;
     println!("Getting a zone!");
-
-    let zone_data = get_zone(&pool, "example.com".to_string()).await?;
+    let mut txn = pool.begin().await?;
+    let zone_data = FileZone::get_by_name(&mut txn, "example.com").await?;
     println!("Zone: {:?}", zone_data);
-    assert_eq!(zone_data, Some(zone));
-    let zone_data = get_zone(&pool, "example.org".to_string()).await?;
+
+    assert_eq!(*zone_data, zone);
+    let zone_data = FileZone::get_by_name(&mut txn, "example.com").await?;
     println!("{:?}", zone_data);
-    assert_eq!(zone_data, None);
+    assert_eq!(*zone_data, zone);
 
     println!("Creating Record");
     let rrtype: &str = RecordType::TXT.into();
@@ -251,12 +251,12 @@ async fn test_load_zone() -> Result<(), sqlx::Error> {
     // first time
     zone.save(&pool).await?;
 
-    let zone_first = get_zone(&pool, zone.to_owned().name).await?.unwrap();
+    let zone_first = FileZone::get_by_name(&mut pool.begin().await?, &zone.name).await?;
 
     zone.rname = "foo.example.com".to_string();
     zone.save(&pool).await?;
 
-    let zone_second = get_zone(&pool, zone.clone().name).await?.unwrap();
+    let zone_second = FileZone::get_by_name(&mut pool.begin().await?, &zone.name).await?;
 
     assert_ne!(zone_first, zone_second);
 
@@ -289,13 +289,7 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
     let testzone = test_example_com_zone();
 
     eprintln!("Getting example zone");
-    let zone = match get_zone(&pool, testzone.clone().name).await? {
-        Some(value) => value,
-        None => {
-            println!("couldn't find zone {}", testzone.name);
-            return Err(sqlx::Error::RowNotFound);
-        }
-    };
+    let zone = FileZone::get_by_name(&mut pool.begin().await?, &testzone.name).await?;
 
     let records_to_create = 100usize;
     eprintln!("Creating records");
@@ -367,7 +361,7 @@ async fn load_then_export() -> Result<(), sqlx::Error> {
     let _json: String = serde_json::to_string(&json).unwrap();
 
     eprintln!("Exporting zone");
-    let zone_got = get_zone(&pool, example_zone.clone().name).await?;
+    let zone_got = FileZone::get_by_name(&mut pool.begin().await?, &example_zone.name).await?;
     eprintln!("zone_got {zone_got:?}");
 
     if let Err(err) = export_zone_json(pool.acquire().await?, 1).await {

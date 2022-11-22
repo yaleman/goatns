@@ -252,22 +252,6 @@ impl FromRow<'_, SqliteRow> for TokenSearchRow {
     }
 }
 
-impl From<&SqliteRow> for FileZone {
-    fn from(row: &SqliteRow) -> Self {
-        FileZone {
-            id: row.get("id"),
-            name: row.get("name"),
-            rname: row.get("rname"),
-            serial: row.get("serial"),
-            refresh: row.get("refresh"),
-            retry: row.get("retry"),
-            expire: row.get("expire"),
-            minimum: row.get("minimum"),
-            records: vec![],
-        }
-    }
-}
-
 impl From<SqliteRow> for User {
     fn from(row: SqliteRow) -> Self {
         let id: i64 = row.get("id");
@@ -326,88 +310,32 @@ impl ZoneOwnership {
         // TODO: delete all ownership records
         todo!();
     }
+
+    // get the thing by the other thing
+    pub async fn get_ownership_by_userid<'t>(
+        txn: &mut Transaction<'t, Sqlite>,
+        userid: &i64,
+        zoneid: &i64,
+    ) -> Result<ZoneOwnership, sqlx::Error> {
+        let res = sqlx::query(
+            "select users.username, zones.name, zones.id as zoneid, ownership.id as id, userid
+        from users, ownership, zones
+        where ownership.userid = ? AND ownership.zoneid = ? AND (ownership.userid = users.id AND
+            users.disabled=0 and
+            (zones.id = ownership.zoneid OR
+            users.admin=1
+            ))",
+        )
+        .bind(userid)
+        .bind(zoneid)
+        .fetch_one(txn)
+        .await?;
+
+        Ok(res.into())
+    }
 }
 
-// pub async fn create_zone_with_conn(
-//     conn: &mut SqliteConnection,
-//     zone: FileZone,
-// ) -> Result<i64, sqlx::Error> {
-
-//     zone.create
-//     let mut args = SqliteArguments::default();
-//     let serial = zone.serial.to_string();
-//     let refresh = zone.refresh.to_string();
-//     let retry = zone.retry.to_string();
-//     let expire = zone.expire.to_string();
-//     let minimum = zone.minimum.to_string();
-//     for arg in [
-//         &zone.name,
-//         &zone.rname,
-//         &serial,
-//         &refresh,
-//         &retry,
-//         &expire,
-//         &minimum,
-//     ] {
-//         args.add(arg);
-//     }
-
-//     let result = sqlx::query_with(
-//         "INSERT INTO zones (name, rname, serial, refresh, retry, expire, minimum)
-//             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-//         args,
-//     )
-//     .execute(conn)
-//     .await?;
-//     Ok(result.rows_affected())
-// }
-
-// /// create a resource record within a zone
-// pub async fn create_record(pool: &SqlitePool, record: FileZoneRecord) -> Result<i64, sqlx::Error> {
-//     let mut txn = pool.begin().await?;
-//     let res = create_record_with_conn(&mut txn, record).await?;
-//     txn.commit().await?;
-//     Ok(res)
-// }
-
-// /// create a resource record within a zone
-// pub async fn create_record_with_conn(
-//     txn: &mut Transaction<'_, Sqlite>,
-//     record: FileZoneRecord,
-// ) -> Result<i64, sqlx::Error> {
-//     let rclass: u16 = record.class as u16;
-//     let rrtype = RecordType::from(record.rrtype);
-//     let rrtype = rrtype as u16;
-
-//     let record_name = match record.name.len() {
-//         0 => None,
-//         _ => Some(record.name),
-//     };
-
-//     let mut args = SqliteArguments::default();
-//     let input_args: Vec<Option<String>> = vec![
-//         Some(record.zoneid.to_string()),
-//         record_name,
-//         Some(record.ttl.to_string()),
-//         Some(rrtype.to_string()),
-//         Some(rclass.to_string()),
-//         Some(record.rdata),
-//     ];
-//     for arg in input_args {
-//         args.add(arg);
-//     }
-//     let result = sqlx::query_with(
-//         "INSERT INTO records (zoneid, name, ttl,rrtype, rclass, rdata)
-//                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-//         args,
-//     )
-//     .execute(&mut *txn)
-//     .await?;
-//     Ok(result.rows_affected())
-// }
-
-/// Query the zones table, name_or_id can be the zoneid or the name - if they match then you're bad and you should feel bacd.
-
+/// Query the zones table, name_or_id can be the zoneid or the name - if they match then you're bad and you should feel bad.
 pub async fn get_zone_with_txn(
     txn: &mut Transaction<'_, Sqlite>,
     id: Option<i64>,
@@ -465,48 +393,6 @@ pub async fn get_zone_with_txn(
     Ok(Some(zone))
 }
 
-pub async fn get_zone(pool: &SqlitePool, name: String) -> Result<Option<FileZone>, sqlx::Error> {
-    let mut txn = pool.begin().await?;
-
-    get_zone_with_txn(&mut txn, None, Some(name)).await
-}
-
-#[allow(dead_code)]
-pub async fn update_zone(pool: &SqlitePool, zone: FileZone) -> Result<i64, sqlx::Error> {
-    let mut txn = pool.begin().await?;
-    let res = update_zone_with_conn(&mut txn, zone).await?;
-    txn.commit().await?;
-    Ok(res)
-}
-
-#[allow(dead_code)]
-pub async fn update_zone_with_conn(
-    txn: &mut Transaction<'_, Sqlite>,
-    zone: FileZone,
-) -> Result<i64, sqlx::Error> {
-    // let mut tx = pool.begin().await?;
-
-    let mut args = SqliteArguments::default();
-    args.add(zone.rname);
-    args.add(zone.serial);
-    args.add(zone.refresh);
-    args.add(zone.retry);
-    args.add(zone.expire);
-    args.add(zone.minimum);
-    args.add(zone.id as i64);
-
-    let qry = sqlx::query_with(
-        "UPDATE zones
-        set rname = ?, serial = ?, refresh = ?, retry = ?, expire = ?, minimum =?
-        WHERE id = ?",
-        args,
-    )
-    .execute(&mut *txn)
-    .await?;
-    println!("Rows updated: {}", qry.rows_affected());
-    Ok(qry.rows_affected() as i64)
-}
-
 impl TryFrom<SqliteRow> for InternalResourceRecord {
     type Error = String;
     fn try_from(row: SqliteRow) -> Result<InternalResourceRecord, String> {
@@ -558,8 +444,6 @@ pub async fn get_records(
 
     let mut results: Vec<InternalResourceRecord> = vec![];
     for row in res {
-        #[cfg(test)]
-        eprintln!("Checking row => IRR");
         if let Ok(irr) = InternalResourceRecord::try_from(row) {
             results.push(irr);
         }
@@ -611,15 +495,32 @@ impl FileZone {
             log::trace!("No results returned for zoneid={}", self.id);
         }
 
-        let mut results: Vec<FileZoneRecord> = vec![];
-        for row in res {
-            if let Ok(irr) = FileZoneRecord::try_from(row) {
-                results.push(irr);
-            }
-        }
+        // let mut results: Vec<FileZoneRecord> = vec![];
+        // for row in res {
+        //     if let Ok(irr) = FileZoneRecord::try_from(row) {
+        //         results.push(irr);
+        //     }
+        // }
+        let results: Vec<FileZoneRecord> = res
+            .iter()
+            .filter_map(|r| FileZoneRecord::try_from(r).ok())
+            .collect();
 
         log::trace!("results: {results:?}");
         Ok(results)
+    }
+
+    pub async fn get_orphans(pool: &SqlitePool) -> Result<Vec<FileZone>, sqlx::Error> {
+        let res = sqlx::query(
+            "
+            SELECT name, userid from zones
+            LEFT OUTER JOIN ownership on zones.id = ownership.zoneid
+            where userid IS NULL",
+        )
+        .fetch_all(&mut pool.acquire().await?)
+        .await?;
+        let res: Vec<FileZone> = res.into_iter().map(|r| r.into()).collect();
+        Ok(res)
     }
 }
 
@@ -663,15 +564,29 @@ pub trait DBEntity: Send {
 
     /// Get the entity
     async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error>;
-
-    async fn get_by_name<'t>(txn: &mut Transaction<'t, Sqlite>,name: &str) -> Result<Arc<Self>, sqlx::Error>;
-
+    async fn get_with_txn<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _id: &i64,
+    ) -> Result<Arc<Self>, sqlx::Error>;
+    async fn get_by_name<'t>(
+        txn: &mut Transaction<'t, Sqlite>,
+        name: &str,
+    ) -> Result<Arc<Self>, sqlx::Error>;
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error>;
-
     /// save the entity to the database
     async fn save(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error>;
     /// save the entity to the database, but you're in a transaction
     async fn save_with_txn<'t>(
+        &self,
+        txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error>;
+    /// create from scratch
+    async fn create_with_txn<'t>(
+        &self,
+        txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error>;
+    /// create from scratch
+    async fn update_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
     ) -> Result<i64, sqlx::Error>;
@@ -687,7 +602,6 @@ pub trait DBEntity: Send {
     {
         serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
     }
-
 }
 
 #[async_trait]
@@ -732,15 +646,54 @@ impl DBEntity for FileZone {
 
     /// Get by id
     async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Arc<Self>, sqlx::Error> {
-        let res = get_zone(pool, id.to_string()).await?;
-        match res {
-            Some(value) => Ok(Arc::new(value)),
-            None => Err(sqlx::Error::RowNotFound),
-        }
+        let mut txn = pool.begin().await?;
+        Self::get_with_txn(&mut txn, &id).await
     }
 
-    async fn get_by_name<'t>(txn: &mut Transaction<'t, Sqlite>,name: &str) -> Result<Arc<Self>, sqlx::Error>{
-        let res = sqlx::query(&format!("SELECT * from {} where name=?", Self::TABLE)).bind(name).fetch_one(txn).await?;
+    async fn get_with_txn<'t>(
+        txn: &mut Transaction<'t, Sqlite>,
+        id: &i64,
+    ) -> Result<Arc<Self>, sqlx::Error> {
+        let res = sqlx::query(
+            "SELECT
+            *
+            FROM zones
+            WHERE id = ? LIMIT 1",
+        )
+        .bind(id)
+        .fetch_one(&mut *txn)
+        .await?;
+        let mut zone: FileZone = res.into();
+        log::debug!("got a zone: {zone:?}");
+
+        let records = sqlx::query(
+            "SELECT
+            id, zoneid, name, ttl, rrtype, rclass, rdata
+            FROM records
+            WHERE zoneid = ?",
+        )
+        .bind(zone.id as i64)
+        .fetch_all(txn)
+        .await?;
+
+        zone.records = records
+            .into_iter()
+            .filter_map(|r| match FileZoneRecord::try_from(r) {
+                Ok(val) => Some(val),
+                Err(_) => None,
+            })
+            .collect();
+        Ok(Arc::new(zone))
+    }
+
+    async fn get_by_name<'t>(
+        txn: &mut Transaction<'t, Sqlite>,
+        name: &str,
+    ) -> Result<Arc<Self>, sqlx::Error> {
+        let res = sqlx::query(&format!("SELECT * from {} where name=?", Self::TABLE))
+            .bind(name)
+            .fetch_one(txn)
+            .await?;
 
         let res: Self = res.into();
         Ok(Arc::new(res))
@@ -828,7 +781,7 @@ impl DBEntity for FileZone {
                     let mut new_zone = self.clone();
                     new_zone.id = ez.id;
 
-                    let updated = update_zone_with_conn(txn, new_zone).await?;
+                    let updated = new_zone.update_with_txn(txn).await?;
                     #[cfg(test)]
                     eprintln!("Updated: {:?} record", updated);
                     log::debug!("Updated: {:?} record", updated);
@@ -870,6 +823,34 @@ impl DBEntity for FileZone {
         Ok(1)
     }
 
+    /// create from scratch
+    async fn create_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        todo!();
+    }
+    /// create from scratch
+    async fn update_with_txn<'t>(
+        &self,
+        txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        let res = sqlx::query(
+            "UPDATE zones
+            set rname = ?, serial = ?, refresh = ?, retry = ?, expire = ?, minimum =?
+            WHERE id = ?",
+        )
+        .bind(&self.rname)
+        .bind(self.serial)
+        .bind(self.refresh)
+        .bind(self.retry)
+        .bind(self.expire)
+        .bind(self.minimum)
+        .bind(self.id)
+        .execute(txn)
+        .await?;
+        Ok(res.rows_affected() as i64)
+    }
     /// delete the entity from the database
     async fn delete(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
         let mut txn = pool.begin().await?;
@@ -877,16 +858,20 @@ impl DBEntity for FileZone {
         txn.commit().await?;
         Ok(1)
     }
-    /// delete the entity from the database, but you're in a transaction
+    /// Delete the entity from the database, when you're in a transaction.
+    ///
+    /// This one happens in the order ownership -> records -> zone because at the very least,
+    /// if it fails after the ownership thing, then non-admin users can't see the zone
+    /// and admins will just have to clean it up manually
     async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<i64, sqlx::Error> {
-        // delete all the records
-        sqlx::query("DELETE FROM records where zoneid = ?")
+        // delete all the ownership records
+        sqlx::query("DELETE FROM ownership where zoneid = ?")
             .bind(self.id)
             .execute(&mut *txn)
             .await?;
 
-        // delete all the ownership records
-        sqlx::query("DELETE FROM ownership where zoneid = ?")
+        // delete all the records
+        sqlx::query("DELETE FROM records where zoneid = ?")
             .bind(self.id)
             .execute(&mut *txn)
             .await?;
@@ -899,17 +884,23 @@ impl DBEntity for FileZone {
     }
 }
 
-impl Into<FileZone> for SqliteRow {
-    fn into(self) -> FileZone {
+impl From<&SqliteRow> for FileZone {
+    fn from(input: &SqliteRow) -> Self {
+        input.into()
+    }
+}
+
+impl From<SqliteRow> for FileZone {
+    fn from(input: SqliteRow) -> Self {
         FileZone {
-            id: self.get("id"),
-            name: self.get("name"),
-            rname: self.get("rname"),
-            serial: self.get("serial"),
-            refresh: self.get("refresh"),
-            retry: self.get("retry"),
-            expire: self.get("expire"),
-            minimum: self.get("minimum"),
+            id: input.get("id"),
+            name: input.get("name"),
+            rname: input.get("rname"),
+            serial: input.get("serial"),
+            refresh: input.get("refresh"),
+            retry: input.get("retry"),
+            expire: input.get("expire"),
+            minimum: input.get("minimum"),
             records: vec![], // can't fill this out yet
         }
     }
@@ -974,7 +965,17 @@ impl DBEntity for FileZoneRecord {
         todo!();
         // get_records(conn, name, rrtype, rclass)
     }
-    async fn get_by_name<'t>(_txn: &mut Transaction<'t, Sqlite>,_name: &str) -> Result<Arc<Self>, sqlx::Error>{
+
+    async fn get_with_txn<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _id: &i64,
+    ) -> Result<Arc<Self>, sqlx::Error> {
+        todo!()
+    }
+    async fn get_by_name<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _name: &str,
+    ) -> Result<Arc<Self>, sqlx::Error> {
         todo!()
     }
     async fn get_all_user(
@@ -1069,6 +1070,20 @@ impl DBEntity for FileZoneRecord {
         Ok(result.rows_affected() as i64)
     }
 
+    /// create from scratch
+    async fn create_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        todo!();
+    }
+    /// create from scratch
+    async fn update_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        todo!();
+    }
     async fn delete(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
         let mut txn = pool.begin().await?;
         self.delete_with_txn(&mut txn).await
@@ -1089,7 +1104,6 @@ impl DBEntity for FileZoneRecord {
         serde_json::to_string_pretty(&self).map_err(|e| e.to_string())
     }
 }
-
 
 #[async_trait]
 impl DBEntity for ZoneOwnership {
@@ -1146,7 +1160,19 @@ impl DBEntity for ZoneOwnership {
         Ok(Arc::new(res))
     }
 
-    async fn get_by_name<'t>(_txn: &mut Transaction<'t, Sqlite>,_name: &str) -> Result<Arc<Self>, sqlx::Error> {
+    /// This getter is by zoneid, since it should return less results
+    async fn get_with_txn<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _id: &i64,
+    ) -> Result<Arc<Self>, sqlx::Error> {
+        todo!()
+    }
+
+    async fn get_by_name<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _name: &str,
+    ) -> Result<Arc<Self>, sqlx::Error> {
+        // TODO implement ZoneOwnership get_by_name which gets by zone name
         unimplemented!("Not applicable for this!");
     }
     /// Get an ownership record by its id
@@ -1174,11 +1200,32 @@ impl DBEntity for ZoneOwnership {
         &self,
         txn: &mut Transaction<'t, Sqlite>,
     ) -> Result<i64, sqlx::Error> {
-        let res = sqlx::query(&format!("INSERT INTO {} (zoneid, userid) values ( ?, ? )", Self::TABLE)).bind(self.zoneid).bind(self.userid).execute(txn).await?;
+        let res = sqlx::query(&format!(
+            "INSERT INTO {} (zoneid, userid) values ( ?, ? )",
+            Self::TABLE
+        ))
+        .bind(self.zoneid)
+        .bind(self.userid)
+        .execute(txn)
+        .await?;
 
-        return Ok(res.last_insert_rowid())
+        return Ok(res.last_insert_rowid());
     }
 
+    /// create new, this just calls save_with_txn
+    async fn create_with_txn<'t>(
+        &self,
+        txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        self.save_with_txn(txn).await
+    }
+    /// create from scratch
+    async fn update_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        unimplemented!("this should never be updated");
+    }
     /// delete the entity from the database
     async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
         todo!()
@@ -1259,7 +1306,16 @@ impl DBEntity for User {
         .into();
         Ok(Arc::new(res))
     }
-    async fn get_by_name<'t>(_txn: &mut Transaction<'t, Sqlite>,_name: &str) -> Result<Arc<Self>, sqlx::Error> {
+    async fn get_with_txn<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _id: &i64,
+    ) -> Result<Arc<Self>, sqlx::Error> {
+        todo!()
+    }
+    async fn get_by_name<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _name: &str,
+    ) -> Result<Arc<Self>, sqlx::Error> {
         todo!()
     }
     /// Get an ownership record by its id, which is slightly ironic in this case
@@ -1306,6 +1362,20 @@ impl DBEntity for User {
         Ok(res.last_insert_rowid())
     }
 
+    /// create from scratch
+    async fn create_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        todo!();
+    }
+    /// create from scratch
+    async fn update_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        todo!();
+    }
     /// delete the entity from the database
     async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
         todo!()
@@ -1529,8 +1599,17 @@ impl DBEntity for UserAuthToken {
         ))
     }
 
+    async fn get_with_txn<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _id: &i64,
+    ) -> Result<Arc<Self>, sqlx::Error> {
+        todo!()
+    }
     // TODO: maybe get by name gets it by the username?
-    async fn get_by_name<'t>(_txn: &mut Transaction<'t, Sqlite>,_name: &str) -> Result<Arc<Self>, sqlx::Error> {
+    async fn get_by_name<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _name: &str,
+    ) -> Result<Arc<Self>, sqlx::Error> {
         todo!()
     }
 
@@ -1575,6 +1654,21 @@ impl DBEntity for UserAuthToken {
         .execute(txn)
         .await?;
         Ok(res.last_insert_rowid())
+    }
+
+    /// create from scratch
+    async fn create_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        todo!();
+    }
+    /// create from scratch
+    async fn update_with_txn<'t>(
+        &self,
+        _txn: &mut Transaction<'t, Sqlite>,
+    ) -> Result<i64, sqlx::Error> {
+        todo!();
     }
 
     /// delete the entity from the database
@@ -1642,7 +1736,6 @@ pub async fn cron_db_cleanup(pool: Pool<Sqlite>, period: Duration) {
     }
 }
 
-
 pub async fn get_zones_with_txn(
     txn: &mut Transaction<'_, Sqlite>,
     lim: i64,
@@ -1668,5 +1761,39 @@ pub async fn get_zones_with_txn(
         })
         .collect();
     Ok(rows)
+}
 
+impl TryFrom<&SqliteRow> for FileZoneRecord {
+    type Error = String;
+    fn try_from(row: &SqliteRow) -> Result<Self, String> {
+        row.to_owned().try_into()
+    }
+}
+
+impl TryFrom<SqliteRow> for FileZoneRecord {
+    type Error = String;
+    fn try_from(row: SqliteRow) -> Result<Self, String> {
+        let name: String = row.get("name");
+        let rrtype: i32 = row.get("rrtype");
+        let rrtype = RecordType::from(&(rrtype as u16));
+        #[cfg(test)]
+        eprintln!("rrtype: {rrtype:?}");
+        let class: u16 = row.get("rclass");
+        let rdata: String = row.get("rdata");
+        let ttl: u32 = row.get("ttl");
+
+        if let RecordType::ANY = rrtype {
+            return Err("Cannot serve ANY records".to_string());
+        }
+
+        Ok(FileZoneRecord {
+            zoneid: row.get("zoneid"),
+            id: row.get("id"),
+            name,
+            rrtype: rrtype.to_string(),
+            class: RecordClass::from(&class),
+            rdata,
+            ttl,
+        })
+    }
 }
