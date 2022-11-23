@@ -40,9 +40,11 @@ async fn start_test_server() -> (SqlitePool, Servers, u16) {
         }
     }
 
-    config.write().await.api_port = port;
+    let mut config_tx = config.write().await;
+    config_tx.api_port = port;
+    config_tx.commit().await;
 
-    println!("Starting channels");
+    // println!("Starting channels");
     let (agent_sender, datastore_tx, datastore_rx) = crate::utils::start_channels();
 
     let tcpserver = tokio::spawn(servers::tcp_server(
@@ -108,7 +110,13 @@ async fn insert_test_user_api_token(pool: &SqlitePool, userid: i64) -> Result<Ap
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_api_zone_create() -> Result<(), sqlx::Error> {
-    let (pool, orly, api_port) = start_test_server().await;
+
+    // here we stand up the servers
+    let (pool, servers, api_port) = start_test_server().await;
+
+    let apiserver = servers.apiserver.unwrap();
+
+
 
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
@@ -172,7 +180,6 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
     assert_eq!(res.status(), 200);
     // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
 
-    let apiserver = orly.apiserver.unwrap();
     apiserver.abort();
     Ok(())
 }
