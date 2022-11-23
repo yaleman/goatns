@@ -109,7 +109,7 @@ async fn insert_test_user_api_token(pool: &SqlitePool, userid: i64) -> Result<Ap
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_api_zone_create() -> Result<(), sqlx::Error> {
     let (pool, orly, api_port) = start_test_server().await;
-    println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
+    // println!("API Server ID: {:?}", orly.apiserver.unwrap());
 
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
@@ -126,17 +126,17 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
         pub token: String,
     }
 
-    println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
+    // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id);
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
         .build()
         .unwrap();
 
-        println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
+        // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
     // wait_for_server(Url::parse(&format!("https://localhost:{api_port}/status")).unwrap()).await;
     println!("Logging in with the token...");
-    println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
+    // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
         .json(&AuthStruct {
@@ -146,7 +146,7 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
         .send()
         .await
         .unwrap();
-        println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
+        // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
@@ -172,6 +172,6 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
         .unwrap();
 
     assert_eq!(res.status(), 200);
-    println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
+    // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
     Ok(())
 }
