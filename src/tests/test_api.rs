@@ -109,7 +109,6 @@ async fn insert_test_user_api_token(pool: &SqlitePool, userid: i64) -> Result<Ap
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_api_zone_create() -> Result<(), sqlx::Error> {
     let (pool, orly, api_port) = start_test_server().await;
-    // println!("API Server ID: {:?}", orly.apiserver.unwrap());
 
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
@@ -126,7 +125,6 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
         pub token: String,
     }
 
-    // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id);
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
@@ -173,5 +171,8 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
 
     assert_eq!(res.status(), 200);
     // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
+
+    let apiserver = orly.apiserver.unwrap();
+    apiserver.abort();
     Ok(())
 }
