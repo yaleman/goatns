@@ -226,6 +226,7 @@ pub async fn build(
         axum_server::bind_rustls(config.api_listener_address(), tls_config)
             .serve(router.into_make_service()),
     ));
+    #[cfg(test)]
     println!(
         "Started Web server on https://{}",
         config.api_listener_address()

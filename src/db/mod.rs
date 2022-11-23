@@ -1767,8 +1767,8 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
         let name: String = row.get("name");
         let rrtype: i32 = row.get("rrtype");
         let rrtype = RecordType::from(&(rrtype as u16));
-        #[cfg(test)]
-        eprintln!("rrtype: {rrtype:?}");
+        // #[cfg(test)]
+        // eprintln!("rrtype: {rrtype:?}");
         let class: u16 = row.get("rclass");
         let rdata: String = row.get("rdata");
         let ttl: u32 = row.get("ttl");

@@ -1,8 +1,10 @@
+use concread::cowcell::asynch::CowCell;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tokio::net::TcpStream;
 // use url::Url;
 
+use crate::config::ConfigFile;
 use crate::db::test::test_get_sqlite_memory;
 use crate::db::{start_db, DBEntity, User, UserAuthToken};
 use crate::servers::{self, Servers};
@@ -17,7 +19,7 @@ pub async fn is_free_port(port: u16) -> bool {
     TcpStream::connect(("127.0.0.1", port)).await.is_err()
 }
 
-async fn start_test_server() -> (SqlitePool, Servers, u16) {
+async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     let pool = test_get_sqlite_memory().await;
 
     start_db(&pool).await.unwrap();
@@ -67,7 +69,7 @@ async fn start_test_server() -> (SqlitePool, Servers, u16) {
             .with_datastore(datastore_manager)
             .with_apiserver(apiserver)
             .with_tcpserver(tcpserver),
-        port,
+        config,
     )
 }
 
@@ -110,13 +112,11 @@ async fn insert_test_user_api_token(pool: &SqlitePool, userid: i64) -> Result<Ap
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_api_zone_create() -> Result<(), sqlx::Error> {
-
     // here we stand up the servers
-    let (pool, servers, api_port) = start_test_server().await;
+    let (pool, servers, config) = start_test_server().await;
 
+    let api_port = config.read().await.api_port;
     let apiserver = servers.apiserver.unwrap();
-
-
 
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
@@ -139,7 +139,7 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
         .build()
         .unwrap();
 
-        // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
+    // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
     // wait_for_server(Url::parse(&format!("https://localhost:{api_port}/status")).unwrap()).await;
     println!("Logging in with the token...");
     // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
@@ -152,7 +152,7 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
         .send()
         .await
         .unwrap();
-        // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
+    // println!("API Server ID: {}", orly.apiserver.as_ref().unwrap().id());
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
