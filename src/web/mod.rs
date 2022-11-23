@@ -116,20 +116,15 @@ pub struct State {
     pub csp_matchers: Vec<CspUrlMatcher>,
 }
 
-pub async fn build(
-    tx: Sender<datastore::Command>,
-    config: CowCellReadTxn<ConfigFile>,
-    connpool: Pool<Sqlite>,
-) -> Option<JoinHandle<Result<(), std::io::Error>>> {
-    let config_dir: PathBuf = shellexpand::tilde(&config.api_static_dir)
-        .to_string()
-        .into();
-    // check to see if we can find the static dir things
-    match config_dir.try_exists() {
+fn check_static_dir_exists(static_dir: &PathBuf, config: &ConfigFile) -> bool {
+    match static_dir.try_exists() {
         Ok(res) => match res {
-            true => log::info!("Found static resources dir ({config_dir:#?}) for web API."),
+            true => {
+                log::info!("Found static resources dir ({static_dir:#?}) for web API.");
+                return true;
+            }
             false => {
-                log::error!("Couldn't find static resources dir ({config_dir:#?}) for web API!")
+                log::error!("Couldn't find static resources dir ({static_dir:#?}) for web API!")
             }
         },
         Err(err) => match err.kind() {
@@ -154,8 +149,17 @@ pub async fn build(
             ),
         },
     }
+    false
+}
 
-    let static_router = SpaRouter::new("/static", &config_dir);
+pub async fn build(
+    tx: Sender<datastore::Command>,
+    config: CowCellReadTxn<ConfigFile>,
+    connpool: Pool<Sqlite>,
+) -> Option<JoinHandle<Result<(), std::io::Error>>> {
+    let static_dir: PathBuf = shellexpand::tilde(&config.api_static_dir)
+        .to_string()
+        .into();
 
     let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await;
 
@@ -203,8 +207,13 @@ pub async fn build(
                 .layer(session_layer)
                 .into_inner(),
         )
-        .route("/status", get(generic::status))
-        .merge(static_router)
+        .route("/status", get(generic::status));
+
+    let router = match check_static_dir_exists(&static_dir, &config) {
+        true => router.merge(SpaRouter::new("/static", &static_dir)),
+        false => router,
+    };
+    let router = router
         .layer(CompressionLayer::new())
         .fallback(handler_404.into_service());
 

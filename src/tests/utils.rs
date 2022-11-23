@@ -1,6 +1,37 @@
 use std::str::from_utf8;
 
+use url::Url;
+
 use crate::utils::{find_tail_match, loc_size_to_u8, name_as_bytes};
+use std::thread::sleep;
+use std::time::Duration;
+
+/// Test function to keep checking the server for startup
+pub async fn wait_for_server(status_url: Url) {
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .unwrap();
+    for i in 0..10 {
+        match client.get(status_url.clone()).send().await {
+            Ok(value) => {
+                eprintln!("OK: {value:?}");
+                if let Ok(text) = value.text().await {
+                    eprintln!("Server response: {text}");
+                    if text == crate::web::STATUS_OK.to_string() {
+                        println!("API is up!");
+                        break;
+                    }
+                }
+            }
+            Err(err) => eprintln!("ERR: {err:?}"),
+        }
+        sleep(Duration::from_secs(1));
+        if i == 9 {
+            panic!("Couldn't connect to test server after 10 seconds!");
+        }
+    }
+}
 
 #[test]
 fn test_loc_size_to_u8() {

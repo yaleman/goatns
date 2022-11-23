@@ -582,24 +582,28 @@ impl Servers {
         let mut results = vec![];
         if let Some(server) = &self.apiserver {
             if server.is_finished() {
+                println!("Sending API Shutdown");
                 self.send_shutdown(Agent::API);
             }
             results.push(server.is_finished())
         }
         if let Some(server) = &self.datastore {
             if server.is_finished() {
+                println!("Sending Datastore Shutdown");
                 self.send_shutdown(Agent::Datastore);
             }
             results.push(server.is_finished())
         }
         if let Some(server) = &self.tcpserver {
             if server.is_finished() {
+                println!("Sending TCP Server Shutdown");
                 self.send_shutdown(Agent::TCPServer);
             }
             results.push(server.is_finished())
         }
         if let Some(server) = &self.udpserver {
             if server.is_finished() {
+                println!("Sending UDP Server Shutdown");
                 self.send_shutdown(Agent::UDPServer);
             }
             results.push(server.is_finished())

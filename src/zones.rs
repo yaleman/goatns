@@ -17,10 +17,11 @@ pub struct FileZone {
     #[serde(default = "default_id")]
     pub id: i64,
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
-    #[serde(rename(serialize = "MNAME"))]
+    // #[serde(rename(serialize = "MNAME"))]
     pub name: String,
     // RNAME A <domain-name> which specifies the mailbox of the person responsible for this zone.
-    #[serde(rename(serialize = "RNAME"), default = "rname_default")]
+    // #[serde(rename(serialize = "RNAME"), default = "rname_default")]
+    #[serde(default = "rname_default")]
     pub rname: String,
     /// SERIAL - The unsigned 32 bit version number of the original copy of the zone.  Zone transfers preserve this value.  This value wraps and should be compared using sequence space arithmetic.
     #[serde(default)]

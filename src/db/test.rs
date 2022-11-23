@@ -71,25 +71,12 @@ async fn test_get_zone_records() -> Result<(), sqlx::Error> {
 
     test_create_example_com_records(&pool, zone.id, 1000).await?;
 
-    let records = zone.get_zone_records(&mut pool.begin().await?).await?;
-    for record in &records {
-        eprintln!("{}", record);
-    }
+    let zone = FileZone::get_by_name(&mut txn, &testzone.name)
+        .await?
+        .with_zone_records(&mut txn)
+        .await;
 
-    assert_eq!(records.len(), 1000);
-    Ok(())
-}
-
-/// Ensures that when we ask for something that isn't there, it returns None
-#[tokio::test]
-
-async fn test_get_zone_empty() -> Result<(), sqlx::Error> {
-    let pool = test_get_sqlite_memory().await;
-    println!("Creating Zones Table");
-    FileZone::create_table(&pool).await?;
-    let mut txn = pool.begin().await?;
-    let zone_data = FileZone::get_by_name(&mut txn, "example.org").await?;
-    println!("{:?}", zone_data);
+    assert_eq!(zone.records.len(), 1000);
     Ok(())
 }
 
@@ -298,7 +285,8 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
     }
 
     eprintln!("Exporting zone {}", zone.id);
-    let exported_zone = export_zone(pool.acquire().await?, zone.id.try_into().unwrap()).await?;
+    // let exported_zone = export_zone(pool.acquire().await?, zone.id.try_into().unwrap()).await?;
+    let exported_zone = FileZone::get(&pool, zone.id).await?;
     eprintln!("Done exporting zone");
 
     println!("found {} records", exported_zone.records.len());
@@ -308,11 +296,10 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
 
     println!("{json_result}");
 
-    let export_json_result =
-        match export_zone_json(pool.acquire().await?, zone.id.try_into().unwrap()).await {
-            Ok(val) => val,
-            Err(err) => panic!("error exporting json: {err}"),
-        };
+    let export_json_result = match export_zone_json(&pool, zone.id).await {
+        Ok(val) => val,
+        Err(err) => panic!("error exporting json: {err}"),
+    };
 
     println!("Checking that the result matches expectation");
     assert_eq!(json_result, export_json_result);
@@ -328,11 +315,6 @@ async fn load_then_export() -> Result<(), sqlx::Error> {
     eprintln!("Setting up DB");
     start_db(&pool).await?;
 
-    // let example_zone_file = std::fs::Path:: ::from("./examples/test_config/single-zone.json");
-    // let example_zone_file = example_zone_file.as_path();
-    // if !example_zone_file.exists() {
-    // panic!("couldn't find example zone file {:?}", example_zone_file);
-    // }
     let example_zone_file = std::path::Path::new(&"./examples/test_config/single-zone.json");
 
     eprintln!("load_zone_from_file from {:?}", example_zone_file);
@@ -364,7 +346,7 @@ async fn load_then_export() -> Result<(), sqlx::Error> {
     let zone_got = FileZone::get_by_name(&mut pool.begin().await?, &example_zone.name).await?;
     eprintln!("zone_got {zone_got:?}");
 
-    if let Err(err) = export_zone_json(pool.acquire().await?, 1).await {
+    if let Err(err) = export_zone_json(&pool, 1).await {
         panic!("Failed to export zone! {err}");
     }
 

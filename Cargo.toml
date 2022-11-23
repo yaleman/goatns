@@ -60,7 +60,7 @@ packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
 regex = "1.6.0"
-reqwest = { version = "0.11.13", features = ["blocking", "json", "rustls-tls"] }
+reqwest = { version = "0.11.13", features = ["blocking", "cookies", "json", "rustls-tls"] }
 serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
 serde_derive = "1.0.145"
@@ -68,7 +68,7 @@ serde_json = "1.0.88"
 sha2 = { version = "0.10.6", features = ["asm", "asm-aarch64"] }
 shellexpand = "2.1.2"
 sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "json"], default-features=false }
-tokio = { version = "1.21.2", features = ["full"] }
+tokio = { version = "1.21.2", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.8.1"
 tokio-stream = { version = "0.1.11", features = ["net"] }
 tokio-util = { version = "0.7.4", features = ["full"] }
@@ -80,8 +80,10 @@ url = { version = "2.3.1", features = ["serde"] }
 
 
 [dev-dependencies]
+console-subscriber = "0.1.8"
 criterion = "^0.4"
 scopeguard = "1.1.0"
+tracing-subscriber = "0.3.16"
 trust-dns-resolver = { version = "0.22.0", features=["tokio", "tokio-runtime"] }
 
 [[bench]]

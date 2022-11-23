@@ -1,13 +1,10 @@
 use crate::db::{DBEntity, User};
 use crate::web::ui::check_logged_in;
-use rand::distributions::{Alphanumeric, DistString};
-use sha2::{Digest, Sha256};
+use crate::web::utils::create_api_token;
 use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHasher};
 use askama::Template;
 use axum::extract::Path;
 use axum::response::{Html, Redirect};
@@ -19,7 +16,6 @@ use chrono::{DateTime, Duration, Utc};
 use enum_iterator::Sequence;
 use http::Uri;
 use oauth2::CsrfToken;
-use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
 use crate::db::UserAuthToken;
@@ -311,56 +307,30 @@ pub async fn api_tokens_post(
 
             // generate the credential
 
-            let cookie_token = state.read().await;
-            let cookie_token = cookie_token.config.api_cookie_secret();
-            let issued = Utc::now();
+            let state_reader = state.read().await;
+            let api_cookie_secret = state_reader.config.api_cookie_secret();
             let lifetime: i32 = form.lifetime.unwrap().into();
+            // get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
+            let user: User = session.get("user").unwrap();
+            let userid: i64 = user.id.unwrap();
 
-            let expiry = match lifetime {
-                -1 => None,
-                _ => Some(issued + Duration::seconds(lifetime.into())),
-            };
-            // TODO: get the user id from the session store
-            let userid: i64 = 1;
-
-            let api_token_to_hash = format!("{cookie_token:?}-{userid:?}-{issued:?}-{lifetime:?}-");
-
-            let api_token = hex::encode(Sha256::digest(api_token_to_hash));
-
-            let api_token = format!("goatns_{api_token}");
-            log::trace!("Final token: {api_token}");
-
-            // TODO: is rand_core the thing we want to use for generating randomness?
-            let salt = SaltString::generate(&mut OsRng);
-
-            log::debug!("generating hash");
-            // Argon2 with default params (Argon2id v19)
-            let argon2 = Argon2::default();
-            let password_hash = argon2.hash_password(api_token.as_bytes(), &salt).unwrap();
-
-            let password_hash_string = password_hash.to_string();
-            log::debug!("done");
-
-            // TODO: Generate tokenkey
-            let tokenkey = Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
-            let tokenkey = format!("GA{}", tokenkey);
+            let api_token = create_api_token(api_cookie_secret, lifetime, userid);
 
             // store the token in the database
             log::trace!("Starting to store token in the DB, grabbing writer...");
-            let state_writer = &state.read().await;
             println!("got writer...");
             let uat = UserAuthToken {
                 id: None,
                 name: form.token_name.unwrap(),
-                issued,
-                expiry,
+                issued: api_token.issued,
+                expiry: api_token.expiry,
                 userid,
-                tokenkey: tokenkey.to_string(),
-                tokenhash: password_hash_string.to_string(),
+                tokenkey: api_token.token_key.to_owned(),
+                tokenhash: api_token.token_hash,
             };
             log::trace!("Starting to store token in the DB, grabbing transaction...");
 
-            let mut txn = match state_writer.connpool.begin().await {
+            let mut txn = match state_reader.connpool.begin().await {
                 Ok(val) => val,
                 Err(error) => todo!(
                     "Need to handle failing to pick up a txn for api token storage: {error:?}"
@@ -372,7 +342,7 @@ pub async fn api_tokens_post(
                 Err(error) => todo!("Need to handle this! {error:?}"),
                 Ok(_) => {
                     // store the api token in the session store
-                    if let Err(error) = session.insert("new_api_token", &api_token) {
+                    if let Err(error) = session.insert("new_api_token", &api_token.token_secret) {
                         log::error!(
                             "Failed to store new API token in the session, ruh roh? {error:?}"
                         );
@@ -387,7 +357,7 @@ pub async fn api_tokens_post(
                         todo!("Failed to store new API token in the session, ruh roh? {error:?}");
                     };
 
-                    if let Err(error) = session.insert("new_api_tokenkey", &tokenkey) {
+                    if let Err(error) = session.insert("new_api_tokenkey", &api_token.token_key) {
                         log::error!(
                             "Failed to store new API tokenkey in the session, ruh roh? {error:?}"
                         );
