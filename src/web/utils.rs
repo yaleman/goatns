@@ -1,10 +1,12 @@
 use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHasher};
+use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use axum::response::Redirect;
 use chrono::{DateTime, Duration, Utc};
 use rand::distributions::{Alphanumeric, DistString};
 use rand_core::OsRng;
 use sha2::{Digest, Sha256};
+
+use crate::db::TokenSearchRow;
 
 pub fn redirect_to_home() -> Redirect {
     Redirect::to("/")
@@ -23,10 +25,15 @@ pub fn redirect_to_zones_list() -> Redirect {
 
 #[derive(Debug, Clone)]
 pub struct ApiToken {
+    /// The username
     pub token_key: String,
+    /// The password
     pub token_secret: String,
+    /// This goes into the database
     pub token_hash: String,
+    /// Guess?
     pub issued: DateTime<Utc>,
+    /// For a time or forever!
     pub expiry: Option<DateTime<Utc>>,
 }
 
@@ -55,7 +62,6 @@ pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) ->
     let password_hash_string = password_hash.to_string();
     log::debug!("done");
 
-    // TODO: Generate tokenkey
     let token_key = Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
     let token_key = format!("GA{}", token_key);
     ApiToken {
@@ -65,4 +71,25 @@ pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) ->
         issued,
         expiry,
     }
+}
+
+/// validate an API token matches our thingamajig
+pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result<(), String> {
+    let passwordhash =
+        match argon2::PasswordHash::parse(&token.tokenhash, argon2::password_hash::Encoding::B64) {
+            Ok(val) => {
+                #[cfg(test)]
+                println!("Hashed payload: {val:?}");
+                val
+            }
+            Err(err) => {
+                return Err(format!(
+                    "Failed to parse token ({:?}) into hash: {err:?}",
+                    token.tokenhash
+                ));
+            }
+        };
+    Argon2::default()
+        .verify_password(payload_token.as_bytes(), &passwordhash)
+        .map_err(|e| format!("validation error: {e:?}"))
 }

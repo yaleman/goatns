@@ -6,9 +6,8 @@ use crate::db::ZoneOwnership;
 use crate::zones::FileZone;
 use axum::extract::Extension;
 use axum::extract::Path;
-use axum::routing::{delete, post};
+use axum::routing::{delete, post, put};
 use axum::Json;
-// use axum_macros::debug_handler;
 use axum_sessions::extractors::ReadableSession;
 use serde::Deserialize;
 use serde::Serialize;
@@ -19,11 +18,6 @@ pub mod auth;
 pub struct NotImplemented {
     response: String,
 }
-
-// enum APIResult {
-//     PermissionDenied,
-//     ItemNotFound,
-// }
 
 impl Default for NotImplemented {
     fn default() -> Self {
@@ -57,13 +51,19 @@ macro_rules! error_result_json {
 /// This gets applied to DBEntities
 #[async_trait]
 trait APIEntity {
-    /// Save the
+    /// Save the entity to the database
     async fn api_create(
         state: Extension<SharedState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
-    // async fn api_update(pool: &Pool<Sqlite>, id: i64) -> Result<Json<String>, Json<ErrorResult>>;
+    /// HTTP Put https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT
+    async fn api_update(
+        state: Extension<SharedState>,
+        session: ReadableSession,
+        Path(id): Path<i64>,
+        Json(payload): Json<serde_json::Value>,
+    ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
     async fn api_get(
         state: Extension<SharedState>,
         session: ReadableSession,
@@ -79,6 +79,13 @@ trait APIEntity {
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)>;
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct FileZoneResponse {
+    pub message: String,
+    pub zone: Option<FileZone>,
+    pub id: Option<i64>,
+}
+
 #[async_trait]
 impl APIEntity for FileZone {
     async fn api_create(
@@ -86,14 +93,11 @@ impl APIEntity for FileZone {
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
+        #[cfg(test)]
+        println!("Got api_create payload: {payload:?}");
         log::debug!("Got api_create payload: {payload:?}");
-        let user: User = match session.get("user") {
-            Some(val) => val,
-            None => {
-                log::debug!("User not found in api_create call");
-                return error_result_json!("", StatusCode::FORBIDDEN);
-            }
-        };
+
+        goatns_macros::check_api_auth!();
 
         let zone: FileZone = match serde_json::from_value(payload) {
             Ok(val) => val,
@@ -182,7 +186,87 @@ impl APIEntity for FileZone {
             );
         }
         log::debug!("Zone created by user={} zone={zone:?}", user.id.unwrap());
-        return Ok(Json("Zone creation completed!".to_string()));
+        let result = FileZoneResponse {
+            message: "Zone creation completed!".to_string(),
+            id: None,
+            zone: None,
+        };
+        return Ok(Json(serde_json::to_string_pretty(&result).unwrap()));
+    }
+
+    async fn api_update(
+        state: Extension<SharedState>,
+        session: ReadableSession,
+        Path(_id): Path<i64>,
+        Json(payload): Json<serde_json::Value>,
+    ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
+        goatns_macros::check_api_auth!();
+
+        println!("{user:?}");
+        #[cfg(test)]
+        println!("zone api_update payload: {payload:?}");
+        #[cfg(not(test))]
+        log::debug!("zone api_update payload: {payload:?}");
+
+        // deserialize the zone
+        println!("about to deser input");
+        let zone: FileZone = match serde_json::from_value(payload) {
+            Ok(val) => val,
+            Err(err) => {
+                // TODO: make this a better log
+                println!("Failed to deserialize user input in api_update: {err:?}");
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    Json(ErrorResult {
+                        message: "Invalid input".to_string(),
+                    }),
+                ));
+            }
+        };
+        println!("deser'd zone: {zone:?}");
+
+        // get a db transaction
+        let connpool = state.connpool().await.clone();
+        // TODO getting a transaction might fail
+        let mut txn = connpool.begin().await.unwrap();
+        // check the user owns the zone
+        if let Err(err) =
+            ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &zone.id).await
+        {
+            // TODO: make this a better log
+            println!("Failed to validate user owns zone: {err:?}");
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(ErrorResult {
+                    message: "".to_string(),
+                }),
+            ));
+        };
+        println!("looks like user owns zone");
+
+        // save the zone data
+
+        if let Err(err) = zone.save_with_txn(&mut txn).await {
+            // TODO: make this a better log
+            println!("Failed to save zone: {err:?}");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResult {
+                    message: "failed to save zone".to_string(),
+                }),
+            ));
+        };
+        if let Err(err) = txn.commit().await {
+            // TODO: make this a better log
+            println!("Failed to commit transaction while saving zone: {err:?}");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResult {
+                    message: "failed to save zone".to_string(),
+                }),
+            ));
+        };
+        Ok(Json("success".to_string()))
     }
 
     async fn api_delete(
@@ -192,14 +276,7 @@ impl APIEntity for FileZone {
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
         let id = id;
 
-        // get the user
-        let user: User = match session.get("user") {
-            Some(val) => val,
-            None => {
-                log::error!("api_delete for filezone and user not found in session!");
-                return error_result_json!("", StatusCode::FORBIDDEN);
-            }
-        };
+        goatns_macros::check_api_auth!();
 
         // let zone_id: i64 = match payload.get("id") {
         //     None => {
@@ -223,8 +300,7 @@ impl APIEntity for FileZone {
             }
         };
         // get the zoneownership
-        let _ = match ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &id).await
-        {
+        match ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &id).await {
             Ok(val) => val,
             Err(err) => {
                 log::error!(
@@ -289,16 +365,22 @@ impl APIEntity for FileZone {
         session: ReadableSession,
         Path(id): Path<i64>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {
-        // get the user
-        let _user: User = match session.get("user") {
-            Some(val) => val,
-            None => {
-                log::error!("api_delete for filezone and user not found in session!");
-                return error_result_json!("", StatusCode::FORBIDDEN);
-            }
+        goatns_macros::check_api_auth!();
+
+        let mut txn = state.connpool().await.begin().await.unwrap();
+
+        if ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &id)
+            .await
+            .is_err()
+        {
+            log::error!(
+                "User {} not authorized for zoneid={}",
+                &user.id.unwrap(),
+                id
+            );
+            return error_result_json!("", StatusCode::UNAUTHORIZED);
         };
 
-        // TODO: only return zones for users that are allowed them
         log::debug!("Searching for zone id {id:?}");
         let zone = match FileZone::get(&state.connpool().await, id).await {
             Ok(val) => val,
@@ -329,24 +411,9 @@ pub fn new() -> Router {
     Router::new()
         // just zone things
         .route("/zone", post(FileZone::api_create))
+        .route("/zone/:id", put(FileZone::api_update))
         .route("/zone/:id", get(FileZone::api_get))
         .route("/zone/:id", delete(FileZone::api_delete))
-        // .route("/zone", post(zone_post))
-        // .route("/zone/:id", patch(zone_patch))
-        // // zone ownership
-        // .route("/ownership/:id", get(ownership_get))
-        // .route("/ownership/:id", delete(ownership_delete))
-        // .route("/ownership/", post(ownership_post))
-        // // record related
-        // .route("/record/:id", get(record_get))
-        // .route("/record/:id", delete(record_delete))
-        // .route("/record", post(record_post))
-        // .route("/record/:id", patch(record_patch))
-        // // user things
-        // .route("/user/:id", get(user_get))
-        // .route("/user/:id", delete(user_delete))
-        // .route("/user/", post(user_post))
-        // .route("/user/:id", patch(user_patch))
-        .layer(from_fn(auth::check_auth))
+        // .layer(from_fn(auth::check_auth))
         .route("/login", post(auth::login))
 }

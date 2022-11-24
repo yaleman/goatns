@@ -47,6 +47,7 @@ flexi_logger = { version = "0.24", features = ["async", "default"] }
 futures = "0.3.25"
 futures-util = "0.3.25"
 gethostname = "0.4.0"
+goatns-macros = { path = "./goatns-macros"}
 hex = "0.4.3"
 http = "0.2.8"
 ipnet = { version = "2.5.0", features = [ "json", "serde" ] }
@@ -77,7 +78,11 @@ tower-http = { version = "0.3.4", features = ["trace","add-extension","compressi
 tracing = "0.1.37"
 url = { version = "2.3.1", features = ["serde"] }
 
+[workspace.dependencies]
 
+quote = "0.4"
+proc-macro2 = "1.0.47"
+syn = "1.0.103"
 
 [dev-dependencies]
 console-subscriber = "0.1.8"

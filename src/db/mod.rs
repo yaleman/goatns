@@ -736,29 +736,24 @@ impl DBEntity for FileZone {
                 log::debug!("Creating zone {self:?}");
 
                 // zone.create
-                let mut args = SqliteArguments::default();
                 let serial = self.serial.to_string();
                 let refresh = self.refresh.to_string();
                 let retry = self.retry.to_string();
                 let expire = self.expire.to_string();
                 let minimum = self.minimum.to_string();
-                for arg in [
-                    &self.name,
-                    &self.rname,
-                    &serial,
-                    &refresh,
-                    &retry,
-                    &expire,
-                    &minimum,
-                ] {
-                    args.add(arg);
-                }
 
-                sqlx::query_with(
-                    "INSERT INTO zones (name, rname, serial, refresh, retry, expire, minimum)
-                        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-                    args,
+                sqlx::query(
+                    "INSERT INTO zones (id, name, rname, serial, refresh, retry, expire, minimum)
+                        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 )
+                .bind(&self.id)
+                .bind(&self.name)
+                .bind(&self.rname)
+                .bind(&serial)
+                .bind(&refresh)
+                .bind(&retry)
+                .bind(&expire)
+                .bind(&minimum)
                 .execute(&mut *txn)
                 .await?;
 
