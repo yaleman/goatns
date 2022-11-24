@@ -103,54 +103,20 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-</pre><pre class="rust"><code><span class="kw">use </span>std::str::from_utf8;
+</pre><pre class="rust"><code><span class="comment">// use std::str::from_utf8;
 
-<span class="kw">use </span>argon2::{Argon2, PasswordHash, PasswordVerifier};
-<span class="kw">use </span>axum::middleware::Next;
-<span class="kw">use </span>axum::response::Response;
-<span class="kw">use </span>axum::{Extension, Json};
+// use axum::middleware::Next;
+// use axum::response::Response;
+</span><span class="kw">use </span>axum::{Extension, Json};
 <span class="kw">use </span>axum_macros::debug_handler;
 <span class="kw">use </span>axum_sessions::extractors::WritableSession;
-<span class="kw">use </span>http::{Request, StatusCode};
-<span class="kw">use </span>serde::{Deserialize, Serialize};
+<span class="kw">use </span>http::StatusCode;
+<span class="comment">// use http::{Request, StatusCode};
+</span><span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use </span><span class="kw">crate</span>::db::User;
+<span class="kw">use </span><span class="kw">crate</span>::web::utils::validate_api_token;
 <span class="kw">use </span><span class="kw">crate</span>::web::SharedState;
-
-<span class="kw">pub async fn </span>check_auth&lt;B&gt;(req: Request&lt;B&gt;, next: Next&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Response, StatusCode&gt; {
-    <span class="kw">let </span>auth_header = <span class="kw">match </span>req.headers().get(<span class="string">&quot;Authorization&quot;</span>) {
-        <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(StatusCode::UNAUTHORIZED),
-        <span class="prelude-val">Some</span>(val) =&gt; from_utf8(val.as_bytes()).unwrap(),
-    };
-
-    <span class="kw">if </span>!auth_header.starts_with(<span class="string">&quot;Bearer&quot;</span>) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(StatusCode::BAD_REQUEST);
-    }
-
-    <span class="kw">let </span>auth_token = <span class="kw">match </span>auth_header.split(<span class="string">&#39; &#39;</span>).nth(<span class="number">1</span>) {
-        <span class="prelude-val">Some</span>(val) =&gt; val,
-        <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(StatusCode::BAD_REQUEST),
-    };
-
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Got auth header with bearer token: {auth_token:?}&quot;</span>);
-    <span class="comment">// wait for the middleware to come back
-    </span><span class="prelude-val">Ok</span>(next.run(req).<span class="kw">await</span>)
-}
 
 <span class="attribute">#[derive(Debug, Deserialize, Clone)]
 </span><span class="kw">pub struct </span>AuthPayload {
@@ -168,45 +134,39 @@
     state: Extension&lt;SharedState&gt;,
     payload: Json&lt;AuthPayload&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;AuthResponse&gt;, Json&lt;AuthResponse&gt;&gt; {
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Got payload: {payload:?}&quot;</span>);
+) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;AuthResponse&gt;, (StatusCode, Json&lt;AuthResponse&gt;)&gt; {
+    <span class="attribute">#[cfg(test)]
+    </span><span class="macro">println!</span>(<span class="string">&quot;Got login payload: {payload:?}&quot;</span>);
+    <span class="attribute">#[cfg(not(test))]
+    </span><span class="macro">log::debug!</span>(<span class="string">&quot;Got login payload: {payload:?}&quot;</span>);
 
     <span class="kw">let </span>pool = state.read().<span class="kw">await</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>pool = pool.connpool.clone();
     <span class="kw">let </span>token = <span class="kw">match </span>User::get_token(<span class="kw-2">&amp;mut </span>pool, <span class="kw-2">&amp;</span>payload.tokenkey).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(val) =&gt; val,
         <span class="prelude-val">Err</span>(err) =&gt; {
+            <span class="attribute">#[cfg(test)]
+            </span><span class="macro">println!</span>(
+                <span class="string">&quot;action=api_login tokenkey={} result=failure reason=\&quot;no token found\&quot;&quot;</span>,
+                payload.tokenkey
+            );
             <span class="macro">log::info!</span>(
                 <span class="string">&quot;action=api_login tokenkey={} result=failure reason=\&quot;no token found\&quot;&quot;</span>,
                 payload.tokenkey
             );
+            <span class="attribute">#[cfg(test)]
+            </span><span class="macro">println!</span>(<span class="string">&quot;Error: {err:?}&quot;</span>);
             <span class="macro">log::debug!</span>(<span class="string">&quot;Error: {err:?}&quot;</span>);
             session.destroy();
             <span class="kw">let </span>resp = AuthResponse {
                 message: <span class="string">&quot;token not found&quot;</span>.to_string(),
             };
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Json(resp));
+            <span class="kw">return </span><span class="prelude-val">Err</span>((StatusCode::UNAUTHORIZED, Json(resp)));
         }
     };
-
-    <span class="kw">let </span>passwordhash = <span class="kw">match </span>PasswordHash::parse(
-        <span class="kw-2">&amp;</span>token.tokenhash,
-        argon2::password_hash::Encoding::B64,
-    ) {
-        <span class="prelude-val">Ok</span>(val) =&gt; val,
-        <span class="prelude-val">Err</span>(err) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse token ({token:?}) from database: {err:?}&quot;</span>);
-            <span class="macro">log::info!</span>(<span class="string">&quot;action=api_login tokenkey={} result=failure reason=\&quot;failed to parse token from dtatabase\&quot;&quot;</span>, payload.tokenkey);
-
-            session.destroy();
-            <span class="kw">let </span>resp = AuthResponse {
-                message: <span class="string">&quot;token error&quot;</span>.to_string(),
-            };
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Json(resp));
-        }
-    };
-    <span class="kw">match </span>Argon2::default().verify_password(payload.token.as_bytes(), <span class="kw-2">&amp;</span>passwordhash) {
+    <span class="kw">match </span>validate_api_token(<span class="kw-2">&amp;</span>token, <span class="kw-2">&amp;</span>payload.token) {
         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {
+            <span class="macro">println!</span>(<span class="string">&quot;Successfully validated token on login&quot;</span>);
             <span class="kw">let </span>session_user = session.insert(<span class="string">&quot;user&quot;</span>, <span class="kw-2">&amp;</span>token.user);
             <span class="kw">let </span>session_authref = session.insert(<span class="string">&quot;authref&quot;</span>, token.user.authref);
             <span class="kw">let </span>session_signin = session.insert(<span class="string">&quot;signed_in&quot;</span>, <span class="bool-val">true</span>);
@@ -214,27 +174,37 @@
             <span class="kw">if </span>session_authref.is_err() | session_user.is_err() | session_signin.is_err() {
                 session.destroy();
                 <span class="macro">log::info!</span>(<span class="string">&quot;action=api_login tokenkey={} result=failure reason=\&quot;failed to store session for user\&quot;&quot;</span>, payload.tokenkey);
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Json(AuthResponse {
-                    message: <span class="string">&quot;system failure, please contact an admin&quot;</span>.to_string(),
-                }));
+                <span class="kw">return </span><span class="prelude-val">Err</span>((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(AuthResponse {
+                        message: <span class="string">&quot;system failure, please contact an admin&quot;</span>.to_string(),
+                    }),
+                ));
             };
-
-            <span class="macro">log::info!</span>(<span class="string">&quot;action=api_login user={} result=success&quot;</span>, payload.tokenkey);
+            <span class="attribute">#[cfg(test)]
+            </span><span class="macro">println!</span>(<span class="string">&quot;action=api_login user={} result=success&quot;</span>, payload.tokenkey);
+            <span class="attribute">#[cfg(not(test))]
+            </span><span class="macro">log::info!</span>(<span class="string">&quot;action=api_login user={} result=success&quot;</span>, payload.tokenkey);
             <span class="prelude-val">Ok</span>(Json(AuthResponse {
                 message: <span class="string">&quot;success&quot;</span>.to_string(),
             }))
         }
-        <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
+        <span class="prelude-val">Err</span>(err) =&gt; {
             session.destroy();
+            <span class="attribute">#[cfg(test)]
+            </span><span class="macro">println!</span>(<span class="string">&quot;Failed to validate token! {err:?}&quot;</span>);
             <span class="macro">log::error!</span>(
-        <span class="string">&quot;action=api_login username={} userid={} tokenkey=\&quot;{:?}\&quot; result=failure reason=\&quot;failed to match token\&quot;&quot;</span>,
+        <span class="string">&quot;action=api_login username={} userid={} tokenkey=\&quot;{:?}\&quot; result=failure reason=\&quot;failed to match token: {err:?}\&quot;&quot;</span>,
         token.user.username,
         token.user.id.unwrap(),
         payload.tokenkey,
-    );
-            <span class="prelude-val">Err</span>(Json(AuthResponse {
-                message: <span class="string">&quot;system failure, please contact an admin&quot;</span>.to_string(),
-            }))
+        );
+            <span class="prelude-val">Err</span>((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(AuthResponse {
+                    message: <span class="string">&quot;system failure, please contact an admin&quot;</span>.to_string(),
+                }),
+            ))
         }
     }
 }

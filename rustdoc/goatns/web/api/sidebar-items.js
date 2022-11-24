@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["new",""],["version_get",""]],"mod":[["auth",""]],"struct":[["ErrorResult",""],["GoatNSVersion",""],["NotImplemented",""]],"trait":[["APIEntity","This gets applied to DBEntities"]]};
+window.SIDEBAR_ITEMS = {"fn":[["new",""],["version_get",""]],"macro":[["error_result_json",""]],"mod":[["auth",""]],"struct":[["ErrorResult",""],["FileZoneResponse",""],["GoatNSVersion",""],["NotImplemented",""]],"trait":[["APIEntity","This gets applied to DBEntities"]]};

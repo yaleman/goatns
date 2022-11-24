@@ -524,46 +524,13 @@
 <span id="524">524</span>
 <span id="525">525</span>
 <span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
-<span id="530">530</span>
-<span id="531">531</span>
-<span id="532">532</span>
-<span id="533">533</span>
-<span id="534">534</span>
-<span id="535">535</span>
-<span id="536">536</span>
-<span id="537">537</span>
-<span id="538">538</span>
-<span id="539">539</span>
-<span id="540">540</span>
-<span id="541">541</span>
-<span id="542">542</span>
-<span id="543">543</span>
-<span id="544">544</span>
-<span id="545">545</span>
-<span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
 <span class="kw">use </span><span class="kw">crate</span>::web::ui::check_logged_in;
-<span class="kw">use </span>rand::distributions::{Alphanumeric, DistString};
-<span class="kw">use </span>sha2::{Digest, Sha256};
+<span class="kw">use </span><span class="kw">crate</span>::web::utils::create_api_token;
 <span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::str::FromStr;
 <span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use </span>argon2::password_hash::SaltString;
-<span class="kw">use </span>argon2::{Argon2, PasswordHasher};
 <span class="kw">use </span>askama::Template;
 <span class="kw">use </span>axum::extract::Path;
 <span class="kw">use </span>axum::response::{Html, Redirect};
@@ -575,7 +542,6 @@
 <span class="kw">use </span>enum_iterator::Sequence;
 <span class="kw">use </span>http::Uri;
 <span class="kw">use </span>oauth2::CsrfToken;
-<span class="kw">use </span>rand_core::OsRng;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use </span><span class="kw">crate</span>::db::UserAuthToken;
@@ -867,56 +833,30 @@
 
             <span class="comment">// generate the credential
 
-            </span><span class="kw">let </span>cookie_token = state.read().<span class="kw">await</span>;
-            <span class="kw">let </span>cookie_token = cookie_token.config.api_cookie_secret();
-            <span class="kw">let </span>issued = Utc::now();
+            </span><span class="kw">let </span>state_reader = state.read().<span class="kw">await</span>;
+            <span class="kw">let </span>api_cookie_secret = state_reader.config.api_cookie_secret();
             <span class="kw">let </span>lifetime: i32 = form.lifetime.unwrap().into();
+            <span class="comment">// get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
+            </span><span class="kw">let </span>user: User = session.get(<span class="string">&quot;user&quot;</span>).unwrap();
+            <span class="kw">let </span>userid: i64 = user.id.unwrap();
 
-            <span class="kw">let </span>expiry = <span class="kw">match </span>lifetime {
-                -<span class="number">1 </span>=&gt; <span class="prelude-val">None</span>,
-                <span class="kw">_ </span>=&gt; <span class="prelude-val">Some</span>(issued + Duration::seconds(lifetime.into())),
-            };
-            <span class="comment">// TODO: get the user id from the session store
-            </span><span class="kw">let </span>userid: i64 = <span class="number">1</span>;
-
-            <span class="kw">let </span>api_token_to_hash = <span class="macro">format!</span>(<span class="string">&quot;{cookie_token:?}-{userid:?}-{issued:?}-{lifetime:?}-&quot;</span>);
-
-            <span class="kw">let </span>api_token = hex::encode(Sha256::digest(api_token_to_hash));
-
-            <span class="kw">let </span>api_token = <span class="macro">format!</span>(<span class="string">&quot;goatns_{api_token}&quot;</span>);
-            <span class="macro">log::trace!</span>(<span class="string">&quot;Final token: {api_token}&quot;</span>);
-
-            <span class="comment">// TODO: is rand_core the thing we want to use for generating randomness?
-            </span><span class="kw">let </span>salt = SaltString::generate(<span class="kw-2">&amp;mut </span>OsRng);
-
-            <span class="macro">log::debug!</span>(<span class="string">&quot;generating hash&quot;</span>);
-            <span class="comment">// Argon2 with default params (Argon2id v19)
-            </span><span class="kw">let </span>argon2 = Argon2::default();
-            <span class="kw">let </span>password_hash = argon2.hash_password(api_token.as_bytes(), <span class="kw-2">&amp;</span>salt).unwrap();
-
-            <span class="kw">let </span>password_hash_string = password_hash.to_string();
-            <span class="macro">log::debug!</span>(<span class="string">&quot;done&quot;</span>);
-
-            <span class="comment">// TODO: Generate tokenkey
-            </span><span class="kw">let </span>tokenkey = Alphanumeric.sample_string(<span class="kw-2">&amp;mut </span>rand::thread_rng(), <span class="number">12</span>);
-            <span class="kw">let </span>tokenkey = <span class="macro">format!</span>(<span class="string">&quot;GA{}&quot;</span>, tokenkey);
+            <span class="kw">let </span>api_token = create_api_token(api_cookie_secret, lifetime, userid);
 
             <span class="comment">// store the token in the database
             </span><span class="macro">log::trace!</span>(<span class="string">&quot;Starting to store token in the DB, grabbing writer...&quot;</span>);
-            <span class="kw">let </span>state_writer = <span class="kw-2">&amp;</span>state.read().<span class="kw">await</span>;
             <span class="macro">println!</span>(<span class="string">&quot;got writer...&quot;</span>);
             <span class="kw">let </span>uat = UserAuthToken {
                 id: <span class="prelude-val">None</span>,
                 name: form.token_name.unwrap(),
-                issued,
-                expiry,
+                issued: api_token.issued,
+                expiry: api_token.expiry,
                 userid,
-                tokenkey: tokenkey.to_string(),
-                tokenhash: password_hash_string.to_string(),
+                tokenkey: api_token.token_key.to_owned(),
+                tokenhash: api_token.token_hash,
             };
             <span class="macro">log::trace!</span>(<span class="string">&quot;Starting to store token in the DB, grabbing transaction...&quot;</span>);
 
-            <span class="kw">let </span><span class="kw-2">mut </span>txn = <span class="kw">match </span>state_writer.connpool.begin().<span class="kw">await </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>txn = <span class="kw">match </span>state_reader.connpool.begin().<span class="kw">await </span>{
                 <span class="prelude-val">Ok</span>(val) =&gt; val,
                 <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">todo!</span>(
                     <span class="string">&quot;Need to handle failing to pick up a txn for api token storage: {error:?}&quot;
@@ -928,7 +868,7 @@
                 <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">todo!</span>(<span class="string">&quot;Need to handle this! {error:?}&quot;</span>),
                 <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {
                     <span class="comment">// store the api token in the session store
-                    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(<span class="string">&quot;new_api_token&quot;</span>, <span class="kw-2">&amp;</span>api_token) {
+                    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(<span class="string">&quot;new_api_token&quot;</span>, <span class="kw-2">&amp;</span>api_token.token_secret) {
                         <span class="macro">log::error!</span>(
                             <span class="string">&quot;Failed to store new API token in the session, ruh roh? {error:?}&quot;
                         </span>);
@@ -943,7 +883,7 @@
                         </span><span class="macro">todo!</span>(<span class="string">&quot;Failed to store new API token in the session, ruh roh? {error:?}&quot;</span>);
                     };
 
-                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(<span class="string">&quot;new_api_tokenkey&quot;</span>, <span class="kw-2">&amp;</span>tokenkey) {
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(<span class="string">&quot;new_api_tokenkey&quot;</span>, <span class="kw-2">&amp;</span>api_token.token_key) {
                         <span class="macro">log::error!</span>(
                             <span class="string">&quot;Failed to store new API tokenkey in the session, ruh roh? {error:?}&quot;
                         </span>);

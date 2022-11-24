@@ -223,6 +223,20 @@
 <span id="223">223</span>
 <span id="224">224</span>
 <span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
 </pre><pre class="rust"><code><span class="doccomment">//! # Web things
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
@@ -341,20 +355,15 @@
     <span class="kw">pub </span>csp_matchers: Vec&lt;CspUrlMatcher&gt;,
 }
 
-<span class="kw">pub async fn </span>build(
-    tx: Sender&lt;datastore::Command&gt;,
-    config: CowCellReadTxn&lt;ConfigFile&gt;,
-    connpool: Pool&lt;Sqlite&gt;,
-) -&gt; <span class="prelude-ty">Option</span>&lt;JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), std::io::Error&gt;&gt;&gt; {
-    <span class="kw">let </span>config_dir: PathBuf = shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_static_dir)
-        .to_string()
-        .into();
-    <span class="comment">// check to see if we can find the static dir things
-    </span><span class="kw">match </span>config_dir.try_exists() {
+<span class="kw">fn </span>check_static_dir_exists(static_dir: <span class="kw-2">&amp;</span>PathBuf, config: <span class="kw-2">&amp;</span>ConfigFile) -&gt; bool {
+    <span class="kw">match </span>static_dir.try_exists() {
         <span class="prelude-val">Ok</span>(res) =&gt; <span class="kw">match </span>res {
-            <span class="bool-val">true </span>=&gt; <span class="macro">log::info!</span>(<span class="string">&quot;Found static resources dir ({config_dir:#?}) for web API.&quot;</span>),
+            <span class="bool-val">true </span>=&gt; {
+                <span class="macro">log::info!</span>(<span class="string">&quot;Found static resources dir ({static_dir:#?}) for web API.&quot;</span>);
+                <span class="kw">return </span><span class="bool-val">true</span>;
+            }
             <span class="bool-val">false </span>=&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find static resources dir ({config_dir:#?}) for web API!&quot;</span>)
+                <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find static resources dir ({static_dir:#?}) for web API!&quot;</span>)
             }
         },
         <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">match </span>err.kind() {
@@ -379,8 +388,17 @@
             ),
         },
     }
+    <span class="bool-val">false
+</span>}
 
-    <span class="kw">let </span>static_router = SpaRouter::new(<span class="string">&quot;/static&quot;</span>, <span class="kw-2">&amp;</span>config_dir);
+<span class="kw">pub async fn </span>build(
+    tx: Sender&lt;datastore::Command&gt;,
+    config: CowCellReadTxn&lt;ConfigFile&gt;,
+    connpool: Pool&lt;Sqlite&gt;,
+) -&gt; <span class="prelude-ty">Option</span>&lt;JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), std::io::Error&gt;&gt;&gt; {
+    <span class="kw">let </span>static_dir: PathBuf = shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_static_dir)
+        .to_string()
+        .into();
 
     <span class="kw">let </span>session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).<span class="kw">await</span>;
 
@@ -428,8 +446,13 @@
                 .layer(session_layer)
                 .into_inner(),
         )
-        .route(<span class="string">&quot;/status&quot;</span>, get(generic::status))
-        .merge(static_router)
+        .route(<span class="string">&quot;/status&quot;</span>, get(generic::status));
+
+    <span class="kw">let </span>router = <span class="kw">match </span>check_static_dir_exists(<span class="kw-2">&amp;</span>static_dir, <span class="kw-2">&amp;</span>config) {
+        <span class="bool-val">true </span>=&gt; router.merge(SpaRouter::new(<span class="string">&quot;/static&quot;</span>, <span class="kw-2">&amp;</span>static_dir)),
+        <span class="bool-val">false </span>=&gt; router,
+    };
+    <span class="kw">let </span>router = router
         .layer(CompressionLayer::new())
         .fallback(handler_404.into_service());
 
@@ -442,6 +465,11 @@
         axum_server::bind_rustls(config.api_listener_address(), tls_config)
             .serve(router.into_make_service()),
     ));
+    <span class="attribute">#[cfg(test)]
+    </span><span class="macro">println!</span>(
+        <span class="string">&quot;Started Web server on https://{}&quot;</span>,
+        config.api_listener_address()
+    );
     <span class="macro">log::debug!</span>(
         <span class="string">&quot;Started Web server on https://{}&quot;</span>,
         config.api_listener_address()

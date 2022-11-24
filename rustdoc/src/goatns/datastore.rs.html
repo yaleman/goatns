@@ -330,6 +330,8 @@
 <span id="330">330</span>
 <span id="331">331</span>
 <span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::str::from_utf8;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::time::Duration;
@@ -570,6 +572,8 @@
                 };
             }
             Command::Shutdown =&gt; {
+                <span class="attribute">#[cfg(test)]
+                </span><span class="macro">println!</span>(<span class="string">&quot;### Datastore was sent shutdown message, shutting down.&quot;</span>);
                 <span class="macro">log::info!</span>(<span class="string">&quot;Datastore was sent shutdown message, shutting down.&quot;</span>);
                 <span class="kw">break</span>;
             }
@@ -659,7 +663,7 @@
             Command::PostOwnership { .. } =&gt; <span class="macro">todo!</span>(),
         }
     }
-
+    <span class="macro">println!</span>(<span class="string">&quot;### manager is done!&quot;</span>);
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div>
