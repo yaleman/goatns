@@ -99,7 +99,7 @@ impl Default for User {
 
 impl User {
     #[allow(dead_code, unused_variables)]
-    pub async fn create(&self, pool: &SqlitePool, disabled: bool) -> Result<usize, sqlx::Error> {
+    pub async fn create_old(&self, pool: &SqlitePool, disabled: bool) -> Result<usize, sqlx::Error> {
         // TODO: test user create
         let res =
             sqlx::query("INSERT into users (username, email, disabled, authref) VALUES(?, ?, ?)")
@@ -283,7 +283,7 @@ pub struct ZoneOwnership {
 
 impl ZoneOwnership {
     #[allow(dead_code, unused_variables)]
-    pub async fn create(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    pub async fn create_old(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
         // TODO: test ownership create
         sqlx::query(
             "INSERT INTO ownership (zoneid, userid) VALUES ( ?, ? ) ON CONFLICT DO NOTHING",

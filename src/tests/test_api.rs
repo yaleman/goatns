@@ -309,6 +309,7 @@ async fn test_api_zone_create_update() -> Result<(), sqlx::Error> {
 
     println!("updating zone rname to steve@example.goat");
     let newzone = FileZone {
+
         rname: "steve@example.goat".to_string(),
         ..newzone
     };
@@ -316,8 +317,7 @@ async fn test_api_zone_create_update() -> Result<(), sqlx::Error> {
     println!("Sending zone update");
     let res = client
         .put(&format!(
-            "https://localhost:{api_port}/api/zone/{}",
-            newzone.id
+            "https://localhost:{api_port}/api/zone",
         ))
         .json(&newzone)
         .send()

@@ -64,7 +64,6 @@ trait APIEntity {
     async fn api_update(
         state: Extension<SharedState>,
         session: ReadableSession,
-        Path(id): Path<i64>,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
     async fn api_get(
@@ -102,11 +101,11 @@ pub fn new() -> Router {
     Router::new()
         // just zone things
         .route("/zone", post(FileZone::api_create))
-        .route("/zone/:id", put(FileZone::api_update))
+        .route("/zone", put(FileZone::api_update))
         .route("/zone/:id", get(FileZone::api_get))
         .route("/zone/:id", delete(FileZone::api_delete))
         .route("/record", post(FileZoneRecord::api_create))
-        .route("/record/:id", put(FileZoneRecord::api_update))
+        .route("/record", put(FileZoneRecord::api_update))
         .route("/record/:id", get(FileZoneRecord::api_get))
         .route("/record/:id", delete(FileZoneRecord::api_delete))
         // .layer(from_fn(auth::check_auth))
