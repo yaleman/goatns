@@ -157,7 +157,9 @@ IP.1 = 127.0.0.1
 DEVEOF
 
 # because we can't generate duplicates and meh
-rm "${CADB}"
+if [ -f "${CADB}" ]; then
+    rm "${CADB}"
+fi
 
 touch ${CADB}
 
