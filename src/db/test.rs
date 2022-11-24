@@ -124,7 +124,7 @@ async fn test_db_create_records() -> Result<(), sqlx::Error> {
     start_db(&pool).await?;
 
     println!("Creating Zone");
-    let zoneid = match test_example_com_zone().save(&pool).await {
+    let zone = match test_example_com_zone().save(&pool).await {
         Ok(value) => value,
         Err(err) => panic!("{err:?}"),
     };
@@ -139,7 +139,7 @@ async fn test_db_create_records() -> Result<(), sqlx::Error> {
     let rrtype: &str = RecordType::TXT.into();
     let rec_to_create = FileZoneRecord {
         name: "foo".to_string(),
-        zoneid,
+        zoneid: zone.id,
         ttl: 123,
         id: 1,
         rrtype: rrtype.into(),

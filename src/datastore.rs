@@ -329,6 +329,7 @@ pub async fn manager(
             Command::PostOwnership { .. } => todo!(),
         }
     }
+    #[cfg(test)]
     println!("### manager is done!");
     Ok(())
 }

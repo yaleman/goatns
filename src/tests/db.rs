@@ -73,7 +73,7 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
     let tokenhash = "hello world".to_string();
     let expiry = Utc::now() - chrono::Duration::hours(60);
     let uat = UserAuthToken {
-        id: Some(5),
+        id: None,
         name: "Test Token".to_string(),
         issued: Utc::now(),
         expiry: Some(expiry),
@@ -81,13 +81,13 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
         tokenkey: "hello world".to_string(),
         tokenhash,
     };
-    println!("Saving UAT Object to DB: {uat:?}");
+    println!("Saving UAT Object 1 to DB: {uat:?}");
 
     uat.save(&pool).await?;
     let tokenhash = "hello world this should exist".to_string();
     let expiry = Utc::now() + chrono::Duration::hours(60);
     let uat = UserAuthToken {
-        id: Some(5),
+        id: None,
         name: "Test Token".to_string(),
         issued: Utc::now(),
         expiry: Some(expiry),
@@ -95,9 +95,9 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
         tokenkey: "hello world".to_string(),
         tokenhash,
     };
-    println!("Saving UAT Object to DB: {uat:?}");
-
-    uat.save(&pool).await?;
+    println!("Saving UAT Object 2 to DB: {uat:?}");
+    let res = uat.save(&pool).await;
+    println!("result: {res:?}");
 
     print!("Starting DB Cleanup... ");
     UserAuthToken::cleanup(&pool).await?;

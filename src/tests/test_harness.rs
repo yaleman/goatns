@@ -13,7 +13,7 @@ pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), String> {
     .map_err(|e| format!("Failed to import test zones.json: {e:?}"))
 }
 
-pub async fn create_test_user(pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+pub async fn create_test_user(pool: &Pool<Sqlite>) -> Result<Box<User>, sqlx::Error> {
     println!("Creating User");
     Ok(User {
         id: None,
