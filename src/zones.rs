@@ -1,10 +1,8 @@
-use crate::enums::{RecordClass, RecordType};
+use crate::enums::RecordClass;
 use crate::resourcerecord::InternalResourceRecord;
 use log::*;
 
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqliteRow;
-use sqlx::Row;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
@@ -19,10 +17,11 @@ pub struct FileZone {
     #[serde(default = "default_id")]
     pub id: i64,
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
-    #[serde(rename(serialize = "MNAME"))]
+    // #[serde(rename(serialize = "MNAME"))]
     pub name: String,
     // RNAME A <domain-name> which specifies the mailbox of the person responsible for this zone.
-    #[serde(rename(serialize = "RNAME"), default = "rname_default")]
+    // #[serde(rename(serialize = "RNAME"), default = "rname_default")]
+    #[serde(default = "rname_default")]
     pub rname: String,
     /// SERIAL - The unsigned 32 bit version number of the original copy of the zone.  Zone transfers preserve this value.  This value wraps and should be compared using sequence space arithmetic.
     #[serde(default)]
@@ -96,34 +95,6 @@ impl Display for FileZoneRecord {
             "FileZoneRecord {{ name={} class={} rrtype={}, ttl={}, zoneid={}, id={}, rdata={} }}",
             self.name, self.class, self.rrtype, self.ttl, self.zoneid, self.id, self.rdata
         ))
-    }
-}
-
-impl TryFrom<SqliteRow> for FileZoneRecord {
-    type Error = String;
-    fn try_from(row: SqliteRow) -> Result<Self, String> {
-        let name: String = row.get("name");
-        let rrtype: i32 = row.get("rrtype");
-        let rrtype = RecordType::from(&(rrtype as u16));
-        #[cfg(test)]
-        eprintln!("rrtype: {rrtype:?}");
-        let class: u16 = row.get("rclass");
-        let rdata: String = row.get("rdata");
-        let ttl: u32 = row.get("ttl");
-
-        if let RecordType::ANY = rrtype {
-            return Err("Cannot serve ANY records".to_string());
-        }
-
-        Ok(FileZoneRecord {
-            zoneid: row.get("zoneid"),
-            id: row.get("id"),
-            name,
-            rrtype: rrtype.to_string(),
-            class: RecordClass::from(&class),
-            rdata,
-            ttl,
-        })
     }
 }
 

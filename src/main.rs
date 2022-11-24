@@ -77,13 +77,11 @@ async fn main() -> io::Result<()> {
                     config.read().await,
                     datastore_sender.clone(),
                     agent_tx.clone(),
-                    // agent_tx.subscribe(),
                 ));
                 let tcpserver = tokio::spawn(servers::tcp_server(
                     config.read().await,
                     datastore_sender.clone(),
                     agent_tx.clone(),
-                    // agent_tx.subscribe(),
                 ));
 
                 let apiserver = goatns::web::build(

@@ -238,6 +238,8 @@ pub async fn manager(
                 };
             }
             Command::Shutdown => {
+                #[cfg(test)]
+                println!("### Datastore was sent shutdown message, shutting down.");
                 log::info!("Datastore was sent shutdown message, shutting down.");
                 break;
             }
@@ -327,6 +329,6 @@ pub async fn manager(
             Command::PostOwnership { .. } => todo!(),
         }
     }
-
+    println!("### manager is done!");
     Ok(())
 }

@@ -3,6 +3,7 @@ mod db;
 mod e2e_test;
 mod enums;
 mod resourcerecord;
+mod test_api;
 pub mod test_harness;
 mod utils;
 

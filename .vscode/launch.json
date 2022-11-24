@@ -4,6 +4,19 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+    {
+        "type": "lldb",
+        "request": "launch",
+        "name": "Cargo test",
+        "cargo": {
+            "args": [
+                "test",
+                "--no-run",
+                "--lib"
+            ]
+        },
+        "args": ["test_api_zone_create"]
+    },
         {
             "type": "lldb",
             "request": "launch",
