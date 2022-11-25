@@ -615,7 +615,7 @@ impl DBEntity for FileZone {
         sqlx::query(
             r#"CREATE TABLE IF NOT EXISTS
             zones (
-                id   INTEGER PRIMARY KEY,
+                id   INTEGER PRIMARY KEY NOT NULL,
                 name TEXT NOT NULL,
                 rname TEXT NOT NULL,
                 serial INTEGER NOT NULL,
@@ -909,7 +909,7 @@ impl DBEntity for FileZoneRecord {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS
         records (
-            id      INTEGER PRIMARY KEY,
+            id      INTEGER PRIMARY KEY NOT NULL,
             zoneid  INTEGER NOT NULL,
             name    TEXT, /* this can be null for apex records */
             ttl     INTEGER,
@@ -1115,7 +1115,7 @@ impl DBEntity for ZoneOwnership {
         sqlx::query(&format!(
             r#"CREATE TABLE IF NOT EXISTS
                 {} (
-                    id   INTEGER PRIMARY KEY,
+                    id   INTEGER PRIMARY KEY NOT NULL,
                     zoneid INTEGER NOT NULL,
                     userid INTEGER NOT NULL,
                     FOREIGN KEY(zoneid) REFERENCES zones(id),
@@ -1268,7 +1268,7 @@ impl DBEntity for User {
         sqlx::query(&format!(
             r#"CREATE TABLE IF NOT EXISTS
         {} (
-            id  INTEGER PRIMARY KEY,
+            id  INTEGER PRIMARY KEY NOT NULL,
             displayname TEXT NOT NULL,
             username TEXT NOT NULL,
             email TEXT NOT NULL,
@@ -1479,7 +1479,7 @@ impl DBEntity for UserAuthToken {
                 sqlx::query(&format!(
                     r#"CREATE TABLE IF NOT EXISTS
                     {} (
-                        id INTEGER PRIMARY KEY,
+                        id INTEGER PRIMARY KEY NOT NULL,
                         name TEXT NOT NULL,
                         issued TEXT NOT NULL,
                         expiry TEXT,
