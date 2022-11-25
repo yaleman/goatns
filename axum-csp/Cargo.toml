@@ -12,7 +12,7 @@ categories = ["network-programming"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = { version = "0.5.17", default-features = false, features = ["headers", "original-uri"] }
+axum = { version = "0.6.0", default-features = false, features = ["headers", "original-uri"] }
 http = "0.2.8"
 regex = "1.7.0"
 tokio = { version = "1.22.0", default-features = false, features = ["sync"] }
