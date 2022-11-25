@@ -32,7 +32,7 @@ async-trait = "0.1.58"
 axum = { version="0.5.17", features=["http2", "headers", "original-uri"] }
 axum-csp = { version="^0.0.1", path="axum-csp/"}
 axum-extra = { version = "0.3.7", features = ["spa"] }
-axum-macros = "0.2.3"
+axum-macros = "0.3.0"
 axum-server = { version = "0.4.3", features = [ "tls-rustls"] }
 axum-sessions = "0.3.2"
 bit-vec = "0.6.3"
