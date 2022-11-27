@@ -311,6 +311,34 @@
 <span id="311">311</span>
 <span id="312">312</span>
 <span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
 <span class="kw">use </span><span class="kw">crate</span>::enums::AgentState;
 <span class="kw">use </span><span class="kw">crate</span>::HEADER_BYTES;
@@ -624,5 +652,33 @@ name_as_bytes(
     (datastore_sender, datastore_receiver) = mpsc::channel(<span class="kw">crate</span>::MAX_IN_FLIGHT);
     (agent_tx, datastore_sender, datastore_receiver)
 }
+
+<span class="doccomment">/// Compares the TLD to the list of valid TLDs - usually from `allowed_tlds` in [crate::config::ConfigFile]
+///```
+/// use goatns::utils::check_valid_tld;
+///
+/// let valid_tlds = vec![];
+/// let zone_name = &quot;hello.example.goat&quot;;
+/// assert_eq!(check_valid_tld(&amp;zone_name, &amp;valid_tlds), true);
+///
+/// let valid_tlds = vec![&quot;goat&quot;.to_string()];
+/// let zone_name = &quot;hello.example.goat&quot;;
+/// assert_eq!(check_valid_tld(&amp;zone_name, &amp;valid_tlds), true);
+///
+/// let valid_tlds = vec![&quot;cheese&quot;.to_string()];
+/// let zone_name = &quot;hello.example.goat&quot;;
+/// assert_eq!(check_valid_tld(&amp;zone_name, &amp;valid_tlds), false);
+/// ```
+</span><span class="kw">pub fn </span>check_valid_tld(zone_name: <span class="kw-2">&amp;</span>str, allowed_tlds: <span class="kw-2">&amp;</span>Vec&lt;String&gt;) -&gt; bool {
+    <span class="kw">if </span>allowed_tlds.is_empty() {
+        <span class="kw">return </span><span class="bool-val">true</span>;
+    }
+    <span class="kw">for </span>tld <span class="kw">in </span>allowed_tlds.iter() {
+        <span class="kw">if </span>zone_name.ends_with(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;.{tld}&quot;</span>)) {
+            <span class="kw">return </span><span class="bool-val">true</span>;
+        }
+    }
+    <span class="bool-val">false
+</span>}
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

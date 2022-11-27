@@ -323,12 +323,22 @@
 <span id="323">323</span>
 <span id="324">324</span>
 <span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::db::DBEntity;
 
 <span class="kw">use </span><span class="kw">crate</span>::db::User;
 <span class="kw">use </span><span class="kw">crate</span>::db::ZoneOwnership;
 <span class="kw">use </span><span class="kw">crate</span>::error_result_json;
+<span class="kw">use </span><span class="kw">crate</span>::utils::check_valid_tld;
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZone;
 <span class="kw">use </span>axum::extract::Path;
 <span class="kw">use </span>axum::Json;
@@ -365,6 +375,10 @@
                 <span class="kw">return </span><span class="macro">error_result_json!</span>(res.as_str(), StatusCode::BAD_REQUEST);
             }
         };
+
+        <span class="kw">if </span>!check_valid_tld(<span class="kw-2">&amp;</span>zone.name, <span class="kw-2">&amp;</span>state.read().<span class="kw">await</span>.config.allowed_tlds) {
+            <span class="kw">return </span><span class="macro">error_result_json!</span>(<span class="string">&quot;Invalid TLD for this system&quot;</span>, StatusCode::BAD_REQUEST);
+        }
 
         <span class="comment">// check to see if the zone exists
         </span><span class="kw">let </span><span class="kw-2">mut </span>txn = state.connpool().<span class="kw">await</span>.begin().<span class="kw">await</span>.unwrap();
@@ -481,6 +495,10 @@
             }
         };
         <span class="macro">println!</span>(<span class="string">&quot;deser&#39;d zone: {zone:?}&quot;</span>);
+
+        <span class="kw">if </span>!check_valid_tld(<span class="kw-2">&amp;</span>zone.name, <span class="kw-2">&amp;</span>state.read().<span class="kw">await</span>.config.allowed_tlds) {
+            <span class="kw">return </span><span class="macro">error_result_json!</span>(<span class="string">&quot;Invalid TLD for this system&quot;</span>, StatusCode::BAD_REQUEST);
+        }
 
         <span class="comment">// get a db transaction
         </span><span class="kw">let </span>connpool = state.connpool().<span class="kw">await</span>.clone();

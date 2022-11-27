@@ -179,7 +179,7 @@
         session: ReadableSession,
         Json(payload): Json&lt;serde_json::Value&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;String&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt;;
-    <span class="doccomment">/// HTTP Put https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT
+    <span class="doccomment">/// HTTP Put &lt;https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT&gt;
     </span><span class="kw">async fn </span>api_update(
         State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
@@ -192,7 +192,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt;;
 
     <span class="doccomment">/// Delete an object
-    /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE
+    /// &lt;https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE&gt;
     </span><span class="kw">async fn </span>api_delete(
         State(state): State&lt;GoatState&gt;,
         session: ReadableSession,

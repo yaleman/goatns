@@ -502,6 +502,12 @@
 <span id="502">502</span>
 <span id="503">503</span>
 <span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
 </pre><pre class="rust"><code><span class="kw">use </span>axum_server::tls_rustls::RustlsConfig;
 <span class="kw">use </span>clap::ArgMatches;
 <span class="kw">use </span>concread::cowcell::asynch::{CowCell, CowCellReadTxn, CowCellWriteTxn};
@@ -554,6 +560,8 @@
     </span><span class="kw">pub </span>sqlite_path: String,
     <span class="doccomment">/// Where the JSON zone file is
     </span><span class="kw">pub </span>zone_file: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="doccomment">/// List of &quot;valid&quot; TLDs - if this is empty let anything be created
+    </span><span class="kw">pub </span>allowed_tlds: Vec&lt;String&gt;,
     <span class="doccomment">/// IP Allow lists
     </span><span class="attribute">#[serde(flatten)]
     </span><span class="kw">pub </span>ip_allow_lists: IPAllowList,
@@ -775,6 +783,7 @@
             log_level: <span class="string">&quot;INFO&quot;</span>.to_string(),
             tcp_client_timeout: <span class="number">5</span>,
             enable_hinfo: <span class="bool-val">false</span>,
+            allowed_tlds: <span class="macro">vec!</span>[],
             ip_allow_lists: IPAllowList {
                 <span class="comment">// axfr: vec![],
                 </span>shutdown: <span class="macro">vec!</span>[],
@@ -879,6 +888,9 @@
             sqlite_path: config
                 .get(<span class="string">&quot;sqlite_path&quot;</span>)
                 .unwrap_or(<span class="self">Self</span>::default().sqlite_path),
+            allowed_tlds: config
+                .get(<span class="string">&quot;allowed_tlds&quot;</span>)
+                .unwrap_or(<span class="self">Self</span>::default().allowed_tlds),
             zone_file: config.get(<span class="string">&quot;zone_file&quot;</span>).unwrap_or(<span class="self">Self</span>::default().zone_file),
             enable_api: config
                 .get(<span class="string">&quot;enable_api&quot;</span>)
