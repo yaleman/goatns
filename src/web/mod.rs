@@ -2,6 +2,9 @@
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
 //!
+
+#![allow(clippy::clone_on_copy)]
+// ^ this is because the datetime in the goatchildState is a jerk
 use crate::config::ConfigFile;
 use crate::datastore;
 use crate::web::middleware::csp;
@@ -163,7 +166,6 @@ pub async fn build(
     let csp_matchers = vec![CspUrlMatcher::default_self(
         RegexSet::new([r"^(/|/ui)"]).unwrap(),
     )];
-
 
     // we set this to an hour ago so it forces update on startup
     let oidc_config_updated = Utc::now() - chrono::Duration::seconds(3600);

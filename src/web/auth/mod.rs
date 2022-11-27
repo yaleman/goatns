@@ -106,15 +106,13 @@ pub enum ParserError {
 pub async fn oauth_get_discover(state: &mut GoatState) -> Result<CustomProviderMetadata, String> {
     log::debug!("Getting discovery data");
     let issuer_url = IssuerUrl::new(state.read().await.config.oauth2_config_url.clone());
-    match CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client)
-        .await {
-            Err(e) => return Err(format!("{e:?}")),
-            Ok(val) => {
-                state.oidc_update(val.clone()).await;
-                Ok(val)
-            }
+    match CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client).await {
+        Err(e) => Err(format!("{e:?}")),
+        Ok(val) => {
+            state.oidc_update(val.clone()).await;
+            Ok(val)
         }
-
+    }
 }
 
 pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, String> {
@@ -126,10 +124,7 @@ pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, String> {
         true => oauth_get_discover(state).await.unwrap(),
         false => {
             log::debug!("using cached OIDC discovery data");
-            let config = state
-            .read()
-            .await
-            .oidc_config.clone();
+            let config = state.read().await.oidc_config.clone();
             let meta = config.unwrap_or(oauth_get_discover(state).await.unwrap());
             state.oidc_update(meta.clone()).await;
             meta
