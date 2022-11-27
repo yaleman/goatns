@@ -44,12 +44,12 @@ async fn test_create_example_com_records(
         rdata = Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
 
         FileZoneRecord {
-            zoneid,
+            zoneid: Some(zoneid),
             name,
             rrtype: RecordType::A.to_string(),
             class: RecordClass::Internet,
             rdata,
-            id: i as i64,
+            id: None,
             ttl: i as u32,
         }
         .save(&pool)
@@ -69,7 +69,7 @@ async fn test_get_zone_records() -> Result<(), sqlx::Error> {
     let mut txn = pool.begin().await?;
     let zone = FileZone::get_by_name(&mut txn, &testzone.name).await?;
 
-    test_create_example_com_records(&pool, zone.id, 1000).await?;
+    test_create_example_com_records(&pool, zone.id.unwrap(), 1000).await?;
 
     let zone = FileZone::get_by_name(&mut txn, &testzone.name)
         .await?
@@ -103,7 +103,7 @@ async fn test_db_create_table_records() -> Result<(), sqlx::Error> {
 #[cfg(test)]
 pub fn test_example_com_zone() -> FileZone {
     FileZone {
-        id: 1,
+        id: Some(1),
         name: String::from("example.com"),
         rname: String::from("billy.example.com"),
         ..FileZone::default()
@@ -141,7 +141,7 @@ async fn test_db_create_records() -> Result<(), sqlx::Error> {
         name: "foo".to_string(),
         zoneid: zone.id,
         ttl: 123,
-        id: 1,
+        id: None,
         rrtype: rrtype.into(),
         class: RecordClass::Internet.into(),
         rdata: "test txt".to_string(),
@@ -193,8 +193,8 @@ async fn test_all_db_things() -> Result<(), sqlx::Error> {
     let rec_to_create = FileZoneRecord {
         name: "foo".to_string(),
         ttl: 123,
-        zoneid: 1,
-        id: 1,
+        zoneid: Some(1),
+        id: None,
         rrtype: rrtype.into(),
         class: RecordClass::Internet.into(),
         rdata: "test txt".to_string(),
@@ -226,7 +226,6 @@ async fn test_all_db_things() -> Result<(), sqlx::Error> {
 #[tokio::test]
 async fn test_load_zone() -> Result<(), sqlx::Error> {
     let mut zone = FileZone {
-        id: 0,
         name: "example.com".to_string(),
         rname: "billy.example.com".to_string(),
         ..Default::default()
@@ -280,13 +279,15 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
 
     let records_to_create = 100usize;
     eprintln!("Creating records");
-    if let Err(err) = test_create_example_com_records(&pool, zone.id, records_to_create).await {
+    if let Err(err) =
+        test_create_example_com_records(&pool, zone.id.unwrap(), records_to_create).await
+    {
         panic!("failed to create test records: {err:?}");
     }
 
-    eprintln!("Exporting zone {}", zone.id);
+    eprintln!("Exporting zone {}", zone.id.unwrap());
     // let exported_zone = export_zone(pool.acquire().await?, zone.id.try_into().unwrap()).await?;
-    let exported_zone = FileZone::get(&pool, zone.id).await?;
+    let exported_zone = FileZone::get(&pool, zone.id.unwrap()).await?;
     eprintln!("Done exporting zone");
 
     println!("found {} records", exported_zone.records.len());
@@ -296,7 +297,7 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
 
     println!("{json_result}");
 
-    let export_json_result = match export_zone_json(&pool, zone.id).await {
+    let export_json_result = match export_zone_json(&pool, zone.id.unwrap()).await {
         Ok(val) => val,
         Err(err) => panic!("error exporting json: {err}"),
     };

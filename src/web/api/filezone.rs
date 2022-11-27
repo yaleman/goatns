@@ -96,7 +96,7 @@ impl APIEntity for FileZone {
         let ownership = ZoneOwnership {
             id: None,
             userid: user.id.unwrap(),
-            zoneid: zone.id,
+            zoneid: zone.id.unwrap(),
         };
 
         if let Err(err) = ownership.save_with_txn(&mut txn).await {
@@ -164,7 +164,8 @@ impl APIEntity for FileZone {
         let mut txn = connpool.begin().await.unwrap();
         // check the user owns the zone
         if let Err(err) =
-            ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &zone.id).await
+            ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &zone.id.unwrap())
+                .await
         {
             // TODO: make this a better log
             println!("Failed to validate user owns zone: {err:?}");

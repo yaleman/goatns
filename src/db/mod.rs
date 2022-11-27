@@ -99,7 +99,11 @@ impl Default for User {
 
 impl User {
     #[allow(dead_code, unused_variables)]
-    pub async fn create_old(&self, pool: &SqlitePool, disabled: bool) -> Result<usize, sqlx::Error> {
+    pub async fn create_old(
+        &self,
+        pool: &SqlitePool,
+        disabled: bool,
+    ) -> Result<usize, sqlx::Error> {
         // TODO: test user create
         let res =
             sqlx::query("INSERT into users (username, email, disabled, authref) VALUES(?, ?, ?)")
@@ -379,7 +383,7 @@ pub async fn get_zone_with_txn(
         FROM records
         WHERE zoneid = ?",
     )
-    .bind(zone.id as i64)
+    .bind(zone.id.unwrap())
     .fetch_all(&mut *txn)
     .await?;
 
@@ -406,7 +410,7 @@ impl TryFrom<SqliteRow> for InternalResourceRecord {
             name: row.get("name"),
             ttl,
             zoneid: row.get("zoneid"),
-            id: record_id,
+            id: Some(record_id),
             rrtype: rrtype.to_string(),
             class: RecordClass::from(&record_class),
             rdata,
@@ -471,7 +475,11 @@ pub async fn get_records(
                 .map(|r| r.clone().set_ttl(min_ttl))
                 .collect()
         }
-        false => results,
+        false => {
+            #[cfg(tesT)]
+            println!("not normalizing ttls...");
+            results
+        }
     };
     Ok(results)
 }
@@ -509,12 +517,12 @@ impl FileZone {
             FROM records
             WHERE zoneid = ?",
         )
-        .bind(self.id as i64)
+        .bind(self.id.unwrap())
         .fetch_all(&mut *txn)
         .await?;
 
         if res.is_empty() {
-            log::trace!("No results returned for zoneid={}", self.id);
+            log::trace!("No results returned for zoneid={}", self.id.unwrap());
         }
 
         // let mut results: Vec<FileZoneRecord> = vec![];
@@ -615,7 +623,7 @@ impl DBEntity for FileZone {
         sqlx::query(
             r#"CREATE TABLE IF NOT EXISTS
             zones (
-                id   INTEGER PRIMARY KEY NOT NULL,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 rname TEXT NOT NULL,
                 serial INTEGER NOT NULL,
@@ -672,7 +680,7 @@ impl DBEntity for FileZone {
             FROM records
             WHERE zoneid = ?",
         )
-        .bind(zone.id as i64)
+        .bind(zone.id.unwrap())
         .fetch_all(txn)
         .await?;
 
@@ -761,6 +769,8 @@ impl DBEntity for FileZone {
                 .execute(&mut *txn)
                 .await?;
 
+                #[cfg(not(test))]
+                log::debug!("Insert statement succeeded");
                 #[cfg(test)]
                 eprintln!("Done creating zone");
                 get_zone_with_txn(txn, None, Some(self.name.clone()))
@@ -781,6 +791,8 @@ impl DBEntity for FileZone {
                     #[cfg(test)]
                     eprintln!("Updated: {:?} record", updated);
                     log::debug!("Updated: {:?} record", updated);
+                } else {
+                    log::debug!("Zone data is fine")
                 }
                 get_zone_with_txn(txn, None, Some(self.name.clone()))
                     .await
@@ -797,16 +809,16 @@ impl DBEntity for FileZone {
         eprintln!("Dropping all records for zone {self:?}");
         // log::debug!("Dropping all records for zone {self:?}");
         sqlx::query("delete from records where zoneid = ?")
-            .bind(updated_zone.id as i64)
+            .bind(updated_zone.id)
             .execute(&mut *txn)
             .await?;
 
-        // add the records
+        // add the records for the zone
         for mut record in self.records.clone() {
+            record.zoneid = updated_zone.id;
             #[cfg(test)]
             eprintln!("Creating new zone record: {record:?}");
             log::trace!("Creating new zone record: {record:?}");
-            record.zoneid = updated_zone.id;
             if record.name == "@" {
                 record.name = "".to_string();
             }
@@ -815,8 +827,10 @@ impl DBEntity for FileZone {
         #[cfg(test)]
         println!("Done creating zone!");
 
-        // TODO: this needs to have the zone id
-        let res = Self { ..self.to_owned() };
+        let res = Self {
+            id: updated_zone.id,
+            ..self.to_owned()
+        };
         Ok(Box::new(res))
     }
 
@@ -909,7 +923,7 @@ impl DBEntity for FileZoneRecord {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS
         records (
-            id      INTEGER PRIMARY KEY NOT NULL,
+            id      INTEGER PRIMARY KEY AUTOINCREMENT ,
             zoneid  INTEGER NOT NULL,
             name    TEXT, /* this can be null for apex records */
             ttl     INTEGER,
@@ -1017,8 +1031,8 @@ impl DBEntity for FileZoneRecord {
         );
         let existing_record = sqlx::query("SELECT id, zoneid, name, ttl, rrtype, rclass, rdata from records WHERE
         id = ? AND  zoneid = ? AND  name = ? AND  ttl = ? AND  rrtype = ? AND  rclass = ? AND rdata = ? LIMIT 1")
-            .bind(self.id as i64)
-            .bind(self.zoneid as i64)
+            .bind(self.id) // TODO id could be a none, which would work out bad
+            .bind(self.zoneid) // TODO zoneid could be a none, which would work out bad
             .bind(&record_name)
             .bind(self.ttl)
             .bind(RecordType::from(self.rrtype.clone()))
@@ -1027,7 +1041,7 @@ impl DBEntity for FileZoneRecord {
             .fetch_optional(&mut *txn).await?;
 
         let mut args = SqliteArguments::default();
-        args.add(self.zoneid as i64);
+        args.add(self.zoneid);
         args.add(record_name);
         args.add(self.ttl);
         args.add(RecordType::from(self.rrtype.clone()));
@@ -1050,17 +1064,36 @@ impl DBEntity for FileZoneRecord {
                     args,
                 )
             }
-            None => sqlx::query_with(
-                "INSERT INTO records (zoneid, name, ttl, rrtype, rclass, rdata)
-                            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                        ",
-                args,
-            ),
+            None => match self.id {
+                Some(id) => sqlx::query(
+                    "INSERT INTO records (id, zoneid, name, ttl, rrtype, rclass, rdata)
+                                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                                ",
+                )
+                .bind(id)
+                .bind(self.zoneid)
+                .bind(self.name.clone())
+                .bind(self.ttl)
+                .bind(RecordType::from(self.rrtype.clone()))
+                .bind(self.class)
+                .bind(self.rdata.clone()),
+                None => sqlx::query(
+                    "INSERT INTO records (zoneid, name, ttl, rrtype, rclass, rdata)
+                                        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                                    ",
+                )
+                .bind(self.zoneid)
+                .bind(self.name.clone())
+                .bind(self.ttl)
+                .bind(RecordType::from(self.rrtype.clone()))
+                .bind(self.class)
+                .bind(self.rdata.clone()),
+            },
         };
         #[cfg(test)]
         println!("Saving record...");
         let res = Self {
-            id: query.execute(&mut *txn).await?.last_insert_rowid(),
+            id: Some(query.execute(&mut *txn).await?.last_insert_rowid()),
             ..self.to_owned()
         };
 

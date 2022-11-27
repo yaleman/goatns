@@ -27,11 +27,14 @@ impl APIEntity for FileZoneRecord {
         println!(
             "looking for ZO for user: {} zoneid: {}",
             user.id.unwrap(),
-            record.zoneid
+            record.zoneid.unwrap()
         );
-        if let Err(err) =
-            ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &record.zoneid)
-                .await
+        if let Err(err) = ZoneOwnership::get_ownership_by_userid(
+            &mut txn,
+            &user.id.unwrap(),
+            &record.zoneid.unwrap(),
+        )
+        .await
         {
             eprintln!("Error getting ownership: {err:?}");
             return error_result_json!("", StatusCode::UNAUTHORIZED);
@@ -82,9 +85,12 @@ impl APIEntity for FileZoneRecord {
             }
         };
 
-        if let Err(err) =
-            ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &res.zoneid)
-                .await
+        if let Err(err) = ZoneOwnership::get_ownership_by_userid(
+            &mut txn,
+            &user.id.unwrap(),
+            &res.zoneid.unwrap(),
+        )
+        .await
         {
             eprintln!("Error getting ownership: {err:?}");
             return error_result_json!("", StatusCode::UNAUTHORIZED);
@@ -124,17 +130,21 @@ impl APIEntity for FileZoneRecord {
 
         let record = match FileZoneRecord::get_with_txn(&mut txn, &id).await {
             Ok(val) => val,
-            Err(_) => {
-                return error_result_json!("", StatusCode::UNAUTHORIZED);
+            Err(err) => {
+                let resmsg = format!("error getting record: {err:?}");
+                return error_result_json!(resmsg.as_str(), StatusCode::UNAUTHORIZED);
             }
         };
 
-        if let Err(err) =
-            ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &record.zoneid)
-                .await
+        if let Err(err) = ZoneOwnership::get_ownership_by_userid(
+            &mut txn,
+            &user.id.unwrap(),
+            &record.zoneid.unwrap(),
+        )
+        .await
         {
             eprintln!("Error getting ownership: {err:?}");
-            return error_result_json!("", StatusCode::UNAUTHORIZED);
+            return error_result_json!("no zone ownership found", StatusCode::UNAUTHORIZED);
         };
 
         if let Err(err) = record.delete_with_txn(&mut txn).await {

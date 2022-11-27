@@ -665,7 +665,11 @@ async fn test_normalize_ttls() {
     .unwrap();
 
     print!("Checking that we got three records...");
-    assert!(response.iter().len() == 3);
+    println!("Response:");
+    for re in response.iter() {
+        println!("{re:?}");
+    }
+    assert_eq!(response.iter().len(), 3);
     println!(" OK");
 
     // first we just check we got three records from the db

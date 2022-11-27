@@ -9,7 +9,7 @@
     </thead>
     {% for zone in zones %}
     <tr>
-        <td class="text-truncate"><a href="/ui/zones/{{zone.id}}">{{zone.name}}</a></td>
+        <td class="text-truncate"><a href="/ui/zones/{{zone.id.unwrap()}}">{{zone.name}}</a></td>
         <td>{{zone.rname}}</td>
     </tr>
     {% endfor %}
