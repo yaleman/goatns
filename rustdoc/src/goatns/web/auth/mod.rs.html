@@ -465,23 +465,33 @@
 <span id="465">465</span>
 <span id="466">466</span>
 <span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span><span class="kw">super</span>::utils::{redirect_to_dashboard, redirect_to_home};
-<span class="kw">use </span><span class="kw">super</span>::SharedState;
+<span class="kw">use </span><span class="kw">super</span>::GoatState;
 <span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
-<span class="kw">use </span><span class="kw">crate</span>::web::SharedStateTrait;
+<span class="kw">use </span><span class="kw">crate</span>::web::GoatStateTrait;
 <span class="kw">use </span><span class="kw">crate</span>::COOKIE_NAME;
 
 <span class="kw">use </span>askama::Template;
 <span class="kw">use </span>async_sqlx_session::SqliteSessionStore;
-<span class="kw">use </span>axum::extract::Query;
+<span class="kw">use </span>axum::extract::{Query, State};
 <span class="kw">use </span>axum::response::{IntoResponse, Redirect, Response};
 <span class="kw">use </span>axum::routing::{get, post};
-<span class="kw">use </span>axum::{Extension, Form, Router};
-<span class="kw">use </span>axum_macros::debug_handler;
-<span class="kw">use </span>axum_sessions::extractors::WritableSession;
+<span class="kw">use </span>axum::{Form, Router};
+<span class="comment">// use axum_macros::debug_handler;
+</span><span class="kw">use </span>axum_sessions::extractors::WritableSession;
 <span class="kw">use </span>axum_sessions::SessionLayer;
 <span class="kw">use </span>chrono::{DateTime, Utc};
 <span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
@@ -570,18 +580,20 @@
 }
 
 <span class="doccomment">/// Pull the OIDC Discovery details
-</span><span class="kw">pub async fn </span>oauth_get_discover(state: <span class="kw-2">&amp;</span>SharedState) -&gt; <span class="prelude-ty">Result</span>&lt;CustomProviderMetadata, String&gt; {
-    <span class="kw">let </span>issuer_url = IssuerUrl::new(state.config().<span class="kw">await</span>.oauth2_config_url);
-    CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client)
-        .<span class="kw">await
-        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))
+</span><span class="kw">pub async fn </span>oauth_get_discover(state: <span class="kw-2">&amp;mut </span>GoatState) -&gt; <span class="prelude-ty">Result</span>&lt;CustomProviderMetadata, String&gt; {
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Getting discovery data&quot;</span>);
+    <span class="kw">let </span>issuer_url = IssuerUrl::new(state.read().<span class="kw">await</span>.config.oauth2_config_url.clone());
+    <span class="kw">match </span>CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client).<span class="kw">await </span>{
+        <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>)),
+        <span class="prelude-val">Ok</span>(val) =&gt; {
+            state.oidc_update(val.clone()).<span class="kw">await</span>;
+            <span class="prelude-val">Ok</span>(val)
+        }
+    }
 }
 
-<span class="kw">pub async fn </span>oauth_start(state: <span class="kw-2">&amp;</span>SharedState) -&gt; <span class="prelude-ty">Result</span>&lt;url::Url, String&gt; {
-    <span class="kw">let </span>last_updated: DateTime&lt;Utc&gt; = <span class="kw">match </span>state.read().<span class="kw">await</span>.oidc_config_updated {
-        <span class="prelude-val">None </span>=&gt; Utc::now(),
-        <span class="prelude-val">Some</span>(val) =&gt; val,
-    };
+<span class="kw">pub async fn </span>oauth_start(state: <span class="kw-2">&amp;mut </span>GoatState) -&gt; <span class="prelude-ty">Result</span>&lt;url::Url, String&gt; {
+    <span class="kw">let </span>last_updated: DateTime&lt;Utc&gt; = state.read().<span class="kw">await</span>.oidc_config_updated;
     <span class="kw">let </span>now: DateTime&lt;Utc&gt; = Utc::now();
 
     <span class="kw">let </span>delta = now - last_updated;
@@ -589,10 +601,8 @@
         <span class="bool-val">true </span>=&gt; oauth_get_discover(state).<span class="kw">await</span>.unwrap(),
         <span class="bool-val">false </span>=&gt; {
             <span class="macro">log::debug!</span>(<span class="string">&quot;using cached OIDC discovery data&quot;</span>);
-            <span class="kw">let </span>meta = state
-                .oidc_config()
-                .<span class="kw">await
-                </span>.unwrap_or(oauth_get_discover(state).<span class="kw">await</span>.unwrap());
+            <span class="kw">let </span>config = state.read().<span class="kw">await</span>.oidc_config.clone();
+            <span class="kw">let </span>meta = config.unwrap_or(oauth_get_discover(state).<span class="kw">await</span>.unwrap());
             state.oidc_update(meta.clone()).<span class="kw">await</span>;
             meta
         }
@@ -609,7 +619,7 @@
     <span class="comment">// This example will be running its own server at localhost:8080.
     // See below for the server implementation.
     </span>.set_redirect_uri(RedirectUrl::from_url(
-        state.config().<span class="kw">await</span>.oauth2_redirect_url,
+        state.read().<span class="kw">await</span>.config.oauth2_redirect_url.clone(),
     ));
 
     <span class="comment">// Generate the authorization URL to which we&#39;ll redirect the user.
@@ -625,20 +635,23 @@
         .set_pkce_challenge(pkce_challenge)
         .url();
     state
-        .push_verifier(csrf_state.secret().to_owned(), (pkce_verifier, nonce))
+        .push_verifier(
+            csrf_state.secret().to_owned(),
+            (pkce_verifier.secret().to_owned(), nonce),
+        )
         .<span class="kw">await</span>;
     <span class="prelude-val">Ok</span>(authorize_url)
 }
 
 <span class="kw">pub async fn </span>parse_state_code(
-    shared_state: <span class="kw-2">&amp;</span>SharedState,
+    shared_state: <span class="kw-2">&amp;</span>GoatState,
     query_code: String,
     pkce_verifier: PkceCodeVerifier,
     nonce: Nonce,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;CustomClaimType, ParserError&gt; {
     <span class="kw">let </span>auth_code = AuthorizationCode::new(query_code);
-
-    <span class="kw">let </span>provider_metadata = <span class="kw">match </span>shared_state.oidc_config().<span class="kw">await </span>{
+    <span class="kw">let </span>reader = shared_state.read().<span class="kw">await</span>;
+    <span class="kw">let </span>provider_metadata = <span class="kw">match </span><span class="kw-2">&amp;</span>reader.oidc_config {
         <span class="prelude-val">Some</span>(value) =&gt; value,
         <span class="prelude-val">None </span>=&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(ParserError::ErrorMessage {
@@ -648,12 +661,12 @@
     };
 
     <span class="kw">let </span>client = CoreClient::from_provider_metadata(
-        provider_metadata,
+        provider_metadata.to_owned(),
         shared_state.oauth2_client_id().<span class="kw">await</span>,
         shared_state.oauth2_secret().<span class="kw">await</span>,
     )
     .set_redirect_uri(RedirectUrl::from_url(
-        shared_state.config().<span class="kw">await</span>.oauth2_redirect_url,
+        shared_state.read().<span class="kw">await</span>.config.oauth2_redirect_url.clone(),
     ));
     <span class="kw">let </span>verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
     <span class="macro">assert_eq!</span>(verifier_copy.secret(), pkce_verifier.secret());
@@ -693,11 +706,11 @@
         .cloned()
 }
 
-<span class="attribute">#[debug_handler]
+<span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>login(
-    query: Query&lt;QueryForLogin&gt;,
+    Query(query): Query&lt;QueryForLogin&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
-    Extension(state): Extension&lt;SharedState&gt;,
+    axum::extract::State(<span class="kw-2">mut </span>state): axum::extract::State&lt;GoatState&gt;,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
     <span class="comment">// check if we&#39;ve got an existing, valid session
     </span><span class="kw">if </span>!session.is_expired() {
@@ -709,7 +722,7 @@
     }
 
     <span class="kw">if </span>query.state.is_none() || query.code.is_none() {
-        <span class="kw">let </span>auth_url = <span class="kw-2">&amp;</span>oauth_start(<span class="kw-2">&amp;</span>state).<span class="kw">await</span>.unwrap().to_string();
+        <span class="kw">let </span>auth_url = <span class="kw-2">&amp;</span>oauth_start(<span class="kw-2">&amp;mut </span>state).<span class="kw">await</span>.unwrap().to_string();
         <span class="kw">return </span>Redirect::to(auth_url).into_response();
     }
 
@@ -718,19 +731,19 @@
 
     </span><span class="kw">let </span>verifier = state.pop_verifier(query.state.clone().unwrap()).<span class="kw">await</span>;
 
-    <span class="kw">let </span>(pkce_verifier, nonce) = <span class="kw">match </span>verifier {
+    <span class="kw">let </span>(pkce_verifier_secret, nonce) = <span class="kw">match </span>verifier {
         <span class="prelude-val">Some</span>((p, n)) =&gt; (p, n),
         <span class="prelude-val">None </span>=&gt; {
             <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find a sesssion, redirecting...&quot;</span>);
             <span class="kw">return </span>Redirect::to(<span class="string">&quot;/auth/login&quot;</span>).into_response();
         }
     };
-    <span class="kw">let </span>verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
+    <span class="kw">let </span>verifier_copy = PkceCodeVerifier::new(pkce_verifier_secret.clone());
 
     <span class="kw">let </span>claims = parse_state_code(
         <span class="kw-2">&amp;</span>state,
         query.code.clone().unwrap(),
-        pkce_verifier,
+        PkceCodeVerifier::new(pkce_verifier_secret),
         nonce.clone(),
     )
     .<span class="kw">await</span>;
@@ -746,10 +759,11 @@
                 <span class="prelude-val">Err</span>(error) =&gt; {
                     <span class="kw">match </span>error {
                         sqlx::Error::RowNotFound =&gt; {
-                            <span class="kw">if </span>!state.config().<span class="kw">await</span>.user_auto_provisioning {
+                            <span class="kw">if </span>!state.read().<span class="kw">await</span>.config.user_auto_provisioning {
                                 <span class="comment">// TODO: show a &quot;sorry&quot; page when auto-provisioning&#39;s not enabled
                                 // log::warn!(&quot;User attempted login when auto-provisioning is not enabled, yeeting them to the home page.&quot;);
-                                </span><span class="kw">let </span>admin_contact = state.config().<span class="kw">await</span>.admin_contact.to_string();
+                                </span><span class="kw">let </span>admin_contact =
+                                    state.read().<span class="kw">await</span>.config.admin_contact.to_string();
                                 <span class="comment">// let admin_contact = match admin_contact {
                                 //     Some(value) =&gt; value.to_string(),
                                 //     None =&gt; &quot;the administrator&quot;.to_string(),
@@ -777,7 +791,10 @@
                             <span class="kw">let </span>pagebody = new_user_page.render().unwrap();
                             <span class="comment">// push it back into the stack for signup
                             </span>state
-                                .push_verifier(query.state.clone().unwrap(), (verifier_copy, nonce))
+                                .push_verifier(
+                                    query.state.clone().unwrap(),
+                                    (verifier_copy.secret().to_owned(), nonce),
+                                )
                                 .<span class="kw">await</span>;
 
                             <span class="kw">return </span>Response::builder()
@@ -822,7 +839,7 @@
         <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">match </span>error {
             ParserError::Redirect { content } =&gt; content.into_response(),
             ParserError::ErrorMessage { content } =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;{content}&quot;</span>);
+                <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to parse state: {content}&quot;</span>);
                 <span class="macro">todo!</span>();
             }
             ParserError::ClaimsVerificationError { content } =&gt; {
@@ -859,7 +876,6 @@
         <span class="comment">// TODO: cookie domain isn&#39;t working because it sets .(hostname) for some reason.
         // .with_cookie_domain(config.hostname.clone())
         </span>.with_cookie_name(COOKIE_NAME)
-        .with_save_unchanged(<span class="bool-val">false</span>)
 }
 
 <span class="attribute">#[derive(Deserialize, Debug)]
@@ -871,9 +887,9 @@
 
 <span class="doccomment">/// /auth/signup
 </span><span class="kw">pub async fn </span>signup(
-    Extension(state): Extension&lt;SharedState&gt;,
+    State(<span class="kw-2">mut </span>state): State&lt;GoatState&gt;,
     Form(form): Form&lt;SignupForm&gt;,
-) -&gt; <span class="kw">impl </span>IntoResponse {
+) -&gt; <span class="prelude-ty">Result</span>&lt;Response, ()&gt; {
     <span class="macro">log::debug!</span>(<span class="string">&quot;Dumping form: {form:?}&quot;</span>);
 
     <span class="kw">let </span>query_state = form.state;
@@ -884,22 +900,26 @@
         <span class="prelude-val">Some</span>((p, n)) =&gt; (p, n),
         <span class="prelude-val">None </span>=&gt; {
             <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find a signup session, redirecting user...&quot;</span>);
-            <span class="kw">return </span>Redirect::to(<span class="string">&quot;/auth/login&quot;</span>).into_response();
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(Redirect::to(<span class="string">&quot;/auth/login&quot;</span>).into_response());
         }
     };
-    <span class="comment">// let verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
-
-    </span><span class="kw">let </span>claims = parse_state_code(<span class="kw-2">&amp;</span>state, form.code, pkce_verifier, nonce.clone()).<span class="kw">await</span>;
+    <span class="kw">let </span>claims = parse_state_code(
+        <span class="kw-2">&amp;</span>state,
+        form.code,
+        PkceCodeVerifier::new(pkce_verifier),
+        nonce.clone(),
+    )
+    .<span class="kw">await</span>;
     <span class="kw">match </span>claims {
         <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">match </span>error {
-            ParserError::Redirect { content } =&gt; content.into_response(),
+            ParserError::Redirect { content } =&gt; <span class="prelude-val">Ok</span>(content.into_response()),
             ParserError::ErrorMessage { content } =&gt; {
                 <span class="macro">log::debug!</span>(<span class="string">&quot;{content}&quot;</span>);
                 <span class="macro">todo!</span>();
             }
             ParserError::ClaimsVerificationError { content } =&gt; {
                 <span class="macro">log::error!</span>(<span class="string">&quot;Failed to verify claim token: {content:?}&quot;</span>);
-                redirect_to_home().into_response()
+                <span class="prelude-val">Ok</span>(redirect_to_home().into_response())
             }
         },
         <span class="prelude-val">Ok</span>(claims) =&gt; {
@@ -915,18 +935,18 @@
                 admin: <span class="bool-val">false</span>,
             };
             <span class="kw">match </span>user.save(<span class="kw-2">&amp;</span>state.connpool().<span class="kw">await</span>).<span class="kw">await </span>{
-                <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; redirect_to_dashboard().into_response(),
+                <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(redirect_to_dashboard().into_response()),
                 <span class="prelude-val">Err</span>(error) =&gt; {
                     <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to save new user signup... oh no! {error:?}&quot;</span>);
                     <span class="comment">// TODO: throw an error page on this one
-                    </span>redirect_to_home().into_response()
+                    </span><span class="prelude-val">Ok</span>(redirect_to_home().into_response())
                 }
             }
         }
     }
 }
 
-<span class="kw">pub fn </span>new() -&gt; Router {
+<span class="kw">pub fn </span>new() -&gt; Router&lt;GoatState&gt; {
     Router::new()
         .route(<span class="string">&quot;/login&quot;</span>, get(login))
         .route(<span class="string">&quot;/logout&quot;</span>, get(logout))

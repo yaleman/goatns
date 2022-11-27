@@ -323,7 +323,6 @@
 <span id="323">323</span>
 <span id="324">324</span>
 <span id="325">325</span>
-<span id="326">326</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::db::DBEntity;
 
@@ -331,7 +330,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::db::ZoneOwnership;
 <span class="kw">use </span><span class="kw">crate</span>::error_result_json;
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZone;
-<span class="kw">use </span>axum::extract::Extension;
 <span class="kw">use </span>axum::extract::Path;
 <span class="kw">use </span>axum::Json;
 <span class="kw">use </span>axum_sessions::extractors::ReadableSession;
@@ -349,7 +347,7 @@
 <span class="attribute">#[async_trait]
 </span><span class="kw">impl </span>APIEntity <span class="kw">for </span>FileZone {
     <span class="kw">async fn </span>api_create(
-        state: Extension&lt;SharedState&gt;,
+        State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Json(payload): Json&lt;serde_json::Value&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;String&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
@@ -455,7 +453,7 @@
     }
 
     <span class="kw">async fn </span>api_update(
-        state: Extension&lt;SharedState&gt;,
+        State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Json(payload): Json&lt;serde_json::Value&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;String&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
@@ -530,7 +528,7 @@
     }
 
     <span class="kw">async fn </span>api_delete(
-        state: Extension&lt;SharedState&gt;,
+        State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Path(id): Path&lt;i64&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;StatusCode, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
@@ -621,7 +619,7 @@
         res
     }
     <span class="kw">async fn </span>api_get(
-        state: Extension&lt;SharedState&gt;,
+        State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Path(id): Path&lt;i64&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {

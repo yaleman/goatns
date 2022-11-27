@@ -111,11 +111,17 @@
 <span id="111">111</span>
 <span id="112">112</span>
 <span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZone;
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZoneRecord;
-<span class="kw">use </span>axum::extract::Extension;
 <span class="kw">use </span>axum::extract::Path;
+<span class="kw">use </span>axum::extract::State;
 <span class="kw">use </span>axum::routing::{delete, post, put};
 <span class="kw">use </span>axum::Json;
 <span class="kw">use </span>axum_sessions::extractors::ReadableSession;
@@ -169,18 +175,18 @@
 </span><span class="kw">trait </span>APIEntity {
     <span class="doccomment">/// Save the entity to the database
     </span><span class="kw">async fn </span>api_create(
-        state: Extension&lt;SharedState&gt;,
+        State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Json(payload): Json&lt;serde_json::Value&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;String&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt;;
     <span class="doccomment">/// HTTP Put https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT
     </span><span class="kw">async fn </span>api_update(
-        state: Extension&lt;SharedState&gt;,
+        State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Json(payload): Json&lt;serde_json::Value&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;String&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt;;
     <span class="kw">async fn </span>api_get(
-        state: Extension&lt;SharedState&gt;,
+        State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Path(id): Path&lt;i64&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt;;
@@ -188,10 +194,17 @@
     <span class="doccomment">/// Delete an object
     /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE
     </span><span class="kw">async fn </span>api_delete(
-        state: Extension&lt;SharedState&gt;,
+        State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Path(id): Path&lt;i64&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;StatusCode, (StatusCode, Json&lt;ErrorResult&gt;)&gt;;
+}
+
+<span class="attribute">#[derive(Deserialize, Serialize, Debug, Clone)]
+</span><span class="kw">pub struct </span>FileZoneResponse {
+    <span class="kw">pub </span>message: String,
+    <span class="kw">pub </span>zone: <span class="prelude-ty">Option</span>&lt;FileZone&gt;,
+    <span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
 }
 
 <span class="attribute">#[derive(Serialize)]
@@ -210,7 +223,7 @@
     Json::from(GoatNSVersion::default())
 }
 
-<span class="kw">pub fn </span>new() -&gt; Router {
+<span class="kw">pub fn </span>new() -&gt; Router&lt;GoatState&gt; {
     Router::new()
         <span class="comment">// just zone things
         </span>.route(<span class="string">&quot;/zone&quot;</span>, post(FileZone::api_create))
@@ -221,8 +234,7 @@
         .route(<span class="string">&quot;/record&quot;</span>, put(FileZoneRecord::api_update))
         .route(<span class="string">&quot;/record/:id&quot;</span>, get(FileZoneRecord::api_get))
         .route(<span class="string">&quot;/record/:id&quot;</span>, delete(FileZoneRecord::api_delete))
-        <span class="comment">// .layer(from_fn(auth::check_auth))
-        </span>.route(<span class="string">&quot;/login&quot;</span>, post(auth::login))
+        .route(<span class="string">&quot;/login&quot;</span>, post(auth::login))
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

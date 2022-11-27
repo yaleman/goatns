@@ -36,31 +36,27 @@
 <span id="36">36</span>
 <span id="37">37</span>
 <span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-</pre><pre class="rust"><code><span class="kw">use </span>axum::middleware::Next;
+</pre><pre class="rust"><code><span class="kw">use </span>axum::extract::State;
+<span class="kw">use </span>axum::middleware::Next;
 <span class="kw">use </span>axum::response::Response;
 <span class="kw">use </span>axum_csp::<span class="kw-2">*</span>;
-<span class="kw">use </span>http::{HeaderValue, Request, StatusCode};
+<span class="kw">use </span>http::{HeaderValue, Request};
 
-<span class="kw">use </span><span class="kw">crate</span>::web::SharedState;
+<span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
 
-<span class="kw">pub async fn </span>cspheaders&lt;B&gt;(req: Request&lt;B&gt;, next: Next&lt;B&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Response, StatusCode&gt; {
+<span class="kw">pub async fn </span>cspheaders&lt;B&gt;(
+    State(state): State&lt;GoatState&gt;,
+    req: Request&lt;B&gt;,
+    next: Next&lt;B&gt;,
+) -&gt; Response {
     <span class="kw">let </span>uri: String = req.uri().path().to_string();
-    <span class="kw">let </span>state: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>SharedState&gt; = req.extensions().get();
-    <span class="kw">let </span>url_matcher: <span class="prelude-ty">Option</span>&lt;CspUrlMatcher&gt; = <span class="kw">match </span>state {
-        <span class="prelude-val">None </span>=&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t get state in request :(&quot;</span>);
+    <span class="kw">let </span>url_matcher: <span class="prelude-ty">Option</span>&lt;CspUrlMatcher&gt; = state.read().<span class="kw">await</span>.csp_matchers.iter().find_map(|c| {
+        <span class="kw">if </span>c.matcher.is_match(<span class="kw-2">&amp;</span>uri) {
+            <span class="prelude-val">Some</span>(c.to_owned())
+        } <span class="kw">else </span>{
             <span class="prelude-val">None
         </span>}
-        <span class="prelude-val">Some</span>(state) =&gt; state.read().<span class="kw">await</span>.csp_matchers.iter().find_map(|c| {
-            <span class="kw">if </span>c.matcher.is_match(<span class="kw-2">&amp;</span>uri) {
-                <span class="prelude-val">Some</span>(c.to_owned())
-            } <span class="kw">else </span>{
-                <span class="prelude-val">None
-            </span>}
-        }),
-    };
+    });
 
     <span class="comment">// wait for the middleware to come back
     </span><span class="kw">let </span><span class="kw-2">mut </span>response = next.run(req).<span class="kw">await</span>;
@@ -76,7 +72,7 @@
         <span class="macro">log::debug!</span>(<span class="string">&quot;didn&#39;t match uri&quot;</span>);
     }
 
-    <span class="prelude-val">Ok</span>(response)
+    response
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

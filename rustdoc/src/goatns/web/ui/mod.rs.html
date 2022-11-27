@@ -171,21 +171,21 @@
 <span id="171">171</span>
 <span id="172">172</span>
 <span id="173">173</span>
-<span id="174">174</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
 <span class="kw">use </span><span class="kw">crate</span>::db::User;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zones_list};
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZone;
 <span class="kw">use </span>askama::Template;
-<span class="kw">use </span>axum::extract::{OriginalUri, Path};
+<span class="kw">use </span>axum::extract::{OriginalUri, Path, State};
 <span class="kw">use </span>axum::http::{Response, Uri};
 <span class="kw">use </span>axum::response::{IntoResponse, Redirect};
 <span class="kw">use </span>axum::routing::get;
-<span class="kw">use </span>axum::{Extension, Router};
+<span class="kw">use </span>axum::Router;
 <span class="kw">use </span>axum_macros::debug_handler;
-<span class="kw">use </span>axum_sessions::extractors::WritableSession;
+<span class="comment">// use axum_macros::debug_handler;
+</span><span class="kw">use </span>axum_sessions::extractors::WritableSession;
 
-<span class="kw">use </span><span class="kw">super</span>::SharedState;
+<span class="kw">use </span><span class="kw">super</span>::GoatState;
 
 <span class="kw">mod </span>user_settings;
 
@@ -209,9 +209,9 @@
     };
 }
 
-<span class="attribute">#[debug_handler]
+<span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>zones_list(
-    Extension(state): Extension&lt;SharedState&gt;,
+    State(state): State&lt;GoatState&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
@@ -220,7 +220,6 @@
     // }
     </span><span class="macro">check_logged_in!</span>(state, session, path);
     <span class="kw">let </span>(os_tx, os_rx) = tokio::sync::oneshot::channel();
-    <span class="kw">let </span>state_writer = state.write().<span class="kw">await</span>;
 
     <span class="kw">let </span>offset = <span class="number">0</span>;
     <span class="kw">let </span>limit = <span class="number">20</span>;
@@ -233,9 +232,11 @@
         <span class="prelude-val">None </span>=&gt; <span class="kw">return </span>redirect_to_login().into_response(),
     };
 
-    <span class="macro">println!</span>(<span class="string">&quot;Sending request for zones&quot;</span>);
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = state_writer
-        .tx
+    <span class="macro">log::trace!</span>(<span class="string">&quot;Sending request for zones&quot;</span>);
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = state
+        .read()
+        .<span class="kw">await
+        </span>.tx
         .send(Command::GetZoneNames {
             resp: os_tx,
             user,
@@ -248,7 +249,6 @@
         <span class="macro">log::error!</span>(<span class="string">&quot;failed to send GetZoneNames command to datastore: {err:?}&quot;</span>);
         <span class="kw">return </span>redirect_to_dashboard().into_response();
     };
-    drop(state_writer);
 
     <span class="kw">let </span>zones = os_rx.<span class="kw">await</span>.expect(<span class="string">&quot;Failed to get response: {res:?}&quot;</span>);
 
@@ -261,9 +261,10 @@
         .into_response()
 }
 
-<span class="kw">pub async fn </span>zone_view(
+<span class="attribute">#[debug_handler]
+</span><span class="kw">pub async fn </span>zone_view(
     Path(name_or_id): Path&lt;i64&gt;,
-    Extension(state): Extension&lt;SharedState&gt;,
+    axum::extract::State(state): axum::extract::State&lt;GoatState&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
@@ -277,13 +278,11 @@
         name: <span class="prelude-val">None</span>,
     };
     <span class="macro">log::debug!</span>(<span class="string">&quot;{cmd:?}&quot;</span>);
-    <span class="kw">let </span>state_writer = state.write().<span class="kw">await</span>;
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = state_writer.tx.send(cmd).<span class="kw">await </span>{
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = state.read().<span class="kw">await</span>.tx.send(cmd).<span class="kw">await </span>{
         <span class="macro">eprintln!</span>(<span class="string">&quot;failed to send GetZone command to datastore: {err:?}&quot;</span>);
         <span class="macro">log::error!</span>(<span class="string">&quot;failed to send GetZone command to datastore: {err:?}&quot;</span>);
         <span class="kw">return </span>redirect_to_zones_list().into_response();
     };
-    drop(state_writer);
 
     <span class="kw">let </span>zone = <span class="kw">match </span>os_rx.<span class="kw">await</span>.expect(<span class="string">&quot;Failed to get response: {res:?}&quot;</span>) {
         <span class="prelude-val">Some</span>(value) =&gt; value,
@@ -320,10 +319,9 @@
     </span><span class="prelude-val">Ok</span>(())
 }
 
-<span class="attribute">#[debug_handler]
+<span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>dashboard(
-    <span class="comment">// Extension(_state): Extension&lt;SharedState&gt;,
-    </span><span class="kw-2">mut </span>session: WritableSession,
+    <span class="kw-2">mut </span>session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = check_logged_in(<span class="kw-2">&amp;mut </span>session, path).<span class="kw">await </span>{
@@ -339,12 +337,12 @@
         .into_response()
 }
 
-<span class="kw">pub fn </span>new() -&gt; Router {
+<span class="kw">pub fn </span>new() -&gt; Router&lt;GoatState&gt; {
     Router::new()
         .route(<span class="string">&quot;/&quot;</span>, get(dashboard))
-        .nest(<span class="string">&quot;/settings&quot;</span>, user_settings::router())
         .route(<span class="string">&quot;/zones/:id&quot;</span>, get(zone_view))
         .route(<span class="string">&quot;/zones/list&quot;</span>, get(zones_list))
+        .nest(<span class="string">&quot;/settings&quot;</span>, user_settings::router())
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="goatns" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

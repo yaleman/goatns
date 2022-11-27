@@ -524,6 +524,8 @@
 <span id="524">524</span>
 <span id="525">525</span>
 <span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
 <span class="kw">use </span><span class="kw">crate</span>::web::ui::check_logged_in;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::create_api_token;
@@ -532,12 +534,14 @@
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>askama::Template;
-<span class="kw">use </span>axum::extract::Path;
+<span class="kw">use </span>axum::extract::{Path, State};
 <span class="kw">use </span>axum::response::{Html, Redirect};
-<span class="kw">use </span>axum::routing::{get, post};
-<span class="kw">use </span>axum::{Extension, Form, Router};
+<span class="kw">use </span>axum::routing::get;
+<span class="kw">use </span>axum::routing::post;
+<span class="kw">use </span>axum::{Form, Router};
 <span class="kw">use </span>axum_macros::debug_handler;
-<span class="kw">use </span>axum_sessions::extractors::WritableSession;
+<span class="comment">// use axum_macros::debug_handler;
+</span><span class="kw">use </span>axum_sessions::extractors::WritableSession;
 <span class="kw">use </span>chrono::{DateTime, Duration, Utc};
 <span class="kw">use </span>enum_iterator::Sequence;
 <span class="kw">use </span>http::Uri;
@@ -545,7 +549,7 @@
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use </span><span class="kw">crate</span>::db::UserAuthToken;
-<span class="kw">use </span><span class="kw">crate</span>::web::SharedState;
+<span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
 
 <span class="kw">static </span>SESSION_CSRFTOKEN_FIELD: <span class="kw-2">&amp;</span>str = <span class="string">&quot;api_token_csrf_token&quot;</span>;
 
@@ -554,7 +558,7 @@
 </span><span class="kw">struct </span>Settings;
 
 <span class="doccomment">/// The user settings page at /ui/settings
-</span><span class="kw">pub async fn </span>settings(Extension(_state): Extension&lt;SharedState&gt;) -&gt; Html&lt;String&gt; {
+</span><span class="kw">pub async fn </span>settings(State(_state): State&lt;GoatState&gt;) -&gt; Html&lt;String&gt; {
     <span class="kw">let </span>context = Settings;
 
     Html::from(context.render().unwrap())
@@ -645,9 +649,10 @@
 }
 
 <span class="doccomment">/// The user settings page at /ui/settings/api_tokens
+</span><span class="attribute">#[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_get(
-    Extension(state): Extension&lt;SharedState&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
+    State(state): State&lt;GoatState&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     check_logged_in(
         <span class="kw-2">&amp;mut </span>session,
@@ -788,11 +793,11 @@
 }
 
 <span class="doccomment">/// The user settings page at /ui/settings
-</span><span class="attribute">#[debug_handler]
+</span><span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_post(
-    Extension(state): Extension&lt;SharedState&gt;,
-    Form(form): Form&lt;ApiTokenPage&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
+    State(state): State&lt;GoatState&gt;,
+    Form(form): Form&lt;ApiTokenPage&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     <span class="macro">eprintln!</span>(<span class="string">&quot;Got form: {form:?}&quot;</span>);
 
@@ -929,9 +934,9 @@
     <span class="kw">pub </span>csrftoken: String,
 }
 
-<span class="attribute">#[debug_handler]
+<span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_delete_get(
-    Extension(state): Extension&lt;SharedState&gt;,
+    axum::extract::State(state): axum::extract::State&lt;GoatState&gt;,
     <span class="comment">// Form(form): Form&lt;ApiTokenPage&gt;,
     </span>Path(id): Path&lt;String&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
@@ -989,11 +994,11 @@
     <span class="prelude-val">Ok</span>(Html::from(context.render().unwrap()))
 }
 
-<span class="attribute">#[debug_handler]
+<span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_delete_post(
-    Extension(state): Extension&lt;SharedState&gt;,
-    Form(form): Form&lt;ApiTokenDelete&gt;,
+    State(state): State&lt;GoatState&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
+    Form(form): Form&lt;ApiTokenDelete&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     check_logged_in(
         <span class="kw-2">&amp;mut </span>session,
@@ -1009,8 +1014,7 @@
 
     <span class="macro">log::debug!</span>(<span class="string">&quot;Deleting token from Form: {form:?}&quot;</span>);
     <span class="kw">let </span>user: User = session.get(<span class="string">&quot;user&quot;</span>).unwrap();
-    <span class="kw">let </span>state_reader = state.read().<span class="kw">await</span>;
-    <span class="kw">let </span>pool = state_reader.connpool.clone();
+    <span class="kw">let </span>pool = state.read().<span class="kw">await</span>.connpool.clone();
     <span class="kw">let </span>uat = <span class="kw">match </span>UserAuthToken::get(<span class="kw-2">&amp;</span>pool, form.id).<span class="kw">await </span>{
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">log::debug!</span>(<span class="string">&quot;Requested delete for existing token: {err:?}&quot;</span>);
@@ -1042,7 +1046,7 @@
     <span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>))
 }
 <span class="doccomment">/// Build the router for user settings
-</span><span class="kw">pub fn </span>router() -&gt; Router {
+</span><span class="kw">pub fn </span>router() -&gt; Router&lt;GoatState&gt; {
     Router::new()
         .route(<span class="string">&quot;/&quot;</span>, get(settings))
         .route(<span class="string">&quot;/api_tokens&quot;</span>, get(api_tokens_get))

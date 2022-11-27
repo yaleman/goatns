@@ -241,22 +241,26 @@
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
 //!
+
+</span><span class="attribute">#![allow(clippy::clone_on_copy)]
+</span><span class="comment">// ^ this is because the datetime in the goatchildState is a jerk
 </span><span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::datastore;
 <span class="kw">use </span><span class="kw">crate</span>::web::middleware::csp;
 <span class="kw">use </span>async_trait::async_trait;
-<span class="kw">use </span>axum::handler::Handler;
-<span class="kw">use </span>axum::http::StatusCode;
-<span class="kw">use </span>axum::middleware::from_fn;
+<span class="comment">// use axum::handler::Handler;
+</span><span class="kw">use </span>axum::http::StatusCode;
+<span class="kw">use </span>axum::middleware::from_fn_with_state;
 <span class="kw">use </span>axum::response::IntoResponse;
 <span class="kw">use </span>axum::routing::get;
-<span class="kw">use </span>axum::{Extension, Router};
+<span class="kw">use </span>axum::Router;
 <span class="kw">use </span>axum_csp::CspUrlMatcher;
 <span class="kw">use </span>axum_extra::routing::SpaRouter;
+<span class="kw">use </span>axum_macros::FromRef;
 <span class="kw">use </span>axum_server::tls_rustls::RustlsConfig;
 <span class="kw">use </span>chrono::{DateTime, NaiveDateTime, Utc};
 <span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
-<span class="kw">use </span>oauth2::{ClientId, ClientSecret, PkceCodeVerifier};
+<span class="kw">use </span>oauth2::{ClientId, ClientSecret};
 <span class="kw">use </span>openidconnect::Nonce;
 <span class="kw">use </span>regex::RegexSet;
 <span class="kw">use </span>sqlx::{Pool, Sqlite};
@@ -287,44 +291,37 @@
 
 <span class="comment">// TODO: look at the ServiceBuilder layers bits here: https://github.com/tokio-rs/axum/blob/dea36db400f27c025b646e5720b9a6784ea4db6e/examples/key-value-store/src/main.rs
 
-</span><span class="kw">type </span>SharedState = Arc&lt;RwLock&lt;State&gt;&gt;;
+// type GoatState = Arc&lt;RwLock&lt;State&gt;&gt;;
 
-<span class="attribute">#[async_trait]
-</span><span class="kw">pub trait </span>SharedStateTrait {
+</span><span class="attribute">#[async_trait]
+</span><span class="kw">pub trait </span>GoatStateTrait {
     <span class="kw">async fn </span>connpool(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Pool&lt;Sqlite&gt;;
-    <span class="kw">async fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ConfigFile;
-    <span class="kw">async fn </span>oidc_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;CustomProviderMetadata&gt;;
-    <span class="kw">async fn </span>oidc_update(<span class="kw-2">&amp;</span><span class="self">self</span>, response: CustomProviderMetadata);
-    <span class="kw">async fn </span>pop_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String) -&gt; <span class="prelude-ty">Option</span>&lt;(PkceCodeVerifier, Nonce)&gt;;
+    <span class="comment">// async fn config(&amp;self) -&gt; ConfigFile;
+    // async fn oidc_config(&amp;self) -&gt; Option&lt;CustomProviderMetadata&gt;;
+    </span><span class="kw">async fn </span>oidc_update&lt;<span class="lifetime">&#39;life0</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;life0 </span><span class="kw-2">mut </span><span class="self">self</span>, response: CustomProviderMetadata);
+    <span class="kw">async fn </span>pop_verifier&lt;<span class="lifetime">&#39;life0</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;life0 </span><span class="kw-2">mut </span><span class="self">self</span>, csrftoken: String) -&gt; <span class="prelude-ty">Option</span>&lt;(String, Nonce)&gt;;
     <span class="kw">async fn </span>oauth2_client_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ClientId;
     <span class="kw">async fn </span>oauth2_secret(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;ClientSecret&gt;;
-    <span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String, verifier: (PkceCodeVerifier, Nonce));
+    <span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;mut </span><span class="self">self</span>, csrftoken: String, verifier: (String, Nonce));
 }
 
 <span class="attribute">#[async_trait]
-</span><span class="kw">impl </span>SharedStateTrait <span class="kw">for </span>SharedState {
+</span><span class="kw">impl </span>GoatStateTrait <span class="kw">for </span>GoatState {
     <span class="doccomment">/// Get an sqlite connection pool
     </span><span class="kw">async fn </span>connpool(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Pool&lt;Sqlite&gt; {
-        <span class="self">self</span>.write().<span class="kw">await</span>.connpool.clone()
+        <span class="self">self</span>.read().<span class="kw">await</span>.connpool.clone()
     }
-    <span class="doccomment">/// Get a copy of the config
-    </span><span class="kw">async fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ConfigFile {
-        <span class="self">self</span>.read().<span class="kw">await</span>.config.clone()
-    }
-    <span class="doccomment">/// Get a copy of the config
-    </span><span class="kw">async fn </span>oidc_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;CustomProviderMetadata&gt; {
-        <span class="self">self</span>.read().<span class="kw">await</span>.oidc_config.clone()
-    }
-    <span class="kw">async fn </span>oidc_update(<span class="kw-2">&amp;</span><span class="self">self</span>, response: CustomProviderMetadata) {
+    <span class="kw">async fn </span>oidc_update&lt;<span class="lifetime">&#39;life0</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;life0 </span><span class="kw-2">mut </span><span class="self">self</span>, response: CustomProviderMetadata) {
+        <span class="macro">log::debug!</span>(<span class="string">&quot;Storing OIDC config!&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="self">self</span>.write().<span class="kw">await</span>;
         writer.oidc_config = <span class="prelude-val">Some</span>(response.clone());
-        writer.oidc_config_updated = <span class="prelude-val">Some</span>(DateTime::from_utc(NaiveDateTime::default(), Utc));
+        writer.oidc_config_updated = DateTime::from_utc(NaiveDateTime::default(), Utc);
+        drop(writer);
     }
 
-    <span class="kw">async fn </span>pop_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String) -&gt; <span class="prelude-ty">Option</span>&lt;(PkceCodeVerifier, Nonce)&gt; {
+    <span class="kw">async fn </span>pop_verifier&lt;<span class="lifetime">&#39;life0</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;life0 </span><span class="kw-2">mut </span><span class="self">self</span>, csrftoken: String) -&gt; <span class="prelude-ty">Option</span>&lt;(String, Nonce)&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="self">self</span>.write().<span class="kw">await</span>;
-        <span class="kw">let </span>result = writer.oidc_verifier.remove_entry(<span class="kw-2">&amp;</span>csrftoken);
-        result.map(|(<span class="kw">_</span>, (pkce, nonce))| (pkce, nonce))
+        writer.oidc_verifier.remove(<span class="kw-2">&amp;</span>csrftoken)
     }
     <span class="kw">async fn </span>oauth2_client_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ClientId {
         <span class="kw">let </span>client_id = <span class="self">self</span>.read().<span class="kw">await</span>.config.oauth2_client_id.clone();
@@ -337,21 +334,24 @@
     }
 
     <span class="doccomment">/// Store the PKCE verifier details server-side for when the user comes back with their auth token
-    </span><span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;</span><span class="self">self</span>, csrftoken: String, verifier: (PkceCodeVerifier, Nonce)) {
+    </span><span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;mut </span><span class="self">self</span>, csrftoken: String, verifier: (String, Nonce)) {
         <span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="self">self</span>.write().<span class="kw">await</span>;
+        <span class="macro">log::debug!</span>(<span class="string">&quot;Pushing CSRF token into shared state: token={csrftoken}&quot;</span>);
         writer.oidc_verifier.insert(csrftoken, verifier);
     }
 }
 
-<span class="attribute">#[derive(Debug)]
+<span class="kw">type </span>GoatState = Arc&lt;RwLock&lt;GoatChildState&gt;&gt;;
+
+<span class="attribute">#[derive(Clone, FromRef)]
 </span><span class="doccomment">/// Internal State handler for the datastore object within the API
-</span><span class="kw">pub struct </span>State {
+</span><span class="kw">pub struct </span>GoatChildState {
     <span class="kw">pub </span>tx: Sender&lt;datastore::Command&gt;,
     <span class="kw">pub </span>connpool: Pool&lt;Sqlite&gt;,
     <span class="kw">pub </span>config: ConfigFile,
-    <span class="kw">pub </span>oidc_config_updated: <span class="prelude-ty">Option</span>&lt;DateTime&lt;Utc&gt;&gt;,
+    <span class="kw">pub </span>oidc_config_updated: DateTime&lt;Utc&gt;,
     <span class="kw">pub </span>oidc_config: <span class="prelude-ty">Option</span>&lt;auth::CustomProviderMetadata&gt;,
-    <span class="kw">pub </span>oidc_verifier: HashMap&lt;String, (PkceCodeVerifier, Nonce)&gt;,
+    <span class="kw">pub </span>oidc_verifier: std::collections::HashMap&lt;String, (String, Nonce)&gt;,
     <span class="kw">pub </span>csp_matchers: Vec&lt;CspUrlMatcher&gt;,
 }
 
@@ -406,12 +406,14 @@
         RegexSet::new([<span class="string">r&quot;^(/|/ui)&quot;</span>]).unwrap(),
     )];
 
+    <span class="comment">// we set this to an hour ago so it forces update on startup
+    </span><span class="kw">let </span>oidc_config_updated = Utc::now() - chrono::Duration::seconds(<span class="number">3600</span>);
     <span class="comment">// let config_clone: ConfigFile = ConfigFile::from(&amp;config);
-    </span><span class="kw">let </span>state: SharedState = Arc::new(RwLock::new(State {
+    </span><span class="kw">let </span>state = Arc::new(RwLock::new(GoatChildState {
         tx,
         connpool,
         config: (<span class="kw-2">*</span>config).clone(),
-        oidc_config_updated: <span class="prelude-val">None</span>,
+        oidc_config_updated,
         oidc_config: <span class="prelude-val">None</span>,
         oidc_verifier: HashMap::new(),
         csp_matchers,
@@ -440,21 +442,19 @@
         .nest(<span class="string">&quot;/auth&quot;</span>, auth::new())
         .layer(
             ServiceBuilder::new()
+                .layer(from_fn_with_state(state.clone(), csp::cspheaders))
                 .layer(trace_layer)
-                .layer(Extension(state))
-                .layer(from_fn(csp::cspheaders))
                 .layer(session_layer)
                 .into_inner(),
         )
+        .with_state(state)
         .route(<span class="string">&quot;/status&quot;</span>, get(generic::status));
 
     <span class="kw">let </span>router = <span class="kw">match </span>check_static_dir_exists(<span class="kw-2">&amp;</span>static_dir, <span class="kw-2">&amp;</span>config) {
         <span class="bool-val">true </span>=&gt; router.merge(SpaRouter::new(<span class="string">&quot;/static&quot;</span>, <span class="kw-2">&amp;</span>static_dir)),
         <span class="bool-val">false </span>=&gt; router,
     };
-    <span class="kw">let </span>router = router
-        .layer(CompressionLayer::new())
-        .fallback(handler_404.into_service());
+    <span class="kw">let </span>router = router.layer(CompressionLayer::new()).fallback(handler_404);
 
     <span class="kw">let </span>tls_cert = <span class="kw-2">&amp;</span>config.api_tls_cert.clone();
     <span class="kw">let </span>tls_config = RustlsConfig::from_pem_file(<span class="kw-2">&amp;</span>tls_cert, <span class="kw-2">&amp;</span>config.api_tls_key)

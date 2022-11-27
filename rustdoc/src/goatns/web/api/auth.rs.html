@@ -103,20 +103,22 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
 </pre><pre class="rust"><code><span class="comment">// use std::str::from_utf8;
 
 // use axum::middleware::Next;
 // use axum::response::Response;
-</span><span class="kw">use </span>axum::{Extension, Json};
-<span class="kw">use </span>axum_macros::debug_handler;
-<span class="kw">use </span>axum_sessions::extractors::WritableSession;
+</span><span class="kw">use </span>axum::{extract::State, Json};
+<span class="comment">// use axum_macros::debug_handler;
+</span><span class="kw">use </span>axum_sessions::extractors::WritableSession;
 <span class="kw">use </span>http::StatusCode;
 <span class="comment">// use http::{Request, StatusCode};
 </span><span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use </span><span class="kw">crate</span>::db::User;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::validate_api_token;
-<span class="kw">use </span><span class="kw">crate</span>::web::SharedState;
+<span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
 
 <span class="attribute">#[derive(Debug, Deserialize, Clone)]
 </span><span class="kw">pub struct </span>AuthPayload {
@@ -129,19 +131,18 @@
     <span class="kw">pub </span>message: String,
 }
 
-<span class="attribute">#[debug_handler]
+<span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>login(
-    state: Extension&lt;SharedState&gt;,
-    payload: Json&lt;AuthPayload&gt;,
+    State(state): State&lt;GoatState&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;AuthResponse&gt;, (StatusCode, Json&lt;AuthResponse&gt;)&gt; {
+    payload: Json&lt;AuthPayload&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(StatusCode, Json&lt;AuthResponse&gt;), (StatusCode, Json&lt;AuthResponse&gt;)&gt; {
     <span class="attribute">#[cfg(test)]
     </span><span class="macro">println!</span>(<span class="string">&quot;Got login payload: {payload:?}&quot;</span>);
     <span class="attribute">#[cfg(not(test))]
     </span><span class="macro">log::debug!</span>(<span class="string">&quot;Got login payload: {payload:?}&quot;</span>);
 
-    <span class="kw">let </span>pool = state.read().<span class="kw">await</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>pool = pool.connpool.clone();
+    <span class="kw">let </span><span class="kw-2">mut </span>pool = state.read().<span class="kw">await</span>.connpool.clone();
     <span class="kw">let </span>token = <span class="kw">match </span>User::get_token(<span class="kw-2">&amp;mut </span>pool, <span class="kw-2">&amp;</span>payload.tokenkey).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(val) =&gt; val,
         <span class="prelude-val">Err</span>(err) =&gt; {
@@ -185,9 +186,12 @@
             </span><span class="macro">println!</span>(<span class="string">&quot;action=api_login user={} result=success&quot;</span>, payload.tokenkey);
             <span class="attribute">#[cfg(not(test))]
             </span><span class="macro">log::info!</span>(<span class="string">&quot;action=api_login user={} result=success&quot;</span>, payload.tokenkey);
-            <span class="prelude-val">Ok</span>(Json(AuthResponse {
-                message: <span class="string">&quot;success&quot;</span>.to_string(),
-            }))
+            <span class="prelude-val">Ok</span>((
+                StatusCode::OK,
+                Json(AuthResponse {
+                    message: <span class="string">&quot;success&quot;</span>.to_string(),
+                }),
+            ))
         }
         <span class="prelude-val">Err</span>(err) =&gt; {
             session.destroy();
