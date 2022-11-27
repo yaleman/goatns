@@ -193,13 +193,13 @@ impl User {
             "get_zones_for_user query: {:?}",
             query_string.replace('\n', "")
         );
-        println!("Building query");
+        log::trace!("Building query");
         let query = sqlx::query(query_string).bind(limit).bind(offset);
         let query = match self.admin {
             true => query,
             false => query.bind(self.id),
         };
-        println!("About to send query");
+        log::trace!("About to send query");
 
         let rows: Vec<FileZone> = match query.fetch_all(txn).await {
             Err(error) => {

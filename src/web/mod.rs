@@ -70,7 +70,7 @@ impl GoatStateTrait for GoatState {
         self.read().await.connpool.clone()
     }
     async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata) {
-        log::warn!("Storing OIDC config!");
+        log::debug!("Storing OIDC config!");
         let mut writer = self.write().await;
         writer.oidc_config = Some(response.clone());
         writer.oidc_config_updated = DateTime::from_utc(NaiveDateTime::default(), Utc);

@@ -59,7 +59,7 @@ pub async fn zones_list(
         None => return redirect_to_login().into_response(),
     };
 
-    println!("Sending request for zones");
+    log::trace!("Sending request for zones");
     if let Err(err) = state
         .read()
         .await
