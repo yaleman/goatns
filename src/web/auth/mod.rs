@@ -103,11 +103,18 @@ pub enum ParserError {
 }
 
 /// Pull the OIDC Discovery details
-pub async fn oauth_get_discover(state: &GoatState) -> Result<CustomProviderMetadata, String> {
+pub async fn oauth_get_discover(state: &mut GoatState) -> Result<CustomProviderMetadata, String> {
+    log::debug!("Getting discovery data");
     let issuer_url = IssuerUrl::new(state.read().await.config.oauth2_config_url.clone());
-    CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client)
-        .await
-        .map_err(|e| format!("{e:?}"))
+    match CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client)
+        .await {
+            Err(e) => return Err(format!("{e:?}")),
+            Ok(val) => {
+                state.oidc_update(val.clone()).await;
+                Ok(val)
+            }
+        }
+
 }
 
 pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, String> {
@@ -119,11 +126,11 @@ pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, String> {
         true => oauth_get_discover(state).await.unwrap(),
         false => {
             log::debug!("using cached OIDC discovery data");
-            let meta = state
-                .read()
-                .await
-                .oidc_config.clone()
-                .unwrap_or(oauth_get_discover(state).await.unwrap());
+            let config = state
+            .read()
+            .await
+            .oidc_config.clone();
+            let meta = config.unwrap_or(oauth_get_discover(state).await.unwrap());
             state.oidc_update(meta.clone()).await;
             meta
         }
@@ -171,8 +178,8 @@ pub async fn parse_state_code(
     nonce: Nonce,
 ) -> Result<CustomClaimType, ParserError> {
     let auth_code = AuthorizationCode::new(query_code);
-
-    let provider_metadata = match shared_state.read().await.oidc_config.clone() {
+    let reader = shared_state.read().await;
+    let provider_metadata = match &reader.oidc_config {
         Some(value) => value,
         None => {
             return Err(ParserError::ErrorMessage {
@@ -182,7 +189,7 @@ pub async fn parse_state_code(
     };
 
     let client = CoreClient::from_provider_metadata(
-        provider_metadata,
+        provider_metadata.to_owned(),
         shared_state.oauth2_client_id().await,
         shared_state.oauth2_secret().await,
     )
