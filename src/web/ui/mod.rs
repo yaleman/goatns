@@ -3,15 +3,16 @@ use crate::db::User;
 use crate::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zones_list};
 use crate::zones::FileZone;
 use askama::Template;
-use axum::extract::{OriginalUri, Path};
+use axum::extract::{OriginalUri, Path, State};
 use axum::http::{Response, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
-use axum::{Extension, Router};
+use axum::Router;
 use axum_macros::debug_handler;
+// use axum_macros::debug_handler;
 use axum_sessions::extractors::WritableSession;
 
-use super::SharedState;
+use super::GoatState;
 
 mod user_settings;
 
@@ -35,9 +36,9 @@ macro_rules! check_logged_in {
     };
 }
 
-#[debug_handler]
+// #[debug_handler]
 pub async fn zones_list(
-    Extension(state): Extension<SharedState>,
+    State(state): State<GoatState>,
     mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
@@ -46,7 +47,6 @@ pub async fn zones_list(
     // }
     check_logged_in!(state, session, path);
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
-    let state_writer = state.write().await;
 
     let offset = 0;
     let limit = 20;
@@ -59,8 +59,10 @@ pub async fn zones_list(
         None => return redirect_to_login().into_response(),
     };
 
-    println!("Sending request for zones");
-    if let Err(err) = state_writer
+    log::trace!("Sending request for zones");
+    if let Err(err) = state
+        .read()
+        .await
         .tx
         .send(Command::GetZoneNames {
             resp: os_tx,
@@ -74,7 +76,6 @@ pub async fn zones_list(
         log::error!("failed to send GetZoneNames command to datastore: {err:?}");
         return redirect_to_dashboard().into_response();
     };
-    drop(state_writer);
 
     let zones = os_rx.await.expect("Failed to get response: {res:?}");
 
@@ -87,9 +88,10 @@ pub async fn zones_list(
         .into_response()
 }
 
+#[debug_handler]
 pub async fn zone_view(
     Path(name_or_id): Path<i64>,
-    Extension(state): Extension<SharedState>,
+    axum::extract::State(state): axum::extract::State<GoatState>,
     mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
@@ -103,13 +105,11 @@ pub async fn zone_view(
         name: None,
     };
     log::debug!("{cmd:?}");
-    let state_writer = state.write().await;
-    if let Err(err) = state_writer.tx.send(cmd).await {
+    if let Err(err) = state.read().await.tx.send(cmd).await {
         eprintln!("failed to send GetZone command to datastore: {err:?}");
         log::error!("failed to send GetZone command to datastore: {err:?}");
         return redirect_to_zones_list().into_response();
     };
-    drop(state_writer);
 
     let zone = match os_rx.await.expect("Failed to get response: {res:?}") {
         Some(value) => value,
@@ -146,9 +146,8 @@ pub async fn check_logged_in(session: &mut WritableSession, path: Uri) -> Result
     Ok(())
 }
 
-#[debug_handler]
+// #[debug_handler]
 pub async fn dashboard(
-    // Extension(_state): Extension<SharedState>,
     mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
@@ -165,10 +164,10 @@ pub async fn dashboard(
         .into_response()
 }
 
-pub fn new() -> Router {
+pub fn new() -> Router<GoatState> {
     Router::new()
         .route("/", get(dashboard))
-        .nest("/settings", user_settings::router())
         .route("/zones/:id", get(zone_view))
         .route("/zones/list", get(zones_list))
+        .nest("/settings", user_settings::router())
 }

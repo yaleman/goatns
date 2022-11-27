@@ -1,8 +1,8 @@
 use super::*;
 use crate::zones::FileZone;
 use crate::zones::FileZoneRecord;
-use axum::extract::Extension;
 use axum::extract::Path;
+use axum::extract::State;
 use axum::routing::{delete, post, put};
 use axum::Json;
 use axum_sessions::extractors::ReadableSession;
@@ -56,18 +56,18 @@ impl From<&str> for ErrorResult {
 trait APIEntity {
     /// Save the entity to the database
     async fn api_create(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
     /// HTTP Put https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT
     async fn api_update(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
     async fn api_get(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Path(id): Path<i64>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
@@ -75,10 +75,17 @@ trait APIEntity {
     /// Delete an object
     /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE
     async fn api_delete(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Path(id): Path<i64>,
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)>;
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct FileZoneResponse {
+    pub message: String,
+    pub zone: Option<FileZone>,
+    pub id: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -97,7 +104,7 @@ pub async fn version_get() -> Json<GoatNSVersion> {
     Json::from(GoatNSVersion::default())
 }
 
-pub fn new() -> Router {
+pub fn new() -> Router<GoatState> {
     Router::new()
         // just zone things
         .route("/zone", post(FileZone::api_create))
@@ -108,6 +115,5 @@ pub fn new() -> Router {
         .route("/record", put(FileZoneRecord::api_update))
         .route("/record/:id", get(FileZoneRecord::api_get))
         .route("/record/:id", delete(FileZoneRecord::api_delete))
-        // .layer(from_fn(auth::check_auth))
         .route("/login", post(auth::login))
 }

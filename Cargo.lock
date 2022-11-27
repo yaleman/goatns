@@ -257,7 +257,6 @@ dependencies = [
  "bitflags",
  "bytes",
  "futures-util",
- "headers",
  "http",
  "http-body",
  "hyper",
@@ -268,8 +267,6 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "serde",
- "serde_json",
- "serde_urlencoded",
  "sync_wrapper",
  "tokio",
  "tower",
@@ -286,6 +283,7 @@ checksum = "744864363a200a5e724a7e61bc8c11b6628cf2e3ec519c8a1a48e609a8156b40"
 dependencies = [
  "async-trait",
  "axum-core 0.3.0",
+ "axum-macros",
  "bitflags",
  "bytes",
  "futures-util",
@@ -301,7 +299,11 @@ dependencies = [
  "pin-project-lite",
  "rustversion",
  "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "serde_urlencoded",
  "sync_wrapper",
+ "tokio",
  "tower",
  "tower-http",
  "tower-layer",
@@ -355,11 +357,11 @@ dependencies = [
 
 [[package]]
 name = "axum-extra"
-version = "0.3.7"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69034b3b0fd97923eee2ce8a47540edb21e07f48f87f67d44bb4271cec622bdb"
+checksum = "d1933e5206aa0a213ae64bbd53b3006f4dc171f02314fb5efaf4d2212d2705b8"
 dependencies = [
- "axum 0.5.17",
+ "axum 0.6.0",
  "bytes",
  "cookie",
  "futures-util",
@@ -375,9 +377,9 @@ dependencies = [
 
 [[package]]
 name = "axum-macros"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6293dae2ec708e679da6736e857cf8532886ef258e92930f38279c12641628b8"
+checksum = "e4df0fc33ada14a338b799002f7e8657711422b25d4e16afb032708d6b185621"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -407,12 +409,12 @@ dependencies = [
 
 [[package]]
 name = "axum-sessions"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0439981de4c1e72fa9e4e762e79f5c7efd9a9b3c2a6db62082bcd53781c557e7"
+checksum = "2eb201ee35b541ff31dbb69457fc7c5a3678cdeff488aa156fe194cd6da37b9c"
 dependencies = [
  "async-session",
- "axum 0.5.17",
+ "axum 0.6.0",
  "axum-extra",
  "futures",
  "http-body",
@@ -1410,7 +1412,7 @@ dependencies = [
  "askama",
  "async-sqlx-session",
  "async-trait",
- "axum 0.5.17",
+ "axum 0.6.0",
  "axum-csp",
  "axum-extra",
  "axum-macros",

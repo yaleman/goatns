@@ -40,12 +40,23 @@
     <button type="submit" class="btn btn-primary">New API Token</button>
 </form>
 
+{% if !tokens.is_empty() %}
+
+<div class="row">
+    <div class="col">&nbsp;</div>
+    <div class="col-4"><strong>Created</strong></div>
+    <div class="col-4"><strong>Expires</strong></div>
+    <div class="col-2 py-1">&nbsp;</div>
+</div>
+
+{% endif %}
+
 {% for token in tokens %}
 <div class="row">
     <div class="col"><strong>{{token.name}}</strong></div>
-    <div class="col-4">Created: {{token.issued.to_rfc3339()}}</div>
+    <div class="col-4">{{token.issued.to_rfc3339()}}</div>
     {% if token.expiry.is_some() %}
-    <div class="col-4">Expires: {{token.expiry.unwrap().to_rfc3339()}}</div>
+    <div class="col-4">{{token.expiry.unwrap().to_rfc3339()}}</div>
     {% else %}
     <div class="col-4">Expires: Never!</div>
     {% endif %}

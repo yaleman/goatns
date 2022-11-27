@@ -1,6 +1,6 @@
 //! Goats are cool, but they make for poor DNS record stores. So here's an authoritative DNS server INSPIRED by goats.
 
-#![warn(clippy::complexity)]
+// #![warn(clippy::complexity)]
 // #![warn(clippy::cargo)]
 #![warn(clippy::perf)]
 #![deny(unsafe_code)]
