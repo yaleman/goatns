@@ -311,3 +311,31 @@ pub fn start_channels() -> (
     (datastore_sender, datastore_receiver) = mpsc::channel(crate::MAX_IN_FLIGHT);
     (agent_tx, datastore_sender, datastore_receiver)
 }
+
+/// Compares the TLD to the list of valid TLDs - usually from `allowed_tlds` in [crate::config::ConfigFile]
+///```
+/// use goatns::utils::check_valid_tld;
+///
+/// let valid_tlds = vec![];
+/// let zone_name = "hello.example.goat";
+/// assert_eq!(check_valid_tld(&zone_name, &valid_tlds), true);
+///
+/// let valid_tlds = vec!["goat".to_string()];
+/// let zone_name = "hello.example.goat";
+/// assert_eq!(check_valid_tld(&zone_name, &valid_tlds), true);
+///
+/// let valid_tlds = vec!["cheese".to_string()];
+/// let zone_name = "hello.example.goat";
+/// assert_eq!(check_valid_tld(&zone_name, &valid_tlds), false);
+/// ```
+pub fn check_valid_tld(zone_name: &str, allowed_tlds: &Vec<String>) -> bool {
+    if allowed_tlds.is_empty() {
+        return true;
+    }
+    for tld in allowed_tlds.iter() {
+        if zone_name.ends_with(&format!(".{tld}")) {
+            return true;
+        }
+    }
+    false
+}

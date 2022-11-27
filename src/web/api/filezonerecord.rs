@@ -59,7 +59,7 @@ impl APIEntity for FileZoneRecord {
             }
         }
     }
-    /// HTTP Put https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT
+    /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
     async fn api_update(
         State(state): State<GoatState>,
         session: ReadableSession,
@@ -118,7 +118,7 @@ impl APIEntity for FileZoneRecord {
     }
 
     /// Delete an object
-    /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE
+    /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
     async fn api_delete(
         State(state): State<GoatState>,
         session: ReadableSession,
