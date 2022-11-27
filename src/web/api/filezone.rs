@@ -4,6 +4,7 @@ use crate::db::DBEntity;
 use crate::db::User;
 use crate::db::ZoneOwnership;
 use crate::error_result_json;
+use crate::utils::check_valid_tld;
 use crate::zones::FileZone;
 use axum::extract::Path;
 use axum::Json;
@@ -40,6 +41,10 @@ impl APIEntity for FileZone {
                 return error_result_json!(res.as_str(), StatusCode::BAD_REQUEST);
             }
         };
+
+        if !check_valid_tld(&zone.name, &state.read().await.config.allowed_tlds) {
+            return error_result_json!("Invalid TLD for this system", StatusCode::BAD_REQUEST);
+        }
 
         // check to see if the zone exists
         let mut txn = state.connpool().await.begin().await.unwrap();
@@ -156,6 +161,10 @@ impl APIEntity for FileZone {
             }
         };
         println!("deser'd zone: {zone:?}");
+
+        if !check_valid_tld(&zone.name, &state.read().await.config.allowed_tlds) {
+            return error_result_json!("Invalid TLD for this system", StatusCode::BAD_REQUEST);
+        }
 
         // get a db transaction
         let connpool = state.connpool().await.clone();

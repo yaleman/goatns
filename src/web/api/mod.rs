@@ -60,7 +60,7 @@ trait APIEntity {
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
-    /// HTTP Put https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT
+    /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
     async fn api_update(
         State(state): State<GoatState>,
         session: ReadableSession,
@@ -73,7 +73,7 @@ trait APIEntity {
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
 
     /// Delete an object
-    /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE
+    /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
     async fn api_delete(
         State(state): State<GoatState>,
         session: ReadableSession,

@@ -50,6 +50,8 @@ pub struct ConfigFile {
     pub sqlite_path: String,
     /// Where the JSON zone file is
     pub zone_file: Option<String>,
+    /// List of "valid" TLDs - if this is empty let anything be created
+    pub allowed_tlds: Vec<String>,
     /// IP Allow lists
     #[serde(flatten)]
     pub ip_allow_lists: IPAllowList,
@@ -271,6 +273,7 @@ impl Default for ConfigFile {
             log_level: "INFO".to_string(),
             tcp_client_timeout: 5,
             enable_hinfo: false,
+            allowed_tlds: vec![],
             ip_allow_lists: IPAllowList {
                 // axfr: vec![],
                 shutdown: vec![],
@@ -375,6 +378,9 @@ impl From<Config> for ConfigFile {
             sqlite_path: config
                 .get("sqlite_path")
                 .unwrap_or(Self::default().sqlite_path),
+            allowed_tlds: config
+                .get("allowed_tlds")
+                .unwrap_or(Self::default().allowed_tlds),
             zone_file: config.get("zone_file").unwrap_or(Self::default().zone_file),
             enable_api: config
                 .get("enable_api")

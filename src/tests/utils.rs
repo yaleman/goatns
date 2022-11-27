@@ -2,7 +2,7 @@ use std::str::from_utf8;
 
 use url::Url;
 
-use crate::utils::{find_tail_match, loc_size_to_u8, name_as_bytes};
+use crate::utils::{check_valid_tld, find_tail_match, loc_size_to_u8, name_as_bytes};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -99,4 +99,28 @@ pub fn test_name_bytes_with_tail_compression() {
     let result = name_as_bytes(test_input, Some(12), Some(&example_com));
 
     assert_eq!(result, expected_result);
+}
+
+#[test]
+fn test_test_valid_tld() {
+    // empty list
+    let valid_tlds = vec![];
+    let zone_name = "hello.example.goat";
+    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), true);
+
+    let valid_tlds = vec!["goat".to_string()];
+    let zone_name = "hello.example.goat";
+    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), true);
+
+    let valid_tlds = vec!["cheese".to_string()];
+    let zone_name = "hello.example.goat";
+    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), false);
+
+    let valid_tlds = vec!["goat".to_string()];
+    let zone_name = "hello.example.happygoat";
+    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), false);
+
+    let valid_tlds = vec!["goat".to_string()];
+    let zone_name = "hello.example.goat.cheese";
+    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), false);
 }
