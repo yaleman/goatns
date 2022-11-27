@@ -5,7 +5,6 @@ use crate::db::User;
 use crate::db::ZoneOwnership;
 use crate::error_result_json;
 use crate::zones::FileZone;
-use axum::extract::Extension;
 use axum::extract::Path;
 use axum::Json;
 use axum_sessions::extractors::ReadableSession;
@@ -23,7 +22,7 @@ pub struct FileZoneResponse {
 #[async_trait]
 impl APIEntity for FileZone {
     async fn api_create(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
@@ -129,7 +128,7 @@ impl APIEntity for FileZone {
     }
 
     async fn api_update(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
@@ -204,7 +203,7 @@ impl APIEntity for FileZone {
     }
 
     async fn api_delete(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Path(id): Path<i64>,
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
@@ -295,7 +294,7 @@ impl APIEntity for FileZone {
         res
     }
     async fn api_get(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Path(id): Path<i64>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {

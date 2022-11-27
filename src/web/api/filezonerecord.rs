@@ -9,7 +9,7 @@ use super::*;
 impl APIEntity for FileZoneRecord {
     /// Save the entity to the database
     async fn api_create(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
@@ -61,7 +61,7 @@ impl APIEntity for FileZoneRecord {
     }
     /// HTTP Put https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT
     async fn api_update(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
@@ -99,7 +99,7 @@ impl APIEntity for FileZoneRecord {
         Ok(Json(serde_json::to_string(&res).unwrap()))
     }
     async fn api_get(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Path(id): Path<i64>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {
@@ -120,7 +120,7 @@ impl APIEntity for FileZoneRecord {
     /// Delete an object
     /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE
     async fn api_delete(
-        state: Extension<SharedState>,
+        State(state): State<GoatState>,
         session: ReadableSession,
         Path(id): Path<i64>,
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
