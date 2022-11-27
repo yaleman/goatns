@@ -1,19 +1,19 @@
 use std::time::Duration;
 
 use super::utils::{redirect_to_dashboard, redirect_to_home};
-use super::SharedState;
+use super::GoatState;
 use crate::config::ConfigFile;
 use crate::db::{DBEntity, User};
-use crate::web::SharedStateTrait;
+use crate::web::GoatStateTrait;
 use crate::COOKIE_NAME;
 
 use askama::Template;
 use async_sqlx_session::SqliteSessionStore;
-use axum::extract::Query;
+use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
-use axum::{Extension, Form, Router};
-use axum_macros::debug_handler;
+use axum::{Form, Router};
+// use axum_macros::debug_handler;
 use axum_sessions::extractors::WritableSession;
 use axum_sessions::SessionLayer;
 use chrono::{DateTime, Utc};
@@ -103,18 +103,15 @@ pub enum ParserError {
 }
 
 /// Pull the OIDC Discovery details
-pub async fn oauth_get_discover(state: &SharedState) -> Result<CustomProviderMetadata, String> {
-    let issuer_url = IssuerUrl::new(state.config().await.oauth2_config_url);
+pub async fn oauth_get_discover(state: &GoatState) -> Result<CustomProviderMetadata, String> {
+    let issuer_url = IssuerUrl::new(state.read().await.config.oauth2_config_url.clone());
     CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client)
         .await
         .map_err(|e| format!("{e:?}"))
 }
 
-pub async fn oauth_start(state: &SharedState) -> Result<url::Url, String> {
-    let last_updated: DateTime<Utc> = match state.read().await.oidc_config_updated {
-        None => Utc::now(),
-        Some(val) => val,
-    };
+pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, String> {
+    let last_updated: DateTime<Utc> = state.read().await.oidc_config_updated;
     let now: DateTime<Utc> = Utc::now();
 
     let delta = now - last_updated;
@@ -123,8 +120,9 @@ pub async fn oauth_start(state: &SharedState) -> Result<url::Url, String> {
         false => {
             log::debug!("using cached OIDC discovery data");
             let meta = state
-                .oidc_config()
+                .read()
                 .await
+                .oidc_config.clone()
                 .unwrap_or(oauth_get_discover(state).await.unwrap());
             state.oidc_update(meta.clone()).await;
             meta
@@ -142,7 +140,7 @@ pub async fn oauth_start(state: &SharedState) -> Result<url::Url, String> {
     // This example will be running its own server at localhost:8080.
     // See below for the server implementation.
     .set_redirect_uri(RedirectUrl::from_url(
-        state.config().await.oauth2_redirect_url,
+        state.read().await.config.oauth2_redirect_url.clone(),
     ));
 
     // Generate the authorization URL to which we'll redirect the user.
@@ -158,20 +156,23 @@ pub async fn oauth_start(state: &SharedState) -> Result<url::Url, String> {
         .set_pkce_challenge(pkce_challenge)
         .url();
     state
-        .push_verifier(csrf_state.secret().to_owned(), (pkce_verifier, nonce))
+        .push_verifier(
+            csrf_state.secret().to_owned(),
+            (pkce_verifier.secret().to_owned(), nonce),
+        )
         .await;
     Ok(authorize_url)
 }
 
 pub async fn parse_state_code(
-    shared_state: &SharedState,
+    shared_state: &GoatState,
     query_code: String,
     pkce_verifier: PkceCodeVerifier,
     nonce: Nonce,
 ) -> Result<CustomClaimType, ParserError> {
     let auth_code = AuthorizationCode::new(query_code);
 
-    let provider_metadata = match shared_state.oidc_config().await {
+    let provider_metadata = match shared_state.read().await.oidc_config.clone() {
         Some(value) => value,
         None => {
             return Err(ParserError::ErrorMessage {
@@ -186,7 +187,7 @@ pub async fn parse_state_code(
         shared_state.oauth2_secret().await,
     )
     .set_redirect_uri(RedirectUrl::from_url(
-        shared_state.config().await.oauth2_redirect_url,
+        shared_state.read().await.config.oauth2_redirect_url.clone(),
     ));
     let verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
     assert_eq!(verifier_copy.secret(), pkce_verifier.secret());
@@ -226,11 +227,11 @@ pub async fn parse_state_code(
         .cloned()
 }
 
-#[debug_handler]
+// #[debug_handler]
 pub async fn login(
-    query: Query<QueryForLogin>,
+    Query(query): Query<QueryForLogin>,
     mut session: WritableSession,
-    Extension(state): Extension<SharedState>,
+    axum::extract::State(mut state): axum::extract::State<GoatState>,
 ) -> impl IntoResponse {
     // check if we've got an existing, valid session
     if !session.is_expired() {
@@ -242,7 +243,7 @@ pub async fn login(
     }
 
     if query.state.is_none() || query.code.is_none() {
-        let auth_url = &oauth_start(&state).await.unwrap().to_string();
+        let auth_url = &oauth_start(&mut state).await.unwrap().to_string();
         return Redirect::to(auth_url).into_response();
     }
 
@@ -251,19 +252,19 @@ pub async fn login(
 
     let verifier = state.pop_verifier(query.state.clone().unwrap()).await;
 
-    let (pkce_verifier, nonce) = match verifier {
+    let (pkce_verifier_secret, nonce) = match verifier {
         Some((p, n)) => (p, n),
         None => {
             log::error!("Couldn't find a sesssion, redirecting...");
             return Redirect::to("/auth/login").into_response();
         }
     };
-    let verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
+    let verifier_copy = PkceCodeVerifier::new(pkce_verifier_secret.clone());
 
     let claims = parse_state_code(
         &state,
         query.code.clone().unwrap(),
-        pkce_verifier,
+        PkceCodeVerifier::new(pkce_verifier_secret),
         nonce.clone(),
     )
     .await;
@@ -279,10 +280,11 @@ pub async fn login(
                 Err(error) => {
                     match error {
                         sqlx::Error::RowNotFound => {
-                            if !state.config().await.user_auto_provisioning {
+                            if !state.read().await.config.user_auto_provisioning {
                                 // TODO: show a "sorry" page when auto-provisioning's not enabled
                                 // log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
-                                let admin_contact = state.config().await.admin_contact.to_string();
+                                let admin_contact =
+                                    state.read().await.config.admin_contact.to_string();
                                 // let admin_contact = match admin_contact {
                                 //     Some(value) => value.to_string(),
                                 //     None => "the administrator".to_string(),
@@ -310,7 +312,10 @@ pub async fn login(
                             let pagebody = new_user_page.render().unwrap();
                             // push it back into the stack for signup
                             state
-                                .push_verifier(query.state.clone().unwrap(), (verifier_copy, nonce))
+                                .push_verifier(
+                                    query.state.clone().unwrap(),
+                                    (verifier_copy.secret().to_owned(), nonce),
+                                )
                                 .await;
 
                             return Response::builder()
@@ -355,7 +360,7 @@ pub async fn login(
         Err(error) => match error {
             ParserError::Redirect { content } => content.into_response(),
             ParserError::ErrorMessage { content } => {
-                log::debug!("{content}");
+                log::debug!("Failed to parse state: {content}");
                 todo!();
             }
             ParserError::ClaimsVerificationError { content } => {
@@ -392,7 +397,6 @@ pub async fn build_auth_stores(
         // TODO: cookie domain isn't working because it sets .(hostname) for some reason.
         // .with_cookie_domain(config.hostname.clone())
         .with_cookie_name(COOKIE_NAME)
-        .with_save_unchanged(false)
 }
 
 #[derive(Deserialize, Debug)]
@@ -404,9 +408,9 @@ pub struct SignupForm {
 
 /// /auth/signup
 pub async fn signup(
-    Extension(state): Extension<SharedState>,
+    State(mut state): State<GoatState>,
     Form(form): Form<SignupForm>,
-) -> impl IntoResponse {
+) -> Result<Response, ()> {
     log::debug!("Dumping form: {form:?}");
 
     let query_state = form.state;
@@ -417,22 +421,26 @@ pub async fn signup(
         Some((p, n)) => (p, n),
         None => {
             log::error!("Couldn't find a signup session, redirecting user...");
-            return Redirect::to("/auth/login").into_response();
+            return Ok(Redirect::to("/auth/login").into_response());
         }
     };
-    // let verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
-
-    let claims = parse_state_code(&state, form.code, pkce_verifier, nonce.clone()).await;
+    let claims = parse_state_code(
+        &state,
+        form.code,
+        PkceCodeVerifier::new(pkce_verifier),
+        nonce.clone(),
+    )
+    .await;
     match claims {
         Err(error) => match error {
-            ParserError::Redirect { content } => content.into_response(),
+            ParserError::Redirect { content } => Ok(content.into_response()),
             ParserError::ErrorMessage { content } => {
                 log::debug!("{content}");
                 todo!();
             }
             ParserError::ClaimsVerificationError { content } => {
                 log::error!("Failed to verify claim token: {content:?}");
-                redirect_to_home().into_response()
+                Ok(redirect_to_home().into_response())
             }
         },
         Ok(claims) => {
@@ -448,18 +456,18 @@ pub async fn signup(
                 admin: false,
             };
             match user.save(&state.connpool().await).await {
-                Ok(_) => redirect_to_dashboard().into_response(),
+                Ok(_) => Ok(redirect_to_dashboard().into_response()),
                 Err(error) => {
                     log::debug!("Failed to save new user signup... oh no! {error:?}");
                     // TODO: throw an error page on this one
-                    redirect_to_home().into_response()
+                    Ok(redirect_to_home().into_response())
                 }
             }
         }
     }
 }
 
-pub fn new() -> Router {
+pub fn new() -> Router<GoatState> {
     Router::new()
         .route("/login", get(login))
         .route("/logout", get(logout))

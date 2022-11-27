@@ -1,26 +1,24 @@
+use axum::extract::State;
 use axum::middleware::Next;
 use axum::response::Response;
 use axum_csp::*;
-use http::{HeaderValue, Request, StatusCode};
+use http::{HeaderValue, Request};
 
-use crate::web::SharedState;
+use crate::web::GoatState;
 
-pub async fn cspheaders<B>(req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
+pub async fn cspheaders<B>(
+    State(state): State<GoatState>,
+    req: Request<B>,
+    next: Next<B>,
+) -> Response {
     let uri: String = req.uri().path().to_string();
-    let state: Option<&SharedState> = req.extensions().get();
-    let url_matcher: Option<CspUrlMatcher> = match state {
-        None => {
-            log::error!("Couldn't get state in request :(");
+    let url_matcher: Option<CspUrlMatcher> = state.read().await.csp_matchers.iter().find_map(|c| {
+        if c.matcher.is_match(&uri) {
+            Some(c.to_owned())
+        } else {
             None
         }
-        Some(state) => state.read().await.csp_matchers.iter().find_map(|c| {
-            if c.matcher.is_match(&uri) {
-                Some(c.to_owned())
-            } else {
-                None
-            }
-        }),
-    };
+    });
 
     // wait for the middleware to come back
     let mut response = next.run(req).await;
@@ -36,5 +34,5 @@ pub async fn cspheaders<B>(req: Request<B>, next: Next<B>) -> Result<Response, S
         log::debug!("didn't match uri");
     }
 
-    Ok(response)
+    response
 }

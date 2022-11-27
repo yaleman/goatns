@@ -6,18 +6,19 @@ use crate::config::ConfigFile;
 use crate::datastore;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
-use axum::handler::Handler;
+// use axum::handler::Handler;
 use axum::http::StatusCode;
-use axum::middleware::from_fn;
+use axum::middleware::from_fn_with_state;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{Extension, Router};
+use axum::Router;
 use axum_csp::CspUrlMatcher;
 use axum_extra::routing::SpaRouter;
+use axum_macros::FromRef;
 use axum_server::tls_rustls::RustlsConfig;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
-use oauth2::{ClientId, ClientSecret, PkceCodeVerifier};
+use oauth2::{ClientId, ClientSecret};
 use openidconnect::Nonce;
 use regex::RegexSet;
 use sqlx::{Pool, Sqlite};
@@ -48,44 +49,37 @@ pub const STATUS_OK: &str = "Ok";
 
 // TODO: look at the ServiceBuilder layers bits here: https://github.com/tokio-rs/axum/blob/dea36db400f27c025b646e5720b9a6784ea4db6e/examples/key-value-store/src/main.rs
 
-type SharedState = Arc<RwLock<State>>;
+// type GoatState = Arc<RwLock<State>>;
 
 #[async_trait]
-pub trait SharedStateTrait {
+pub trait GoatStateTrait {
     async fn connpool(&self) -> Pool<Sqlite>;
-    async fn config(&self) -> ConfigFile;
-    async fn oidc_config(&self) -> Option<CustomProviderMetadata>;
-    async fn oidc_update(&self, response: CustomProviderMetadata);
-    async fn pop_verifier(&self, csrftoken: String) -> Option<(PkceCodeVerifier, Nonce)>;
+    // async fn config(&self) -> ConfigFile;
+    // async fn oidc_config(&self) -> Option<CustomProviderMetadata>;
+    async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata);
+    async fn pop_verifier<'life0>(&'life0 mut self, csrftoken: String) -> Option<(String, Nonce)>;
     async fn oauth2_client_id(&self) -> ClientId;
     async fn oauth2_secret(&self) -> Option<ClientSecret>;
-    async fn push_verifier(&self, csrftoken: String, verifier: (PkceCodeVerifier, Nonce));
+    async fn push_verifier(&mut self, csrftoken: String, verifier: (String, Nonce));
 }
 
 #[async_trait]
-impl SharedStateTrait for SharedState {
+impl GoatStateTrait for GoatState {
     /// Get an sqlite connection pool
     async fn connpool(&self) -> Pool<Sqlite> {
-        self.write().await.connpool.clone()
+        self.read().await.connpool.clone()
     }
-    /// Get a copy of the config
-    async fn config(&self) -> ConfigFile {
-        self.read().await.config.clone()
-    }
-    /// Get a copy of the config
-    async fn oidc_config(&self) -> Option<CustomProviderMetadata> {
-        self.read().await.oidc_config.clone()
-    }
-    async fn oidc_update(&self, response: CustomProviderMetadata) {
+    async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata) {
+        log::warn!("Storing OIDC config!");
         let mut writer = self.write().await;
         writer.oidc_config = Some(response.clone());
-        writer.oidc_config_updated = Some(DateTime::from_utc(NaiveDateTime::default(), Utc));
+        writer.oidc_config_updated = DateTime::from_utc(NaiveDateTime::default(), Utc);
+        drop(writer);
     }
 
-    async fn pop_verifier(&self, csrftoken: String) -> Option<(PkceCodeVerifier, Nonce)> {
+    async fn pop_verifier<'life0>(&'life0 mut self, csrftoken: String) -> Option<(String, Nonce)> {
         let mut writer = self.write().await;
-        let result = writer.oidc_verifier.remove_entry(&csrftoken);
-        result.map(|(_, (pkce, nonce))| (pkce, nonce))
+        writer.oidc_verifier.remove(&csrftoken)
     }
     async fn oauth2_client_id(&self) -> ClientId {
         let client_id = self.read().await.config.oauth2_client_id.clone();
@@ -98,21 +92,24 @@ impl SharedStateTrait for SharedState {
     }
 
     /// Store the PKCE verifier details server-side for when the user comes back with their auth token
-    async fn push_verifier(&self, csrftoken: String, verifier: (PkceCodeVerifier, Nonce)) {
+    async fn push_verifier(&mut self, csrftoken: String, verifier: (String, Nonce)) {
         let mut writer = self.write().await;
+        log::debug!("Pushing CSRF token into shared state: token={csrftoken}");
         writer.oidc_verifier.insert(csrftoken, verifier);
     }
 }
 
-#[derive(Debug)]
+type GoatState = Arc<RwLock<GoatChildState>>;
+
+#[derive(Clone, FromRef)]
 /// Internal State handler for the datastore object within the API
-pub struct State {
+pub struct GoatChildState {
     pub tx: Sender<datastore::Command>,
     pub connpool: Pool<Sqlite>,
     pub config: ConfigFile,
-    pub oidc_config_updated: Option<DateTime<Utc>>,
+    pub oidc_config_updated: DateTime<Utc>,
     pub oidc_config: Option<auth::CustomProviderMetadata>,
-    pub oidc_verifier: HashMap<String, (PkceCodeVerifier, Nonce)>,
+    pub oidc_verifier: std::collections::HashMap<String, (String, Nonce)>,
     pub csp_matchers: Vec<CspUrlMatcher>,
 }
 
@@ -167,12 +164,15 @@ pub async fn build(
         RegexSet::new([r"^(/|/ui)"]).unwrap(),
     )];
 
+
+    // we set this to an hour ago so it forces update on startup
+    let oidc_config_updated = Utc::now() - chrono::Duration::seconds(3600);
     // let config_clone: ConfigFile = ConfigFile::from(&config);
-    let state: SharedState = Arc::new(RwLock::new(State {
+    let state = Arc::new(RwLock::new(GoatChildState {
         tx,
         connpool,
         config: (*config).clone(),
-        oidc_config_updated: None,
+        oidc_config_updated,
         oidc_config: None,
         oidc_verifier: HashMap::new(),
         csp_matchers,
@@ -201,21 +201,19 @@ pub async fn build(
         .nest("/auth", auth::new())
         .layer(
             ServiceBuilder::new()
+                .layer(from_fn_with_state(state.clone(), csp::cspheaders))
                 .layer(trace_layer)
-                .layer(Extension(state))
-                .layer(from_fn(csp::cspheaders))
                 .layer(session_layer)
                 .into_inner(),
         )
+        .with_state(state)
         .route("/status", get(generic::status));
 
     let router = match check_static_dir_exists(&static_dir, &config) {
         true => router.merge(SpaRouter::new("/static", &static_dir)),
         false => router,
     };
-    let router = router
-        .layer(CompressionLayer::new())
-        .fallback(handler_404.into_service());
+    let router = router.layer(CompressionLayer::new()).fallback(handler_404);
 
     let tls_cert = &config.api_tls_cert.clone();
     let tls_config = RustlsConfig::from_pem_file(&tls_cert, &config.api_tls_key)

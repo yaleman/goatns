@@ -6,11 +6,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use askama::Template;
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::response::{Html, Redirect};
-use axum::routing::{get, post};
-use axum::{Extension, Form, Router};
+use axum::routing::get;
+use axum::routing::post;
+use axum::{Form, Router};
 use axum_macros::debug_handler;
+// use axum_macros::debug_handler;
 use axum_sessions::extractors::WritableSession;
 use chrono::{DateTime, Duration, Utc};
 use enum_iterator::Sequence;
@@ -19,7 +21,7 @@ use oauth2::CsrfToken;
 use serde::{Deserialize, Serialize};
 
 use crate::db::UserAuthToken;
-use crate::web::SharedState;
+use crate::web::GoatState;
 
 static SESSION_CSRFTOKEN_FIELD: &str = "api_token_csrf_token";
 
@@ -28,7 +30,7 @@ static SESSION_CSRFTOKEN_FIELD: &str = "api_token_csrf_token";
 struct Settings;
 
 /// The user settings page at /ui/settings
-pub async fn settings(Extension(_state): Extension<SharedState>) -> Html<String> {
+pub async fn settings(State(_state): State<GoatState>) -> Html<String> {
     let context = Settings;
 
     Html::from(context.render().unwrap())
@@ -119,9 +121,10 @@ fn store_api_csrf_token(
 }
 
 /// The user settings page at /ui/settings/api_tokens
+#[debug_handler]
 pub async fn api_tokens_get(
-    Extension(state): Extension<SharedState>,
     mut session: WritableSession,
+    State(state): State<GoatState>,
 ) -> Result<Html<String>, Redirect> {
     check_logged_in(
         &mut session,
@@ -262,11 +265,11 @@ pub struct ApiTokenPage {
 }
 
 /// The user settings page at /ui/settings
-#[debug_handler]
+// #[debug_handler]
 pub async fn api_tokens_post(
-    Extension(state): Extension<SharedState>,
-    Form(form): Form<ApiTokenPage>,
     mut session: WritableSession,
+    State(state): State<GoatState>,
+    Form(form): Form<ApiTokenPage>,
 ) -> Result<Html<String>, Redirect> {
     eprintln!("Got form: {form:?}");
 
@@ -403,9 +406,9 @@ pub struct ApiTokenDelete {
     pub csrftoken: String,
 }
 
-#[debug_handler]
+// #[debug_handler]
 pub async fn api_tokens_delete_get(
-    Extension(state): Extension<SharedState>,
+    axum::extract::State(state): axum::extract::State<GoatState>,
     // Form(form): Form<ApiTokenPage>,
     Path(id): Path<String>,
     mut session: WritableSession,
@@ -463,11 +466,11 @@ pub async fn api_tokens_delete_get(
     Ok(Html::from(context.render().unwrap()))
 }
 
-#[debug_handler]
+// #[debug_handler]
 pub async fn api_tokens_delete_post(
-    Extension(state): Extension<SharedState>,
-    Form(form): Form<ApiTokenDelete>,
+    State(state): State<GoatState>,
     mut session: WritableSession,
+    Form(form): Form<ApiTokenDelete>,
 ) -> Result<Html<String>, Redirect> {
     check_logged_in(
         &mut session,
@@ -483,8 +486,7 @@ pub async fn api_tokens_delete_post(
 
     log::debug!("Deleting token from Form: {form:?}");
     let user: User = session.get("user").unwrap();
-    let state_reader = state.read().await;
-    let pool = state_reader.connpool.clone();
+    let pool = state.read().await.connpool.clone();
     let uat = match UserAuthToken::get(&pool, form.id).await {
         Err(err) => {
             log::debug!("Requested delete for existing token: {err:?}");
@@ -516,7 +518,7 @@ pub async fn api_tokens_delete_post(
     Err(Redirect::to("/ui/settings/api_tokens"))
 }
 /// Build the router for user settings
-pub fn router() -> Router {
+pub fn router() -> Router<GoatState> {
     Router::new()
         .route("/", get(settings))
         .route("/api_tokens", get(api_tokens_get))

@@ -2,8 +2,8 @@
 
 // use axum::middleware::Next;
 // use axum::response::Response;
-use axum::{Extension, Json};
-use axum_macros::debug_handler;
+use axum::{extract::State, Json};
+// use axum_macros::debug_handler;
 use axum_sessions::extractors::WritableSession;
 use http::StatusCode;
 // use http::{Request, StatusCode};
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::User;
 use crate::web::utils::validate_api_token;
-use crate::web::SharedState;
+use crate::web::GoatState;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AuthPayload {
@@ -24,19 +24,18 @@ pub struct AuthResponse {
     pub message: String,
 }
 
-#[debug_handler]
+// #[debug_handler]
 pub async fn login(
-    state: Extension<SharedState>,
-    payload: Json<AuthPayload>,
+    State(state): State<GoatState>,
     mut session: WritableSession,
-) -> Result<Json<AuthResponse>, (StatusCode, Json<AuthResponse>)> {
+    payload: Json<AuthPayload>,
+) -> Result<(StatusCode, Json<AuthResponse>), (StatusCode, Json<AuthResponse>)> {
     #[cfg(test)]
     println!("Got login payload: {payload:?}");
     #[cfg(not(test))]
     log::debug!("Got login payload: {payload:?}");
 
-    let pool = state.read().await;
-    let mut pool = pool.connpool.clone();
+    let mut pool = state.read().await.connpool.clone();
     let token = match User::get_token(&mut pool, &payload.tokenkey).await {
         Ok(val) => val,
         Err(err) => {
@@ -80,9 +79,12 @@ pub async fn login(
             println!("action=api_login user={} result=success", payload.tokenkey);
             #[cfg(not(test))]
             log::info!("action=api_login user={} result=success", payload.tokenkey);
-            Ok(Json(AuthResponse {
-                message: "success".to_string(),
-            }))
+            Ok((
+                StatusCode::OK,
+                Json(AuthResponse {
+                    message: "success".to_string(),
+                }),
+            ))
         }
         Err(err) => {
             session.destroy();
