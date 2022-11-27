@@ -14,8 +14,7 @@ use std::str::from_utf8;
 #[serde(rename(serialize = "UPPERCASE"))]
 pub struct FileZone {
     /// Database row ID
-    #[serde(default = "default_id")]
-    pub id: i64,
+    pub id: Option<i64>,
     /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
     // #[serde(rename(serialize = "MNAME"))]
     pub name: String,
@@ -62,11 +61,10 @@ pub fn rname_default() -> String {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct FileZoneRecord {
     /// Foreign key to id in [FileZone::id]
-    #[serde(default = "default_id")]
-    pub zoneid: i64,
+    pub zoneid: Option<i64>,
     /// Database row ID
     #[serde(default)]
-    pub id: i64,
+    pub id: Option<i64>,
     #[serde(default = "default_record_name")]
     pub name: String,
     pub rrtype: String,
@@ -74,11 +72,6 @@ pub struct FileZoneRecord {
     pub class: RecordClass,
     pub rdata: String,
     pub ttl: u32,
-}
-
-/// If you don't specify a name, it's the root.
-fn default_id() -> i64 {
-    1
 }
 /// If you don't specify a name, it's the root.
 fn default_record_name() -> String {
@@ -92,7 +85,7 @@ fn default_record_class() -> RecordClass {
 impl Display for FileZoneRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
-            "FileZoneRecord {{ name={} class={} rrtype={}, ttl={}, zoneid={}, id={}, rdata={} }}",
+            "FileZoneRecord {{ name={} class={} rrtype={}, ttl={}, zoneid={:#?}, id={:#?}, rdata={} }}",
             self.name, self.class, self.rrtype, self.ttl, self.zoneid, self.id, self.rdata
         ))
     }

@@ -1,7 +1,7 @@
 use crate::resourcerecord::InternalResourceRecord;
 use enum_iterator::Sequence;
 use packed_struct::prelude::*;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{de, Serialize, Serializer};
 use sqlx::encode::IsNull;
 use sqlx::sqlite::SqliteArgumentValue;
 use std::fmt::Display;
@@ -279,7 +279,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for RecordType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Sequence)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
 /// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
     /// IN - Internet
@@ -322,6 +322,30 @@ impl Display for RecordClass {
     }
 }
 
+impl<'de> de::Deserialize<'de> for RecordClass {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let s: String = de::Deserialize::deserialize(deserializer)?;
+        Ok(RecordClass::from(s.as_str()))
+        // log::trace!("deser input='{}' result='{:?}'", s, res);
+        // match res {
+        //     Ok(val) => Ok(val),
+        //     Err(err) => match err {
+        //         crate::enums::ContactDetailsDeserializerError::InputLengthWrong { msg, len } => {
+        //             Err(de::Error::invalid_length(len, &msg))
+        //         }
+        //         crate::enums::ContactDetailsDeserializerError::InputFormatWrong { unexp, exp } => {
+        //             Err(de::Error::invalid_value(de::Unexpected::Str(&unexp), &exp))
+        //         }
+        //         crate::enums::ContactDetailsDeserializerError::WrongContactType(_msg) => {
+        //             todo!()
+        //         }
+        //     },
+        // }
+    }
+}
 impl From<&str> for RecordClass {
     fn from(value: &str) -> Self {
         match value {

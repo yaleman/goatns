@@ -1,9 +1,10 @@
 use crate::config::ConfigFile;
 use crate::db::test::test_get_sqlite_memory;
 use crate::db::{start_db, DBEntity, User, UserAuthToken, ZoneOwnership};
+use crate::enums::RecordType;
 use crate::servers::{self, Servers};
 use crate::web::utils::{create_api_token, ApiToken};
-use crate::zones::FileZone;
+use crate::zones::{FileZone, FileZoneRecord};
 use concread::cowcell::asynch::CowCell;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
@@ -71,8 +72,8 @@ async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     )
 }
 
-async fn insert_test_user(pool: &SqlitePool) -> User {
-    let mut user = User {
+async fn insert_test_user(pool: &SqlitePool) -> Box<User> {
+    User {
         id: Some(5),
         displayname: "Example user".to_string(),
         username: "example".to_string(),
@@ -80,11 +81,10 @@ async fn insert_test_user(pool: &SqlitePool) -> User {
         disabled: false,
         authref: Some("zooooom".to_string()),
         admin: true,
-    };
-
-    let userid = user.save(&pool).await.unwrap();
-    user.id = Some(userid);
-    user
+    }
+    .save(&pool)
+    .await
+    .unwrap()
 }
 
 /// Shoves an API token into the DB for a user
@@ -109,12 +109,12 @@ async fn insert_test_user_api_token(pool: &SqlitePool, userid: i64) -> Result<Ap
 }
 
 #[derive(Deserialize, Serialize)]
-struct AuthStruct {
+pub struct AuthStruct {
     pub tokenkey: String,
     pub token: String,
 }
 
-#[tokio::test] //(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::test]
 async fn test_api_zone_create() -> Result<(), sqlx::Error> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
@@ -152,7 +152,7 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
     println!("=> Token login success!");
 
     let newzone = FileZone {
-        id: 1234,
+        id: Some(1234),
         name: "example.goat".to_string(),
         rname: "bob@example.goat".to_string(),
         serial: 12345,
@@ -214,7 +214,7 @@ async fn test_api_zone_create_delete() -> Result<(), sqlx::Error> {
     println!("=> Token login success!");
 
     let newzone = FileZone {
-        id: 1234,
+        id: Some(1234),
         name: "example.goat".to_string(),
         rname: "bob@example.goat".to_string(),
         serial: 12345,
@@ -288,7 +288,7 @@ async fn test_api_zone_create_update() -> Result<(), sqlx::Error> {
     println!("=> Token login success!");
 
     let newzone = FileZone {
-        id: 1234,
+        id: Some(1234),
         name: "example.goat".to_string(),
         rname: "bob@example.goat".to_string(),
         serial: 12345,
@@ -302,7 +302,7 @@ async fn test_api_zone_create_update() -> Result<(), sqlx::Error> {
     ZoneOwnership {
         id: None,
         userid: user.id.unwrap(),
-        zoneid: newzone.id,
+        zoneid: newzone.id.unwrap(),
     }
     .save(&pool)
     .await?;
@@ -315,10 +315,7 @@ async fn test_api_zone_create_update() -> Result<(), sqlx::Error> {
 
     println!("Sending zone update");
     let res = client
-        .put(&format!(
-            "https://localhost:{api_port}/api/zone/{}",
-            newzone.id
-        ))
+        .put(&format!("https://localhost:{api_port}/api/zone",))
         .json(&newzone)
         .send()
         .await
@@ -328,5 +325,169 @@ async fn test_api_zone_create_update() -> Result<(), sqlx::Error> {
     let res_content = res.bytes().await;
     println!("content from patch: {res_content:?}");
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_api_record_create() -> Result<(), sqlx::Error> {
+    // here we stand up the servers
+    let (pool, _servers, config) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+    let user = insert_test_user(&pool).await;
+    println!("Created user... {user:?}");
+    println!("Creating token for user");
+    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+        .await
+        .unwrap();
+    println!("Created token... {token:?}");
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .build()
+        .unwrap();
+
+    println!("Logging in with the token...");
+    let res = client
+        .post(&format!("https://localhost:{api_port}/api/login"))
+        .json(&AuthStruct {
+            tokenkey: token.token_key,
+            token: token.token_secret.to_owned(),
+        })
+        .send()
+        .await
+        .unwrap();
+    println!("{:?}", res);
+    assert_eq!(res.status(), 200);
+    println!("=> Token login success!");
+
+    let zone = FileZone {
+        id: Some(333),
+        name: "example.goat".to_string(),
+        rname: "bob@example.goat".to_string(),
+        serial: 12345,
+        expire: 30,
+        minimum: 1235,
+        ..Default::default()
+    }
+    .save(&pool)
+    .await
+    .unwrap();
+
+    let zo = ZoneOwnership {
+        id: None,
+        userid: user.id.unwrap(),
+        zoneid: zone.id.unwrap(),
+    };
+    println!("ZO: {zo:?}");
+    zo.save(&pool).await.unwrap();
+
+    println!("building fzr object");
+    let fzr = FileZoneRecord {
+        id: Some(3),
+        class: crate::enums::RecordClass::Internet,
+        name: "doggo".to_string(),
+        zoneid: Some(333),
+        rrtype: RecordType::A.to_string(),
+        ttl: 33,
+        rdata: "1.2.3.4".to_string(),
+    };
+    println!("Sending record create");
+    let res = client
+        .post(&format!("https://localhost:{api_port}/api/record"))
+        .header("Authorization", format!("Bearer {}", token.token_secret))
+        .json(&fzr)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), 200);
+
+    // apiserver.abort();
+    Ok(())
+}
+#[tokio::test]
+async fn test_api_record_delete() -> Result<(), sqlx::Error> {
+    // here we stand up the servers
+    let (pool, _servers, config) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+    let user = insert_test_user(&pool).await;
+    println!("Created user... {user:?}");
+    println!("Creating token for user");
+    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+        .await
+        .unwrap();
+    println!("Created token... {token:?}");
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .build()
+        .unwrap();
+
+    println!("Logging in with the token...");
+    let res = client
+        .post(&format!("https://localhost:{api_port}/api/login"))
+        .json(&AuthStruct {
+            tokenkey: token.token_key,
+            token: token.token_secret.to_owned(),
+        })
+        .send()
+        .await
+        .unwrap();
+    println!("{:?}", res);
+    assert_eq!(res.status(), 200);
+    println!("=> Token login success!");
+
+    let zone = FileZone {
+        id: Some(333),
+        name: "example.goat".to_string(),
+        rname: "bob@example.goat".to_string(),
+        serial: 12345,
+        expire: 30,
+        minimum: 1235,
+        ..Default::default()
+    }
+    .save(&pool)
+    .await
+    .unwrap();
+
+    let zo = ZoneOwnership {
+        id: None,
+        userid: user.id.unwrap(),
+        zoneid: zone.id.unwrap(),
+    };
+    println!("ZO: {zo:?}");
+    zo.save(&pool).await.unwrap();
+
+    println!("creating fzr object in the database");
+    let fzr = FileZoneRecord {
+        id: Some(3),
+        class: crate::enums::RecordClass::Internet,
+        name: "doggo".to_string(),
+        zoneid: Some(333),
+        rrtype: RecordType::A.to_string(),
+        ttl: 33,
+        rdata: "1.2.3.4".to_string(),
+    }
+    .save(&pool)
+    .await?;
+
+    println!("{fzr:?}");
+
+    println!("Sending record delete");
+    let res = client
+        .delete(&format!("https://localhost:{api_port}/api/record/3"))
+        .header("Authorization", format!("Bearer {}", token.token_secret))
+        .send()
+        .await
+        .unwrap();
+
+    let status = res.status();
+    println!("Response content: {:?}", res.text().await);
+
+    assert_eq!(status, 200);
+
+    // apiserver.abort();
     Ok(())
 }

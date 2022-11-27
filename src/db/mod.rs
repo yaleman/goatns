@@ -99,7 +99,11 @@ impl Default for User {
 
 impl User {
     #[allow(dead_code, unused_variables)]
-    pub async fn create(&self, pool: &SqlitePool, disabled: bool) -> Result<usize, sqlx::Error> {
+    pub async fn create_old(
+        &self,
+        pool: &SqlitePool,
+        disabled: bool,
+    ) -> Result<usize, sqlx::Error> {
         // TODO: test user create
         let res =
             sqlx::query("INSERT into users (username, email, disabled, authref) VALUES(?, ?, ?)")
@@ -283,7 +287,7 @@ pub struct ZoneOwnership {
 
 impl ZoneOwnership {
     #[allow(dead_code, unused_variables)]
-    pub async fn create(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    pub async fn create_old(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
         // TODO: test ownership create
         sqlx::query(
             "INSERT INTO ownership (zoneid, userid) VALUES ( ?, ? ) ON CONFLICT DO NOTHING",
@@ -295,14 +299,14 @@ impl ZoneOwnership {
         Ok(())
     }
     #[allow(dead_code, unused_variables)]
-    pub async fn delete(&self, pool: &SqlitePool) -> Result<i64, sqlx::Error> {
+    pub async fn delete(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
         // TODO: test ownership delete
         let res = sqlx::query("DELETE FROM ownership WHERE zoneid = ? AND userid = ?")
             .bind(self.zoneid as i64)
             .bind(self.userid as i64)
             .execute(&mut pool.acquire().await?)
             .await?;
-        Ok(res.rows_affected() as i64)
+        Ok(())
     }
     #[allow(dead_code, unused_variables)]
     pub async fn delete_for_user(self, pool: &SqlitePool) -> Result<User, sqlx::Error> {
@@ -379,7 +383,7 @@ pub async fn get_zone_with_txn(
         FROM records
         WHERE zoneid = ?",
     )
-    .bind(zone.id as i64)
+    .bind(zone.id.unwrap())
     .fetch_all(&mut *txn)
     .await?;
 
@@ -406,7 +410,7 @@ impl TryFrom<SqliteRow> for InternalResourceRecord {
             name: row.get("name"),
             ttl,
             zoneid: row.get("zoneid"),
-            id: record_id,
+            id: Some(record_id),
             rrtype: rrtype.to_string(),
             class: RecordClass::from(&record_class),
             rdata,
@@ -471,7 +475,11 @@ pub async fn get_records(
                 .map(|r| r.clone().set_ttl(min_ttl))
                 .collect()
         }
-        false => results,
+        false => {
+            #[cfg(tesT)]
+            println!("not normalizing ttls...");
+            results
+        }
     };
     Ok(results)
 }
@@ -509,12 +517,12 @@ impl FileZone {
             FROM records
             WHERE zoneid = ?",
         )
-        .bind(self.id as i64)
+        .bind(self.id.unwrap())
         .fetch_all(&mut *txn)
         .await?;
 
         if res.is_empty() {
-            log::trace!("No results returned for zoneid={}", self.id);
+            log::trace!("No results returned for zoneid={}", self.id.unwrap());
         }
 
         // let mut results: Vec<FileZoneRecord> = vec![];
@@ -569,29 +577,32 @@ pub trait DBEntity: Send {
         txn: &mut Transaction<'t, Sqlite>,
         name: &str,
     ) -> Result<Box<Self>, sqlx::Error>;
+
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error>;
     /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error>;
+
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error>;
     /// save the entity to the database, but you're in a transaction
+
     async fn save_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error>;
+    ) -> Result<Box<Self>, sqlx::Error>;
     /// create from scratch
     async fn create_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error>;
+    ) -> Result<Box<Self>, sqlx::Error>;
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error>;
+    ) -> Result<Box<Self>, sqlx::Error>;
 
     /// delete the entity from the database
-    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error>;
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error>;
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<i64, sqlx::Error>;
+    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<(), sqlx::Error>;
 
     fn json(&self) -> Result<String, String>
     where
@@ -612,7 +623,7 @@ impl DBEntity for FileZone {
         sqlx::query(
             r#"CREATE TABLE IF NOT EXISTS
             zones (
-                id   INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 rname TEXT NOT NULL,
                 serial INTEGER NOT NULL,
@@ -669,7 +680,7 @@ impl DBEntity for FileZone {
             FROM records
             WHERE zoneid = ?",
         )
-        .bind(zone.id as i64)
+        .bind(zone.id.unwrap())
         .fetch_all(txn)
         .await?;
 
@@ -704,10 +715,11 @@ impl DBEntity for FileZone {
     }
 
     /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
         let mut txn = pool.begin().await?;
         let res = self.save_with_txn(&mut txn).await?;
         txn.commit().await?;
+        // TODO: this needs to include the id
         Ok(res)
     }
 
@@ -715,7 +727,7 @@ impl DBEntity for FileZone {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         // check the zone exists
         let find_zone = match get_zone_with_txn(txn, None, Some(self.name.clone())).await {
             Ok(val) => {
@@ -746,7 +758,7 @@ impl DBEntity for FileZone {
                     "INSERT INTO zones (id, name, rname, serial, refresh, retry, expire, minimum)
                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 )
-                .bind(&self.id)
+                .bind(self.id)
                 .bind(&self.name)
                 .bind(&self.rname)
                 .bind(&serial)
@@ -757,6 +769,8 @@ impl DBEntity for FileZone {
                 .execute(&mut *txn)
                 .await?;
 
+                #[cfg(not(test))]
+                log::debug!("Insert statement succeeded");
                 #[cfg(test)]
                 eprintln!("Done creating zone");
                 get_zone_with_txn(txn, None, Some(self.name.clone()))
@@ -777,6 +791,8 @@ impl DBEntity for FileZone {
                     #[cfg(test)]
                     eprintln!("Updated: {:?} record", updated);
                     log::debug!("Updated: {:?} record", updated);
+                } else {
+                    log::debug!("Zone data is fine")
                 }
                 get_zone_with_txn(txn, None, Some(self.name.clone()))
                     .await
@@ -793,16 +809,16 @@ impl DBEntity for FileZone {
         eprintln!("Dropping all records for zone {self:?}");
         // log::debug!("Dropping all records for zone {self:?}");
         sqlx::query("delete from records where zoneid = ?")
-            .bind(updated_zone.id as i64)
+            .bind(updated_zone.id)
             .execute(&mut *txn)
             .await?;
 
-        // add the records
+        // add the records for the zone
         for mut record in self.records.clone() {
+            record.zoneid = updated_zone.id;
             #[cfg(test)]
             eprintln!("Creating new zone record: {record:?}");
             log::trace!("Creating new zone record: {record:?}");
-            record.zoneid = updated_zone.id;
             if record.name == "@" {
                 record.name = "".to_string();
             }
@@ -811,23 +827,26 @@ impl DBEntity for FileZone {
         #[cfg(test)]
         println!("Done creating zone!");
 
-        // TODO: this needs to be the zone id
-        Ok(1)
+        let res = Self {
+            id: updated_zone.id,
+            ..self.to_owned()
+        };
+        Ok(Box::new(res))
     }
 
     /// create from scratch
     async fn create_with_txn<'t>(
         &self,
         _txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         todo!();
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
-        let res = sqlx::query(
+    ) -> Result<Box<Self>, sqlx::Error> {
+        let _res = sqlx::query(
             "UPDATE zones
             set rname = ?, serial = ?, refresh = ?, retry = ?, expire = ?, minimum =?
             WHERE id = ?",
@@ -841,21 +860,21 @@ impl DBEntity for FileZone {
         .bind(self.id)
         .execute(txn)
         .await?;
-        Ok(res.rows_affected() as i64)
+        Ok(Box::new(self.to_owned()))
     }
     /// delete the entity from the database
-    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         let mut txn = pool.begin().await?;
         self.delete_with_txn(&mut txn).await?;
         txn.commit().await?;
-        Ok(1)
+        Ok(())
     }
     /// Delete the entity from the database, when you're in a transaction.
     ///
     /// This one happens in the order ownership -> records -> zone because at the very least,
     /// if it fails after the ownership thing, then non-admin users can't see the zone
     /// and admins will just have to clean it up manually
-    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<(), sqlx::Error> {
         // delete all the ownership records
         sqlx::query("DELETE FROM ownership where zoneid = ?")
             .bind(self.id)
@@ -872,7 +891,7 @@ impl DBEntity for FileZone {
         let query = format!("DELETE FROM {} where id = ?", FileZone::TABLE);
         sqlx::query(&query).bind(self.id).execute(&mut *txn).await?;
 
-        Ok(1)
+        Ok(())
     }
 }
 
@@ -904,7 +923,7 @@ impl DBEntity for FileZoneRecord {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS
         records (
-            id      INTEGER PRIMARY KEY,
+            id      INTEGER PRIMARY KEY AUTOINCREMENT ,
             zoneid  INTEGER NOT NULL,
             name    TEXT, /* this can be null for apex records */
             ttl     INTEGER,
@@ -953,10 +972,17 @@ impl DBEntity for FileZoneRecord {
     }
 
     async fn get_with_txn<'t>(
-        _txn: &mut Transaction<'t, Sqlite>,
-        _id: &i64,
+        txn: &mut Transaction<'t, Sqlite>,
+        id: &i64,
     ) -> Result<Box<Self>, sqlx::Error> {
-        todo!()
+        let res = sqlx::query("select * from records where id = ?")
+            .bind(id)
+            .fetch_one(txn)
+            .await?;
+
+        let res: Self = res.try_into().unwrap();
+
+        Ok(Box::new(res))
     }
     async fn get_by_name<'t>(
         _txn: &mut Transaction<'t, Sqlite>,
@@ -971,7 +997,7 @@ impl DBEntity for FileZoneRecord {
         todo!()
     }
 
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
         #[cfg(test)]
         eprintln!("Starting save");
         let mut txn = pool.begin().await?;
@@ -989,7 +1015,7 @@ impl DBEntity for FileZoneRecord {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         #[cfg(test)]
         eprintln!("Starting save_with_txn for {self:?}");
         log::trace!("Starting save_with_txn for {self:?}");
@@ -1005,8 +1031,8 @@ impl DBEntity for FileZoneRecord {
         );
         let existing_record = sqlx::query("SELECT id, zoneid, name, ttl, rrtype, rclass, rdata from records WHERE
         id = ? AND  zoneid = ? AND  name = ? AND  ttl = ? AND  rrtype = ? AND  rclass = ? AND rdata = ? LIMIT 1")
-            .bind(self.id as i64)
-            .bind(self.zoneid as i64)
+            .bind(self.id) // TODO id could be a none, which would work out bad
+            .bind(self.zoneid) // TODO zoneid could be a none, which would work out bad
             .bind(&record_name)
             .bind(self.ttl)
             .bind(RecordType::from(self.rrtype.clone()))
@@ -1015,7 +1041,7 @@ impl DBEntity for FileZoneRecord {
             .fetch_optional(&mut *txn).await?;
 
         let mut args = SqliteArguments::default();
-        args.add(self.zoneid as i64);
+        args.add(self.zoneid);
         args.add(record_name);
         args.add(self.ttl);
         args.add(RecordType::from(self.rrtype.clone()));
@@ -1038,49 +1064,67 @@ impl DBEntity for FileZoneRecord {
                     args,
                 )
             }
-            None => sqlx::query_with(
-                "INSERT INTO records (zoneid, name, ttl, rrtype, rclass, rdata)
-                            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                        ",
-                args,
-            ),
+            None => match self.id {
+                Some(id) => sqlx::query(
+                    "INSERT INTO records (id, zoneid, name, ttl, rrtype, rclass, rdata)
+                                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                                ",
+                )
+                .bind(id)
+                .bind(self.zoneid)
+                .bind(self.name.clone())
+                .bind(self.ttl)
+                .bind(RecordType::from(self.rrtype.clone()))
+                .bind(self.class)
+                .bind(self.rdata.clone()),
+                None => sqlx::query(
+                    "INSERT INTO records (zoneid, name, ttl, rrtype, rclass, rdata)
+                                        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                                    ",
+                )
+                .bind(self.zoneid)
+                .bind(self.name.clone())
+                .bind(self.ttl)
+                .bind(RecordType::from(self.rrtype.clone()))
+                .bind(self.class)
+                .bind(self.rdata.clone()),
+            },
         };
         #[cfg(test)]
         println!("Saving record...");
-        let result = query.execute(&mut *txn).await?;
-        #[cfg(test)]
-        eprintln!(
-            "Finished fzr save_with_txn, wrote {} rows",
-            result.rows_affected()
-        );
-        Ok(result.rows_affected() as i64)
+        let res = Self {
+            id: Some(query.execute(&mut *txn).await?.last_insert_rowid()),
+            ..self.to_owned()
+        };
+
+        Ok(Box::new(res))
     }
 
     /// create from scratch
     async fn create_with_txn<'t>(
         &self,
         _txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         todo!();
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         _txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         todo!();
     }
-    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         let mut txn = pool.begin().await?;
         self.delete_with_txn(&mut txn).await
     }
 
-    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<i64, sqlx::Error> {
-        let res = sqlx::query(format!("DELETE FROM {} WHERE id = ?", Self::TABLE).as_str())
+    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<(), sqlx::Error> {
+        sqlx::query(format!("DELETE FROM {} WHERE id = ?", Self::TABLE).as_str())
             .bind(self.id)
             .execute(&mut *txn)
             .await?;
-        Ok(res.rows_affected() as i64)
+        Ok(())
     }
 
     fn json(&self) -> Result<String, String>
@@ -1104,7 +1148,7 @@ impl DBEntity for ZoneOwnership {
         sqlx::query(&format!(
             r#"CREATE TABLE IF NOT EXISTS
                 {} (
-                    id   INTEGER PRIMARY KEY,
+                    id   INTEGER PRIMARY KEY NOT NULL,
                     zoneid INTEGER NOT NULL,
                     userid INTEGER NOT NULL,
                     FOREIGN KEY(zoneid) REFERENCES zones(id),
@@ -1174,7 +1218,7 @@ impl DBEntity for ZoneOwnership {
     }
 
     /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
         let mut txn = pool.begin().await?;
         let res = self.save_with_txn(&mut txn).await?;
         txn.commit().await?;
@@ -1185,7 +1229,7 @@ impl DBEntity for ZoneOwnership {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         let res = sqlx::query(&format!(
             "INSERT INTO {} (zoneid, userid) values ( ?, ? )",
             Self::TABLE
@@ -1194,34 +1238,36 @@ impl DBEntity for ZoneOwnership {
         .bind(self.userid)
         .execute(txn)
         .await?;
-
-        return Ok(res.last_insert_rowid());
+        // TODO: set the ID to the new ID
+        let id: i64 = res.last_insert_rowid();
+        let res = Self {
+            id: Some(id),
+            ..*self
+        };
+        Ok(Box::new(res))
     }
 
     /// create new, this just calls save_with_txn
     async fn create_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         self.save_with_txn(txn).await
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         _txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         unimplemented!("this should never be updated");
     }
     /// delete the entity from the database
-    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         todo!()
     }
 
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(
-        &self,
-        _txn: &mut Transaction<'_, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    async fn delete_with_txn(&self, _txn: &mut Transaction<'_, Sqlite>) -> Result<(), sqlx::Error> {
         todo!();
     }
 
@@ -1255,7 +1301,7 @@ impl DBEntity for User {
         sqlx::query(&format!(
             r#"CREATE TABLE IF NOT EXISTS
         {} (
-            id  INTEGER PRIMARY KEY,
+            id  INTEGER PRIMARY KEY NOT NULL,
             displayname TEXT NOT NULL,
             username TEXT NOT NULL,
             email TEXT NOT NULL,
@@ -1320,7 +1366,7 @@ impl DBEntity for User {
     }
 
     /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
         let mut txn = pool.begin().await?;
         let res = self.save_with_txn(&mut txn).await?;
         txn.commit().await?;
@@ -1331,12 +1377,13 @@ impl DBEntity for User {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         let res = sqlx::query(
             "INSERT INTO users
-            (displayname, username, email, disabled, authref, admin)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            (id, displayname, username, email, disabled, authref, admin)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         )
+        .bind(self.id)
         .bind(&self.displayname)
         .bind(&self.username)
         .bind(&self.email)
@@ -1345,33 +1392,34 @@ impl DBEntity for User {
         .bind(self.admin)
         .execute(txn)
         .await?;
-        Ok(res.last_insert_rowid())
+        let res = Self {
+            id: Some(res.last_insert_rowid()),
+            ..self.to_owned()
+        };
+        Ok(Box::new(res))
     }
 
     /// create from scratch
     async fn create_with_txn<'t>(
         &self,
         _txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         todo!();
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         _txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         todo!();
     }
     /// delete the entity from the database
-    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         todo!()
     }
 
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(
-        &self,
-        _txn: &mut Transaction<'_, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    async fn delete_with_txn(&self, _txn: &mut Transaction<'_, Sqlite>) -> Result<(), sqlx::Error> {
         todo!();
     }
 
@@ -1464,7 +1512,7 @@ impl DBEntity for UserAuthToken {
                 sqlx::query(&format!(
                     r#"CREATE TABLE IF NOT EXISTS
                     {} (
-                        id INTEGER PRIMARY KEY,
+                        id INTEGER PRIMARY KEY NOT NULL,
                         name TEXT NOT NULL,
                         issued TEXT NOT NULL,
                         expiry TEXT,
@@ -1612,7 +1660,7 @@ impl DBEntity for UserAuthToken {
     }
 
     /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
         let mut txn = pool.begin().await?;
         let res = self.save_with_txn(&mut txn).await?;
         txn.commit().await?;
@@ -1623,14 +1671,15 @@ impl DBEntity for UserAuthToken {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         let expiry = self.expiry.map(|v| v.timestamp());
         let issued = self.issued.timestamp();
 
         let res = sqlx::query(&format!(
-            "INSERT INTO {} (name, issued, expiry, userid, tokenkey, tokenhash) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO {} (id, name, issued, expiry, userid, tokenkey, tokenhash) VALUES (?, ?, ?, ?, ?, ?, ?)",
             Self::TABLE
         ))
+        .bind(self.id)
         .bind(&self.name)
         .bind(issued)
         .bind(expiry)
@@ -1639,38 +1688,44 @@ impl DBEntity for UserAuthToken {
         .bind(&self.tokenhash)
         .execute(txn)
         .await?;
-        Ok(res.last_insert_rowid())
+
+        let res = Self {
+            id: Some(res.last_insert_rowid()),
+            ..self.to_owned()
+        };
+
+        Ok(Box::new(res))
     }
 
     /// create from scratch
     async fn create_with_txn<'t>(
         &self,
         _txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         todo!();
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         _txn: &mut Transaction<'t, Sqlite>,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Box<Self>, sqlx::Error> {
         todo!();
     }
 
     /// delete the entity from the database
-    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<i64, sqlx::Error> {
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         let mut txn = pool.begin().await?;
-        let res = self.delete_with_txn(&mut txn).await?;
+        self.delete_with_txn(&mut txn).await?;
         txn.commit().await?;
-        Ok(res)
+        Ok(())
     }
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<i64, sqlx::Error> {
-        let res = sqlx::query(&format!("DELETE FROM {} where id = ?", &Self::TABLE))
+    async fn delete_with_txn(&self, txn: &mut Transaction<'_, Sqlite>) -> Result<(), sqlx::Error> {
+        sqlx::query(&format!("DELETE FROM {} where id = ?", &Self::TABLE))
             .bind(self.id)
             .execute(txn)
             .await?;
-        Ok(res.rows_affected() as i64)
+        Ok(())
     }
 
     fn json(&self) -> Result<String, String>
@@ -1762,8 +1817,6 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
         let name: String = row.get("name");
         let rrtype: i32 = row.get("rrtype");
         let rrtype = RecordType::from(&(rrtype as u16));
-        // #[cfg(test)]
-        // eprintln!("rrtype: {rrtype:?}");
         let class: u16 = row.get("rclass");
         let rdata: String = row.get("rdata");
         let ttl: u32 = row.get("ttl");

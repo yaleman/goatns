@@ -36,6 +36,7 @@ pub mod servers;
 mod tests;
 pub mod utils;
 /// Configuration and management API
+#[macro_use]
 pub mod web;
 pub mod zones;
 

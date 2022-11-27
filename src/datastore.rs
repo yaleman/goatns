@@ -162,14 +162,21 @@ pub async fn handle_import_file(
     }
 
     for zone in zones {
-        zone.save_with_txn(&mut txn)
-            .await
-            .map_err(|e| format!("Failed to load zone {}: {e:?}", zone.name))?;
+        let _saved_zone = match zone.save_with_txn(&mut txn).await {
+            Err(err) => {
+                let errmsg = format!("Failed to save zone {}: {err:?}", zone.name);
+                log::error!("{errmsg}");
+                return Err(errmsg);
+            }
+            Ok(val) => val,
+        };
         log::info!("Imported {}", zone.name);
     }
-    txn.commit()
-        .await
-        .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+    txn.commit().await.map_err(|e| {
+        log::error!("Failed to commit transaction!");
+        format!("Failed to commit transaction: {e:?}")
+    })?;
+    log::info!("Completed import process");
     Ok(())
 }
 
@@ -329,6 +336,7 @@ pub async fn manager(
             Command::PostOwnership { .. } => todo!(),
         }
     }
+    #[cfg(test)]
     println!("### manager is done!");
     Ok(())
 }

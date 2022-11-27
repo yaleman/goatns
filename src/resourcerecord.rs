@@ -866,8 +866,8 @@ mod tests {
             rdata: String::from("1234:5678:cafe:beef:ca75:0:4b9:e94d"),
             ttl: 160u32,
             class: RecordClass::Internet,
-            zoneid: 1,
-            id: 1,
+            zoneid: Some(1),
+            id: None,
         };
         debug!("fzr: {fzr}");
         let converted = match Ipv6Addr::from_str(&fzr.rdata) {
