@@ -332,6 +332,14 @@
 <span id="332">332</span>
 <span id="333">333</span>
 <span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::str::from_utf8;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::time::Duration;
@@ -496,14 +504,21 @@
     }
 
     <span class="kw">for </span>zone <span class="kw">in </span>zones {
-        zone.save_with_txn(<span class="kw-2">&amp;mut </span>txn)
-            .<span class="kw">await
-            </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to load zone {}: {e:?}&quot;</span>, zone.name))<span class="question-mark">?</span>;
+        <span class="kw">let </span>_saved_zone = <span class="kw">match </span>zone.save_with_txn(<span class="kw-2">&amp;mut </span>txn).<span class="kw">await </span>{
+            <span class="prelude-val">Err</span>(err) =&gt; {
+                <span class="kw">let </span>errmsg = <span class="macro">format!</span>(<span class="string">&quot;Failed to save zone {}: {err:?}&quot;</span>, zone.name);
+                <span class="macro">log::error!</span>(<span class="string">&quot;{errmsg}&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(errmsg);
+            }
+            <span class="prelude-val">Ok</span>(val) =&gt; val,
+        };
         <span class="macro">log::info!</span>(<span class="string">&quot;Imported {}&quot;</span>, zone.name);
     }
-    txn.commit()
-        .<span class="kw">await
-        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to start transaction: {e:?}&quot;</span>))<span class="question-mark">?</span>;
+    txn.commit().<span class="kw">await</span>.map_err(|e| {
+        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to commit transaction!&quot;</span>);
+        <span class="macro">format!</span>(<span class="string">&quot;Failed to commit transaction: {e:?}&quot;</span>)
+    })<span class="question-mark">?</span>;
+    <span class="macro">log::info!</span>(<span class="string">&quot;Completed import process&quot;</span>);
     <span class="prelude-val">Ok</span>(())
 }
 
@@ -663,7 +678,8 @@
             Command::PostOwnership { .. } =&gt; <span class="macro">todo!</span>(),
         }
     }
-    <span class="macro">println!</span>(<span class="string">&quot;### manager is done!&quot;</span>);
+    <span class="attribute">#[cfg(test)]
+    </span><span class="macro">println!</span>(<span class="string">&quot;### manager is done!&quot;</span>);
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div>

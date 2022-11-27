@@ -2006,8 +2006,8 @@
             rdata: String::from(<span class="string">&quot;1234:5678:cafe:beef:ca75:0:4b9:e94d&quot;</span>),
             ttl: <span class="number">160u32</span>,
             class: RecordClass::Internet,
-            zoneid: <span class="number">1</span>,
-            id: <span class="number">1</span>,
+            zoneid: <span class="prelude-val">Some</span>(<span class="number">1</span>),
+            id: <span class="prelude-val">None</span>,
         };
         <span class="macro">debug!</span>(<span class="string">&quot;fzr: {fzr}&quot;</span>);
         <span class="kw">let </span>converted = <span class="kw">match </span>Ipv6Addr::from_str(<span class="kw-2">&amp;</span>fzr.rdata) {

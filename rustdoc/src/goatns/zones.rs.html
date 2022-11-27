@@ -145,13 +145,6 @@
 <span id="145">145</span>
 <span id="146">146</span>
 <span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::RecordClass;
 <span class="kw">use </span><span class="kw">crate</span>::resourcerecord::InternalResourceRecord;
 <span class="kw">use </span>log::<span class="kw-2">*</span>;
@@ -168,8 +161,7 @@
 #[serde(rename(serialize = <span class="string">&quot;UPPERCASE&quot;</span>))]
 </span><span class="kw">pub struct </span>FileZone {
     <span class="doccomment">/// Database row ID
-    </span><span class="attribute">#[serde(default = <span class="string">&quot;default_id&quot;</span>)]
-    </span><span class="kw">pub </span>id: i64,
+    </span><span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
     <span class="doccomment">/// MNAME The &lt;domain-name&gt; of the name server that was the original or primary source of data for this zone.
     </span><span class="comment">// #[serde(rename(serialize = &quot;MNAME&quot;))]
     </span><span class="kw">pub </span>name: String,
@@ -216,11 +208,10 @@
 </span><span class="attribute">#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 </span><span class="kw">pub struct </span>FileZoneRecord {
     <span class="doccomment">/// Foreign key to id in [FileZone::id]
-    </span><span class="attribute">#[serde(default = <span class="string">&quot;default_id&quot;</span>)]
-    </span><span class="kw">pub </span>zoneid: i64,
+    </span><span class="kw">pub </span>zoneid: <span class="prelude-ty">Option</span>&lt;i64&gt;,
     <span class="doccomment">/// Database row ID
     </span><span class="attribute">#[serde(default)]
-    </span><span class="kw">pub </span>id: i64,
+    </span><span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
     <span class="attribute">#[serde(default = <span class="string">&quot;default_record_name&quot;</span>)]
     </span><span class="kw">pub </span>name: String,
     <span class="kw">pub </span>rrtype: String,
@@ -229,11 +220,6 @@
     <span class="kw">pub </span>rdata: String,
     <span class="kw">pub </span>ttl: u32,
 }
-
-<span class="doccomment">/// If you don&#39;t specify a name, it&#39;s the root.
-</span><span class="kw">fn </span>default_id() -&gt; i64 {
-    <span class="number">1
-</span>}
 <span class="doccomment">/// If you don&#39;t specify a name, it&#39;s the root.
 </span><span class="kw">fn </span>default_record_name() -&gt; String {
     String::from(<span class="string">&quot;@&quot;</span>)
@@ -246,7 +232,7 @@
 <span class="kw">impl </span>Display <span class="kw">for </span>FileZoneRecord {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;FileZoneRecord {{ name={} class={} rrtype={}, ttl={}, zoneid={}, id={}, rdata={} }}&quot;</span>,
+            <span class="string">&quot;FileZoneRecord {{ name={} class={} rrtype={}, ttl={}, zoneid={:#?}, id={:#?}, rdata={} }}&quot;</span>,
             <span class="self">self</span>.name, <span class="self">self</span>.class, <span class="self">self</span>.rrtype, <span class="self">self</span>.ttl, <span class="self">self</span>.zoneid, <span class="self">self</span>.id, <span class="self">self</span>.rdata
         ))
     }

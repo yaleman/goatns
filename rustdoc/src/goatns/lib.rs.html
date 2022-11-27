@@ -339,6 +339,7 @@
 <span id="339">339</span>
 <span id="340">340</span>
 <span id="341">341</span>
+<span id="342">342</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Goats are cool, but they make for poor DNS record stores. So here&#39;s an authoritative DNS server INSPIRED by goats.
 
 </span><span class="attribute">#![warn(clippy::complexity)]
@@ -377,6 +378,7 @@
 </span><span class="kw">mod </span>tests;
 <span class="kw">pub mod </span>utils;
 <span class="doccomment">/// Configuration and management API
+</span><span class="attribute">#[macro_use]
 </span><span class="kw">pub mod </span>web;
 <span class="kw">pub mod </span>zones;
 
