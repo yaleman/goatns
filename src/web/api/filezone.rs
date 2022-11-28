@@ -162,14 +162,24 @@ impl APIEntity for FileZone {
         };
         println!("deser'd zone: {zone:?}");
 
+        if zone.id.is_none() {
+            return error_result_json!("No zone ID specified", StatusCode::BAD_REQUEST);
+        }
         if !check_valid_tld(&zone.name, &state.read().await.config.allowed_tlds) {
             return error_result_json!("Invalid TLD for this system", StatusCode::BAD_REQUEST);
         }
 
+
         // get a db transaction
         let connpool = state.connpool().await.clone();
         // TODO getting a transaction might fail
-        let mut txn = connpool.begin().await.unwrap();
+        let mut txn = match connpool.begin().await {
+            Ok(val) => val,
+            Err(err) => {
+                log::error!("failed to get connection to the database: {err:?}");
+                return error_result_json!("Failed to get a connection to the database!", StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        };
         // check the user owns the zone
         if let Err(err) =
             ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &zone.id.unwrap())
