@@ -332,6 +332,16 @@
 <span id="332">332</span>
 <span id="333">333</span>
 <span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::db::DBEntity;
 
@@ -496,14 +506,24 @@
         };
         <span class="macro">println!</span>(<span class="string">&quot;deser&#39;d zone: {zone:?}&quot;</span>);
 
+        <span class="kw">if </span>zone.id.is_none() {
+            <span class="kw">return </span><span class="macro">error_result_json!</span>(<span class="string">&quot;No zone ID specified&quot;</span>, StatusCode::BAD_REQUEST);
+        }
         <span class="kw">if </span>!check_valid_tld(<span class="kw-2">&amp;</span>zone.name, <span class="kw-2">&amp;</span>state.read().<span class="kw">await</span>.config.allowed_tlds) {
             <span class="kw">return </span><span class="macro">error_result_json!</span>(<span class="string">&quot;Invalid TLD for this system&quot;</span>, StatusCode::BAD_REQUEST);
         }
 
+
         <span class="comment">// get a db transaction
         </span><span class="kw">let </span>connpool = state.connpool().<span class="kw">await</span>.clone();
         <span class="comment">// TODO getting a transaction might fail
-        </span><span class="kw">let </span><span class="kw-2">mut </span>txn = connpool.begin().<span class="kw">await</span>.unwrap();
+        </span><span class="kw">let </span><span class="kw-2">mut </span>txn = <span class="kw">match </span>connpool.begin().<span class="kw">await </span>{
+            <span class="prelude-val">Ok</span>(val) =&gt; val,
+            <span class="prelude-val">Err</span>(err) =&gt; {
+                <span class="macro">log::error!</span>(<span class="string">&quot;failed to get connection to the database: {err:?}&quot;</span>);
+                <span class="kw">return </span><span class="macro">error_result_json!</span>(<span class="string">&quot;Failed to get a connection to the database!&quot;</span>, StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        };
         <span class="comment">// check the user owns the zone
         </span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) =
             ZoneOwnership::get_ownership_by_userid(<span class="kw-2">&amp;mut </span>txn, <span class="kw-2">&amp;</span>user.id.unwrap(), <span class="kw-2">&amp;</span>zone.id.unwrap())
