@@ -340,8 +340,6 @@
 <span id="340">340</span>
 <span id="341">341</span>
 <span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::<span class="kw-2">*</span>;
 <span class="kw">use </span><span class="kw">crate</span>::db::DBEntity;
 
@@ -370,7 +368,7 @@
         State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Json(payload): Json&lt;serde_json::Value&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;String&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="attribute">#[cfg(test)]
         </span><span class="macro">println!</span>(<span class="string">&quot;Got api_create payload: {payload:?}&quot;</span>);
         <span class="macro">log::debug!</span>(<span class="string">&quot;Got api_create payload: {payload:?}&quot;</span>);
@@ -468,12 +466,8 @@
             );
         }
         <span class="macro">log::debug!</span>(<span class="string">&quot;Zone created by user={} zone={zone:?}&quot;</span>, user.id.unwrap());
-        <span class="kw">let </span>result = FileZoneResponse {
-            message: <span class="string">&quot;Zone creation completed!&quot;</span>.to_string(),
-            id: <span class="prelude-val">None</span>,
-            zone: <span class="prelude-val">None</span>,
-        };
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(Json(serde_json::to_string_pretty(<span class="kw-2">&amp;</span>result).unwrap()));
+
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(Json(zone));
     }
 
     <span class="kw">async fn </span>api_update(
@@ -513,7 +507,6 @@
             <span class="kw">return </span><span class="macro">error_result_json!</span>(<span class="string">&quot;Invalid TLD for this system&quot;</span>, StatusCode::BAD_REQUEST);
         }
 
-
         <span class="comment">// get a db transaction
         </span><span class="kw">let </span>connpool = state.connpool().<span class="kw">await</span>.clone();
         <span class="comment">// TODO getting a transaction might fail
@@ -521,7 +514,10 @@
             <span class="prelude-val">Ok</span>(val) =&gt; val,
             <span class="prelude-val">Err</span>(err) =&gt; {
                 <span class="macro">log::error!</span>(<span class="string">&quot;failed to get connection to the database: {err:?}&quot;</span>);
-                <span class="kw">return </span><span class="macro">error_result_json!</span>(<span class="string">&quot;Failed to get a connection to the database!&quot;</span>, StatusCode::INTERNAL_SERVER_ERROR);
+                <span class="kw">return </span><span class="macro">error_result_json!</span>(
+                    <span class="string">&quot;Failed to get a connection to the database!&quot;</span>,
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
             }
         };
         <span class="comment">// check the user owns the zone

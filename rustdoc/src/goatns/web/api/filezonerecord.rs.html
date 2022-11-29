@@ -181,7 +181,7 @@
         State(state): State&lt;GoatState&gt;,
         session: ReadableSession,
         Json(payload): Json&lt;serde_json::Value&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;String&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="macro">check_api_auth!</span>();
 
         <span class="kw">let </span>record: <span class="self">Self </span>= <span class="kw">match </span>serde_json::from_value(payload) {
@@ -224,7 +224,7 @@
                         StatusCode::INTERNAL_SERVER_ERROR
                     );
                 }
-                <span class="prelude-val">Ok</span>(Json(<span class="macro">format!</span>(<span class="string">&quot;ID: {:?}&quot;</span>, val)))
+                <span class="prelude-val">Ok</span>(Json(val))
             }
         }
     }

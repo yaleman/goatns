@@ -231,12 +231,6 @@
 <span id="231">231</span>
 <span id="232">232</span>
 <span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
 </pre><pre class="rust"><code><span class="doccomment">//! # Web things
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
@@ -257,7 +251,6 @@
 <span class="kw">use </span>axum_csp::CspUrlMatcher;
 <span class="kw">use </span>axum_extra::routing::SpaRouter;
 <span class="kw">use </span>axum_macros::FromRef;
-<span class="kw">use </span>axum_server::tls_rustls::RustlsConfig;
 <span class="kw">use </span>chrono::{DateTime, NaiveDateTime, Utc};
 <span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
 <span class="kw">use </span>oauth2::{ClientId, ClientSecret};
@@ -336,7 +329,7 @@
     <span class="doccomment">/// Store the PKCE verifier details server-side for when the user comes back with their auth token
     </span><span class="kw">async fn </span>push_verifier(<span class="kw-2">&amp;mut </span><span class="self">self</span>, csrftoken: String, verifier: (String, Nonce)) {
         <span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="self">self</span>.write().<span class="kw">await</span>;
-        <span class="macro">log::debug!</span>(<span class="string">&quot;Pushing CSRF token into shared state: token={csrftoken}&quot;</span>);
+        <span class="macro">log::trace!</span>(<span class="string">&quot;Pushing CSRF token into shared state: token={csrftoken}&quot;</span>);
         writer.oidc_verifier.insert(csrftoken, verifier);
     }
 }
@@ -456,13 +449,8 @@
     };
     <span class="kw">let </span>router = router.layer(CompressionLayer::new()).fallback(handler_404);
 
-    <span class="kw">let </span>tls_cert = <span class="kw-2">&amp;</span>config.api_tls_cert.clone();
-    <span class="kw">let </span>tls_config = RustlsConfig::from_pem_file(<span class="kw-2">&amp;</span>tls_cert, <span class="kw-2">&amp;</span>config.api_tls_key)
-        .<span class="kw">await
-        </span>.unwrap();
-
     <span class="kw">let </span>res = <span class="prelude-val">Some</span>(tokio::spawn(
-        axum_server::bind_rustls(config.api_listener_address(), tls_config)
+        axum_server::bind_rustls(config.api_listener_address(), config.get_tls_config().<span class="kw">await</span>)
             .serve(router.into_make_service()),
     ));
     <span class="attribute">#[cfg(test)]
