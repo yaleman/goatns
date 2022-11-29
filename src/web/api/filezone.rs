@@ -169,7 +169,6 @@ impl APIEntity for FileZone {
             return error_result_json!("Invalid TLD for this system", StatusCode::BAD_REQUEST);
         }
 
-
         // get a db transaction
         let connpool = state.connpool().await.clone();
         // TODO getting a transaction might fail
@@ -177,7 +176,10 @@ impl APIEntity for FileZone {
             Ok(val) => val,
             Err(err) => {
                 log::error!("failed to get connection to the database: {err:?}");
-                return error_result_json!("Failed to get a connection to the database!", StatusCode::INTERNAL_SERVER_ERROR);
+                return error_result_json!(
+                    "Failed to get a connection to the database!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
             }
         };
         // check the user owns the zone
