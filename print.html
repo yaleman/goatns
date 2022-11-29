@@ -6,7 +6,6 @@
         <title>Goat NS</title>
         <meta name="robots" content="noindex" />
         <!-- Custom HTML head -->
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="Documentation for the GoatNS DNS Server.">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
@@ -29,13 +28,13 @@
     </head>
     <body>
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -51,7 +50,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -63,7 +62,7 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
             var sidebar = 'hidden';
             if (document.body.clientWidth >= 1080) {
@@ -94,7 +93,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -128,7 +127,7 @@
                     </div>
                 </div>
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -156,14 +155,16 @@
 <li>Database - <a href="https://crates.io/crates/sqlx">sqlx</a> for async SQLite goodness.</li>
 <li>Logging - <a href="https://crates.io/crates/flexi_logger">flexi_logger</a></li>
 </ul>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<p>Look at <code>zones.json</code> and <code>goatns.example.json</code> for examples.</p>
+<p>The configuration file's fields are best found here: <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the <code>ip_allow_list</code> field is a nested map.</p>
+<h2 id="running-in-docker"><a class="header" href="#running-in-docker">Running in Docker</a></h2>
+<p>There's a docker container at <code>ghcr.io/yaleman/goatns:latest</code> and a docker-compose.yml file in the repository if that's your thing.</p>
 <h2 id="help"><a class="header" href="#help">Help?</a></h2>
 <p>Found a bug, want to change something, the sky is falling? <a href="https://github.com/yaleman/goatns/issues/new">Create an issue!</a>.</p>
 <p>Wondering how something works, need a chat, or are curious there's so many goat references? <a href="https://github.com/yaleman/goatns/discussions">Discussions are great for that</a>.</p>
 <h2 id="rust-crate-documentation"><a class="header" href="#rust-crate-documentation">Rust Crate Documentation</a></h2>
 <p>Auto-generated and available here: <a href="https://yaleman.github.io/goatns/rustdoc/goatns/">https://yaleman.github.io/goatns/rustdoc/goatns</a></p>
-<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<p>Look at <code>zones.json</code> and <code>goatns.example.json</code> for examples.</p>
-<p>The configuration file's fields are best found here: <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the <code>ip_allow_list</code> field is a nested map.</p>
 <h2 id="testing"><a class="header" href="#testing">Testing</a></h2>
 <p>Rust tests are run using cargo.</p>
 <pre><code class="language-shell">cargo test
@@ -174,8 +175,6 @@
 <p>Or if you want to fuzz the server and test that it doesn't blow up:</p>
 <pre><code class="language-shell">./dnsblast fuzz 127.0.0.1 50000 1500 15353
 </code></pre>
-<h2 id="running-in-docker"><a class="header" href="#running-in-docker">Running in Docker</a></h2>
-<p>There's a dockerfile at <code>ghcr.io/yaleman/goatns:latest</code> and a docker-compose.yml file if that's your thing.</p>
 <h2 id="supported-requestrecord-types"><a class="header" href="#supported-requestrecord-types">Supported request/record types</a></h2>
 <p>This list is now <a href="https://goatns.dotgoat.net/rrtypes.html">in the book</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h1>
@@ -358,20 +357,20 @@ ZONEMD (63) RFC8976 Message Digests for DNS Zones Provides a cryptographic messa
 
         </div>
 
-        <script type="text/javascript">
+        <script>
             window.playground_copyable = true;
         </script>
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
 
         <!-- Custom JS scripts -->
-        <script type="text/javascript" src="mermaid.min.js"></script>
-        <script type="text/javascript" src="mermaid-init.js"></script>
-        <script type="text/javascript">
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+        <script>
         window.addEventListener('load', function() {
             window.setTimeout(window.print, 100);
         });
