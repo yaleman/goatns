@@ -12,7 +12,7 @@ impl APIEntity for FileZoneRecord {
         State(state): State<GoatState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
-    ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
+    ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();
 
         let record: Self = match serde_json::from_value(payload) {
@@ -55,7 +55,7 @@ impl APIEntity for FileZoneRecord {
                         StatusCode::INTERNAL_SERVER_ERROR
                     );
                 }
-                Ok(Json(format!("ID: {:?}", val)))
+                Ok(Json(val))
             }
         }
     }

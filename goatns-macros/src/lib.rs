@@ -35,7 +35,6 @@ pub fn check_api_auth(_item: TokenStream) -> TokenStream {
 //     let signature = syn::parse_macro_input!(input as Signature);
 //     println!("// signature {:?}", signature);
 
-
 //     let max_age = 12345;
 //     let preload = Some(false);
 //     let include_subdomains = None;
