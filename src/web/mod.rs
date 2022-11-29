@@ -18,7 +18,6 @@ use axum::Router;
 use axum_csp::CspUrlMatcher;
 use axum_extra::routing::SpaRouter;
 use axum_macros::FromRef;
-use axum_server::tls_rustls::RustlsConfig;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{ClientId, ClientSecret};
@@ -97,7 +96,7 @@ impl GoatStateTrait for GoatState {
     /// Store the PKCE verifier details server-side for when the user comes back with their auth token
     async fn push_verifier(&mut self, csrftoken: String, verifier: (String, Nonce)) {
         let mut writer = self.write().await;
-        log::debug!("Pushing CSRF token into shared state: token={csrftoken}");
+        log::trace!("Pushing CSRF token into shared state: token={csrftoken}");
         writer.oidc_verifier.insert(csrftoken, verifier);
     }
 }
@@ -217,13 +216,8 @@ pub async fn build(
     };
     let router = router.layer(CompressionLayer::new()).fallback(handler_404);
 
-    let tls_cert = &config.api_tls_cert.clone();
-    let tls_config = RustlsConfig::from_pem_file(&tls_cert, &config.api_tls_key)
-        .await
-        .unwrap();
-
     let res = Some(tokio::spawn(
-        axum_server::bind_rustls(config.api_listener_address(), tls_config)
+        axum_server::bind_rustls(config.api_listener_address(), config.get_tls_config().await)
             .serve(router.into_make_service()),
     ));
     #[cfg(test)]

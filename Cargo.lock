@@ -1455,6 +1455,7 @@ dependencies = [
  "sha2 0.10.6",
  "shellexpand",
  "sqlx",
+ "syn",
  "tokio",
  "tokio-cron-scheduler",
  "tokio-stream",
@@ -1472,6 +1473,7 @@ name = "goatns-macros"
 version = "0.0.1"
 dependencies = [
  "proc-macro2",
+ "syn",
 ]
 
 [[package]]

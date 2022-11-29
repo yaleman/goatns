@@ -169,9 +169,16 @@ async fn test_api_zone_create() -> Result<(), sqlx::Error> {
         .send()
         .await
         .unwrap();
-
     assert_eq!(res.status(), 200);
 
+    let response_zone: FileZone = match res.json().await {
+        Err(err) => panic!("Failed to parse response content: {err:?}"),
+        Ok(val) => val,
+    };
+
+    assert_eq!(response_zone.name, "example.goat");
+    assert_eq!(response_zone.serial, 12345);
+    assert_ne!(response_zone.serial, 123456);
     // apiserver.abort();
     Ok(())
 }
@@ -402,7 +409,12 @@ async fn test_api_record_create() -> Result<(), sqlx::Error> {
         .unwrap();
 
     assert_eq!(res.status(), 200);
+    let response_record: FileZoneRecord = match res.json().await {
+        Err(err) => panic!("Failed to get response content: {err:?}"),
+        Ok(val) => val,
+    };
 
+    assert_eq!(response_record.name, "doggo");
     // apiserver.abort();
     Ok(())
 }

@@ -102,3 +102,6 @@ harness = false
 [[bench]]
 name = "parsers"
 harness = false
+
+[build-dependencies]
+syn.workspace = true

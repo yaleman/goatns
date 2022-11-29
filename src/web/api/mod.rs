@@ -59,7 +59,7 @@ trait APIEntity {
         State(state): State<GoatState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
-    ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
+    ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
     /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
     async fn api_update(
         State(state): State<GoatState>,

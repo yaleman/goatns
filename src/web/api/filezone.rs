@@ -26,7 +26,7 @@ impl APIEntity for FileZone {
         State(state): State<GoatState>,
         session: ReadableSession,
         Json(payload): Json<serde_json::Value>,
-    ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
+    ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {
         #[cfg(test)]
         println!("Got api_create payload: {payload:?}");
         log::debug!("Got api_create payload: {payload:?}");
@@ -124,12 +124,8 @@ impl APIEntity for FileZone {
             );
         }
         log::debug!("Zone created by user={} zone={zone:?}", user.id.unwrap());
-        let result = FileZoneResponse {
-            message: "Zone creation completed!".to_string(),
-            id: None,
-            zone: None,
-        };
-        return Ok(Json(serde_json::to_string_pretty(&result).unwrap()));
+
+        return Ok(Json(zone));
     }
 
     async fn api_update(
@@ -169,7 +165,6 @@ impl APIEntity for FileZone {
             return error_result_json!("Invalid TLD for this system", StatusCode::BAD_REQUEST);
         }
 
-
         // get a db transaction
         let connpool = state.connpool().await.clone();
         // TODO getting a transaction might fail
@@ -177,7 +172,10 @@ impl APIEntity for FileZone {
             Ok(val) => val,
             Err(err) => {
                 log::error!("failed to get connection to the database: {err:?}");
-                return error_result_json!("Failed to get a connection to the database!", StatusCode::INTERNAL_SERVER_ERROR);
+                return error_result_json!(
+                    "Failed to get a connection to the database!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
             }
         };
         // check the user owns the zone
