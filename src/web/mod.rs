@@ -12,7 +12,6 @@ use async_trait::async_trait;
 // use axum::handler::Handler;
 use axum::http::StatusCode;
 use axum::middleware::from_fn_with_state;
-use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
 use axum_csp::CspUrlMatcher;
@@ -34,6 +33,7 @@ use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing::Level;
+use utils::handler_404;
 
 use self::auth::CustomProviderMetadata;
 
@@ -182,18 +182,6 @@ pub async fn build(
     // add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html
     let trace_layer =
         TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
-
-    pub async fn handler_404() -> impl IntoResponse {
-        axum::response::Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .header("Content-type", "text/html")
-            .body(
-                "<h1>Oh no!</h1><p>You've found a 404, try <a href='#' onclick='history.back();'>going back</a> or <a href='/'>home!</a></p>"
-                    .to_string(),
-            )
-            .unwrap()
-            .into_response()
-    }
 
     let router = Router::new()
         .route("/", get(generic::index))

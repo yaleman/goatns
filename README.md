@@ -59,3 +59,7 @@ Or if you want to fuzz the server and test that it doesn't blow up:
 ## Supported request/record types
 
 This list is now [in the book](https://goatns.dotgoat.net/rrtypes.html).
+
+# With thanks to
+
+- Home by Kiki Rizky from [Noun Project](https://thenounproject.com/browse/icons/term/home/)
