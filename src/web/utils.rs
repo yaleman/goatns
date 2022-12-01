@@ -1,7 +1,8 @@
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
-use axum::response::Redirect;
+use axum::response::{IntoResponse, Redirect};
 use chrono::{DateTime, Duration, Utc};
+use http::StatusCode;
 use rand::distributions::{Alphanumeric, DistString};
 use rand_core::OsRng;
 use sha2::{Digest, Sha256};
@@ -92,4 +93,16 @@ pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result
     Argon2::default()
         .verify_password(payload_token.as_bytes(), &passwordhash)
         .map_err(|e| format!("validation error: {e:?}"))
+}
+
+pub async  fn handler_404() -> impl IntoResponse {
+    axum::response::Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .header("Content-type", "text/html")
+        .body(
+            "<h1>Oh no!</h1><p>You've found a 404, try <a href='#' onclick='history.back();'>going back</a> or <a href='/'>home!</a></p>"
+                .to_string(),
+        )
+        .unwrap()
+        .into_response()
 }
