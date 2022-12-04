@@ -18,14 +18,13 @@ FROM gcr.io/distroless/cc as goatns
 # https://github.com/GoogleContainerTools/distroless/blob/main/examples/rust/Dockerfile
 COPY --from=builder /goatns/target/release/goatns /
 COPY --from=builder /goatns/static_files /static_files
-ENV GOATNS_LOG_LEVEL=INFO
 
 # DNS ports
-EXPOSE 15353/udp
-EXPOSE 15353/tcp
+# EXPOSE 15353/udp
+# EXPOSE 15353/tcp
 # default web API port
-EXPOSE 9000/udp
+# EXPOSE 9000/udp
 
 WORKDIR /
 USER nonroot
-CMD ["./goatns"]
+ENTRYPOINT ["./goatns"]
