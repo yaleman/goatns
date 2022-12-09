@@ -57,7 +57,7 @@ log = "0.4.17"
 num-traits = "0.2.15"
 oauth2 = "4.3.0"
 openidconnect = "2.4.0"
-packed_struct = { version = "0.10.0", features = ["byte_types_256"] }
+packed_struct = { version = "0.10.1", features = ["byte_types_256"] }
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
 regex = "1.6.0"
