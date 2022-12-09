@@ -46,7 +46,7 @@ enum-iterator = "1.2.0"
 flexi_logger = { version = "0.24", features = ["async", "default"] }
 futures = "0.3.25"
 futures-util = "0.3.25"
-gethostname = "0.4.0"
+gethostname = "0.4.1"
 goatns-macros = { path = "./goatns-macros"}
 hex = "0.4.3"
 http = "0.2.8"
