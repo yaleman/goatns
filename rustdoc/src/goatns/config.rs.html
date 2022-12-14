@@ -983,7 +983,7 @@
     logger
         .write_mode(flexi_logger::WriteMode::Async)
         .filter(Box::new(LogFilter {
-            filters: <span class="macro">vec!</span>[<span class="string">&quot;h2&quot;</span>, <span class="string">&quot;hyper::proto&quot;</span>],
+            filters: <span class="macro">vec!</span>[<span class="string">&quot;h2&quot;</span>, <span class="string">&quot;hyper::proto&quot;</span>, <span class="string">&quot;rustls&quot;</span>],
         }))
         .set_palette(<span class="string">&quot;b1;3;2;6;5&quot;</span>.to_string())
         .start()
