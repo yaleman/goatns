@@ -473,7 +473,7 @@ pub async fn setup_logging(
     logger
         .write_mode(flexi_logger::WriteMode::Async)
         .filter(Box::new(LogFilter {
-            filters: vec!["h2", "hyper::proto"],
+            filters: vec!["h2", "hyper::proto", "rustls"],
         }))
         .set_palette("b1;3;2;6;5".to_string())
         .start()
