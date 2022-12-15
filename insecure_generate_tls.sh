@@ -161,9 +161,9 @@ if [ -f "${CADB}" ]; then
     rm "${CADB}"
 fi
 
-touch ${CADB}
+touch "${CADB}"
 
-echo 1000 > ${CASRL}
+echo 1000 > "${CASRL}"
 
 if [ ! -f "${CAKEY}" ]; then
     echo "Make the CA key..."
