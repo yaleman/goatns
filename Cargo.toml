@@ -38,7 +38,7 @@ axum-sessions = "0.4.0"
 bit-vec = "0.6.3"
 bytes = "1.3.0"
 chrono = { version = "0.4.23", features = ["clock"] }
-clap = { version="4.0.29", features=["cargo"]}
+clap = { version="4.0.32", features=["cargo"]}
 concread = "0.4.0"
 config = { version = "0.13", features = ["json"] }
 dialoguer = "0.10.2"
