@@ -400,9 +400,9 @@ dependencies = [
 
 [[package]]
 name = "axum-sessions"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2eb201ee35b541ff31dbb69457fc7c5a3678cdeff488aa156fe194cd6da37b9c"
+checksum = "4b114309d293dd8a6fedebf09d5b8bbb0f7647b3d204ca0dd333b5f797aed5c8"
 dependencies = [
  "async-session",
  "axum 0.6.1",
