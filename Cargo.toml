@@ -50,7 +50,7 @@ gethostname = "0.4.1"
 goatns-macros = { path = "./goatns-macros"}
 hex = "0.4.3"
 http = "0.2.8"
-ipnet = { version = "2.7.0", features = [ "json", "serde" ] }
+ipnet = { version = "2.7.1", features = [ "json", "serde" ] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"
 log = "0.4.17"
