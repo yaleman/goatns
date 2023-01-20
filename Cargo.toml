@@ -28,7 +28,7 @@ opt-level = 3
 argon2 = "0.4"
 askama = { version="0.11.1"}
 async-sqlx-session = { git="https://github.com/jbr/async-sqlx-session.git", rev="3f2e1cf", default-features = false, features = ["sqlite"] }
-async-trait = "0.1.60"
+async-trait = "0.1.62"
 axum = { version="0.6.2", features=["http2", "headers", "original-uri", "macros"] }
 axum-csp = { version="^0.0.1", path="axum-csp/"}
 axum-extra = { version = "0.4.2", features = ["spa"] }
