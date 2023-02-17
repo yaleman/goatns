@@ -31,7 +31,7 @@ async-sqlx-session = { git="https://github.com/jbr/async-sqlx-session.git", rev=
 async-trait = "0.1.64"
 axum = { version="0.6.7", features=["http2", "headers", "original-uri", "macros"] }
 axum-csp = { version="^0.0.1", path="axum-csp/"}
-axum-extra = { version = "0.4.2", features = ["spa"] }
+axum-extra = { version = "0.5.0", features = ["spa"] }
 axum-macros = "0.3.2"
 axum-server = { version = "0.4.3", features = [ "tls-rustls"] }
 axum-sessions = "0.4.1"
