@@ -7,7 +7,7 @@ use tokio::sync::{broadcast, mpsc};
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
     for (index, curr_byte) in search.iter().enumerate() {
-        if &(item as u8) == curr_byte {
+        if &(item) == curr_byte {
             return Some(index);
         }
     }
@@ -151,7 +151,7 @@ pub fn name_as_bytes(
             trace!("The thing we're converting is the same as the compression reference!");
             // return a pointer to the target_byte (probably the name in the header)
             if let Some(target) = compress_target {
-                let result: u16 = 0b1100000000000000 | target as u16;
+                let result: u16 = 0b1100000000000000 | target;
                 return result.to_be_bytes().to_vec();
             } else {
                 panic!("you didn't give us a target, dude!")

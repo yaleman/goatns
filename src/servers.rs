@@ -98,6 +98,7 @@ pub async fn udp_server(
         }
     };
 
+    // TODO: this needs to be bigger to handle edns0-negotiated queries
     let mut udp_buffer = [0; UDP_BUFFER_SIZE];
 
     loop {

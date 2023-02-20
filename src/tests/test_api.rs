@@ -14,7 +14,7 @@ pub async fn is_free_port(port: u16) -> bool {
     TcpStream::connect(("127.0.0.1", port)).await.is_err()
 }
 
-async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
+pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     let pool = test_get_sqlite_memory().await;
 
     start_db(&pool).await.unwrap();
@@ -72,7 +72,7 @@ async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     )
 }
 
-async fn insert_test_user(pool: &SqlitePool) -> Box<User> {
+pub async fn insert_test_user(pool: &SqlitePool) -> Box<User> {
     User {
         id: Some(5),
         displayname: "Example user".to_string(),

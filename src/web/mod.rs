@@ -42,6 +42,7 @@ pub mod macros;
 
 pub mod api;
 pub mod auth;
+pub mod doh;
 pub mod generic;
 pub mod middleware;
 pub mod ui;
@@ -188,6 +189,7 @@ pub async fn build(
         .nest("/ui", ui::new())
         .nest("/api", api::new())
         .nest("/auth", auth::new())
+        .nest("/dns-query", doh::new())
         .layer(
             ServiceBuilder::new()
                 .layer(from_fn_with_state(state.clone(), csp::cspheaders))

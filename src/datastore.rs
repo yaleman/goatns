@@ -222,7 +222,7 @@ pub async fn manager(
 ) -> Result<(), String> {
     if let Some(timer) = cron_db_cleanup_timer {
         log::debug!("Spawning DB cron cleanup task");
-        let _ = tokio::spawn(db::cron_db_cleanup(connpool.clone(), timer));
+        tokio::spawn(db::cron_db_cleanup(connpool.clone(), timer));
     }
 
     while let Some(cmd) = rx.recv().await {

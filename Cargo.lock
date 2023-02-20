@@ -1397,6 +1397,7 @@ dependencies = [
  "axum-macros",
  "axum-server",
  "axum-sessions",
+ "base64 0.21.0",
  "bit-vec",
  "bytes",
  "chrono",
