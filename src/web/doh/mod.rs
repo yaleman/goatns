@@ -100,6 +100,7 @@ impl Default for GetQueryString {
 enum ResponseType {
     Json,
     Raw,
+    Invalid,
 }
 
 async fn parse_raw_http(bytes: Vec<u8>) -> Result<GetQueryString, String> {
@@ -136,20 +137,32 @@ async fn parse_raw_http(bytes: Vec<u8>) -> Result<GetQueryString, String> {
     // Err("".to_string())
 }
 
+fn get_response_type_from_headers(headers: HeaderMap) -> ResponseType {
+    match headers.get("accept") {
+        Some(value) => match value.to_str().unwrap_or("") {
+            "application/dns-json" => ResponseType::Json,
+            "application/dns-message" => ResponseType::Raw,
+            _ => ResponseType::Invalid,
+        },
+        None => ResponseType::Invalid,
+    }
+}
+
 pub async fn handle_get(
     State(state): State<GoatState>,
     headers: HeaderMap,
     Query(query): Query<GetQueryString>,
 ) -> Response<Full<Bytes>> {
-    let response_type: ResponseType = match headers.get("accept") {
-        Some(value) => match value.to_str().unwrap_or("") {
-            "application/dns-json" => ResponseType::Json,
-            "application/dns-message" => ResponseType::Raw,
-            _ => ResponseType::Raw,
-        },
-        None => ResponseType::Raw,
-    };
-    log::debug!("Response type: {response_type:?}");
+    let response_type: ResponseType = get_response_type_from_headers(headers);
+
+    if let ResponseType::Invalid = response_type {
+        return axum::response::Response::builder()
+            .status(StatusCode::from_u16(406).unwrap())
+            // .header("Content-type", "application/dns-json")
+            .header("Cache-Control", "max-age=3600")
+            .body(Full::new(Bytes::new()))
+            .unwrap();
+    }
 
     let mut qname: String = "".to_string();
     let mut rrtype: String = "A".to_string();
@@ -199,6 +212,9 @@ pub async fn handle_get(
     log::debug!("Returned records: {records:?}");
 
     match response_type {
+        ResponseType::Invalid => {
+            todo!("How did you get here?");
+        }
         ResponseType::Json => {
             let answer = records
                 .iter()
@@ -278,11 +294,22 @@ pub async fn handle_get(
 
 pub async fn handle_post(
     State(state): State<GoatState>,
-    // _headers: HeaderMap,
+    headers: HeaderMap,
     // Query(query): Query<GetQueryString>,
     body: Bytes,
 ) -> Response<Full<Bytes>> {
     log::debug!("body {body:?}");
+
+    let response_type: ResponseType = get_response_type_from_headers(headers);
+
+    if let ResponseType::Invalid = response_type {
+        return axum::response::Response::builder()
+            .status(StatusCode::from_u16(406).unwrap())
+            // .header("Content-type", "application/dns-json")
+            .header("Cache-Control", "max-age=3600")
+            .body(Full::new(Bytes::new()))
+            .unwrap();
+    };
 
     let state_reader = state.read().await;
     let datastore = state_reader.tx.clone();

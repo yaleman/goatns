@@ -1,4 +1,5 @@
 use http::HeaderMap;
+use http::StatusCode;
 
 use crate::db::test::test_example_com_zone;
 use crate::db::DBEntity;
@@ -50,9 +51,91 @@ async fn test_doh_get_json() -> Result<(), ()> {
         .send()
         .await
         .unwrap();
-    eprintln!("{res:?}");
+    assert_eq!(res.status(), StatusCode::from_u16(200).unwrap());
+    eprintln!("{:?}", res);
     eprintln!("{:?}", res.bytes().await);
 
     // TODO: finish this
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_doh_ask_raw_accept() -> Result<(), ()> {
+    let (_pool, _servers, config) = start_test_server().await;
+
+    let api_port = config.read().await.api_port;
+    let mut headers = HeaderMap::new();
+    headers.insert("Accept", "application/dns-message".parse().unwrap());
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        // .cookie_store(true)
+        .default_headers(headers)
+        .build()
+        .unwrap();
+
+    let res = client
+        .get(&format!(
+            "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
+        ))
+        .send()
+        .await
+        .unwrap();
+    eprintln!("{res:?}");
+    assert_eq!(res.status(), StatusCode::from_u16(200).unwrap());
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_doh_ask_json_accept() -> Result<(), ()> {
+    let (_pool, _servers, config) = start_test_server().await;
+
+    let api_port = config.read().await.api_port;
+    let mut headers = HeaderMap::new();
+    headers.insert("Accept", "application/dns-json".parse().unwrap());
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        // .cookie_store(true)
+        .default_headers(headers)
+        .build()
+        .unwrap();
+
+    let res = client
+        .get(&format!(
+            "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
+        ))
+        .send()
+        .await
+        .unwrap();
+    eprintln!("{res:?}");
+    assert_eq!(res.status(), StatusCode::from_u16(200).unwrap());
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
+    let (_pool, _servers, config) = start_test_server().await;
+
+    let api_port = config.read().await.api_port;
+    let mut headers = HeaderMap::new();
+    headers.insert("Accept", "application/cheese".parse().unwrap());
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        // .cookie_store(true)
+        .default_headers(headers)
+        .build()
+        .unwrap();
+
+    let res = client
+        .get(&format!(
+            "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
+        ))
+        .send()
+        .await
+        .unwrap();
+    eprintln!("{res:?}");
+    assert_eq!(res.status(), StatusCode::from_u16(406).unwrap());
     Ok(())
 }
