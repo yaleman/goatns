@@ -123,7 +123,9 @@ pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, String> {
     })
 }
 
+/// Build a NXDOMAIN response
 pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
+    // RFC 2308  - 2.1 Name Error - <https://www.rfc-editor.org/rfc/rfc2308#section-2.1>
     reply_builder(id, Rcode::NameError)
 }
 

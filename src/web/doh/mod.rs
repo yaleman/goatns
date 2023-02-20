@@ -7,9 +7,10 @@ use axum::response::Response;
 use axum::routing::{get, post};
 // use axum::{Json, Router};
 use crate::db::get_all_fzr_by_name;
-use crate::enums::{Rcode, RecordType};
+use crate::enums::{Rcode, RecordClass, RecordType};
+use crate::reply::Reply;
 use crate::servers::parse_query;
-use crate::{Question, HEADER_BYTES};
+use crate::{Header, Question, HEADER_BYTES};
 use axum::extract::{Query, State};
 use axum::Router;
 use http::{HeaderMap, StatusCode};
@@ -21,24 +22,48 @@ use super::GoatState;
 // use super::api::ErrorResult;
 
 #[derive(Debug, Serialize)]
+pub struct JSONQuestion {
+    name: String,
+    #[serde(rename = "type")]
+    qtype: u16,
+}
+
+#[derive(Debug, Serialize)]
 pub struct JSONRecord {
     name: String,
     #[serde(rename = "type")]
     qtype: u16,
+    #[serde(rename = "TTL")]
     ttl: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     data: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize)]
 pub struct JSONResponse {
     status: u32,
-    tc: bool,
-    rd: bool,
-    ra: bool,
+    /// Response was truncated
+    #[serde(rename = "tc")]
+    truncated: bool,
+    /// Recursive desired was set
+    #[serde(rename = "rd")]
+    recursive_desired: bool,
+    #[serde(rename = "ra")]
+    /// If true, it means the Recursion Available bit was set.
+    recursion_available: bool,
+    ///If true, it means that every record in the answer was verified with DNSSEC.
     ad: bool,
-    cd: bool,
-    question: Vec<JSONRecord>,
+    #[serde(rename = "cd")]
+    /// If true, the client asked to disable DNSSEC validation.
+    client_dnssec_disable: bool,
+    #[serde(rename = "Question")]
+    question: Vec<JSONQuestion>,
+    #[serde(rename = "Answer")]
     answer: Vec<JSONRecord>,
+    #[serde(rename = "Comment", skip_serializing_if = "Option::is_none")]
+    comment: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -116,10 +141,6 @@ pub async fn handle_get(
     headers: HeaderMap,
     Query(query): Query<GetQueryString>,
 ) -> Response<Full<Bytes>> {
-    let state_reader = state.read().await;
-    // let datastore = state_reader.tx.clone();
-    // let (tx_oneshot, rx_oneshot) = oneshot::channel();
-
     let response_type: ResponseType = match headers.get("accept") {
         Some(value) => match value.to_str().unwrap_or("") {
             "application/dns-json" => ResponseType::Json,
@@ -150,11 +171,10 @@ pub async fn handle_get(
 
     log::debug!("getting records...");
 
-    let rrtype_u16: u16 = RecordType::from(rrtype.clone()) as u16;
     let records = match get_all_fzr_by_name(
-        &mut state_reader.connpool.begin().await.unwrap(),
+        &mut state.read().await.connpool.begin().await.unwrap(),
         &qname.clone(),
-        &rrtype_u16,
+        RecordType::from(rrtype.clone()) as u16,
     )
     .await
     {
@@ -167,41 +187,16 @@ pub async fn handle_get(
 
     log::debug!("done getting records...");
 
-    // log::debug!("Query Type: {rrtype:?}");
-    // let ds_req: Command = Command::GetRecord {
-    //     name: qname.as_bytes().to_owned(),
-    //     rrtype: rrtype.clone().into(),
-    //     rclass: crate::enums::RecordClass::Internet,
-    //     resp: tx_oneshot,
-    // };
+    let ttl = records.iter().map(|r| r.ttl).min();
+    let ttl = match ttl {
+        Some(val) => val.to_owned(),
+        None => {
+            log::trace!("Failed to get minimum TTL from query, using 1");
+            1
+        }
+    };
 
-    // match state_reader.tx.send(ds_req).await {
-    //     Ok(_) => log::trace!("Sent a request to the datastore!"),
-    //     // TODO: handle errors sending to the DS properly
-    //     Err(error) => {
-    //         log::error!("Error sending to datastore: {error:?}");
-    //         panic!("Error sending to datastore: {error:?}")
-    //     },
-    // };
-
-    // let record = match rx_oneshot.await {
-    //     Ok(value) => match value {
-    //         Some(zr) => {
-    //             log::debug!("DS Response: {}", zr);
-    //             Some(zr)
-    //         }
-    //         None => {
-    //             log::debug!("No response from datastore");
-    //             // reply_nxdomain(0);
-    //             None
-    //         }
-    //     },
-    //     Err(error) => {
-    //         log::error!("Failed to get response from datastore: {:?}", error);
-    //         // reply_builder(0, Rcode::ServFail);
-    //         None
-    //     }
-    // };
+    log::debug!("Returned records: {records:?}");
 
     match response_type {
         ResponseType::Json => {
@@ -218,67 +213,66 @@ pub async fn handle_get(
             let reply = JSONResponse {
                 answer,
                 status: Rcode::NoError as u32,
-                tc: false,
-                rd: false,
-                ra: false,
+                truncated: false,
+                recursive_desired: false,
+                recursion_available: false,
                 ad: false,
-                cd: false,
-                question: vec![JSONRecord {
+                client_dnssec_disable: false,
+                question: vec![JSONQuestion {
                     name: qname,
                     qtype: RecordType::from(rrtype) as u16,
-                    ttl: 1,
-                    data: None,
-                }], //record.unwrap().typerecords
+                }],
+                ..Default::default()
             };
 
             let response = serde_json::to_string(&reply).unwrap();
 
-            log::debug!("JSON RESPONSE: {response:?}");
-
-            axum::response::Response::builder()
+            let response_builder = axum::response::Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-type", "application/dns-json")
-                .body(Full::from(response))
-                .unwrap()
+                .header("Cache-Control", format!("max-age={ttl}"));
+            // TODO: add handler for DNSSEC responses
+            response_builder.body(Full::from(response)).unwrap()
         }
         ResponseType::Raw => {
-            todo!()
-        } //     let reply = match reply {
-          //         Some(reply) => reply,
-          //         None => Reply {
-          //         header: Header {
-          //             id: 0, // TODO: Check this in ... headers?
-          //             qr: crate::enums::PacketType::Answer,
-          //             opcode: crate::enums::OpCode::Query,
-          //             authoritative: true,
-          //             truncated: false,
-          //             recursion_desired: false,
-          //             recursion_available: false,
-          //             z: false,
-          //             ad: false,
-          //             cd: false,
-          //             rcode: crate::enums::Rcode::NoError,
-          //             qdcount: 1,
-          //             ancount: record.unwrap().typerecords.len() as u16,
-          //             nscount: 0,
-          //             arcount: 0,
-          //         },
-          //         question,
-          //         answers: vec![],
-          //         authorities: vec![],
-          //         additional: vec![],
-          //     }
-          // };
+            let reply = Reply {
+                header: Header {
+                    id: 0, // TODO: Check this in ... headers?
+                    qr: crate::enums::PacketType::Answer,
+                    opcode: crate::enums::OpCode::Query,
+                    authoritative: true,
+                    truncated: false,
+                    recursion_desired: false,
+                    recursion_available: false,
+                    z: false,
+                    ad: false,
+                    cd: false,
+                    rcode: crate::enums::Rcode::NoError,
+                    qdcount: 1,
+                    ancount: records.len() as u16,
+                    nscount: 0,
+                    arcount: 0,
+                },
+                question: Some(Question {
+                    qname: qname.into(),
+                    qtype: RecordType::from(rrtype),
+                    qclass: RecordClass::Internet,
+                }),
+                answers: vec![], // TODO
+                authorities: vec![],
+                additional: vec![],
+            };
 
-          //     match reply.as_bytes().await {
-          //         Ok(value) => axum::response::Response::builder()
-          //             .status(StatusCode::OK)
-          //             .header("Content-type", "application/dns-message")
-          //             .body(Full::from(value))
-          //             .unwrap(),
-          //         Err(err) => panic!("{err}"),
-          //     }
-          // }
+            match reply.as_bytes().await {
+                Ok(value) => axum::response::Response::builder()
+                    .status(StatusCode::OK)
+                    .header("Content-type", "application/dns-message")
+                    .header("Cache-Control", format!("max-age={ttl}"))
+                    .body(Full::from(value))
+                    .unwrap(),
+                Err(err) => panic!("{err}"),
+            }
+        }
     }
 }
 
@@ -292,7 +286,6 @@ pub async fn handle_post(
 
     let state_reader = state.read().await;
     let datastore = state_reader.tx.clone();
-    // let (tx_oneshot, rx_oneshot) = oneshot::channel();
 
     let res = parse_query(datastore, body.len(), &body, false).await;
 
@@ -305,9 +298,16 @@ pub async fn handle_post(
                     panic!();
                 }
             };
+
+            let ttl = reply.answers.iter().map(|a| a.ttl()).min();
+            let ttl = match ttl {
+                Some(ttl) => ttl.to_owned(),
+                None => 1,
+            };
             axum::response::Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-type", "application/dns-message")
+                .header("Cache-Control", format!("max-age={ttl}"))
                 .body(Full::from(bytes))
                 .unwrap()
         }

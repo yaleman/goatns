@@ -98,7 +98,7 @@ pub struct LocRecord {
     pub altitude: i32,
 }
 
-/// <character-string> is a single length octet followed by that number of characters.  <character-string> is treated as binary information, and can be up to 256 characters in length (including the length octet).
+/// `<character-string>` is a single length octet followed by that number of characters.  `<character-string>` is treated as binary information, and can be up to 256 characters in length (including the length octet).
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct DNSCharString {
     pub data: Vec<u8>,
@@ -190,7 +190,7 @@ pub enum InternalResourceRecord {
     NAPTR {
         ttl: u32,
         rclass: RecordClass,
-        ///     Domain - The domain name to which this resource record refers.  This is the 'key' for this entry in the rule database.  This value will either be the first well known key (<something>.uri.arpa for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements.
+        ///     Domain - The domain name to which this resource record refers.  This is the 'key' for this entry in the rule database.  This value will either be the first well known key (`<something>.uri.arpa` for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements.
         domain: DomainName,
         // A 16-bit unsigned integer specifying the order in which the NAPTR records MUST be processed to ensure the correct ordering of rules.  Low numbers are processed before high numbers, and once a NAPTR is found whose rule "matches" the target, the client MUST NOT consider any NAPTRs with a higher value for order (except as noted below for the Flags field).
         order: u16,
@@ -241,9 +241,9 @@ pub enum InternalResourceRecord {
     SOA {
         // The zone that this SOA record is for - eg hello.goat or example.com
         zone: DomainName,
-        /// The <domain-name> of the name server that was the original or primary source of data for this zone.
+        /// The `domain-name` of the name server that was the original or primary source of data for this zone.
         mname: DomainName,
-        /// A <domain-name> which specifies the mailbox of the person responsible for this zone. eg: `dns.example.com` is actually `dns@example.com`
+        /// A `domain-name` which specifies the mailbox of the person responsible for this zone. eg: `dns.example.com` is actually `dns@example.com`
         rname: DomainName,
         serial: u32,
         refresh: u32,

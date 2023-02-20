@@ -1011,7 +1011,6 @@ impl DBEntity for FileZoneRecord {
         .bind(name)
         .fetch_all(txn)
         .await?;
-        log::debug!("Query done!");
         let res = res
             .iter()
             .map(|r| {
@@ -1890,7 +1889,7 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
 pub async fn get_all_fzr_by_name<'t>(
     txn: &mut Transaction<'t, Sqlite>,
     name: &str,
-    rrtype: &u16,
+    rrtype: u16,
 ) -> Result<Vec<FileZoneRecord>, sqlx::Error> {
     let res = sqlx::query(&format!(
         "select *, record_id as id from {} where name = ? AND rrtype = ?",
@@ -1900,7 +1899,6 @@ pub async fn get_all_fzr_by_name<'t>(
     .bind(rrtype)
     .fetch_all(txn)
     .await?;
-    log::debug!("Query done!");
 
     let res = res.into_iter().filter_map(|r| r.try_into().ok()).collect();
     Ok(res)
