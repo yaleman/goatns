@@ -14,5 +14,4 @@ sequenceDiagram
     datastore->>parsequery: Respond with data
     parsequery->>udpserver: Return Result Object
     udpserver->>udpport: Send data to client
-    
 ```
