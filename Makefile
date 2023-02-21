@@ -38,7 +38,7 @@ doc: ## Build the rust documentation locally
 doc:
 	cargo doc --document-private-items --no-deps
 
-book: ## Build the Kanidm book
+book: ## Build the book
 book: doc
 	mdbook build docs
 	mv ./docs/book/ ./target/docs/

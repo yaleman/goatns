@@ -516,7 +516,7 @@ async fn get_result(
         },
         question: Some(question),
         answers: record.typerecords,
-        authorities: vec![],
+        authorities: vec![], // TODO: we're authoritative, we should respond with our records!
         additional: vec![],
     })
 }
