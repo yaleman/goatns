@@ -203,7 +203,7 @@
         .map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;validation error: {e:?}&quot;</span>))
 }
 
-<span class="kw">pub async  fn </span>handler_404() -&gt; <span class="kw">impl </span>IntoResponse {
+<span class="kw">pub async fn </span>handler_404() -&gt; <span class="kw">impl </span>IntoResponse {
     axum::response::Response::builder()
         .status(StatusCode::NOT_FOUND)
         .header(<span class="string">&quot;Content-type&quot;</span>, <span class="string">&quot;text/html&quot;</span>)

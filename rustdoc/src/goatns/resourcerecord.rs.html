@@ -1238,7 +1238,7 @@
     </span><span class="kw">pub </span>altitude: i32,
 }
 
-<span class="doccomment">/// &lt;character-string&gt; is a single length octet followed by that number of characters.  &lt;character-string&gt; is treated as binary information, and can be up to 256 characters in length (including the length octet).
+<span class="doccomment">/// `&lt;character-string&gt;` is a single length octet followed by that number of characters.  `&lt;character-string&gt;` is treated as binary information, and can be up to 256 characters in length (including the length octet).
 </span><span class="attr">#[derive(Eq, PartialEq, Debug, Clone)]
 </span><span class="kw">pub struct </span>DNSCharString {
     <span class="kw">pub </span>data: Vec&lt;u8&gt;,
@@ -1330,7 +1330,7 @@
     NAPTR {
         ttl: u32,
         rclass: RecordClass,
-        <span class="doccomment">///     Domain - The domain name to which this resource record refers.  This is the &#39;key&#39; for this entry in the rule database.  This value will either be the first well known key (&lt;something&gt;.uri.arpa for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements.
+        <span class="doccomment">///     Domain - The domain name to which this resource record refers.  This is the &#39;key&#39; for this entry in the rule database.  This value will either be the first well known key (`&lt;something&gt;.uri.arpa` for example) or a new key that is the output of a replacement or regexp rewrite. Beyond this, it has the standard DNS requirements.
         </span>domain: DomainName,
         <span class="comment">// A 16-bit unsigned integer specifying the order in which the NAPTR records MUST be processed to ensure the correct ordering of rules.  Low numbers are processed before high numbers, and once a NAPTR is found whose rule &quot;matches&quot; the target, the client MUST NOT consider any NAPTRs with a higher value for order (except as noted below for the Flags field).
         </span>order: u16,
@@ -1381,9 +1381,9 @@
     </span>SOA {
         <span class="comment">// The zone that this SOA record is for - eg hello.goat or example.com
         </span>zone: DomainName,
-        <span class="doccomment">/// The &lt;domain-name&gt; of the name server that was the original or primary source of data for this zone.
+        <span class="doccomment">/// The `domain-name` of the name server that was the original or primary source of data for this zone.
         </span>mname: DomainName,
-        <span class="doccomment">/// A &lt;domain-name&gt; which specifies the mailbox of the person responsible for this zone. eg: `dns.example.com` is actually `dns@example.com`
+        <span class="doccomment">/// A `domain-name` which specifies the mailbox of the person responsible for this zone. eg: `dns.example.com` is actually `dns@example.com`
         </span>rname: DomainName,
         serial: u32,
         refresh: u32,

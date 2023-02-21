@@ -219,6 +219,8 @@
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
 </pre><pre class="rust"><code><span class="doccomment">//! # Web things
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
@@ -263,6 +265,7 @@
 
 <span class="kw">pub mod </span>api;
 <span class="kw">pub mod </span>auth;
+<span class="kw">pub mod </span>doh;
 <span class="kw">pub mod </span>generic;
 <span class="kw">pub mod </span>middleware;
 <span class="kw">pub mod </span>ui;
@@ -409,6 +412,7 @@
         .nest(<span class="string">&quot;/ui&quot;</span>, ui::new())
         .nest(<span class="string">&quot;/api&quot;</span>, api::new())
         .nest(<span class="string">&quot;/auth&quot;</span>, auth::new())
+        .nest(<span class="string">&quot;/dns-query&quot;</span>, doh::new())
         .layer(
             ServiceBuilder::new()
                 .layer(from_fn_with_state(state.clone(), csp::cspheaders))

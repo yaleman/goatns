@@ -564,7 +564,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(timer) = cron_db_cleanup_timer {
         <span class="macro">log::debug!</span>(<span class="string">&quot;Spawning DB cron cleanup task&quot;</span>);
-        <span class="kw">let _ </span>= tokio::spawn(db::cron_db_cleanup(connpool.clone(), timer));
+        tokio::spawn(db::cron_db_cleanup(connpool.clone(), timer));
     }
 
     <span class="kw">while let </span><span class="prelude-val">Some</span>(cmd) = rx.recv().<span class="kw">await </span>{

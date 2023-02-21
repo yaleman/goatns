@@ -162,10 +162,10 @@
 </span><span class="kw">pub struct </span>FileZone {
     <span class="doccomment">/// Database row ID
     </span><span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
-    <span class="doccomment">/// MNAME The &lt;domain-name&gt; of the name server that was the original or primary source of data for this zone.
+    <span class="doccomment">/// MNAME The `domain-name` of the name server that was the original or primary source of data for this zone.
     </span><span class="comment">// #[serde(rename(serialize = &quot;MNAME&quot;))]
     </span><span class="kw">pub </span>name: String,
-    <span class="comment">// RNAME A &lt;domain-name&gt; which specifies the mailbox of the person responsible for this zone.
+    <span class="comment">// RNAME A `domain-name` which specifies the mailbox of the person responsible for this zone.
     // #[serde(rename(serialize = &quot;RNAME&quot;), default = &quot;rname_default&quot;)]
     </span><span class="attr">#[serde(default = <span class="string">&quot;rname_default&quot;</span>)]
     </span><span class="kw">pub </span>rname: String,

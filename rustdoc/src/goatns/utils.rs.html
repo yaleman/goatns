@@ -348,7 +348,7 @@
 
 <span class="kw">pub fn </span>vec_find(item: u8, search: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
     <span class="kw">for </span>(index, curr_byte) <span class="kw">in </span>search.iter().enumerate() {
-        <span class="kw">if </span><span class="kw-2">&amp;</span>(item <span class="kw">as </span>u8) == curr_byte {
+        <span class="kw">if </span><span class="kw-2">&amp;</span>(item) == curr_byte {
             <span class="kw">return </span><span class="prelude-val">Some</span>(index);
         }
     }
@@ -492,7 +492,7 @@ name_as_bytes(
             <span class="macro">trace!</span>(<span class="string">&quot;The thing we&#39;re converting is the same as the compression reference!&quot;</span>);
             <span class="comment">// return a pointer to the target_byte (probably the name in the header)
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(target) = compress_target {
-                <span class="kw">let </span>result: u16 = <span class="number">0b1100000000000000 </span>| target <span class="kw">as </span>u16;
+                <span class="kw">let </span>result: u16 = <span class="number">0b1100000000000000 </span>| target;
                 <span class="kw">return </span>result.to_be_bytes().to_vec();
             } <span class="kw">else </span>{
                 <span class="macro">panic!</span>(<span class="string">&quot;you didn&#39;t give us a target, dude!&quot;</span>)
