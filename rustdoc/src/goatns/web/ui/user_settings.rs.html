@@ -642,7 +642,7 @@
 
     <span class="comment">// store it in the session storage
     </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(SESSION_CSRFTOKEN_FIELD, stored_csrf) {
-        <span class="comment">// TOOD: nice errors are nice but secure errors are better
+        <span class="comment">// TODO: nice errors are nice but secure errors are better
         </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to store CSRF Token for user: {error:?}&quot;</span>));
     };
     <span class="prelude-val">Ok</span>(csrftoken)

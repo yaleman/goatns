@@ -734,7 +734,7 @@
     <span class="kw">let </span>(pkce_verifier_secret, nonce) = <span class="kw">match </span>verifier {
         <span class="prelude-val">Some</span>((p, n)) =&gt; (p, n),
         <span class="prelude-val">None </span>=&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find a sesssion, redirecting...&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find a session, redirecting...&quot;</span>);
             <span class="kw">return </span>Redirect::to(<span class="string">&quot;/auth/login&quot;</span>).into_response();
         }
     };

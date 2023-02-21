@@ -151,10 +151,11 @@
                         <h1 id="goatns"><a class="header" href="#goatns">GoatNS</a></h1>
 <p><img src="./static_files/img/apple-touch-icon.png" alt="GoatNS Logo" /></p>
 <p>Yet another authoritative DNS name server. But with goat references.</p>
-<p>Built in Rust, thanks to some great packages</p>
+<p>Built in Rust, thanks to some great packages:</p>
 <ul>
 <li>Networking features use <a href="https://crates.io/crates/tokio">tokio</a></li>
-<li>DNS Packets are largely decoded/encoded with <a href="https://crates.io/crates/packed_struct">packed_struct</a></li>
+<li>DNS Packets are largely decoded/encoded with
+<a href="https://crates.io/crates/packed_struct">packed_struct</a></li>
 <li>HTTP things use:
 <ul>
 <li><a href="https://crates.io/crates/tide">tide</a></li>
@@ -168,19 +169,26 @@
 </ul>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <p>Look at <code>zones.json</code> and <code>goatns.example.json</code> for examples.</p>
-<p>The configuration file's fields are best found here: <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the <code>ip_allow_list</code> field is a nested map.</p>
+<p>The configuration file's fields are best found here:
+<a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the
+<code>ip_allow_list</code> field is a nested map.</p>
 <h2 id="running-in-docker"><a class="header" href="#running-in-docker">Running in Docker</a></h2>
-<p>There's a docker container at <code>ghcr.io/yaleman/goatns:latest</code> and a docker-compose.yml file in the repository if that's your thing.</p>
+<p>There's a docker container at <code>ghcr.io/yaleman/goatns:latest</code> and a docker-compose.yml file in the
+repository if that's your thing.</p>
 <h2 id="help"><a class="header" href="#help">Help?</a></h2>
-<p>Found a bug, want to change something, the sky is falling? <a href="https://github.com/yaleman/goatns/issues/new">Create an issue!</a>.</p>
-<p>Wondering how something works, need a chat, or are curious there's so many goat references? <a href="https://github.com/yaleman/goatns/discussions">Discussions are great for that</a>.</p>
+<p>Found a bug, want to change something, the sky is falling?
+<a href="https://github.com/yaleman/goatns/issues/new">Create an issue!</a>.</p>
+<p>Wondering how something works, need a chat, or are curious there's so many goat references?
+<a href="https://github.com/yaleman/goatns/discussions">Discussions are great for that</a>.</p>
 <h2 id="rust-crate-documentation"><a class="header" href="#rust-crate-documentation">Rust Crate Documentation</a></h2>
-<p>Auto-generated and available here: <a href="https://yaleman.github.io/goatns/rustdoc/goatns/">https://yaleman.github.io/goatns/rustdoc/goatns</a></p>
+<p>Auto-generated and available here:
+<a href="https://yaleman.github.io/goatns/rustdoc/goatns/">https://yaleman.github.io/goatns/rustdoc/goatns</a></p>
 <h2 id="testing"><a class="header" href="#testing">Testing</a></h2>
 <p>Rust tests are run using cargo.</p>
 <pre><code class="language-shell">cargo test
 </code></pre>
-<p>A handy load testing tool is <a href="https://github.com/jedisct1/dnsblast">dnsblast</a>. This'll run 50,000 &quot;valid&quot; queries, 1500 packets per second, to port 15353:</p>
+<p>A handy load testing tool is <a href="https://github.com/jedisct1/dnsblast">dnsblast</a>. This'll run 50,000
+&quot;valid&quot; queries, 1500 packets per second, to port 15353:</p>
 <pre><code class="language-shell">./dnsblast 127.0.0.1 50000 1500 15353
 </code></pre>
 <p>Or if you want to fuzz the server and test that it doesn't blow up:</p>
@@ -188,9 +196,9 @@
 </code></pre>
 <h2 id="supported-requestrecord-types"><a class="header" href="#supported-requestrecord-types">Supported request/record types</a></h2>
 <p>This list is now <a href="https://goatns.dotgoat.net/rrtypes.html">in the book</a>.</p>
-<h1 id="with-thanks-to"><a class="header" href="#with-thanks-to">With thanks to</a></h1>
+<h2 id="with-thanks-to"><a class="header" href="#with-thanks-to">With thanks to</a></h2>
 <ul>
-<li>Home by Kiki Rizky from <a href="https://thenounproject.com/browse/icons/term/home/">Noun Project</a></li>
+<li>&quot;Home&quot; by Kiki Rizky from <a href="https://thenounproject.com/browse/icons/term/home/">Noun Project</a></li>
 </ul>
 
                     </main>
