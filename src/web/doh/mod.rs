@@ -148,6 +148,15 @@ fn get_response_type_from_headers(headers: HeaderMap) -> ResponseType {
     }
 }
 
+fn response_406() -> Response<Full<Bytes>> {
+    axum::response::Response::builder()
+        .status(StatusCode::from_u16(406).unwrap())
+        // .header("Content-type", "application/dns-json")
+        .header("Cache-Control", "max-age=3600")
+        .body(Full::new(Bytes::new()))
+        .unwrap()
+}
+
 pub async fn handle_get(
     State(state): State<GoatState>,
     headers: HeaderMap,
@@ -156,12 +165,7 @@ pub async fn handle_get(
     let response_type: ResponseType = get_response_type_from_headers(headers);
 
     if let ResponseType::Invalid = response_type {
-        return axum::response::Response::builder()
-            .status(StatusCode::from_u16(406).unwrap())
-            // .header("Content-type", "application/dns-json")
-            .header("Cache-Control", "max-age=3600")
-            .body(Full::new(Bytes::new()))
-            .unwrap();
+        return response_406();
     }
 
     let mut qname: String = "".to_string();
@@ -303,12 +307,7 @@ pub async fn handle_post(
     let response_type: ResponseType = get_response_type_from_headers(headers);
 
     if let ResponseType::Invalid = response_type {
-        return axum::response::Response::builder()
-            .status(StatusCode::from_u16(406).unwrap())
-            // .header("Content-type", "application/dns-json")
-            .header("Cache-Control", "max-age=3600")
-            .body(Full::new(Bytes::new()))
-            .unwrap();
+        return response_406();
     };
 
     let state_reader = state.read().await;
