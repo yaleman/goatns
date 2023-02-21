@@ -4,18 +4,12 @@
 
 Yet another authoritative DNS name server. But with goat references.
 
-Built in Rust, thanks to some great packages:
+## Features
 
-- Networking features use [tokio](https://crates.io/crates/tokio)
-- DNS Packets are largely decoded/encoded with
-  [packed_struct](https://crates.io/crates/packed_struct)
-- HTTP things use:
-  - [tide](https://crates.io/crates/tide)
-  - [Askama](https://crates.io/crates/askama)
-  - [Bootstrap 5](https://getbootstrap.com)
-  - [Feather icons](https://feathericons.com)
-- Database - [sqlx](https://crates.io/crates/sqlx) for async SQLite goodness.
-- Logging - [flexi_logger](https://crates.io/crates/flexi_logger)
+- DNS over HTTPS (RFC8484) on `/dns-query`
+- Web API/UI for management
+  - OIDC Authentication to the Web UI
+  - Token auth for API endpoints
 
 ## Configuration
 
@@ -37,6 +31,21 @@ Found a bug, want to change something, the sky is falling?
 
 Wondering how something works, need a chat, or are curious there's so many goat references?
 [Discussions are great for that](https://github.com/yaleman/goatns/discussions).
+
+## Built in Rust
+
+Thanks to some great packages:
+
+- Networking features use [tokio](https://crates.io/crates/tokio)
+- DNS Packets are largely decoded/encoded with
+  [packed_struct](https://crates.io/crates/packed_struct)
+- HTTP things use:
+  - [tide](https://crates.io/crates/tide)
+  - [Askama](https://crates.io/crates/askama)
+  - [Bootstrap 5](https://getbootstrap.com)
+  - [Feather icons](https://feathericons.com)
+- Database - [sqlx](https://crates.io/crates/sqlx) for async SQLite goodness.
+- Logging - [flexi_logger](https://crates.io/crates/flexi_logger)
 
 ## Rust Crate Documentation
 
@@ -68,6 +77,6 @@ Or if you want to fuzz the server and test that it doesn't blow up:
 
 This list is now [in the book](https://goatns.dotgoat.net/rrtypes.html).
 
-## With thanks to
+## Additional thanks
 
 - "Home" by Kiki Rizky from [Noun Project](https://thenounproject.com/browse/icons/term/home/)
