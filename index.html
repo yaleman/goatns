@@ -151,7 +151,31 @@
                         <h1 id="goatns"><a class="header" href="#goatns">GoatNS</a></h1>
 <p><img src="./static_files/img/apple-touch-icon.png" alt="GoatNS Logo" /></p>
 <p>Yet another authoritative DNS name server. But with goat references.</p>
-<p>Built in Rust, thanks to some great packages:</p>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<ul>
+<li>DNS over HTTPS (RFC8484) on <code>/dns-query</code></li>
+<li>Web API/UI for management
+<ul>
+<li>OIDC Authentication to the Web UI</li>
+<li>Token auth for API endpoints</li>
+</ul>
+</li>
+</ul>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<p>Look at <code>zones.json</code> and <code>goatns.example.json</code> for examples.</p>
+<p>The configuration file's fields are best found here:
+<a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the
+<code>ip_allow_list</code> field is a nested map.</p>
+<h2 id="running-in-docker"><a class="header" href="#running-in-docker">Running in Docker</a></h2>
+<p>There's a docker container at <code>ghcr.io/yaleman/goatns:latest</code> and a docker-compose.yml file in the
+repository if that's your thing.</p>
+<h2 id="help"><a class="header" href="#help">Help?</a></h2>
+<p>Found a bug, want to change something, the sky is falling?
+<a href="https://github.com/yaleman/goatns/issues/new">Create an issue!</a>.</p>
+<p>Wondering how something works, need a chat, or are curious there's so many goat references?
+<a href="https://github.com/yaleman/goatns/discussions">Discussions are great for that</a>.</p>
+<h2 id="built-in-rust"><a class="header" href="#built-in-rust">Built in Rust</a></h2>
+<p>Thanks to some great packages:</p>
 <ul>
 <li>Networking features use <a href="https://crates.io/crates/tokio">tokio</a></li>
 <li>DNS Packets are largely decoded/encoded with
@@ -167,19 +191,6 @@
 <li>Database - <a href="https://crates.io/crates/sqlx">sqlx</a> for async SQLite goodness.</li>
 <li>Logging - <a href="https://crates.io/crates/flexi_logger">flexi_logger</a></li>
 </ul>
-<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<p>Look at <code>zones.json</code> and <code>goatns.example.json</code> for examples.</p>
-<p>The configuration file's fields are best found here:
-<a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html</a>. Note that the
-<code>ip_allow_list</code> field is a nested map.</p>
-<h2 id="running-in-docker"><a class="header" href="#running-in-docker">Running in Docker</a></h2>
-<p>There's a docker container at <code>ghcr.io/yaleman/goatns:latest</code> and a docker-compose.yml file in the
-repository if that's your thing.</p>
-<h2 id="help"><a class="header" href="#help">Help?</a></h2>
-<p>Found a bug, want to change something, the sky is falling?
-<a href="https://github.com/yaleman/goatns/issues/new">Create an issue!</a>.</p>
-<p>Wondering how something works, need a chat, or are curious there's so many goat references?
-<a href="https://github.com/yaleman/goatns/discussions">Discussions are great for that</a>.</p>
 <h2 id="rust-crate-documentation"><a class="header" href="#rust-crate-documentation">Rust Crate Documentation</a></h2>
 <p>Auto-generated and available here:
 <a href="https://yaleman.github.io/goatns/rustdoc/goatns/">https://yaleman.github.io/goatns/rustdoc/goatns</a></p>
@@ -196,7 +207,7 @@ repository if that's your thing.</p>
 </code></pre>
 <h2 id="supported-requestrecord-types"><a class="header" href="#supported-requestrecord-types">Supported request/record types</a></h2>
 <p>This list is now <a href="https://goatns.dotgoat.net/rrtypes.html">in the book</a>.</p>
-<h2 id="with-thanks-to"><a class="header" href="#with-thanks-to">With thanks to</a></h2>
+<h2 id="additional-thanks"><a class="header" href="#additional-thanks">Additional thanks</a></h2>
 <ul>
 <li>&quot;Home&quot; by Kiki Rizky from <a href="https://thenounproject.com/browse/icons/term/home/">Noun Project</a></li>
 </ul>
