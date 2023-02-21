@@ -31,7 +31,15 @@ jobs:
       #   with:
       #     command: install
       #     args: mdbook-template
+      - name: Setup deno
+        # Documentation: https://github.com/denoland/setup-deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
 
+      - name: Test document formatting
+        run: |
+          make book/format
       - name: Make all the books
         run: make book
       - name: Deploy

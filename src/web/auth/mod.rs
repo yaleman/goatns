@@ -257,7 +257,7 @@ pub async fn login(
     let (pkce_verifier_secret, nonce) = match verifier {
         Some((p, n)) => (p, n),
         None => {
-            log::error!("Couldn't find a sesssion, redirecting...");
+            log::error!("Couldn't find a session, redirecting...");
             return Redirect::to("/auth/login").into_response();
         }
     };

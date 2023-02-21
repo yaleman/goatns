@@ -114,7 +114,7 @@ fn store_api_csrf_token(
 
     // store it in the session storage
     if let Err(error) = session.insert(SESSION_CSRFTOKEN_FIELD, stored_csrf) {
-        // TOOD: nice errors are nice but secure errors are better
+        // TODO: nice errors are nice but secure errors are better
         return Err(format!("Failed to store CSRF Token for user: {error:?}"));
     };
     Ok(csrftoken)

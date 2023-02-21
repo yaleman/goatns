@@ -105,7 +105,7 @@ mod tests {
                 ))
             );
         }
-        println!("Succesfully got hello.goat A: {:?}", address);
+        println!("Successfully got hello.goat A: {:?}", address);
 
         println!("Querying _mqtt._http.hello.goat URI");
         let response = match resolver

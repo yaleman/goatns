@@ -2,27 +2,29 @@
 
 What do we need to store?
 
-Zones
-    which contain
+## Zones
 
-    id - u64
-    name : Text
-    rname : Text
-    serial : Integer,
-    refresh : Integer,
-    retry : Integer,
-    expire : Integer,
-    minimum : Integer,
+Which contain:
 
-Records
-    which contain
+- id - u64
+- name : Text
+- rname : Text
+- serial : Integer,
+- refresh : Integer,
+- retry : Integer,
+- expire : Integer,
+- minimum : Integer,
 
-    id - u64
-    name (String)
-    ttl (Optional) - Integer (0 or NULL = Inherit from SOA)
-    rtype - Integer
-    rclass - Integer
-    rdata (Text? Varchar?)
+## Records
+
+Which contain
+
+- id - u64
+- name (String)
+- ttl (Optional) - Integer (0 or NULL = Inherit from SOA)
+- rtype - Integer
+- rclass - Integer
+- rdata (Text? Varchar?)
 
 ## Zones for a user
 

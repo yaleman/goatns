@@ -2,7 +2,8 @@
 
 ## Supported Versions
 
-Only the latest released version is supported - if a major issue appears, old ones will be considered for patching, or yanked.
+Only the latest released version is supported - if a major issue appears, old ones will be
+considered for patching, or yanked.
 
 ## Reporting a Vulnerability
 

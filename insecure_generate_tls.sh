@@ -185,7 +185,7 @@ gen_certs () {
     # openssl ecparam -genkey -name prime256v1 -noout -out "${KEYFILE}"
     openssl genrsa -out "${KEYFILE}" || { echo "Failed to generate the key..."; exit 1 ;}
 
-    echo "Generating the certficate signing request..."
+    echo "Generating the certificate signing request..."
     openssl req -sha256 -new \
         -batch \
         -config "${ALTNAME_FILE}" -extensions v3_req \
