@@ -473,7 +473,14 @@ pub async fn setup_logging(
     logger
         .write_mode(flexi_logger::WriteMode::Async)
         .filter(Box::new(LogFilter {
-            filters: vec!["h2", "hyper::proto", "rustls"],
+            filters: vec![
+                "h2",
+                "hyper::proto",
+                "rustls",
+                "h2::proto",
+                "tower_http::trace::make_span",
+                "tokio_util::codec::framed_impl",
+            ],
         }))
         .set_palette("b1;3;2;6;5".to_string())
         .start()
@@ -496,14 +503,14 @@ impl LogLineFilter for LogFilter {
         record: &log::Record,
         log_line_writer: &dyn LogLineWriter,
     ) -> std::io::Result<()> {
-        // eprintln!("{:?}", record.metadata());
         if self
             .filters
             .iter()
-            .any(|r| record.metadata().target().starts_with(r))
+            .any(|r| record.module_path().unwrap().contains(r))
         {
             return Ok(());
         }
+
         log_line_writer.write(now, record)?;
         Ok(())
     }

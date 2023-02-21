@@ -95,7 +95,7 @@ pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result
         .map_err(|e| format!("validation error: {e:?}"))
 }
 
-pub async  fn handler_404() -> impl IntoResponse {
+pub async fn handler_404() -> impl IntoResponse {
     axum::response::Response::builder()
         .status(StatusCode::NOT_FOUND)
         .header("Content-type", "text/html")

@@ -389,7 +389,7 @@ pub async fn build_auth_stores(
         .await
         .expect("Could not migrate session store database on startup!");
 
-    let _ = tokio::spawn(sessions::session_store_cleanup(
+    tokio::spawn(sessions::session_store_cleanup(
         Duration::from_secs(config.sql_db_cleanup_seconds.to_owned()),
         session_store.clone(),
     ));

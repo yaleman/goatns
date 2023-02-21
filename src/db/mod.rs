@@ -122,12 +122,12 @@ impl User {
         let mut txn = pool.begin().await?;
 
         let res = sqlx::query("DELETE FROM ownership WHERE userid = ?")
-            .bind(self.id.unwrap() as i64)
+            .bind(self.id.unwrap())
             .execute(&mut *txn)
             .await?;
 
         let res = sqlx::query("DELETE FROM users WHERE id = ?")
-            .bind(self.id.unwrap() as i64)
+            .bind(self.id.unwrap())
             .execute(&mut *txn)
             .await?;
 
@@ -292,8 +292,8 @@ impl ZoneOwnership {
         sqlx::query(
             "INSERT INTO ownership (zoneid, userid) VALUES ( ?, ? ) ON CONFLICT DO NOTHING",
         )
-        .bind(self.zoneid as i64)
-        .bind(self.userid as i64)
+        .bind(self.zoneid)
+        .bind(self.userid)
         .execute(&mut pool.acquire().await?)
         .await?;
         Ok(())
@@ -302,8 +302,8 @@ impl ZoneOwnership {
     pub async fn delete(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
         // TODO: test ownership delete
         let res = sqlx::query("DELETE FROM ownership WHERE zoneid = ? AND userid = ?")
-            .bind(self.zoneid as i64)
-            .bind(self.userid as i64)
+            .bind(self.zoneid)
+            .bind(self.userid)
             .execute(&mut pool.acquire().await?)
             .await?;
         Ok(())
@@ -577,7 +577,10 @@ pub trait DBEntity: Send {
         txn: &mut Transaction<'t, Sqlite>,
         name: &str,
     ) -> Result<Box<Self>, sqlx::Error>;
-
+    async fn get_all_by_name<'t>(
+        txn: &mut Transaction<'t, Sqlite>,
+        name: &str,
+    ) -> Result<Vec<Box<Self>>, sqlx::Error>;
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error>;
     /// save the entity to the database
 
@@ -706,7 +709,12 @@ impl DBEntity for FileZone {
         let res: FileZone = res.into();
         Ok(Box::new(res))
     }
-
+    async fn get_all_by_name<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _name: &str,
+    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+        unimplemented!()
+    }
     async fn get_all_user(
         _pool: &Pool<Sqlite>,
         _userid: i64,
@@ -984,12 +992,35 @@ impl DBEntity for FileZoneRecord {
 
         Ok(Box::new(res))
     }
+
     async fn get_by_name<'t>(
         _txn: &mut Transaction<'t, Sqlite>,
         _name: &str,
     ) -> Result<Box<Self>, sqlx::Error> {
-        todo!()
+        unimplemented!();
     }
+
+    async fn get_all_by_name<'t>(
+        txn: &mut Transaction<'t, Sqlite>,
+        name: &str,
+    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+        let res = sqlx::query(&format!(
+            "select * from {} where name = ?",
+            SQL_VIEW_RECORDS
+        ))
+        .bind(name)
+        .fetch_all(txn)
+        .await?;
+        let res = res
+            .iter()
+            .map(|r| {
+                let conf: FileZoneRecord = r.try_into().unwrap();
+                Box::from(conf)
+            })
+            .collect();
+        Ok(res)
+    }
+
     async fn get_all_user(
         _pool: &Pool<Sqlite>,
         _userid: i64,
@@ -1205,6 +1236,12 @@ impl DBEntity for ZoneOwnership {
         // TODO implement ZoneOwnership get_by_name which gets by zone name
         unimplemented!("Not applicable for this!");
     }
+    async fn get_all_by_name<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _name: &str,
+    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+        unimplemented!()
+    }
     /// Get an ownership record by its id
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
         let mut conn = pool.acquire().await?;
@@ -1349,6 +1386,12 @@ impl DBEntity for User {
         _name: &str,
     ) -> Result<Box<Self>, sqlx::Error> {
         todo!()
+    }
+    async fn get_all_by_name<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _name: &str,
+    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+        unimplemented!()
     }
     /// Get an ownership record by its id, which is slightly ironic in this case
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
@@ -1646,6 +1689,12 @@ impl DBEntity for UserAuthToken {
     ) -> Result<Box<Self>, sqlx::Error> {
         todo!()
     }
+    async fn get_all_by_name<'t>(
+        _txn: &mut Transaction<'t, Sqlite>,
+        _name: &str,
+    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+        unimplemented!()
+    }
 
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
         let res = sqlx::query(&format!("SELECT * from {} where userid = ?", Self::TABLE))
@@ -1835,4 +1884,22 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
             ttl,
         })
     }
+}
+
+pub async fn get_all_fzr_by_name<'t>(
+    txn: &mut Transaction<'t, Sqlite>,
+    name: &str,
+    rrtype: u16,
+) -> Result<Vec<FileZoneRecord>, sqlx::Error> {
+    let res = sqlx::query(&format!(
+        "select *, record_id as id from {} where name = ? AND rrtype = ?",
+        SQL_VIEW_RECORDS
+    ))
+    .bind(name)
+    .bind(rrtype)
+    .fetch_all(txn)
+    .await?;
+
+    let res = res.into_iter().filter_map(|r| r.try_into().ok()).collect();
+    Ok(res)
 }

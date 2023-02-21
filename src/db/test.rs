@@ -30,7 +30,7 @@ async fn test_create_user() -> Result<(), sqlx::Error> {
 
 #[cfg(test)]
 /// create a zone example.com
-async fn test_create_example_com_records(
+pub async fn test_create_example_com_records(
     pool: &SqlitePool,
     zoneid: i64,
     num_records: usize,
@@ -100,7 +100,6 @@ async fn test_db_create_table_records() -> Result<(), sqlx::Error> {
 }
 
 /// An example zone for testing
-#[cfg(test)]
 pub fn test_example_com_zone() -> FileZone {
     FileZone {
         id: Some(1),
@@ -111,7 +110,6 @@ pub fn test_example_com_zone() -> FileZone {
 }
 
 /// Get a sqlite pool with a memory-only database
-#[cfg(test)]
 pub async fn test_get_sqlite_memory() -> SqlitePool {
     SqlitePool::connect("sqlite::memory:").await.unwrap()
 }

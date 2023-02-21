@@ -15,10 +15,10 @@ use std::str::from_utf8;
 pub struct FileZone {
     /// Database row ID
     pub id: Option<i64>,
-    /// MNAME The <domain-name> of the name server that was the original or primary source of data for this zone.
+    /// MNAME The `domain-name` of the name server that was the original or primary source of data for this zone.
     // #[serde(rename(serialize = "MNAME"))]
     pub name: String,
-    // RNAME A <domain-name> which specifies the mailbox of the person responsible for this zone.
+    // RNAME A `domain-name` which specifies the mailbox of the person responsible for this zone.
     // #[serde(rename(serialize = "RNAME"), default = "rname_default")]
     #[serde(default = "rname_default")]
     pub rname: String,

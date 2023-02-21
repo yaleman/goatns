@@ -1,5 +1,6 @@
 mod config;
 mod db;
+mod doh;
 mod e2e_test;
 mod enums;
 mod resourcerecord;
