@@ -138,7 +138,7 @@ async fn handle_get_command(
     Ok(())
 }
 
-/// Import a file direclty into the database. Normally, you shouldn't use this directly, call it through calls to the datastore.
+/// Import a file directly into the database. Normally, you shouldn't use this directly, call it through calls to the datastore.
 pub async fn handle_import_file(
     pool: &Pool<Sqlite>,
     filename: String,

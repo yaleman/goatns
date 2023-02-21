@@ -209,7 +209,7 @@ impl Display for Question {
     }
 }
 
-/// Returns a Vec<u8> representation of the name
+/// Returns a `Vec<u8>` representation of the name
 /// (ie, example.com = [101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109])
 ///
 /// # Errors

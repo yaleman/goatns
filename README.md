@@ -4,7 +4,7 @@
 
 Yet another authoritative DNS name server. But with goat references.
 
-Built in Rust, thanks to some great packages
+Built in Rust, thanks to some great packages:
 
 - Networking features use [tokio](https://crates.io/crates/tokio)
 - DNS Packets are largely decoded/encoded with [packed_struct](https://crates.io/crates/packed_struct)
@@ -60,6 +60,6 @@ Or if you want to fuzz the server and test that it doesn't blow up:
 
 This list is now [in the book](https://goatns.dotgoat.net/rrtypes.html).
 
-# With thanks to
+## With thanks to
 
-- Home by Kiki Rizky from [Noun Project](https://thenounproject.com/browse/icons/term/home/)
+- "Home" by Kiki Rizky from [Noun Project](https://thenounproject.com/browse/icons/term/home/)

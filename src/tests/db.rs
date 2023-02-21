@@ -105,7 +105,7 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
 
     match UserAuthToken::get(&pool, 1).await {
         Ok(uat) => panic!("We shouldn't find this! {uat:?}"),
-        Err(err) => println!("Didn't find the uat after cleanup, is gud. Got {err:?}"),
+        Err(err) => println!("Didn't find the UserAuthToken after cleanup, is good. Got {err:?}"),
     };
 
     assert!(UserAuthToken::get(&pool, 2).await.is_ok());
