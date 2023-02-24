@@ -70,6 +70,7 @@ type CustomClaimType = IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>;
 struct AuthLoginTemplate {
     errors: Vec<String>,
     redirect_url: String,
+    pub user_is_admin: bool,
 }
 
 #[derive(Template)]
@@ -81,11 +82,14 @@ struct AuthNewUserTemplate {
     displayname: String,
     redirect_url: String,
     errors: Vec<String>,
+    pub user_is_admin: bool,
 }
 
 #[derive(Template)]
 #[template(path = "auth_logout.html")]
-struct AuthLogoutTemplate {}
+struct AuthLogoutTemplate {
+    pub user_is_admin: bool,
+}
 
 #[derive(Template)]
 #[template(path = "auth_provisioning_disabled.html")]
@@ -94,6 +98,7 @@ struct AuthProvisioningDisabledTemplate {
     username: String,
     authref: String,
     admin_contact: String,
+    pub user_is_admin: bool,
 }
 
 pub enum ParserError {
@@ -291,10 +296,12 @@ pub async fn login(
                                 //     Some(value) => value.to_string(),
                                 //     None => "the administrator".to_string(),
                                 // };
+
                                 let context = AuthProvisioningDisabledTemplate {
                                     username: claims.get_username(),
                                     authref: claims.subject().to_string(),
                                     admin_contact,
+                                    user_is_admin: false, // TODO: ... probably not an admin but we can check
                                 };
                                 return Response::builder()
                                     .status(200)
@@ -310,6 +317,7 @@ pub async fn login(
                                 displayname: claims.get_displayname(),
                                 redirect_url: "".to_string(),
                                 errors: vec![],
+                                user_is_admin: false, // TODO: ... probably not an admin but we can check
                             };
                             let pagebody = new_user_page.render().unwrap();
                             // push it back into the stack for signup

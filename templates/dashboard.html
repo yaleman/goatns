@@ -38,6 +38,11 @@
             <li class="nav-item">
               <a class="link-dark nav-link" href="/ui/settings"><i data-feather="settings"></i> Settings</a>
             </li>
+            {% if user_is_admin %}
+            <li class="nav-item">
+              <a class="link-dark nav-link" href="/ui/admin"><i data-feather="settings"></i> Admin</a>
+            </li>
+            {% endif %}
             <li class="nav-item">
               <a class="link-dark nav-link" href="https://goatns.dotgoat.net" target="_blank"><i data-feather="external-link"></i> GoatNS Docs</a>
             </li>

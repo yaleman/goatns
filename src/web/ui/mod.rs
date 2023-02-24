@@ -14,18 +14,21 @@ use axum_sessions::extractors::WritableSession;
 
 use super::GoatState;
 
+mod admin_ui;
 mod user_settings;
 
 #[derive(Template)]
 #[template(path = "view_zones.html")]
 struct TemplateViewZones {
     zones: Vec<FileZone>,
+    pub user_is_admin: bool,
 }
 
 #[derive(Template)]
 #[template(path = "view_zone.html")]
 struct TemplateViewZone {
     zone: FileZone,
+    pub user_is_admin: bool,
 }
 
 macro_rules! check_logged_in {
@@ -59,6 +62,8 @@ pub async fn zones_list(
         None => return redirect_to_login().into_response(),
     };
 
+
+
     log::trace!("Sending request for zones");
     if let Err(err) = state
         .read()
@@ -66,7 +71,7 @@ pub async fn zones_list(
         .tx
         .send(Command::GetZoneNames {
             resp: os_tx,
-            user,
+            user: user.clone(),
             offset,
             limit,
         })
@@ -80,7 +85,10 @@ pub async fn zones_list(
     let zones = os_rx.await.expect("Failed to get response: {res:?}");
 
     log::debug!("about to return zone list... found {} zones", zones.len());
-    let context = TemplateViewZones { zones };
+    let context = TemplateViewZones {
+        zones,
+        user_is_admin: user.admin,
+    };
     Response::builder()
         .status(200)
         .body(context.render().unwrap())
@@ -95,9 +103,8 @@ pub async fn zone_view(
     mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    if let Err(e) = check_logged_in(&mut session, path).await {
-        return e.into_response();
-    }
+    let user = check_logged_in(&mut session, path).await.map_err(|err| err.into_response() ).unwrap();
+
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let cmd = Command::GetZone {
         resp: os_tx,
@@ -117,17 +124,15 @@ pub async fn zone_view(
     };
 
     log::trace!("Returning zone: {zone:?}");
-    let context = TemplateViewZone { zone };
+    let context = TemplateViewZone {
+        zone,
+        user_is_admin: user.admin,
+    };
     Response::new(context.render().unwrap()).into_response()
 }
 
-#[derive(Template)]
-#[template(path = "dashboard.html")]
-struct DashboardTemplate /*<'a>*/ {
-    // name: &'a str,
-}
 
-pub async fn check_logged_in(session: &mut WritableSession, path: Uri) -> Result<(), Redirect> {
+pub async fn check_logged_in(session: &mut WritableSession, path: Uri) -> Result<User, Redirect> {
     let authref = session.get::<String>("authref");
 
     let redirect_path = Some(path.path_and_query().unwrap().to_string());
@@ -142,8 +147,21 @@ pub async fn check_logged_in(session: &mut WritableSession, path: Uri) -> Result
         return Err(redirect_to_login());
     }
     log::debug!("session ok!");
+
+    let user = match session.get("user") {
+        Some(val) => val,
+        None => return Err(redirect_to_login()),
+    };
+
     // TODO: check the database to make sure they're actually legit and not disabled and blah
-    Ok(())
+    Ok(user)
+}
+
+#[derive(Template)]
+#[template(path = "dashboard.html")]
+struct DashboardTemplate /*<'a>*/ {
+    // name: &'a str,
+    pub user_is_admin: bool,
 }
 
 // #[debug_handler]
@@ -151,11 +169,14 @@ pub async fn dashboard(
     mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    if let Err(e) = check_logged_in(&mut session, path).await {
-        return e.into_response();
-    }
+    let user = match check_logged_in(&mut session, path).await {
+        Ok(val) => val,
+        Err(err) =>  return err.into_response(),
+    };
 
-    let context = DashboardTemplate {};
+    let context = DashboardTemplate {
+        user_is_admin: user.admin
+    };
     // Html::from()).into_response()
     Response::builder()
         .status(200)
@@ -170,4 +191,5 @@ pub fn new() -> Router<GoatState> {
         .route("/zones/:id", get(zone_view))
         .route("/zones/list", get(zones_list))
         .nest("/settings", user_settings::router())
+        .nest("/admin", admin_ui::router())
 }

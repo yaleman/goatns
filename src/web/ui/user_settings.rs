@@ -27,11 +27,13 @@ static SESSION_CSRFTOKEN_FIELD: &str = "api_token_csrf_token";
 
 #[derive(Template)]
 #[template(path = "user_settings.html")]
-struct Settings;
+struct Settings{
+    pub user_is_admin: bool,
+}
 
 /// The user settings page at /ui/settings
 pub async fn settings(State(_state): State<GoatState>) -> Html<String> {
-    let context = Settings;
+    let context = Settings { user_is_admin: true };
 
     Html::from(context.render().unwrap())
 }
@@ -43,6 +45,7 @@ struct ApiTokensGetPage {
     tokens: Vec<Arc<UserAuthToken>>,
     tokenkey: Option<String>,
     token_value: Option<String>,
+    pub user_is_admin: bool,
 }
 
 pub fn validate_csrf_expiry(user_input: &str, session: &mut WritableSession) -> bool {
@@ -126,11 +129,8 @@ pub async fn api_tokens_get(
     mut session: WritableSession,
     State(state): State<GoatState>,
 ) -> Result<Html<String>, Redirect> {
-    check_logged_in(
-        &mut session,
-        Uri::from_str("/ui/settings/api_tokens").unwrap(),
-    )
-    .await?;
+
+    let user = check_logged_in(&mut session, Uri::from_str("/ui/settings/api_tokens").unwrap()).await?;
 
     let csrftoken = match store_api_csrf_token(&mut session, None) {
         Ok(value) => value,
@@ -140,11 +140,7 @@ pub async fn api_tokens_get(
         }
     };
 
-    let user: User = session.get("user").unwrap();
-    log::debug!("Got user: {user:?}");
-
     // pull token from the session store new_api_token
-
     let token_value: Option<String> = session.get("new_api_token");
     session.remove("new_api_token");
 
@@ -165,6 +161,7 @@ pub async fn api_tokens_get(
         tokens,
         tokenkey,
         token_value,
+        user_is_admin: user.admin,
     };
 
     Ok(Html::from(context.render().unwrap()))
@@ -262,6 +259,7 @@ pub struct ApiTokenPage {
     pub lifetime: Option<ApiTokenLifetime>,
     /// Used to show the possible lifetimes in the creation form
     pub lifetimes: Option<Vec<(String, String)>>,
+    pub user_is_admin: bool,
 }
 
 /// The user settings page at /ui/settings
@@ -273,7 +271,7 @@ pub async fn api_tokens_post(
 ) -> Result<Html<String>, Redirect> {
     eprintln!("Got form: {form:?}");
 
-    check_logged_in(
+    let user = check_logged_in(
         &mut session,
         Uri::from_str("/ui/settings/api_tokens").unwrap(),
     )
@@ -302,6 +300,7 @@ pub async fn api_tokens_post(
                 lifetime: None,
                 tokenkey: None,
                 token_value: None,
+                user_is_admin: user.admin,
             }
         }
         // The user has set a lifetime and we're generating a token
@@ -404,6 +403,7 @@ pub struct ApiTokenDelete {
     pub id: i64,
     pub token_name: Option<String>,
     pub csrftoken: String,
+    pub user_is_admin: bool,
 }
 
 // #[debug_handler]
@@ -413,7 +413,7 @@ pub async fn api_tokens_delete_get(
     Path(id): Path<String>,
     mut session: WritableSession,
 ) -> Result<Html<String>, Redirect> {
-    check_logged_in(
+    let user = check_logged_in(
         &mut session,
         Uri::from_str("/ui/settings/api_tokens").unwrap(),
     )
@@ -435,7 +435,6 @@ pub async fn api_tokens_delete_get(
         }
     };
 
-    let user: User = session.get("user").unwrap();
     let state_reader = state.read().await;
     let pool = state_reader.connpool.clone();
     let uat = match UserAuthToken::get(&pool, id).await {
@@ -461,6 +460,7 @@ pub async fn api_tokens_delete_get(
         id,
         token_name: Some(uat.name.clone()),
         csrftoken,
+        user_is_admin: user.admin,
     };
 
     Ok(Html::from(context.render().unwrap()))
