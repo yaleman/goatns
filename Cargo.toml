@@ -72,7 +72,7 @@ shellexpand = "3.0.0"
 sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "json"], default-features=false }
 tokio = { version = "1.25.0", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.9.3"
-tokio-stream = { version = "0.1.11", features = ["net"] }
+tokio-stream = { version = "0.1.12", features = ["net"] }
 tokio-util = { version = "0.7.4", features = ["full"] }
 tower = "0.4.13"
 tower-http = { version = "0.3.5", features = ["trace","add-extension","compression-gzip"] }
