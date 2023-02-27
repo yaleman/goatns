@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/yaleman/goatns.git"
 keywords = ["dns","server","tokio","api","oauth2","oidc"]
 categories = ["network-programming"]
+include = ["src/**/*", "LICENSE.md", "README.md", "!**/*_test.*", "!**/tests/**/*"]
 
 
 [workspace]

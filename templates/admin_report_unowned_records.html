@@ -1,0 +1,18 @@
+{% extends "dashboard.html" %}
+{% block content %}
+<h1>Admin</h1>
+
+<h3>Reports - Unowned Records</h3>
+
+<table>
+<thead>
+    <th>&nbsp;</th>
+</thead>
+    {% for record in records %}
+    <tr>
+        <td><a href="/ui/records/{{record.id}}">{{record.name}}</a></td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock content %}
