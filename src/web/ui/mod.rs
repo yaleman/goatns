@@ -62,8 +62,6 @@ pub async fn zones_list(
         None => return redirect_to_login().into_response(),
     };
 
-
-
     log::trace!("Sending request for zones");
     if let Err(err) = state
         .read()
@@ -103,7 +101,10 @@ pub async fn zone_view(
     mut session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    let user = check_logged_in(&mut session, path).await.map_err(|err| err.into_response() ).unwrap();
+    let user = check_logged_in(&mut session, path)
+        .await
+        .map_err(|err| err.into_response())
+        .unwrap();
 
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let cmd = Command::GetZone {
@@ -130,7 +131,6 @@ pub async fn zone_view(
     };
     Response::new(context.render().unwrap()).into_response()
 }
-
 
 pub async fn check_logged_in(session: &mut WritableSession, path: Uri) -> Result<User, Redirect> {
     let authref = session.get::<String>("authref");
@@ -171,11 +171,11 @@ pub async fn dashboard(
 ) -> impl IntoResponse {
     let user = match check_logged_in(&mut session, path).await {
         Ok(val) => val,
-        Err(err) =>  return err.into_response(),
+        Err(err) => return err.into_response(),
     };
 
     let context = DashboardTemplate {
-        user_is_admin: user.admin
+        user_is_admin: user.admin,
     };
     // Html::from()).into_response()
     Response::builder()

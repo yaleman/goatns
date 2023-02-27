@@ -27,13 +27,15 @@ static SESSION_CSRFTOKEN_FIELD: &str = "api_token_csrf_token";
 
 #[derive(Template)]
 #[template(path = "user_settings.html")]
-struct Settings{
+struct Settings {
     pub user_is_admin: bool,
 }
 
 /// The user settings page at /ui/settings
 pub async fn settings(State(_state): State<GoatState>) -> Html<String> {
-    let context = Settings { user_is_admin: true };
+    let context = Settings {
+        user_is_admin: true,
+    };
 
     Html::from(context.render().unwrap())
 }
@@ -129,8 +131,11 @@ pub async fn api_tokens_get(
     mut session: WritableSession,
     State(state): State<GoatState>,
 ) -> Result<Html<String>, Redirect> {
-
-    let user = check_logged_in(&mut session, Uri::from_str("/ui/settings/api_tokens").unwrap()).await?;
+    let user = check_logged_in(
+        &mut session,
+        Uri::from_str("/ui/settings/api_tokens").unwrap(),
+    )
+    .await?;
 
     let csrftoken = match store_api_csrf_token(&mut session, None) {
         Ok(value) => value,
