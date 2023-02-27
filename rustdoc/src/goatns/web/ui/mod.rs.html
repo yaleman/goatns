@@ -171,6 +171,28 @@
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
 <span class="kw">use </span><span class="kw">crate</span>::db::User;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zones_list};
@@ -187,18 +209,21 @@
 
 <span class="kw">use </span><span class="kw">super</span>::GoatState;
 
+<span class="kw">mod </span>admin_ui;
 <span class="kw">mod </span>user_settings;
 
 <span class="attr">#[derive(Template)]
 #[template(path = <span class="string">&quot;view_zones.html&quot;</span>)]
 </span><span class="kw">struct </span>TemplateViewZones {
     zones: Vec&lt;FileZone&gt;,
+    <span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="attr">#[derive(Template)]
 #[template(path = <span class="string">&quot;view_zone.html&quot;</span>)]
 </span><span class="kw">struct </span>TemplateViewZone {
     zone: FileZone,
+    <span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="macro">macro_rules! </span>check_logged_in {
@@ -239,7 +264,7 @@
         </span>.tx
         .send(Command::GetZoneNames {
             resp: os_tx,
-            user,
+            user: user.clone(),
             offset,
             limit,
         })
@@ -253,7 +278,10 @@
     <span class="kw">let </span>zones = os_rx.<span class="kw">await</span>.expect(<span class="string">&quot;Failed to get response: {res:?}&quot;</span>);
 
     <span class="macro">log::debug!</span>(<span class="string">&quot;about to return zone list... found {} zones&quot;</span>, zones.len());
-    <span class="kw">let </span>context = TemplateViewZones { zones };
+    <span class="kw">let </span>context = TemplateViewZones {
+        zones,
+        user_is_admin: user.admin,
+    };
     Response::builder()
         .status(<span class="number">200</span>)
         .body(context.render().unwrap())
@@ -268,9 +296,11 @@
     <span class="kw-2">mut </span>session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = check_logged_in(<span class="kw-2">&amp;mut </span>session, path).<span class="kw">await </span>{
-        <span class="kw">return </span>e.into_response();
-    }
+    <span class="kw">let </span>user = check_logged_in(<span class="kw-2">&amp;mut </span>session, path)
+        .<span class="kw">await
+        </span>.map_err(|err| err.into_response())
+        .unwrap();
+
     <span class="kw">let </span>(os_tx, os_rx) = tokio::sync::oneshot::channel();
     <span class="kw">let </span>cmd = Command::GetZone {
         resp: os_tx,
@@ -290,17 +320,14 @@
     };
 
     <span class="macro">log::trace!</span>(<span class="string">&quot;Returning zone: {zone:?}&quot;</span>);
-    <span class="kw">let </span>context = TemplateViewZone { zone };
+    <span class="kw">let </span>context = TemplateViewZone {
+        zone,
+        user_is_admin: user.admin,
+    };
     Response::new(context.render().unwrap()).into_response()
 }
 
-<span class="attr">#[derive(Template)]
-#[template(path = <span class="string">&quot;dashboard.html&quot;</span>)]
-</span><span class="kw">struct </span>DashboardTemplate <span class="comment">/*&lt;&#39;a&gt;*/ </span>{
-    <span class="comment">// name: &amp;&#39;a str,
-</span>}
-
-<span class="kw">pub async fn </span>check_logged_in(session: <span class="kw-2">&amp;mut </span>WritableSession, path: Uri) -&gt; <span class="prelude-ty">Result</span>&lt;(), Redirect&gt; {
+<span class="kw">pub async fn </span>check_logged_in(session: <span class="kw-2">&amp;mut </span>WritableSession, path: Uri) -&gt; <span class="prelude-ty">Result</span>&lt;User, Redirect&gt; {
     <span class="kw">let </span>authref = session.get::&lt;String&gt;(<span class="string">&quot;authref&quot;</span>);
 
     <span class="kw">let </span>redirect_path = <span class="prelude-val">Some</span>(path.path_and_query().unwrap().to_string());
@@ -315,8 +342,21 @@
         </span><span class="kw">return </span><span class="prelude-val">Err</span>(redirect_to_login());
     }
     <span class="macro">log::debug!</span>(<span class="string">&quot;session ok!&quot;</span>);
+
+    <span class="kw">let </span>user = <span class="kw">match </span>session.get(<span class="string">&quot;user&quot;</span>) {
+        <span class="prelude-val">Some</span>(val) =&gt; val,
+        <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(redirect_to_login()),
+    };
+
     <span class="comment">// TODO: check the database to make sure they&#39;re actually legit and not disabled and blah
-    </span><span class="prelude-val">Ok</span>(())
+    </span><span class="prelude-val">Ok</span>(user)
+}
+
+<span class="attr">#[derive(Template)]
+#[template(path = <span class="string">&quot;dashboard.html&quot;</span>)]
+</span><span class="kw">struct </span>DashboardTemplate <span class="comment">/*&lt;&#39;a&gt;*/ </span>{
+    <span class="comment">// name: &amp;&#39;a str,
+    </span><span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="comment">// #[debug_handler]
@@ -324,11 +364,14 @@
     <span class="kw-2">mut </span>session: WritableSession,
     OriginalUri(path): OriginalUri,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = check_logged_in(<span class="kw-2">&amp;mut </span>session, path).<span class="kw">await </span>{
-        <span class="kw">return </span>e.into_response();
-    }
+    <span class="kw">let </span>user = <span class="kw">match </span>check_logged_in(<span class="kw-2">&amp;mut </span>session, path).<span class="kw">await </span>{
+        <span class="prelude-val">Ok</span>(val) =&gt; val,
+        <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">return </span>err.into_response(),
+    };
 
-    <span class="kw">let </span>context = DashboardTemplate {};
+    <span class="kw">let </span>context = DashboardTemplate {
+        user_is_admin: user.admin,
+    };
     <span class="comment">// Html::from()).into_response()
     </span>Response::builder()
         .status(<span class="number">200</span>)
@@ -343,6 +386,7 @@
         .route(<span class="string">&quot;/zones/:id&quot;</span>, get(zone_view))
         .route(<span class="string">&quot;/zones/list&quot;</span>, get(zones_list))
         .nest(<span class="string">&quot;/settings&quot;</span>, user_settings::router())
+        .nest(<span class="string">&quot;/admin&quot;</span>, admin_ui::router())
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.1 (d5a82bbd2 2023-02-07)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

@@ -475,6 +475,14 @@
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
 <a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span><span class="kw">super</span>::utils::{redirect_to_dashboard, redirect_to_home};
@@ -547,6 +555,7 @@
 </span><span class="kw">struct </span>AuthLoginTemplate {
     errors: Vec&lt;String&gt;,
     redirect_url: String,
+    <span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="attr">#[derive(Template)]
@@ -558,11 +567,14 @@
     displayname: String,
     redirect_url: String,
     errors: Vec&lt;String&gt;,
+    <span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="attr">#[derive(Template)]
 #[template(path = <span class="string">&quot;auth_logout.html&quot;</span>)]
-</span><span class="kw">struct </span>AuthLogoutTemplate {}
+</span><span class="kw">struct </span>AuthLogoutTemplate {
+    <span class="kw">pub </span>user_is_admin: bool,
+}
 
 <span class="attr">#[derive(Template)]
 #[template(path = <span class="string">&quot;auth_provisioning_disabled.html&quot;</span>)]
@@ -571,6 +583,7 @@
     username: String,
     authref: String,
     admin_contact: String,
+    <span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="kw">pub enum </span>ParserError {
@@ -768,11 +781,13 @@
                                 //     Some(value) =&gt; value.to_string(),
                                 //     None =&gt; &quot;the administrator&quot;.to_string(),
                                 // };
+
                                 </span><span class="kw">let </span>context = AuthProvisioningDisabledTemplate {
                                     username: claims.get_username(),
                                     authref: claims.subject().to_string(),
                                     admin_contact,
-                                };
+                                    user_is_admin: <span class="bool-val">false</span>, <span class="comment">// TODO: ... probably not an admin but we can check
+                                </span>};
                                 <span class="kw">return </span>Response::builder()
                                     .status(<span class="number">200</span>)
                                     .body(context.render().unwrap())
@@ -787,7 +802,8 @@
                                 displayname: claims.get_displayname(),
                                 redirect_url: <span class="string">&quot;&quot;</span>.to_string(),
                                 errors: <span class="macro">vec!</span>[],
-                            };
+                                user_is_admin: <span class="bool-val">false</span>, <span class="comment">// TODO: ... probably not an admin but we can check
+                            </span>};
                             <span class="kw">let </span>pagebody = new_user_page.render().unwrap();
                             <span class="comment">// push it back into the stack for signup
                             </span>state

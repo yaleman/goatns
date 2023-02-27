@@ -526,6 +526,11 @@
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
 <a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
 <span class="kw">use </span><span class="kw">crate</span>::web::ui::check_logged_in;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::create_api_token;
@@ -555,11 +560,15 @@
 
 <span class="attr">#[derive(Template)]
 #[template(path = <span class="string">&quot;user_settings.html&quot;</span>)]
-</span><span class="kw">struct </span>Settings;
+</span><span class="kw">struct </span>Settings {
+    <span class="kw">pub </span>user_is_admin: bool,
+}
 
 <span class="doccomment">/// The user settings page at /ui/settings
 </span><span class="kw">pub async fn </span>settings(State(_state): State&lt;GoatState&gt;) -&gt; Html&lt;String&gt; {
-    <span class="kw">let </span>context = Settings;
+    <span class="kw">let </span>context = Settings {
+        user_is_admin: <span class="bool-val">true</span>,
+    };
 
     Html::from(context.render().unwrap())
 }
@@ -571,6 +580,7 @@
     tokens: Vec&lt;Arc&lt;UserAuthToken&gt;&gt;,
     tokenkey: <span class="prelude-ty">Option</span>&lt;String&gt;,
     token_value: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="kw">pub fn </span>validate_csrf_expiry(user_input: <span class="kw-2">&amp;</span>str, session: <span class="kw-2">&amp;mut </span>WritableSession) -&gt; bool {
@@ -654,7 +664,7 @@
     <span class="kw-2">mut </span>session: WritableSession,
     State(state): State&lt;GoatState&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
-    check_logged_in(
+    <span class="kw">let </span>user = check_logged_in(
         <span class="kw-2">&amp;mut </span>session,
         Uri::from_str(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>).unwrap(),
     )
@@ -668,11 +678,7 @@
         }
     };
 
-    <span class="kw">let </span>user: User = session.get(<span class="string">&quot;user&quot;</span>).unwrap();
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Got user: {user:?}&quot;</span>);
-
     <span class="comment">// pull token from the session store new_api_token
-
     </span><span class="kw">let </span>token_value: <span class="prelude-ty">Option</span>&lt;String&gt; = session.get(<span class="string">&quot;new_api_token&quot;</span>);
     session.remove(<span class="string">&quot;new_api_token&quot;</span>);
 
@@ -693,6 +699,7 @@
         tokens,
         tokenkey,
         token_value,
+        user_is_admin: user.admin,
     };
 
     <span class="prelude-val">Ok</span>(Html::from(context.render().unwrap()))
@@ -790,6 +797,7 @@
     </span><span class="kw">pub </span>lifetime: <span class="prelude-ty">Option</span>&lt;ApiTokenLifetime&gt;,
     <span class="doccomment">/// Used to show the possible lifetimes in the creation form
     </span><span class="kw">pub </span>lifetimes: <span class="prelude-ty">Option</span>&lt;Vec&lt;(String, String)&gt;&gt;,
+    <span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="doccomment">/// The user settings page at /ui/settings
@@ -801,7 +809,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     <span class="macro">eprintln!</span>(<span class="string">&quot;Got form: {form:?}&quot;</span>);
 
-    check_logged_in(
+    <span class="kw">let </span>user = check_logged_in(
         <span class="kw-2">&amp;mut </span>session,
         Uri::from_str(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>).unwrap(),
     )
@@ -830,6 +838,7 @@
                 lifetime: <span class="prelude-val">None</span>,
                 tokenkey: <span class="prelude-val">None</span>,
                 token_value: <span class="prelude-val">None</span>,
+                user_is_admin: user.admin,
             }
         }
         <span class="comment">// The user has set a lifetime and we&#39;re generating a token
@@ -932,6 +941,7 @@
     <span class="kw">pub </span>id: i64,
     <span class="kw">pub </span>token_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="kw">pub </span>csrftoken: String,
+    <span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="comment">// #[debug_handler]
@@ -941,7 +951,7 @@
     </span>Path(id): Path&lt;String&gt;,
     <span class="kw-2">mut </span>session: WritableSession,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
-    check_logged_in(
+    <span class="kw">let </span>user = check_logged_in(
         <span class="kw-2">&amp;mut </span>session,
         Uri::from_str(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>).unwrap(),
     )
@@ -963,7 +973,6 @@
         }
     };
 
-    <span class="kw">let </span>user: User = session.get(<span class="string">&quot;user&quot;</span>).unwrap();
     <span class="kw">let </span>state_reader = state.read().<span class="kw">await</span>;
     <span class="kw">let </span>pool = state_reader.connpool.clone();
     <span class="kw">let </span>uat = <span class="kw">match </span>UserAuthToken::get(<span class="kw-2">&amp;</span>pool, id).<span class="kw">await </span>{
@@ -989,6 +998,7 @@
         id,
         token_name: <span class="prelude-val">Some</span>(uat.name.clone()),
         csrftoken,
+        user_is_admin: user.admin,
     };
 
     <span class="prelude-val">Ok</span>(Html::from(context.render().unwrap()))
