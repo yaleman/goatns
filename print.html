@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">2.</strong> Configuration</a></li><li class="chapter-item expanded affix "><li class="part-title">Development Notes</li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">3.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">4.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="rrtypes.html"><strong aria-hidden="true">5.</strong> Supported RRTypes</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">6.</strong> References</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><li class="part-title">Goat NS</li><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Home</a></li><li class="chapter-item expanded "><a href="configuration.html"><strong aria-hidden="true">2.</strong> Configuration</a></li><li class="chapter-item expanded affix "><li class="part-title">Development Notes</li><li class="chapter-item expanded "><a href="packet_header.html"><strong aria-hidden="true">3.</strong> Packet Headers</a></li><li class="chapter-item expanded "><a href="processing.html"><strong aria-hidden="true">4.</strong> Processing Packets</a></li><li class="chapter-item expanded "><a href="rrtypes.html"><strong aria-hidden="true">5.</strong> Supported RRTypes</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">6.</strong> References</a></li><li class="chapter-item expanded affix "><li class="part-title">Other stuff</li><li class="chapter-item expanded "><a href="opentelemetry.html"><strong aria-hidden="true">7.</strong> OpenTelemetry</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -409,6 +409,32 @@ DNS zone data at rest.</li>
 <a href="https://www.rfc-editor.org/rfc/rfc8659">RFC8659</a></li>
 <li>LOC Records - <a href="https://www.rfc-editor.org/rfc/rfc1876">RFC1876</a></li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="opentelemetry-config"><a class="header" href="#opentelemetry-config">OpenTelemetry config</a></h1>
+<p>At the moment this isn't <em>great</em> but it works.</p>
+<p>Running jaeger locally on docker (from
+<a href="https://www.jaegertracing.io/docs/1.42/getting-started/">the quickstart docs</a>)</p>
+<pre><code class="language-bash">docker run --rm -it --name jaeger \
+  -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
+  -e COLLECTOR_OTLP_ENABLED=true \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -p 14250:14250 \
+  -p 14268:14268 \
+  -p 14269:14269 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:latest
+</code></pre>
+<p>Example environment variables:</p>
+<pre><code class="language-bash">export OTEL_EXPORTER_OTLP_ENDPOINT=&quot;http://localhost:4317&quot; #grpc
+export OTEL_SERVICE_NAME=&quot;goatns&quot;
+export OTEL_LOG_LEVEL=&quot;debug&quot;
+export OTEL_TRACES_SAMPLER=&quot;always_on&quot;
+export OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=&quot;grpc&quot;
+</code></pre>
 
                     </main>
 

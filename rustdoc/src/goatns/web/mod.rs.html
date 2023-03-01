@@ -221,6 +221,20 @@
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
 <a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
 </pre><pre class="rust"><code><span class="doccomment">//! # Web things
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
@@ -232,14 +246,16 @@
 <span class="kw">use </span><span class="kw">crate</span>::datastore;
 <span class="kw">use </span><span class="kw">crate</span>::web::middleware::csp;
 <span class="kw">use </span>async_trait::async_trait;
-<span class="comment">// use axum::handler::Handler;
-</span><span class="kw">use </span>axum::http::StatusCode;
+<span class="kw">use </span>axum::http::StatusCode;
 <span class="kw">use </span>axum::middleware::from_fn_with_state;
 <span class="kw">use </span>axum::routing::get;
 <span class="kw">use </span>axum::Router;
 <span class="kw">use </span>axum_csp::CspUrlMatcher;
 <span class="kw">use </span>axum_extra::routing::SpaRouter;
 <span class="kw">use </span>axum_macros::FromRef;
+<span class="attr">#[cfg(feature = <span class="string">&quot;otel&quot;</span>)]
+#[cfg(not(test))]
+</span><span class="kw">use </span>axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 <span class="kw">use </span>chrono::{DateTime, NaiveDateTime, Utc};
 <span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
 <span class="kw">use </span>oauth2::{ClientId, ClientSecret};
@@ -254,9 +270,9 @@
 <span class="kw">use </span>tokio::task::JoinHandle;
 <span class="kw">use </span>tower::ServiceBuilder;
 <span class="kw">use </span>tower_http::compression::CompressionLayer;
-<span class="kw">use </span>tower_http::trace::{DefaultMakeSpan, TraceLayer};
-<span class="kw">use </span>tracing::Level;
-<span class="kw">use </span>utils::handler_404;
+<span class="comment">// use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+// use tracing::Level;
+</span><span class="kw">use </span>utils::handler_404;
 
 <span class="kw">use </span><span class="self">self</span>::auth::CustomProviderMetadata;
 
@@ -383,6 +399,10 @@
     <span class="kw">let </span>static_dir: PathBuf = shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_static_dir)
         .to_string()
         .into();
+    <span class="attr">#[cfg(feature = <span class="string">&quot;otel&quot;</span>)]
+    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = axum_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers() {
+        <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to initialize OpenTelemetry tracing: {error:?}&quot;</span>);
+    };
 
     <span class="kw">let </span>session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).<span class="kw">await</span>;
 
@@ -404,24 +424,32 @@
     }));
 
     <span class="comment">// add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html
-    </span><span class="kw">let </span>trace_layer =
-        TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
+    // #[cfg(feature = &quot;otel&quot;)]
+    // let trace_layer =
+    //     TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
 
-    <span class="kw">let </span>router = Router::new()
+    </span><span class="kw">let </span>service_layer = ServiceBuilder::new()
+        .layer(from_fn_with_state(state.clone(), csp::cspheaders))
+        .layer(session_layer);
+
+    <span class="comment">// #[cfg(feature = &quot;otel&quot;)]
+    // let service_layer = service_layer.layer(trace_layer);
+
+    </span><span class="kw">let </span>router = Router::new()
         .route(<span class="string">&quot;/&quot;</span>, get(generic::index))
         .nest(<span class="string">&quot;/ui&quot;</span>, ui::new())
         .nest(<span class="string">&quot;/api&quot;</span>, api::new())
         .nest(<span class="string">&quot;/auth&quot;</span>, auth::new())
         .nest(<span class="string">&quot;/dns-query&quot;</span>, doh::new())
-        .layer(
-            ServiceBuilder::new()
-                .layer(from_fn_with_state(state.clone(), csp::cspheaders))
-                .layer(trace_layer)
-                .layer(session_layer)
-                .into_inner(),
-        )
-        .with_state(state)
-        .route(<span class="string">&quot;/status&quot;</span>, get(generic::status));
+        .layer(service_layer.into_inner())
+        .with_state(state);
+
+    <span class="comment">// here we add the tracing layer
+    </span><span class="attr">#[cfg(feature = <span class="string">&quot;otel&quot;</span>)]
+    #[cfg(not(test))]
+    </span><span class="kw">let </span>router = router.layer(opentelemetry_tracing_layer());
+
+    <span class="kw">let </span>router = router.route(<span class="string">&quot;/status&quot;</span>, get(generic::status));
 
     <span class="kw">let </span>router = <span class="kw">match </span>check_static_dir_exists(<span class="kw-2">&amp;</span>static_dir, <span class="kw-2">&amp;</span>config) {
         <span class="bool-val">true </span>=&gt; router.merge(SpaRouter::new(<span class="string">&quot;/static&quot;</span>, <span class="kw-2">&amp;</span>static_dir)),
@@ -438,7 +466,7 @@
         <span class="string">&quot;Started Web server on https://{}&quot;</span>,
         config.api_listener_address()
     );
-    <span class="macro">log::debug!</span>(
+    <span class="macro">log::info!</span>(
         <span class="string">&quot;Started Web server on https://{}&quot;</span>,
         config.api_listener_address()
     );
