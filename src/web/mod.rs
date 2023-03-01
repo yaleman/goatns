@@ -9,9 +9,6 @@ use crate::config::ConfigFile;
 use crate::datastore;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
-#[cfg(feature = "otel")]
-#[cfg(not(test))]
-use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 use axum::http::StatusCode;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
@@ -19,6 +16,9 @@ use axum::Router;
 use axum_csp::CspUrlMatcher;
 use axum_extra::routing::SpaRouter;
 use axum_macros::FromRef;
+#[cfg(feature = "otel")]
+#[cfg(not(test))]
+use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{ClientId, ClientSecret};
@@ -191,9 +191,9 @@ pub async fn build(
     // let trace_layer =
     //     TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
 
-    let service_layer =  ServiceBuilder::new()
-    .layer(from_fn_with_state(state.clone(), csp::cspheaders))
-    .layer(session_layer);
+    let service_layer = ServiceBuilder::new()
+        .layer(from_fn_with_state(state.clone(), csp::cspheaders))
+        .layer(session_layer);
 
     // #[cfg(feature = "otel")]
     // let service_layer = service_layer.layer(trace_layer);
