@@ -12,7 +12,7 @@ include = ["src/**/*", "LICENSE.md", "README.md", "!**/*_test.*", "!**/tests/**/
 
 
 [features]
-default = ["otel"]
+default = []
 otel = []
 
 [workspace]
