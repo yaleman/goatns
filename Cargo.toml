@@ -11,6 +11,10 @@ categories = ["network-programming"]
 include = ["src/**/*", "LICENSE.md", "README.md", "!**/*_test.*", "!**/tests/**/*"]
 
 
+[features]
+default = []
+otel = []
+
 [workspace]
 members = [
     ".",
@@ -36,6 +40,7 @@ axum-extra = { version = "0.5.0", features = ["spa"] }
 axum-macros = "0.3.2"
 axum-server = { version = "0.4.6", features = [ "tls-rustls"] }
 axum-sessions = "0.4.1"
+axum-tracing-opentelemetry = { version = "0.10.0", features = ["tracing_subscriber_ext", "otlp"] }
 base64 = "0.21.0"
 bit-vec = "0.6.3"
 bytes = "1.4.0"
@@ -59,6 +64,7 @@ log = "0.4.17"
 num-traits = "0.2.15"
 oauth2 = "4.3.0"
 openidconnect = "2.4.0"
+opentelemetry-otlp = { version = "0.11.0", features = ["http-proto"] }
 packed_struct = { version = "0.10.1", features = ["byte_types_256"] }
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
@@ -79,6 +85,7 @@ tower = "0.4.13"
 tower-http = { version = "0.4.0", features = ["trace","add-extension","compression-gzip"] }
 tracing = "0.1.37"
 url = { version = "2.3.1", features = ["serde"] }
+
 
 [workspace.dependencies]
 

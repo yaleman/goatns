@@ -37,6 +37,8 @@ jobs:
         with:
           deno-version: v1.x
 
+      - name: Install protoc
+        run: sudo apt-get install -y protobuf-compiler
       - name: Test document formatting
         run: |
           make book/format

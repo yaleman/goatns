@@ -10,6 +10,7 @@ RUN mkdir /goatns
 COPY . /goatns/
 
 WORKDIR /goatns
+RUN sudo apt-get install -y protobuf-compiler
 RUN cargo build --release --bin goatns
 RUN chmod +x /goatns/target/release/goatns
 

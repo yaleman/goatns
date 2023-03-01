@@ -28,5 +28,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      - name: Install protoc
+        run: sudo apt-get install -y protobuf-compiler
       - name: Build Release
         run: cargo build --verbose --release
