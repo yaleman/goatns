@@ -27,6 +27,6 @@ jobs:
       - name: Generate certs
         run: ./insecure_generate_tls.sh
       - name: Install protoc
-        run: apt install -y protobuf-compiler
+        run: sudo apt-get install -y protobuf-compiler
       - name: Run cargo test
         run: cargo test

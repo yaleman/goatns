@@ -34,7 +34,7 @@ jobs:
           override: true
           default: true
       - name: Install protoc
-        run: apt install -y protobuf-compiler
+        run: sudo apt-get install -y protobuf-compiler
       - name: "Run clippy for goatns"
         uses: actions-rs/cargo@v1
         with:
