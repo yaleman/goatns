@@ -11,3 +11,7 @@
 - [Processing Packets](./processing.md)
 - [Supported RRTypes](./rrtypes.md)
 - [References](./references.md)
+
+# Other stuff
+
+- [OpenTelemetry](./opentelemetry.md)

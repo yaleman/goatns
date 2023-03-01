@@ -19,8 +19,8 @@ container:
 	--build-arg GITHUB_SHA="${GITHUB_SHA}" \
 	-t $(IMAGE_BASE)/server:$(IMAGE_VERSION) $(CONTAINER_BUILD_ARGS) .
 
-build: ## Build binaries
-	cargo build
+build: ## Build release binaries
+	cargo build --release
 
 test:
 	cargo test

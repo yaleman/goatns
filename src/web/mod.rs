@@ -9,7 +9,9 @@ use crate::config::ConfigFile;
 use crate::datastore;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
-// use axum::handler::Handler;
+#[cfg(feature = "otel")]
+#[cfg(not(test))]
+use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 use axum::http::StatusCode;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
@@ -31,8 +33,8 @@ use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
-use tower_http::trace::{DefaultMakeSpan, TraceLayer};
-use tracing::Level;
+// use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+// use tracing::Level;
 use utils::handler_404;
 
 use self::auth::CustomProviderMetadata;
@@ -160,6 +162,10 @@ pub async fn build(
     let static_dir: PathBuf = shellexpand::tilde(&config.api_static_dir)
         .to_string()
         .into();
+    #[cfg(feature = "otel")]
+    if let Err(error) = axum_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers() {
+        eprintln!("Failed to initialize OpenTelemetry tracing: {error:?}");
+    };
 
     let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await;
 
@@ -181,8 +187,16 @@ pub async fn build(
     }));
 
     // add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html
-    let trace_layer =
-        TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
+    // #[cfg(feature = "otel")]
+    // let trace_layer =
+    //     TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
+
+    let service_layer =  ServiceBuilder::new()
+    .layer(from_fn_with_state(state.clone(), csp::cspheaders))
+    .layer(session_layer);
+
+    // #[cfg(feature = "otel")]
+    // let service_layer = service_layer.layer(trace_layer);
 
     let router = Router::new()
         .route("/", get(generic::index))
@@ -190,15 +204,15 @@ pub async fn build(
         .nest("/api", api::new())
         .nest("/auth", auth::new())
         .nest("/dns-query", doh::new())
-        .layer(
-            ServiceBuilder::new()
-                .layer(from_fn_with_state(state.clone(), csp::cspheaders))
-                .layer(trace_layer)
-                .layer(session_layer)
-                .into_inner(),
-        )
-        .with_state(state)
-        .route("/status", get(generic::status));
+        .layer(service_layer.into_inner())
+        .with_state(state);
+
+    // here we add the tracing layer
+    #[cfg(feature = "otel")]
+    #[cfg(not(test))]
+    let router = router.layer(opentelemetry_tracing_layer());
+
+    let router = router.route("/status", get(generic::status));
 
     let router = match check_static_dir_exists(&static_dir, &config) {
         true => router.merge(SpaRouter::new("/static", &static_dir)),
@@ -215,7 +229,7 @@ pub async fn build(
         "Started Web server on https://{}",
         config.api_listener_address()
     );
-    log::debug!(
+    log::info!(
         "Started Web server on https://{}",
         config.api_listener_address()
     );
