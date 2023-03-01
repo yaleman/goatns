@@ -1,8 +1,9 @@
 # OpenTelemetry config
 
-At the moment this isn't *great* but it works.
+At the moment this isn't _great_ but it works.
 
-Running jaeger locally on docker (from [the quickstart docs](https://www.jaegertracing.io/docs/1.42/getting-started/))
+Running jaeger locally on docker (from
+[the quickstart docs](https://www.jaegertracing.io/docs/1.42/getting-started/))
 
 ```bash
 docker run --rm -it --name jaeger \
@@ -20,7 +21,6 @@ docker run --rm -it --name jaeger \
   -p 9411:9411 \
   jaegertracing/all-in-one:latest
 ```
-
 
 Example environment variables:
 
