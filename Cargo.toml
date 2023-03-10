@@ -73,7 +73,7 @@ reqwest = { version = "0.11.14", features = ["blocking", "cookies", "json", "rus
 serde = { version = "1.0.152", features = ["derive"] }
 serde_bytes = "0.11.9"
 serde_derive = "1.0.145"
-serde_json = "1.0.91"
+serde_json = "1.0.94"
 sha2 = { version = "0.10.6", features = ["asm", "asm-aarch64"] }
 shellexpand = "3.0.0"
 sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "json"], default-features=false }
