@@ -14,7 +14,7 @@ categories = ["network-programming"]
 [dependencies]
 axum = { version = "0.6.12", default-features = false, features = ["headers", "original-uri"] }
 http = "0.2.9"
-regex = "1.7.2"
+regex = "1.7.3"
 tokio = { version = "1.27.0", default-features = false, features = ["sync"] }
 
 [dev-dependencies]
