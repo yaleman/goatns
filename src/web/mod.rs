@@ -14,7 +14,6 @@ use axum::middleware::from_fn_with_state;
 use axum::routing::get;
 use axum::Router;
 use axum_csp::CspUrlMatcher;
-use axum_extra::routing::SpaRouter;
 use axum_macros::FromRef;
 #[cfg(feature = "otel")]
 #[cfg(not(test))]
@@ -33,6 +32,7 @@ use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
+use tower_http::services::ServeDir;
 // use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 // use tracing::Level;
 use utils::handler_404;
@@ -215,7 +215,7 @@ pub async fn build(
     let router = router.route("/status", get(generic::status));
 
     let router = match check_static_dir_exists(&static_dir, &config) {
-        true => router.merge(SpaRouter::new("/static", &static_dir)),
+        true => router.nest_service("/static", ServeDir::new(&static_dir)),
         false => router,
     };
     let router = router.layer(CompressionLayer::new()).fallback(handler_404);

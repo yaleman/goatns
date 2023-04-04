@@ -1136,5 +1136,5 @@ impl TryFrom<&str> for FileLocRecord {
 
 /// tests to ensure that no label in the name is longer than 63 octets (bytes)
 pub fn check_long_labels(testval: &str) -> bool {
-    return testval.split('.').into_iter().any(|x| x.len() > 63);
+    return testval.split('.').any(|x| x.len() > 63);
 }
