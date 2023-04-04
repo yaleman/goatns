@@ -293,7 +293,6 @@ pub async fn api_tokens_post(
         ApiTokenCreatePageState::Start => {
             // present the user with the lifetime form
             let lifetimes: Vec<(String, String)> = enum_iterator::all::<ApiTokenLifetime>()
-                .into_iter()
                 .map(|l| (l.to_string(), l.variant_str()))
                 .collect();
             eprintln!("Lifetimes: {lifetimes:?}");
