@@ -80,7 +80,7 @@ sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "json"],
 tokio = { version = "1.26.0", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.9.3"
 tokio-stream = { version = "0.1.12", features = ["net"] }
-tokio-util = { version = "0.7.4", features = ["full"] }
+tokio-util = { version = "0.7.8", features = ["full"] }
 tower = "0.4.13"
 tower-http = { version = "0.4.0", features = ["fs", "trace", "add-extension", "compression-gzip"] }
 tracing = "0.1.37"
