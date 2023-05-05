@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["generate_cookie_secret",""],["setup_logging",""]],"struct":[["CONFIG_LOCATIONS",""],["ConfigFile","The main config blob for GoatNS, write this as a JSON file and load it and it’ll make things go."],["IPAllowList","Allow-listing ranges for making particular kinds of requests"],["LogFilter",""]]};
+window.SIDEBAR_ITEMS = {"fn":["__stability","__static_ref_initialize","generate_cookie_secret","setup_logging"],"static":["LAZY"],"struct":["CONFIG_LOCATIONS","ConfigFile","IPAllowList","LogFilter"]};

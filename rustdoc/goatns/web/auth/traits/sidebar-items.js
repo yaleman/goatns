@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":[["CustomClaimTypeThings",""]]};
+window.SIDEBAR_ITEMS = {"trait":["CustomClaimTypeThings"]};

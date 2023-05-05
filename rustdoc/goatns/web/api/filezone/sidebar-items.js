@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["FileZoneResponse",""]]};
+window.SIDEBAR_ITEMS = {"struct":["FileZoneResponse"]};

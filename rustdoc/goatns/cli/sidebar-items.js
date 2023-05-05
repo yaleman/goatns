@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["add_admin_user","Presents the CLI UI to add an admin user."],["clap_parser","Handles the command-line arguments."],["cli_commands","Turns the clap inputs into actions."],["default_config","Output a default configuration file, based on the [crate::config::ConfigFile] object."],["export_zone_file","Dump a zone to a file"],["import_zones","Import zones from a file"]]};
+window.SIDEBAR_ITEMS = {"fn":["add_admin_user","clap_parser","cli_commands","default_config","export_zone_file","import_zones"]};

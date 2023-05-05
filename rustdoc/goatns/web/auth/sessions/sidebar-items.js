@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["session_store_cleanup","A timer that automagically cleans up the session store"]]};
+window.SIDEBAR_ITEMS = {"fn":["session_store_cleanup"]};

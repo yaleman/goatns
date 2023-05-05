@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["csp",""],["gunk",""]]};
+window.SIDEBAR_ITEMS = {"mod":["csp","gunk"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["cspheaders",""]]};
+window.SIDEBAR_ITEMS = {"fn":["cspheaders"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["login",""]],"struct":[["AuthPayload",""],["AuthResponse",""]]};
+window.SIDEBAR_ITEMS = {"fn":["login"],"struct":["AuthPayload","AuthResponse"]};

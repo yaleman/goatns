@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["check_logged_in",""],["dashboard",""],["new",""],["zone_view",""],["zones_list",""]],"macro":[["check_logged_in",""]],"mod":[["admin_ui",""],["user_settings",""]],"struct":[["DashboardTemplate",""],["TemplateViewZone",""],["TemplateViewZones",""]]};
+window.SIDEBAR_ITEMS = {"fn":["check_logged_in","dashboard","new","zone_view","zones_list"],"macro":["check_logged_in"],"mod":["admin_ui","user_settings"],"struct":["DashboardTemplate","TemplateViewZone","TemplateViewZones"]};

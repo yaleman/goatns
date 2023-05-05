@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["index",""],["status",""]],"struct":[["IndexTemplate",""]]};
+window.SIDEBAR_ITEMS = {"fn":["index","status"],"struct":["IndexTemplate"]};
