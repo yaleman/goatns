@@ -276,9 +276,9 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "axum"
-version = "0.6.17"
+version = "0.6.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b70caf9f1b0c045f7da350636435b775a9733adf2df56e8aa2a29210fbc335d4"
+checksum = "f8175979259124331c1d7bf6586ee7e0da434155e4b2d48ec2c8386281d8df39"
 dependencies = [
  "async-trait",
  "axum-core",
@@ -330,7 +330,7 @@ name = "axum-csp"
 version = "0.0.1"
 dependencies = [
  "axum",
- "axum-server",
+ "axum-server 0.5.0",
  "http",
  "lazy_static",
  "regex",
@@ -389,6 +389,21 @@ dependencies = [
  "rustls-pemfile",
  "tokio",
  "tokio-rustls",
+ "tower-service",
+]
+
+[[package]]
+name = "axum-server"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "197b070de3ae5fc503d531d4dc7680e016438c2ffc848a1fefebc5c53f35cc17"
+dependencies = [
+ "bytes",
+ "futures-util",
+ "http",
+ "http-body",
+ "hyper",
+ "tokio",
  "tower-service",
 ]
 
@@ -1348,9 +1363,9 @@ dependencies = [
 
 [[package]]
 name = "flexi_logger"
-version = "0.25.3"
+version = "0.25.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6eae57842a8221ef13f1f207632d786a175dd13bd8fbdc8be9d852f7c9cf1046"
+checksum = "611de758a8869ffffa7524aafdb48658c64dae95cdce49654d68a8442e500d89"
 dependencies = [
  "chrono",
  "crossbeam-channel",
@@ -1578,7 +1593,7 @@ dependencies = [
  "axum-csp",
  "axum-extra",
  "axum-macros",
- "axum-server",
+ "axum-server 0.4.7",
  "axum-sessions",
  "axum-tracing-opentelemetry",
  "base64 0.21.0",
