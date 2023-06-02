@@ -15,9 +15,9 @@ categories = ["network-programming"]
 axum = { version = "0.6.18", default-features = false, features = ["headers", "original-uri"] }
 http = "0.2.9"
 regex = "1.8.3"
-tokio = { version = "1.28.1", default-features = false, features = ["sync"] }
+tokio = { version = "1.28.2", default-features = false, features = ["sync"] }
 
 [dev-dependencies]
 axum-server = "0.5.1"
 lazy_static = "1.4.0"
-tokio = { version = "1.28.1", default-features = false, features = ["full"] }
+tokio = { version = "1.28.2", default-features = false, features = ["full"] }
