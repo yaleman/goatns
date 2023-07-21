@@ -94,7 +94,7 @@ proc-macro2 = "1.0.64"
 syn = "2.0.25"
 
 [dev-dependencies]
-console-subscriber = "0.1.9"
+console-subscriber = "0.1.10"
 criterion = "^0.4"
 scopeguard = "1.2.0"
 tracing-subscriber = "0.3.17"
