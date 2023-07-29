@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["OP_CODE_ALL","PACKET_TYPE_ALL","RCODE_ALL"],"enum":["Agent","AgentState","ContactDetails","ContactDetailsDeserializerError","OpCode","PacketType","Rcode","RecordClass","RecordType","SystemState"],"fn":["next_variant","previous_variant"]};
+window.SIDEBAR_ITEMS = {"constant":["OP_CODE_ALL","PACKET_TYPE_ALL","RCODE_ALL"],"enum":["Agent","AgentState","ContactDetails","ContactDetailsDeserializerError","OpCode","PacketType","Rcode","RecordClass","RecordType","SystemState"]};

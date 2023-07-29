@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["__stability","__static_ref_initialize","check_for_shutdown","get_result","parse_query","tcp_conn_handler","tcp_server","udp_server"],"static":["LAZY"],"struct":["CHAOS_NO","CHAOS_OK","LOCALHOST","Servers"]};
+window.SIDEBAR_ITEMS = {"fn":["check_for_shutdown","get_result","parse_query","tcp_conn_handler","tcp_server","udp_server"],"struct":["CHAOS_NO","CHAOS_OK","LOCALHOST","Servers"]};

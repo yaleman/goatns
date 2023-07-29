@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["__stability","__static_ref_initialize","generate_cookie_secret","setup_logging"],"static":["LAZY"],"struct":["CONFIG_LOCATIONS","ConfigFile","IPAllowList","LogFilter"]};
+window.SIDEBAR_ITEMS = {"fn":["generate_cookie_secret","setup_logging"],"struct":["CONFIG_LOCATIONS","ConfigFile","IPAllowList","LogFilter"]};
