@@ -90,7 +90,7 @@ url = { version = "2.4.0", features = ["serde"] }
 [workspace.dependencies]
 
 quote = "0.4"
-proc-macro2 = "1.0.64"
+proc-macro2 = "1.0.66"
 syn = "2.0.28"
 
 [dev-dependencies]
