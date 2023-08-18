@@ -77,7 +77,7 @@ serde_json = "1.0.104"
 sha2 = { version = "0.10.7", features = ["asm", "asm-aarch64"] }
 shellexpand = "3.1.0"
 sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "json"], default-features=false }
-tokio = { version = "1.30.0", features = ["full", "tracing"] }
+tokio = { version = "1.32.0", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.9.3"
 tokio-stream = { version = "0.1.14", features = ["net"] }
 tokio-util = { version = "0.7.8", features = ["full"] }
