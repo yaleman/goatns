@@ -45,7 +45,7 @@ base64 = "0.21.2"
 bit-vec = "0.6.3"
 bytes = "1.4.0"
 chrono = { version = "0.4.26", features = ["clock"] }
-clap = { version="4.3.21", features=["cargo"]}
+clap = { version="4.3.22", features=["cargo"]}
 concread = "0.4.2"
 config = { version = "0.13", features = ["json"] }
 dialoguer = "0.10.4"
