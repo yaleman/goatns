@@ -60,7 +60,7 @@ http = "0.2.9"
 ipnet = { version = "2.8.0", features = [ "json", "serde" ] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"
-log = "0.4.19"
+log = "0.4.20"
 num-traits = "0.2.16"
 oauth2 = "4.4.1"
 openidconnect = "3.3.0"
