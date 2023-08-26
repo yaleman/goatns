@@ -70,7 +70,7 @@ mod tests {
             SocketAddr::new(localhost, 15353),
             Protocol::Udp,
         ));
-        let resolver = AsyncResolver::tokio(resolver_config, ResolverOpts::default()).unwrap();
+        let resolver = AsyncResolver::tokio(resolver_config, ResolverOpts::default());
 
         // Lookup the IP addresses associated with a name.
 
