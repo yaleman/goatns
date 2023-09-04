@@ -3,12 +3,18 @@ name = "goatns"
 description = "Yet another authoritative DNS name server. But with goat references."
 version = "0.3.0"
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.70"
 license = "MIT"
 repository = "https://github.com/yaleman/goatns.git"
-keywords = ["dns","server","tokio","api","oauth2","oidc"]
+keywords = ["dns", "server", "tokio", "api", "oauth2", "oidc"]
 categories = ["network-programming"]
-include = ["src/**/*", "LICENSE.md", "README.md", "!**/*_test.*", "!**/tests/**/*"]
+include = [
+    "src/**/*",
+    "LICENSE.md",
+    "README.md",
+    "!**/*_test.*",
+    "!**/tests/**/*",
+]
 
 
 [features]
@@ -16,14 +22,10 @@ default = []
 otel = []
 
 [workspace]
-members = [
-    ".",
-    "axum-csp",
-    "goatns-macros",
-]
+members = [".", "axum-csp", "goatns-macros"]
 
 [lib]
-bench=false
+bench = false
 
 [profile.release]
 lto = "fat"
@@ -31,21 +33,31 @@ opt-level = 3
 
 [dependencies]
 argon2 = "0.5"
-askama = { version="0.12.0"}
-async-sqlx-session = { git="https://github.com/jbr/async-sqlx-session.git", rev="3f2e1cf", default-features = false, features = ["sqlite"] }
+askama = { version = "0.12.0" }
+async-sqlx-session = { git = "https://github.com/jbr/async-sqlx-session.git", rev = "3f2e1cf", default-features = false, features = [
+    "sqlite",
+] }
 async-trait = "0.1.73"
-axum = { version="0.6.20", features=["http2", "headers", "original-uri", "macros"] }
-axum-csp = { version="^0.0.1", path="axum-csp/"}
+axum = { version = "0.6.20", features = [
+    "http2",
+    "headers",
+    "original-uri",
+    "macros",
+] }
+axum-csp = { version = "^0.0.1", path = "axum-csp/" }
 axum-extra = { version = "0.7.7" }
 axum-macros = "0.3.8"
-axum-server = { version = "0.5.1", features = [ "tls-rustls"] }
+axum-server = { version = "0.5.1", features = ["tls-rustls"] }
 axum-sessions = "0.5.0"
-axum-tracing-opentelemetry = { version = "0.11.0", features = ["tracing_subscriber_ext", "otlp"] }
+axum-tracing-opentelemetry = { version = "0.11.0", features = [
+    "tracing_subscriber_ext",
+    "otlp",
+] }
 base64 = "0.21.3"
 bit-vec = "0.6.3"
 bytes = "1.4.0"
 chrono = { version = "0.4.28", features = ["clock"] }
-clap = { version="4.4.0", features=["cargo"]}
+clap = { version = "4.4.0", features = ["cargo"] }
 concread = "0.4.2"
 config = { version = "0.13", features = ["json"] }
 dialoguer = "0.10.4"
@@ -54,10 +66,10 @@ flexi_logger = { version = "0.25", features = ["async", "default"] }
 futures = "0.3.28"
 futures-util = "0.3.28"
 gethostname = "0.4.3"
-goatns-macros = { path = "./goatns-macros"}
+goatns-macros = { path = "./goatns-macros" }
 hex = "0.4.3"
 http = "0.2.9"
-ipnet = { version = "2.8.0", features = [ "json", "serde" ] }
+ipnet = { version = "2.8.0", features = ["json", "serde"] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"
 log = "0.4.20"
@@ -69,21 +81,35 @@ packed_struct = { version = "0.10.1", features = ["byte_types_256"] }
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
 regex = "1.9.4"
-reqwest = { version = "0.11.20", features = ["blocking", "cookies", "json", "rustls-tls"] }
+reqwest = { version = "0.11.20", features = [
+    "blocking",
+    "cookies",
+    "json",
+    "rustls-tls",
+] }
 serde = { version = "1.0.187", features = ["derive"] }
 serde_bytes = "0.11.12"
 serde_derive = "1.0.145"
 serde_json = "1.0.105"
 sha2 = { version = "0.10.7", features = ["asm", "asm-aarch64"] }
 shellexpand = "3.1.0"
-sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "json"], default-features=false }
+sqlx = { version = "0.6", features = [
+    "runtime-tokio-rustls",
+    "sqlite",
+    "json",
+], default-features = false }
 tokio = { version = "1.32.0", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.9.3"
 tokio-stream = { version = "0.1.14", features = ["net"] }
 tokio-util = { version = "0.7.8", features = ["full"] }
 tower = "0.4.13"
-tower-http = { version = "0.4.4", features = ["fs", "trace", "add-extension", "compression-gzip"] }
-tracing = "0.1.38"
+tower-http = { version = "0.4.4", features = [
+    "fs",
+    "trace",
+    "add-extension",
+    "compression-gzip",
+] }
+tracing = "^0.1.37"
 url = { version = "2.4.0", features = ["serde"] }
 
 
@@ -98,7 +124,10 @@ console-subscriber = "0.1.10"
 criterion = "^0.4"
 scopeguard = "1.2.0"
 tracing-subscriber = "0.3.17"
-trust-dns-resolver = { version = "0.23.0", features=["tokio", "tokio-runtime"] }
+trust-dns-resolver = { version = "0.23.0", features = [
+    "tokio",
+    "tokio-runtime",
+] }
 
 [[bench]]
 name = "baselines"
