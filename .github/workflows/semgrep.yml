@@ -1,0 +1,30 @@
+---
+"on":
+    pull_request:
+    push:
+
+jobs:
+  semgrep:
+    name: "Run Semgrep"
+    runs-on: ubuntu-latest
+    container:
+      # A Docker image with Semgrep installed. Do not change this.
+      image: returntocorp/semgrep
+
+    # Skip any PR created by dependabot to avoid permission issues:
+    if: (github.actor != 'dependabot[bot]')
+
+    steps:
+        # Fetch project source with GitHub Actions Checkout.
+        - uses: actions/checkout@v3
+        - run: semgrep ci --config auto --junit-xml --output results.xml
+            # env:
+            # Connect to Semgrep Cloud Platform through your SEMGREP_APP_TOKEN.
+            # Generate a token from Semgrep Cloud Platform > Settings
+            # and add it to your GitHub secrets.
+            #   SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        - name: Publish Test Report
+          uses: mikepenz/action-junit-report@v3
+            # if: success() || failure() # always run even if the previous step fails
+          with:
+            report_paths: 'results.xml'
