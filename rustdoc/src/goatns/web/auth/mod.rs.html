@@ -551,7 +551,7 @@
 <span class="kw">type </span>CustomClaimType = IdTokenClaims&lt;EmptyAdditionalClaims, CoreGenderClaim&gt;;
 
 <span class="attr">#[derive(Template)]
-#[template(path = <span class="string">&quot;auth_login.html&quot;</span>)]
+#[template(path = <span class="string">&quot;auth_login.html.j2&quot;</span>)]
 </span><span class="kw">struct </span>AuthLoginTemplate {
     errors: Vec&lt;String&gt;,
     redirect_url: String,
