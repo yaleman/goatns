@@ -3697,7 +3697,7 @@
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
             <span class="prelude-val">Some</span>(val) =&gt; {
                 <span class="kw">let </span>expiry = chrono::NaiveDateTime::parse_from_str(<span class="kw-2">&amp;</span>val, <span class="string">&quot;%s&quot;</span>).unwrap();
-                <span class="kw">let </span>expiry: DateTime&lt;Utc&gt; = chrono::DateTime::from_utc(expiry, Utc);
+                <span class="kw">let </span>expiry: DateTime&lt;Utc&gt; = chrono::TimeZone::from_utc_datetime(<span class="kw-2">&amp;</span>Utc, <span class="kw-2">&amp;</span>expiry);
                 <span class="prelude-val">Some</span>(expiry)
             }
         };
@@ -3705,7 +3705,7 @@
         <span class="kw">let </span>issued: String = input.get(<span class="string">&quot;issued&quot;</span>);
 
         <span class="kw">let </span>issued = chrono::NaiveDateTime::parse_from_str(<span class="kw-2">&amp;</span>issued, <span class="string">&quot;%s&quot;</span>).unwrap();
-        <span class="kw">let </span>issued: DateTime&lt;Utc&gt; = chrono::DateTime::from_utc(issued, Utc);
+        <span class="kw">let </span>issued: DateTime&lt;Utc&gt; = chrono::TimeZone::from_utc_datetime(<span class="kw-2">&amp;</span>Utc, <span class="kw-2">&amp;</span>issued);
 
         <span class="self">Self </span>{
             id: input.get(<span class="string">&quot;id&quot;</span>),

@@ -235,6 +235,7 @@
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
 <a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Web things
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
@@ -315,7 +316,8 @@
         <span class="macro">log::debug!</span>(<span class="string">&quot;Storing OIDC config!&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>writer = <span class="self">self</span>.write().<span class="kw">await</span>;
         writer.oidc_config = <span class="prelude-val">Some</span>(response.clone());
-        writer.oidc_config_updated = DateTime::from_utc(NaiveDateTime::default(), Utc);
+        writer.oidc_config_updated =
+            chrono::TimeZone::from_utc_datetime(<span class="kw-2">&amp;</span>Utc, <span class="kw-2">&amp;</span>NaiveDateTime::default());
         drop(writer);
     }
 
