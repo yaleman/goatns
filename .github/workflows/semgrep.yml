@@ -1,4 +1,5 @@
 ---
+name: "Semgrep checks"
 "on":
     pull_request:
     push:
