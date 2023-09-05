@@ -66,7 +66,7 @@ pub type CustomProviderMetadata = ProviderMetadata<
 type CustomClaimType = IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>;
 
 #[derive(Template)]
-#[template(path = "auth_login.html")]
+#[template(path = "auth_login.html.j2")]
 struct AuthLoginTemplate {
     errors: Vec<String>,
     redirect_url: String,
