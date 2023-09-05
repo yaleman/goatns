@@ -9,10 +9,13 @@ services:
       dockerfile: Dockerfile
       context: .
     init: true
+    read_only: true
     ports:
       - "15353:15353/udp"
       - "15353:15353/tcp"
       - "9000:9000/tcp"
+    security_opt:
+      - "no-new-privileges:true"
     volumes:
       - type: "bind"
         source: "goatns.json"
