@@ -78,7 +78,8 @@ impl GoatStateTrait for GoatState {
         log::debug!("Storing OIDC config!");
         let mut writer = self.write().await;
         writer.oidc_config = Some(response.clone());
-        writer.oidc_config_updated = DateTime::from_utc(NaiveDateTime::default(), Utc);
+        writer.oidc_config_updated =
+            chrono::TimeZone::from_utc_datetime(&Utc, &NaiveDateTime::default());
         drop(writer);
     }
 
