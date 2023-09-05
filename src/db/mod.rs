@@ -1792,7 +1792,7 @@ impl From<SqliteRow> for UserAuthToken {
             None => None,
             Some(val) => {
                 let expiry = chrono::NaiveDateTime::parse_from_str(&val, "%s").unwrap();
-                let expiry: DateTime<Utc> = chrono::DateTime::from_utc(expiry, Utc);
+                let expiry: DateTime<Utc> = chrono::TimeZone::from_utc_datetime(&Utc, &expiry);
                 Some(expiry)
             }
         };
@@ -1800,7 +1800,7 @@ impl From<SqliteRow> for UserAuthToken {
         let issued: String = input.get("issued");
 
         let issued = chrono::NaiveDateTime::parse_from_str(&issued, "%s").unwrap();
-        let issued: DateTime<Utc> = chrono::DateTime::from_utc(issued, Utc);
+        let issued: DateTime<Utc> = chrono::TimeZone::from_utc_datetime(&Utc, &issued);
 
         Self {
             id: input.get("id"),
