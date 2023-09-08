@@ -17,7 +17,7 @@ jobs:
 
     steps:
         # Fetch project source with GitHub Actions Checkout.
-        - uses: actions/checkout@v3
+        - uses: actions/checkout@v4
         - run: semgrep ci --config auto --junit-xml --output results.xml
             # env:
             # Connect to Semgrep Cloud Platform through your SEMGREP_APP_TOKEN.
