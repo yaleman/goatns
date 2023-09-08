@@ -121,7 +121,7 @@ syn = "2.0.28"
 
 [dev-dependencies]
 console-subscriber = "0.1.10"
-criterion = "^0.4"
+criterion = "^0.5"
 scopeguard = "1.2.0"
 tracing-subscriber = "0.3.17"
 trust-dns-resolver = { version = "0.23.0", features = [
