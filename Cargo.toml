@@ -62,7 +62,7 @@ concread = "0.4.2"
 config = { version = "0.13", features = ["json"] }
 dialoguer = "0.10.4"
 enum-iterator = "1.4.1"
-flexi_logger = { version = "0.26", features = ["async", "default"] }
+flexi_logger = { version = "0.27", features = ["async", "default"] }
 futures = "0.3.28"
 futures-util = "0.3.28"
 gethostname = "0.4.3"
