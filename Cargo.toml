@@ -60,7 +60,7 @@ chrono = { version = "0.4.31", features = ["clock"] }
 clap = { version = "4.4.4", features = ["cargo"] }
 concread = "0.4.2"
 config = { version = "0.13", features = ["json"] }
-dialoguer = "0.10.4"
+dialoguer = "0.11.0"
 enum-iterator = "1.4.1"
 flexi_logger = { version = "0.27", features = ["async", "default"] }
 futures = "0.3.28"
