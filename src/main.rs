@@ -10,13 +10,22 @@ use goatns::db;
 use goatns::servers;
 use tokio::time::sleep;
 
-#[tokio::main]
-async fn main() -> io::Result<()> {
+async fn run() -> Result<(), io::Error> {
     let clap_results = clap_parser();
 
-    let config = ConfigFile::try_as_cowcell(clap_results.get_one::<String>("config"))?;
+    let config =
+        ConfigFile::try_as_cowcell(clap_results.get_one::<String>("config")).map_err(|err| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Config loading failed! {:?}", err),
+            )
+        })?;
 
-    let logger = setup_logging(config.read().await, &clap_results).await?;
+    let logger = setup_logging(config.read().await, &clap_results)
+        .await
+        .map_err(|err| {
+            io::Error::new(io::ErrorKind::Other, format!("Log setup failed! {:?}", err))
+        })?;
 
     let config_result = ConfigFile::check_config(config.write().await).await;
 
@@ -33,14 +42,16 @@ async fn main() -> io::Result<()> {
         for error in errors {
             log::error!("{error:}")
         }
-        log::error!("Shutting down!");
+        log::error!("Shutting down due to error!");
         logger.shutdown();
-        return Ok(());
+        return Err(io::Error::new(io::ErrorKind::Other, "Config check failed!"));
     };
+
     if clap_results.get_flag("configcheck") {
-        log::error!("Shutting down!");
+        log::info!("Shutting down after config check.");
         logger.shutdown();
-        return Ok(());
+        return config_result
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Config check failed!"));
     };
 
     log::info!("Configuration: {}", *config.read().await);
@@ -48,7 +59,9 @@ async fn main() -> io::Result<()> {
     let (agent_tx, datastore_sender, datastore_receiver) = start_channels();
 
     // start up the DB
-    let connpool = db::get_conn(config.read().await).await?;
+    let connpool = db::get_conn(config.read().await).await.map_err(|err| {
+        io::Error::new(io::ErrorKind::Other, format!("DB Setup failed: {:?}", err))
+    })?;
 
     if let Err(err) = db::start_db(&connpool).await {
         log::error!("{err}");
@@ -113,4 +126,12 @@ async fn main() -> io::Result<()> {
 
     logger.shutdown();
     Ok(())
+}
+
+fn main() -> Result<(), io::Error> {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async { run().await })
 }
