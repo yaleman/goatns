@@ -40,7 +40,7 @@ jobs:
           # platforms: linux/amd64,linux/arm64
           context: .
           load: true
-          tags: ghcr.io/yaleman/goatns:latest
+          tags: goatns:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: GITHUB_SHA=${GITHUB_SHA}
@@ -52,7 +52,7 @@ jobs:
             --mount type=bind,source=$(pwd)/fullchain.pem,target=/fullchain.pem \
             --mount type=bind,source=$(pwd)/privkey.pem,target=/privkey.pem \
             --mount type=bind,source=$(pwd)/goatns.example.json,target=/goatns.json \
-            goatns/server:latest \
+            goatns:test \
             --configcheck --config goatns.json
       - name: Build and push
         uses: docker/build-push-action@v5
