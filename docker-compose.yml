@@ -4,6 +4,8 @@
 version: "3.9"
 services:
   goatns:
+    security_opt:
+      - no-new-privileges:true
     read_only: true
     image: ghcr.io/yaleman/goatns:latest
     build:
