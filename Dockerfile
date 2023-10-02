@@ -1,4 +1,4 @@
-FROM rust:latest AS builder
+FROM ubuntu:latest AS builder
 
 ARG GITHUB_SHA="${GITHUB_SHA}"
 
@@ -10,11 +10,22 @@ RUN mkdir /goatns
 COPY . /goatns/
 
 WORKDIR /goatns
-RUN apt-get update && apt-get install -y protobuf-compiler
+# install the dependencies
+RUN apt-get update && apt-get install -y \
+    protobuf-compiler \
+    curl \
+    git \
+    build-essential \
+    pkg-config \
+    libssl-dev
+# install rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+RUN mv /root/.cargo/bin/* /usr/local/bin/
+# do the build bits
 RUN cargo build --release --bin goatns
 RUN chmod +x /goatns/target/release/goatns
 
-FROM gcr.io/distroless/cc as goatns
+FROM gcr.io/distroless/cc-debian12 as goatns
 # # ======================
 # https://github.com/GoogleContainerTools/distroless/blob/main/examples/rust/Dockerfile
 COPY --from=builder /goatns/target/release/goatns /
