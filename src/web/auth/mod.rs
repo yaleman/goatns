@@ -255,7 +255,7 @@ pub async fn login(
     }
 
     // if we get the state and code back then we can go back to the server for a token
-    // ref https://github.com/kanidm/kanidm/blob/master/kanidmd/testkit/tests/oauth2_test.rs#L276
+    // ref <https://github.com/kanidm/kanidm/blob/master/kanidmd/testkit/tests/oauth2_test.rs#L276>
 
     let verifier = state.pop_verifier(query.state.clone().unwrap()).await;
 

@@ -228,7 +228,7 @@ pub enum InternalResourceRecord {
         // is not a DNS lookup but that the output of the Regexp field is an
         // URI that adheres to the 'absoluteURI' production found in the
         // ABNF of RFC 2396 [9].  Since there may be applications that use
-        // NAPTR to also lookup aspects of URIs, implementors should be
+        // NAPTR to also lookup aspects of URIs, implementers should be
         // aware that this may cause loop conditions and should act
         // accordingly.
         flags: String,

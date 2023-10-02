@@ -147,7 +147,7 @@ async fn test_cloudflare_soa_reply() {
     use crate::resourcerecord::DomainName;
     use crate::{Header, HEADER_BYTES};
     //     /*
-    //     from: https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA
+    //     from: <https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA>
 
     //     ;; Sending:
     //     ;; QUERY: 8928010000010000000000000a636c6f7564666c61726503636f6d0000060001

@@ -48,7 +48,7 @@ prep: codespell
 codespell: ## Spellchecking, or shaming. Whatever
 codespell:
 	codespell -c \
-	-L crate,unexpect,Pres,pres,ACI,aci,te,ue \
+	-L crate,unexpect,Pres,pres,ACI,aci,te,ue,mut \
 	--skip='./target,./.git,./static_files,./docs/book/*.js,./docs/*.js,./docs/book/FontAwesome/fonts/fontawesome-webfont.svg'
 
 doc: ## Build the rust documentation locally
