@@ -47,7 +47,7 @@ jobs:
         run: |
           touch fullchain.pem
           touch privkey.pem
-          docker run --rm -it \
+          docker run --rm \
             --mount type=bind,source=$(pwd)/fullchain.pem,target=/fullchain.pem \
             --mount type=bind,source=$(pwd)/privkey.pem,target=/privkey.pem \
             --mount type=bind,source=$(pwd)/goatns.example.json,target=/goatns.json \
