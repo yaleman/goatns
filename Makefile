@@ -12,6 +12,7 @@ MARKDOWN_FORMAT_ARGS ?= --options-line-width=100
 help:
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##/\n\t/'
 
+.PHONY: container
 container:	## Build the docker image locally
 container:
 	$(eval GITHUB_SHA:=$(shell  git rev-parse HEAD))
@@ -19,16 +20,27 @@ container:
 	--build-arg GITHUB_SHA="${GITHUB_SHA}" \
 	-t $(IMAGE_BASE)/server:$(IMAGE_VERSION) $(CONTAINER_BUILD_ARGS) .
 
+.PHONY: run_container
+run_container: ## Run the container
+run_container:
+	@$(CONTAINER_TOOL) run $(CONTAINER_TOOL_ARGS) \
+	--rm -it \
+	-v "${HOME}/.config/goatns.json:/goatns.json" \
+	$(IMAGE_BASE)/server:$(IMAGE_VERSION)
+
 build: ## Build release binaries
 	cargo build --release
 
+test: ## run cargo test
 test:
 	cargo test
 
+vendor: ## vendor dependencies
 vendor:
 	cargo vendor
 
-prep:
+prep: ## run cargo outdated and cargo audit
+prep: codespell
 	cargo outdated -R
 	cargo audit
 
@@ -38,10 +50,6 @@ codespell:
 	codespell -c \
 	-L crate,unexpect,Pres,pres,ACI,aci,te,ue \
 	--skip='./target,./.git,./static_files,./docs/book/*.js,./docs/*.js,./docs/book/FontAwesome/fonts/fontawesome-webfont.svg'
-# ,./pykanidm/.venv,./pykanidm/.mypy_cache,./.mypy_cache' \
-# --skip='./docs/*,./.git' \
-# --skip='./kanidmd_web_ui/src/external,./kanidmd_web_ui/pkg/external' \
-# --skip='./kanidmd/lib/src/constants/system_config.rs,./pykanidm/site,./kanidmd/lib/src/constants/*.json'
 
 doc: ## Build the rust documentation locally
 doc:
@@ -56,15 +64,19 @@ book: doc
 
 .PHONY: book/format
 book/format: ## Format docs and the book
+book/format:
 	find . -type f  -not -path './target/*' -not -path '*/.venv/*' \
 		-name \*.md \
 		-exec deno fmt --check $(MARKDOWN_FORMAT_ARGS) "{}" +
 
 .PHONY: book/format/fix
 book/format/fix: ## Fix docs and the book
+book/format/fix:
 	find . -type f  -not -path './target/*' -not -path '*/.venv/*' \
 		-name \*.md \
 		-exec deno fmt  $(MARKDOWN_FORMAT_ARGS) "{}" +
 
+.PHONY: clean_book
+clean_book: ## Remove the docs directory contents
 clean_book:
 	rm -rf ./target/docs/*
