@@ -718,9 +718,9 @@ checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
 name = "concread"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8c43d983bcbf6cbc1b24f9d9a6a6474d762c8744920984d2e0f4e93c2c3e9fa"
+checksum = "80f1d231b98d340d3b9a5d2ba3bd86cd25498ee1242d2e3a61916bf6f8f538a6"
 dependencies = [
  "ahash 0.7.6",
  "crossbeam-epoch",
