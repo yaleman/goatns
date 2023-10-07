@@ -224,7 +224,7 @@ impl APIEntity for FileZone {
         session: ReadableSession,
         Path(id): Path<i64>,
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
-        let id = id;
+        // let id = id;
 
         check_api_auth!();
 

@@ -14,7 +14,7 @@ use std::string::FromUtf8Error;
 lazy_static! {
     static ref CAA_TAG_VALIDATOR: Regex = Regex::new(r"[a-zA-Z0-9]").unwrap();
     static ref URI_RECORD: Regex =
-        Regex::new(r#"^(?P<priority>\d+) (?P<weight>\d+) (?P<target>.*)"#).unwrap();
+        Regex::new(r"^(?P<priority>\d+) (?P<weight>\d+) (?P<target>.*)").unwrap();
 }
 
 const DEFAULT_LOC_HORIZ_PRE: u32 = 10000;
