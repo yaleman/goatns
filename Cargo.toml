@@ -48,7 +48,7 @@ axum-csp = { version = "^0.0.1", path = "axum-csp/" }
 axum-extra = { version = "0.8.0" }
 axum-macros = "0.3.8"
 axum-server = { version = "0.5.1", features = ["tls-rustls"] }
-axum-sessions = "0.5.0"
+axum-sessions = "0.6.1"
 axum-tracing-opentelemetry = { version = "0.11.0", features = [
     "tracing_subscriber_ext",
     "otlp",
