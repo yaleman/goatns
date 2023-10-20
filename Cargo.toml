@@ -37,7 +37,7 @@ askama = { version = "0.12.1" }
 async-sqlx-session = { git = "https://github.com/jbr/async-sqlx-session.git", rev = "3f2e1cf", default-features = false, features = [
     "sqlite",
 ] }
-async-trait = "0.1.73"
+async-trait = "0.1.74"
 axum = { version = "0.6.20", features = [
     "http2",
     "headers",
