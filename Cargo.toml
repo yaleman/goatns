@@ -53,7 +53,7 @@ axum-tracing-opentelemetry = { version = "0.11.0", features = [
     "tracing_subscriber_ext",
     "otlp",
 ] }
-base64 = "0.21.4"
+base64 = "0.21.5"
 bit-vec = "0.6.3"
 bytes = "1.5.0"
 chrono = { version = "0.4.31", features = ["clock"] }
