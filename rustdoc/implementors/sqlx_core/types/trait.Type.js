@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"goatns":[["impl Type&lt;Sqlite&gt; for <a class=\"enum\" href=\"goatns/enums/enum.RecordClass.html\" title=\"enum goatns::enums::RecordClass\">RecordClass</a>"],["impl Type&lt;Sqlite&gt; for <a class=\"enum\" href=\"goatns/enums/enum.RecordType.html\" title=\"enum goatns::enums::RecordType\">RecordType</a>"]]
+"goatns":[["impl Type&lt;Sqlite&gt; for <a class=\"enum\" href=\"goatns/enums/enum.RecordType.html\" title=\"enum goatns::enums::RecordType\">RecordType</a>"],["impl Type&lt;Sqlite&gt; for <a class=\"enum\" href=\"goatns/enums/enum.RecordClass.html\" title=\"enum goatns::enums::RecordClass\">RecordClass</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
