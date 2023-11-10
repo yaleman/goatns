@@ -68,7 +68,7 @@ futures-util = "0.3.28"
 gethostname = "0.4.3"
 goatns-macros = { path = "./goatns-macros" }
 hex = "0.4.3"
-http = "0.2.9"
+http = "0.2.10"
 ipnet = { version = "2.9.0", features = ["json", "serde"] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"
