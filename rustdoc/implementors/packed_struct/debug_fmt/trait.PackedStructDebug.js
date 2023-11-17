@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"goatns":[["impl PackedStructDebug for <a class=\"struct\" href=\"goatns/resourcerecord/struct.LocRecord.html\" title=\"struct goatns::resourcerecord::LocRecord\">LocRecord</a>"],["impl PackedStructDebug for <a class=\"struct\" href=\"goatns/struct.Header.html\" title=\"struct goatns::Header\">Header</a>"]]
+"goatns":[["impl PackedStructDebug for <a class=\"struct\" href=\"goatns/struct.Header.html\" title=\"struct goatns::Header\">Header</a>"],["impl PackedStructDebug for <a class=\"struct\" href=\"goatns/resourcerecord/struct.LocRecord.html\" title=\"struct goatns::resourcerecord::LocRecord\">LocRecord</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
