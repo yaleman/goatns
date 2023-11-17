@@ -117,7 +117,7 @@ url = { version = "2.4.0", features = ["serde"] }
 
 quote = "0.4"
 proc-macro2 = "1.0.69"
-syn = "2.0.38"
+syn = "2.0.39"
 
 [dev-dependencies]
 console-subscriber = "0.2.0"
