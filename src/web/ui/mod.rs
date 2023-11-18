@@ -9,8 +9,8 @@ use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::Router;
 use axum_macros::debug_handler;
+use tower_sessions::Session;
 // use axum_macros::debug_handler;
-use axum_sessions::extractors::WritableSession;
 
 use super::GoatState;
 
@@ -42,7 +42,7 @@ macro_rules! check_logged_in {
 // #[debug_handler]
 pub async fn zones_list(
     State(state): State<GoatState>,
-    mut session: WritableSession,
+    mut session: Session,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
     // if let Err(e) = check_logged_in(&state, &mut session, path).await {
@@ -54,7 +54,7 @@ pub async fn zones_list(
     let offset = 0;
     let limit = 20;
 
-    let user: User = match session.get("user") {
+    let user: User = match session.get("user").unwrap() {
         Some(val) => {
             log::info!("current user: {val:?}");
             val
@@ -98,7 +98,7 @@ pub async fn zones_list(
 pub async fn zone_view(
     Path(name_or_id): Path<i64>,
     axum::extract::State(state): axum::extract::State<GoatState>,
-    mut session: WritableSession,
+    mut session: Session,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
     let user = check_logged_in(&mut session, path)
@@ -132,12 +132,13 @@ pub async fn zone_view(
     Response::new(context.render().unwrap()).into_response()
 }
 
-pub async fn check_logged_in(session: &mut WritableSession, path: Uri) -> Result<User, Redirect> {
-    let authref = session.get::<String>("authref");
+pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, Redirect> {
+    let authref = session.get::<String>("authref").unwrap();
 
     let redirect_path = Some(path.path_and_query().unwrap().to_string());
     if authref.is_none() {
-        session.regenerate();
+        session.clear();
+
         session
             .insert("redirect", redirect_path)
             .map_err(|e| log::debug!("Couldn't store redirect for user: {e:?}"))
@@ -148,7 +149,7 @@ pub async fn check_logged_in(session: &mut WritableSession, path: Uri) -> Result
     }
     log::debug!("session ok!");
 
-    let user = match session.get("user") {
+    let user = match session.get("user").unwrap() {
         Some(val) => val,
         None => return Err(redirect_to_login()),
     };
@@ -165,10 +166,7 @@ struct DashboardTemplate /*<'a>*/ {
 }
 
 // #[debug_handler]
-pub async fn dashboard(
-    mut session: WritableSession,
-    OriginalUri(path): OriginalUri,
-) -> impl IntoResponse {
+pub async fn dashboard(mut session: Session, OriginalUri(path): OriginalUri) -> impl IntoResponse {
     let user = match check_logged_in(&mut session, path).await {
         Ok(val) => val,
         Err(err) => return err.into_response(),

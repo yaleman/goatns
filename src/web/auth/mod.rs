@@ -1,21 +1,17 @@
-use std::time::Duration;
-
 use super::utils::{redirect_to_dashboard, redirect_to_home};
 use super::GoatState;
 use crate::config::ConfigFile;
 use crate::db::{DBEntity, User};
 use crate::web::GoatStateTrait;
 use crate::COOKIE_NAME;
-
 use askama::Template;
-use async_sqlx_session::SqliteSessionStore;
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Form, Router};
+use tower_sessions::cookie::time::Duration;
+use tower_sessions::{session_store::ExpiredDeletion, sqlx::SqlitePool, SqliteStore};
 // use axum_macros::debug_handler;
-use axum_sessions::extractors::WritableSession;
-use axum_sessions::SessionLayer;
 use chrono::{DateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{PkceCodeChallenge, PkceCodeVerifier, RedirectUrl};
@@ -28,10 +24,10 @@ use openidconnect::{
     AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
 };
 use serde::Deserialize;
-use sqlx::{Pool, Sqlite};
 
-pub mod sessions;
+// pub(crate) mod sessionstore;
 pub mod traits;
+use tower_sessions::{Expiry, Session, SessionManagerLayer};
 use traits::*;
 
 #[derive(Deserialize)]
@@ -97,7 +93,9 @@ struct AuthLogoutTemplate {
 struct AuthProvisioningDisabledTemplate {
     username: String,
     authref: String,
-    admin_contact: String,
+
+    admin_contact_name: String,
+    admin_contact_url: String,
     pub user_is_admin: bool,
 }
 
@@ -237,15 +235,14 @@ pub async fn parse_state_code(
 // #[debug_handler]
 pub async fn login(
     Query(query): Query<QueryForLogin>,
-    mut session: WritableSession,
+    session: Session,
     axum::extract::State(mut state): axum::extract::State<GoatState>,
 ) -> impl IntoResponse {
     // check if we've got an existing, valid session
-    if !session.is_expired() {
-        if let Some(signed_in) = session.get("signed_in") {
-            if signed_in {
-                return Redirect::to("/ui").into_response();
-            }
+
+    if let Some(signed_in) = session.get("signed_in").unwrap() {
+        if signed_in {
+            return Redirect::to("/ui").into_response();
         }
     }
 
@@ -290,17 +287,14 @@ pub async fn login(
                             if !state.read().await.config.user_auto_provisioning {
                                 // TODO: show a "sorry" page when auto-provisioning's not enabled
                                 // log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
-                                let admin_contact =
-                                    state.read().await.config.admin_contact.to_string();
-                                // let admin_contact = match admin_contact {
-                                //     Some(value) => value.to_string(),
-                                //     None => "the administrator".to_string(),
-                                // };
+                                let (admin_contact_name, admin_contact_url) =
+                                    state.read().await.config.admin_contact.to_html_parts();
 
                                 let context = AuthProvisioningDisabledTemplate {
                                     username: claims.get_username(),
                                     authref: claims.subject().to_string(),
-                                    admin_contact,
+                                    admin_contact_name,
+                                    admin_contact_url,
                                     user_is_admin: false, // TODO: ... probably not an admin but we can check
                                 };
                                 return Response::builder()
@@ -339,10 +333,10 @@ pub async fn login(
                                 "Database error finding user {:?}: {error:?}",
                                 email.clone()
                             );
-                            let redirect: Option<String> = session.get("redirect");
+                            let redirect: Option<String> = session.get("redirect").unwrap();
                             return match redirect {
                                 Some(destination) => {
-                                    session.remove("redirect");
+                                    session.remove_value("redirect");
                                     Redirect::to(&destination).into_response()
                                 }
                                 None => redirect_to_home().into_response(),
@@ -354,7 +348,7 @@ pub async fn login(
             log::debug!("Found user in database: {dbuser:?}");
 
             if dbuser.disabled {
-                session.destroy();
+                session.flush();
                 log::info!("Disabled user attempted to log in: {dbuser:?}");
                 return redirect_to_home().into_response();
             }
@@ -381,32 +375,36 @@ pub async fn login(
     }
 }
 
-pub async fn logout(mut session: WritableSession) -> impl IntoResponse {
-    session.destroy();
+pub async fn logout(session: Session) -> impl IntoResponse {
+    session.flush();
     Redirect::to("/")
 }
 
 pub async fn build_auth_stores(
     config: CowCellReadTxn<ConfigFile>,
-    connpool: Pool<Sqlite>,
-) -> SessionLayer<SqliteSessionStore> {
-    let session_store = SqliteSessionStore::from_client(connpool).with_table_name("sessions");
+    connpool: SqlitePool,
+) -> SessionManagerLayer<SqliteStore> {
+    let session_store = SqliteStore::new(connpool)
+        .with_table_name("sessions")
+        .expect("Failed to start session store!");
 
     session_store
         .migrate()
         .await
         .expect("Could not migrate session store database on startup!");
 
-    tokio::spawn(sessions::session_store_cleanup(
-        Duration::from_secs(config.sql_db_cleanup_seconds.to_owned()),
-        session_store.clone(),
-    ));
+    let _deletion_task = tokio::task::spawn(
+        session_store
+            .clone()
+            .continuously_delete_expired(tokio::time::Duration::from_secs(60)),
+    );
 
-    SessionLayer::new(session_store, config.api_cookie_secret())
+    SessionManagerLayer::new(session_store)
+        .with_expiry(Expiry::OnInactivity(Duration::minutes(5)))
+        .with_name(COOKIE_NAME)
         .with_secure(true)
-        // TODO: cookie domain isn't working because it sets .(hostname) for some reason.
-        // .with_cookie_domain(config.hostname.clone())
-        .with_cookie_name(COOKIE_NAME)
+        // If the cookies start being weird it's because they were appending a "." on the start...
+        .with_domain(config.hostname.clone())
 }
 
 #[derive(Deserialize, Debug)]

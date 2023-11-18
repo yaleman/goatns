@@ -2,8 +2,6 @@ use crate::resourcerecord::InternalResourceRecord;
 use enum_iterator::Sequence;
 use packed_struct::prelude::*;
 use serde::{de, Serialize, Serializer};
-use sqlx::encode::IsNull;
-use sqlx::sqlite::SqliteArgumentValue;
 use std::fmt::Display;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -81,8 +79,10 @@ pub enum Rcode {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence, sqlx::Type)]
 /// RRType, eg A, NS, MX, etc
+#[sqlx(type_name = "INTEGER")]
+#[repr(i64)]
 pub enum RecordType {
     /// A host address
     A = 1,
@@ -266,20 +266,8 @@ impl RecordType {
     }
 }
 
-impl sqlx::Type<sqlx::Sqlite> for RecordType {
-    fn type_info() -> sqlx::sqlite::SqliteTypeInfo {
-        i64::type_info()
-    }
-}
-
-impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for RecordType {
-    fn encode_by_ref(&self, args: &mut Vec<SqliteArgumentValue<'q>>) -> IsNull {
-        args.push(SqliteArgumentValue::Int64(*self as i64));
-        IsNull::No
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence, sqlx::Type)]
+#[repr(i64)]
 /// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
     /// IN - Internet
@@ -292,19 +280,6 @@ pub enum RecordClass {
     Hesiod = 4,
 
     InvalidType = 0,
-}
-
-impl sqlx::Type<sqlx::Sqlite> for RecordClass {
-    fn type_info() -> sqlx::sqlite::SqliteTypeInfo {
-        i64::type_info()
-    }
-}
-
-impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for RecordClass {
-    fn encode_by_ref(&self, args: &mut Vec<SqliteArgumentValue<'q>>) -> IsNull {
-        args.push(SqliteArgumentValue::Int64(*self as i64));
-        IsNull::No
-    }
 }
 
 impl Display for RecordClass {
@@ -421,6 +396,25 @@ impl ToString for ContactDetails {
                 format!(r#"<a href="https://twitter.com/{contact}">{contact}</a>"#)
             }
             ContactDetails::None => "".to_string(),
+        }
+    }
+}
+impl ContactDetails {
+    /// returns (username, url)
+    pub fn to_html_parts(&self) -> (String, String) {
+        match self {
+            ContactDetails::Mastodon { server, contact } => (
+                contact.to_owned(),
+                format!("https://{}/@{}", server, contact),
+            ),
+            ContactDetails::Email { contact } => {
+                (contact.to_owned(), format!("mailto:{}", contact))
+            }
+            ContactDetails::Twitter { contact } => (
+                contact.to_owned(),
+                format!("https://twitter.com/{}", contact),
+            ),
+            ContactDetails::None => ("".to_string(), "".to_string()),
         }
     }
 }

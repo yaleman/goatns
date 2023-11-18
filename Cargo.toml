@@ -1,7 +1,7 @@
 [package]
 name = "goatns"
 description = "Yet another authoritative DNS name server. But with goat references."
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 rust-version = "1.70"
 license = "MIT"
@@ -34,9 +34,6 @@ opt-level = 3
 [dependencies]
 argon2 = "0.5"
 askama = { version = "0.12.1" }
-async-sqlx-session = { git = "https://github.com/jbr/async-sqlx-session.git", rev = "3f2e1cf", default-features = false, features = [
-    "sqlite",
-] }
 async-trait = "0.1.74"
 axum = { version = "0.6.20", features = [
     "http2",
@@ -48,10 +45,8 @@ axum-csp = { version = "^0.0.1", path = "axum-csp/" }
 axum-extra = { version = "0.8.0" }
 axum-macros = "0.3.8"
 axum-server = { version = "0.5.1", features = ["tls-rustls"] }
-axum-sessions = "0.6.1"
 axum-tracing-opentelemetry = { version = "0.11.0", features = [
     "tracing_subscriber_ext",
-    "otlp",
 ] }
 base64 = "0.21.5"
 bit-vec = "0.6.3"
@@ -87,17 +82,22 @@ reqwest = { version = "0.11.22", features = [
     "json",
     "rustls-tls",
 ] }
+rmp-serde = "1.1.2"
 serde = { version = "1.0.192", features = ["derive"] }
 serde_bytes = "0.11.12"
 serde_derive = "1.0.145"
 serde_json = "1.0.108"
 sha2 = { version = "0.10.8", features = ["asm", "asm-aarch64"] }
 shellexpand = "3.1.0"
-sqlx = { version = "0.6", features = [
+sqlx = { version = "0.7.2", features = [
     "runtime-tokio-rustls",
     "sqlite",
     "json",
+    "time",
+    "uuid",
 ], default-features = false }
+thiserror = "1.0.50"
+time = "0.3.30"
 tokio = { version = "1.34.0", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.9.3"
 tokio-stream = { version = "0.1.14", features = ["net"] }
@@ -109,13 +109,16 @@ tower-http = { version = "0.4.4", features = [
     "add-extension",
     "compression-gzip",
 ] }
+tower-sessions = { version = "0.6.0", features = [
+    "sqlite-store",
+    "deletion-task",
+    "axum-core",
+] }
 tracing = "^0.1.40"
 url = { version = "2.4.0", features = ["serde"] }
 
 
 [workspace.dependencies]
-
-quote = "0.4"
 proc-macro2 = "1.0.69"
 syn = "2.0.39"
 

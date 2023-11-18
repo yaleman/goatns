@@ -5,7 +5,10 @@
 
 <p>Automatic provisioning is disabled on this service, please
 
-    contact {{admin_contact}}. to create your account</p>
+    contact {% if !admin_contact_url.is_empty() %}<a href>{% endif
+        %}{{admin_contact_name}}{% if !admin_contact_url.is_empty() %}</a>{%
+    endif %} to create your
+    account</p>
 
 <h3>Include these details:</h3>
 

@@ -478,7 +478,7 @@ pub async fn setup_logging(
                 "hyper::proto",
                 "rustls",
                 "h2::proto",
-                "tower_http::trace::make_span",
+                // "tower_http::trace::make_span",
                 "tokio_util::codec::framed_impl",
             ],
         }))

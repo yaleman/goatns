@@ -1,5 +1,6 @@
 use goatns::enums::SystemState;
 use goatns::utils::start_channels;
+use sqlx::SqlitePool;
 use std::io;
 use std::time::Duration;
 
@@ -59,7 +60,7 @@ async fn run() -> Result<(), io::Error> {
     let (agent_tx, datastore_sender, datastore_receiver) = start_channels();
 
     // start up the DB
-    let connpool = db::get_conn(config.read().await).await.map_err(|err| {
+    let connpool: SqlitePool = db::get_conn(config.read().await).await.map_err(|err| {
         io::Error::new(io::ErrorKind::Other, format!("DB Setup failed: {:?}", err))
     })?;
 

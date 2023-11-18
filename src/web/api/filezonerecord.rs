@@ -2,6 +2,7 @@ use crate::db::{DBEntity, User, ZoneOwnership};
 use crate::error_result_json;
 use crate::zones::FileZoneRecord;
 use goatns_macros::check_api_auth;
+use tower_sessions::Session;
 
 use super::*;
 
@@ -10,7 +11,7 @@ impl APIEntity for FileZoneRecord {
     /// Save the entity to the database
     async fn api_create(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();
@@ -62,7 +63,7 @@ impl APIEntity for FileZoneRecord {
     /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
     async fn api_update(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();
@@ -100,7 +101,7 @@ impl APIEntity for FileZoneRecord {
     }
     async fn api_get(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path<i64>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();
@@ -121,7 +122,7 @@ impl APIEntity for FileZoneRecord {
     /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
     async fn api_delete(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path<i64>,
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();

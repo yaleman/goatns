@@ -3,10 +3,10 @@ use askama::Template;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
-use axum_sessions::extractors::WritableSession;
 use http::{Response, Uri};
 use sqlx::Row;
 use std::str::FromStr;
+use tower_sessions::Session;
 
 use super::check_logged_in;
 
@@ -33,7 +33,7 @@ struct ZoneRecord {
     zoneid: u32,
 }
 
-pub async fn dashboard(mut session: WritableSession) -> impl IntoResponse {
+pub async fn dashboard(mut session: Session) -> impl IntoResponse {
     let user = match check_logged_in(&mut session, Uri::from_str("/").unwrap()).await {
         Ok(val) => val,
         Err(err) => return err.into_response(),
@@ -52,7 +52,7 @@ pub async fn dashboard(mut session: WritableSession) -> impl IntoResponse {
 
 #[axum::debug_handler]
 pub async fn report_unowned_records(
-    mut session: WritableSession,
+    mut session: Session,
     axum::extract::State(state): axum::extract::State<GoatState>,
 ) -> impl IntoResponse {
     let user = match check_logged_in(&mut session, Uri::from_str("/").unwrap()).await {
@@ -68,7 +68,7 @@ pub async fn report_unowned_records(
         ON records_merged.record_id = ownership.id
         where ownership.id is NULL",
     )
-    .fetch_all(&mut pool)
+    .fetch_all(&mut *pool)
     .await
     {
         Ok(val) => {

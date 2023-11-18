@@ -9,9 +9,11 @@ use crate::config::ConfigFile;
 use crate::datastore;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
+use axum::error_handling::HandleErrorLayer;
 use axum::http::StatusCode;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
+use axum::BoxError;
 use axum::Router;
 use axum_csp::CspUrlMatcher;
 use axum_macros::FromRef;
@@ -20,10 +22,11 @@ use axum_macros::FromRef;
 use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
+use log::error;
 use oauth2::{ClientId, ClientSecret};
 use openidconnect::Nonce;
 use regex::RegexSet;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, SqlitePool};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -33,8 +36,6 @@ use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
-// use tower_http::trace::{DefaultMakeSpan, TraceLayer};
-// use tracing::Level;
 use utils::handler_404;
 
 use self::auth::CustomProviderMetadata;
@@ -111,7 +112,7 @@ type GoatState = Arc<RwLock<GoatChildState>>;
 /// Internal State handler for the datastore object within the API
 pub struct GoatChildState {
     pub tx: Sender<datastore::Command>,
-    pub connpool: Pool<Sqlite>,
+    pub connpool: SqlitePool,
     pub config: ConfigFile,
     pub oidc_config_updated: DateTime<Utc>,
     pub oidc_config: Option<auth::CustomProviderMetadata>,
@@ -158,7 +159,7 @@ fn check_static_dir_exists(static_dir: &PathBuf, config: &ConfigFile) -> bool {
 pub async fn build(
     tx: Sender<datastore::Command>,
     config: CowCellReadTxn<ConfigFile>,
-    connpool: Pool<Sqlite>,
+    connpool: SqlitePool,
 ) -> Option<JoinHandle<Result<(), std::io::Error>>> {
     let static_dir: PathBuf = shellexpand::tilde(&config.api_static_dir)
         .to_string()
@@ -187,17 +188,13 @@ pub async fn build(
         csp_matchers,
     }));
 
-    // add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html
-    // #[cfg(feature = "otel")]
-    // let trace_layer =
-    //     TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
-
     let service_layer = ServiceBuilder::new()
-        .layer(from_fn_with_state(state.clone(), csp::cspheaders))
-        .layer(session_layer);
-
-    // #[cfg(feature = "otel")]
-    // let service_layer = service_layer.layer(trace_layer);
+        .layer(HandleErrorLayer::new(|err: BoxError| async move {
+            error!("Something broke: {:?}", err);
+            StatusCode::BAD_REQUEST
+        }))
+        .layer(session_layer)
+        .layer(from_fn_with_state(state.clone(), csp::cspheaders));
 
     let router = Router::new()
         .route("/", get(generic::index))
@@ -205,7 +202,7 @@ pub async fn build(
         .nest("/api", api::new())
         .nest("/auth", auth::new())
         .nest("/dns-query", doh::new())
-        .layer(service_layer.into_inner())
+        .layer(service_layer)
         .with_state(state);
 
     // here we add the tracing layer
