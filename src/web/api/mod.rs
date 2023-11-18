@@ -5,7 +5,6 @@ use axum::extract::Path;
 use axum::extract::State;
 use axum::routing::{delete, post, put};
 use axum::Json;
-use axum_sessions::extractors::ReadableSession;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -14,6 +13,7 @@ pub mod filezone;
 pub mod filezonerecord;
 pub use filezone::*;
 pub use filezonerecord::*;
+use tower_sessions::Session;
 
 #[macro_export]
 /// message, status
@@ -57,18 +57,18 @@ trait APIEntity {
     /// Save the entity to the database
     async fn api_create(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
     /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
     async fn api_update(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
     async fn api_get(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path<i64>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
 
@@ -76,7 +76,7 @@ trait APIEntity {
     /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
     async fn api_delete(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path<i64>,
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)>;
 }

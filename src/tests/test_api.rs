@@ -493,7 +493,7 @@ async fn test_api_record_delete() -> Result<(), sqlx::Error> {
         .header("Authorization", format!("Bearer {}", token.token_secret))
         .send()
         .await
-        .unwrap();
+        .expect("Failed to send delete request");
 
     let status = res.status();
     println!("Response content: {:?}", res.text().await);

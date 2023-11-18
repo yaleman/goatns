@@ -8,10 +8,10 @@ use crate::utils::check_valid_tld;
 use crate::zones::FileZone;
 use axum::extract::Path;
 use axum::Json;
-use axum_sessions::extractors::ReadableSession;
 use goatns_macros::check_api_auth;
 use serde::Deserialize;
 use serde::Serialize;
+use tower_sessions::Session;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct FileZoneResponse {
@@ -24,7 +24,7 @@ pub struct FileZoneResponse {
 impl APIEntity for FileZone {
     async fn api_create(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {
         #[cfg(test)]
@@ -130,7 +130,7 @@ impl APIEntity for FileZone {
 
     async fn api_update(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json<serde_json::Value>,
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();
@@ -221,7 +221,7 @@ impl APIEntity for FileZone {
 
     async fn api_delete(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path<i64>,
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
         // let id = id;
@@ -312,7 +312,7 @@ impl APIEntity for FileZone {
     }
     async fn api_get(
         State(state): State<GoatState>,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path<i64>,
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();

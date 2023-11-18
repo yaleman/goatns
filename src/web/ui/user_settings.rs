@@ -12,13 +12,12 @@ use axum::routing::get;
 use axum::routing::post;
 use axum::{Form, Router};
 use axum_macros::debug_handler;
-// use axum_macros::debug_handler;
-use axum_sessions::extractors::WritableSession;
 use chrono::{DateTime, Duration, Utc};
 use enum_iterator::Sequence;
 use http::Uri;
 use oauth2::CsrfToken;
 use serde::{Deserialize, Serialize};
+use tower_sessions::Session;
 
 use crate::db::UserAuthToken;
 use crate::web::GoatState;
@@ -50,10 +49,10 @@ struct ApiTokensGetPage {
     pub user_is_admin: bool,
 }
 
-pub fn validate_csrf_expiry(user_input: &str, session: &mut WritableSession) -> bool {
-    let session_token: String = match session.get(SESSION_CSRFTOKEN_FIELD) {
+pub fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
+    let session_token: String = match session.get(SESSION_CSRFTOKEN_FIELD).unwrap() {
         None => {
-            session.remove(SESSION_CSRFTOKEN_FIELD);
+            session.remove_value(SESSION_CSRFTOKEN_FIELD);
             log::debug!("Couldn't get session token from storage");
             return false;
         }
@@ -77,7 +76,7 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut WritableSession) -> 
     let expiry = match split.next() {
         None => {
             log::debug!("Couldn't get timestamp from stored CSRF Token");
-            session.remove(SESSION_CSRFTOKEN_FIELD);
+            session.remove_value(SESSION_CSRFTOKEN_FIELD);
             return false;
         }
         Some(value) => value,
@@ -86,7 +85,7 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut WritableSession) -> 
     let expiry: DateTime<Utc> = match DateTime::parse_from_rfc3339(expiry) {
         Err(error) => {
             log::debug!("Failed to parse {expiry:?} into datetime: {error:?}");
-            session.remove(SESSION_CSRFTOKEN_FIELD);
+            session.remove_value(SESSION_CSRFTOKEN_FIELD);
             return false;
         }
         Ok(value) => value.into(),
@@ -95,7 +94,7 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut WritableSession) -> 
 
     if expiry < now {
         log::debug!("Token has expired at {expiry:?}, time is now {now:?}");
-        session.remove(SESSION_CSRFTOKEN_FIELD);
+        session.remove_value(SESSION_CSRFTOKEN_FIELD);
         return false;
     }
     log::debug!("CSRF Token was valid!");
@@ -106,7 +105,7 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut WritableSession) -> 
 ///
 /// Expiry defaults to 5 (minutes)
 fn store_api_csrf_token(
-    session: &mut WritableSession,
+    session: &mut Session,
     expiry_plus_seconds: Option<i64>,
 ) -> Result<String, String> {
     let csrftoken = CsrfToken::new_random();
@@ -128,7 +127,7 @@ fn store_api_csrf_token(
 /// The user settings page at /ui/settings/api_tokens
 #[debug_handler]
 pub async fn api_tokens_get(
-    mut session: WritableSession,
+    mut session: Session,
     State(state): State<GoatState>,
 ) -> Result<Html<String>, Redirect> {
     let user = check_logged_in(
@@ -146,11 +145,9 @@ pub async fn api_tokens_get(
     };
 
     // pull token from the session store new_api_token
-    let token_value: Option<String> = session.get("new_api_token");
-    session.remove("new_api_token");
+    let token_value: Option<String> = session.remove("new_api_token").unwrap();
 
-    let tokenkey: Option<String> = session.get("new_api_tokenkey");
-    session.remove("new_api_tokenkey");
+    let tokenkey: Option<String> = session.remove("new_api_tokenkey").unwrap();
 
     let tokens =
         match UserAuthToken::get_all_user(&state.read().await.connpool, user.id.unwrap()).await {
@@ -270,7 +267,7 @@ pub struct ApiTokenPage {
 /// The user settings page at /ui/settings
 // #[debug_handler]
 pub async fn api_tokens_post(
-    mut session: WritableSession,
+    mut session: Session,
     State(state): State<GoatState>,
     Form(form): Form<ApiTokenPage>,
 ) -> Result<Html<String>, Redirect> {
@@ -317,7 +314,13 @@ pub async fn api_tokens_post(
             let api_cookie_secret = state_reader.config.api_cookie_secret();
             let lifetime: i32 = form.lifetime.unwrap().into();
             // get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
-            let user: User = session.get("user").unwrap();
+            let user: User = match session.get("user").unwrap() {
+                Some(val) => val,
+                None => {
+                    log::debug!("Couldn't get user from session store");
+                    return Err(Redirect::to("/ui"));
+                }
+            };
             let userid: i64 = user.id.unwrap();
 
             let api_token = create_api_token(api_cookie_secret, lifetime, userid);
@@ -415,7 +418,7 @@ pub async fn api_tokens_delete_get(
     axum::extract::State(state): axum::extract::State<GoatState>,
     // Form(form): Form<ApiTokenPage>,
     Path(id): Path<String>,
-    mut session: WritableSession,
+    mut session: Session,
 ) -> Result<Html<String>, Redirect> {
     let user = check_logged_in(
         &mut session,
@@ -473,7 +476,7 @@ pub async fn api_tokens_delete_get(
 // #[debug_handler]
 pub async fn api_tokens_delete_post(
     State(state): State<GoatState>,
-    mut session: WritableSession,
+    mut session: Session,
     Form(form): Form<ApiTokenDelete>,
 ) -> Result<Html<String>, Redirect> {
     check_logged_in(
@@ -489,7 +492,13 @@ pub async fn api_tokens_delete_post(
     }
 
     log::debug!("Deleting token from Form: {form:?}");
-    let user: User = session.get("user").unwrap();
+    let user: User = match session.get("user").unwrap() {
+        Some(val) => val,
+        None => {
+            log::debug!("Couldn't get user from session store");
+            return Err(Redirect::to("/ui"));
+        }
+    };
     let pool = state.read().await.connpool.clone();
     let uat = match UserAuthToken::get(&pool, form.id).await {
         Err(err) => {

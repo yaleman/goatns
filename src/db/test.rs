@@ -235,12 +235,12 @@ async fn test_load_zone() -> Result<(), sqlx::Error> {
     // first time
     zone.save(&pool).await?;
 
-    let zone_first = FileZone::get_by_name(&mut pool.begin().await?, &zone.name).await?;
+    let zone_first = FileZone::get_by_name(&mut *pool.begin().await?, &zone.name).await?;
 
     zone.rname = "foo.example.com".to_string();
     zone.save(&pool).await?;
 
-    let zone_second = FileZone::get_by_name(&mut pool.begin().await?, &zone.name).await?;
+    let zone_second = FileZone::get_by_name(&mut *pool.begin().await?, &zone.name).await?;
 
     assert_ne!(zone_first, zone_second);
 
@@ -273,7 +273,7 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
     let testzone = test_example_com_zone();
 
     eprintln!("Getting example zone");
-    let zone = FileZone::get_by_name(&mut pool.begin().await?, &testzone.name).await?;
+    let zone = FileZone::get_by_name(&mut *pool.begin().await?, &testzone.name).await?;
 
     let records_to_create = 100usize;
     eprintln!("Creating records");
@@ -342,7 +342,7 @@ async fn load_then_export() -> Result<(), sqlx::Error> {
     let _json: String = serde_json::to_string(&json).unwrap();
 
     eprintln!("Exporting zone");
-    let zone_got = FileZone::get_by_name(&mut pool.begin().await?, &example_zone.name).await?;
+    let zone_got = FileZone::get_by_name(&mut *pool.begin().await?, &example_zone.name).await?;
     eprintln!("zone_got {zone_got:?}");
 
     if let Err(err) = export_zone_json(&pool, 1).await {

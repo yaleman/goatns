@@ -1,8 +1,10 @@
-use axum::extract::State;
-use axum::middleware::Next;
-use axum::response::Response;
+use axum::{
+    extract::State,
+    http::{HeaderValue, Request},
+    middleware::Next,
+    response::Response,
+};
 use axum_csp::*;
-use http::{HeaderValue, Request};
 
 use crate::web::GoatState;
 

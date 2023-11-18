@@ -4,10 +4,10 @@
 // use axum::response::Response;
 use axum::{extract::State, Json};
 // use axum_macros::debug_handler;
-use axum_sessions::extractors::WritableSession;
 use http::StatusCode;
 // use http::{Request, StatusCode};
 use serde::{Deserialize, Serialize};
+use tower_sessions::Session;
 
 use crate::db::User;
 use crate::web::utils::validate_api_token;
@@ -27,7 +27,7 @@ pub struct AuthResponse {
 // #[debug_handler]
 pub async fn login(
     State(state): State<GoatState>,
-    mut session: WritableSession,
+    session: Session,
     payload: Json<AuthPayload>,
 ) -> Result<(StatusCode, Json<AuthResponse>), (StatusCode, Json<AuthResponse>)> {
     #[cfg(test)]
@@ -51,7 +51,7 @@ pub async fn login(
             #[cfg(test)]
             println!("Error: {err:?}");
             log::debug!("Error: {err:?}");
-            session.destroy();
+            session.flush();
             let resp = AuthResponse {
                 message: "token not found".to_string(),
             };
@@ -66,7 +66,7 @@ pub async fn login(
             let session_signin = session.insert("signed_in", true);
 
             if session_authref.is_err() | session_user.is_err() | session_signin.is_err() {
-                session.destroy();
+                session.flush();
                 log::info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.tokenkey);
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -87,7 +87,7 @@ pub async fn login(
             ))
         }
         Err(err) => {
-            session.destroy();
+            session.flush();
             #[cfg(test)]
             println!("Failed to validate token! {err:?}");
             log::error!(
