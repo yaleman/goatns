@@ -14,3 +14,4 @@ axum-csp/target/*
 
 # certificates!
 *.pem
+results.xml

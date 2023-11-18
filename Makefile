@@ -80,3 +80,13 @@ book/format/fix:
 clean_book: ## Remove the docs directory contents
 clean_book:
 	rm -rf ./target/docs/*
+
+.PHONY: semgrep
+semgrep: ## Run semgrep
+semgrep:
+	semgrep ci \
+		--config auto \
+		--junit-xml \
+		--output results.xml \
+		--exclude-rule "yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha" \
+		--exclude-rule "python.django.security.django-no-csrf-token.django-no-csrf-token"
