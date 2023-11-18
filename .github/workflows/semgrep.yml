@@ -20,6 +20,7 @@ jobs:
         - uses: actions/checkout@v4
         - name: Run semgrep
           run: |
+            apt-get update && apt-get -y install make
             make semgrep
         - name: Publish Test Report
           uses: mikepenz/action-junit-report@v4
