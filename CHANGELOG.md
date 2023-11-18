@@ -2,11 +2,13 @@
 
 ## 0.4.0
 
-Someone decided that axum-sessions was bad so I had to rewrite a heap of stuff. I cried. It wasn't fun.
+Someone decided that axum-sessions was bad so I had to rewrite a heap of stuff. I cried. It wasn't
+fun.
 
 ## 0.3.x
 
-The web interface worked and it mostly responded to really arbitrary DNS queries, but a lot of things were bad.
+The web interface worked and it mostly responded to really arbitrary DNS queries, but a lot of
+things were bad.
 
 ## 0.2.x
 
