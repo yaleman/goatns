@@ -233,9 +233,6 @@
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Web things
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
@@ -247,9 +244,11 @@
 <span class="kw">use </span><span class="kw">crate</span>::datastore;
 <span class="kw">use </span><span class="kw">crate</span>::web::middleware::csp;
 <span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>axum::error_handling::HandleErrorLayer;
 <span class="kw">use </span>axum::http::StatusCode;
 <span class="kw">use </span>axum::middleware::from_fn_with_state;
 <span class="kw">use </span>axum::routing::get;
+<span class="kw">use </span>axum::BoxError;
 <span class="kw">use </span>axum::Router;
 <span class="kw">use </span>axum_csp::CspUrlMatcher;
 <span class="kw">use </span>axum_macros::FromRef;
@@ -258,10 +257,11 @@
 </span><span class="kw">use </span>axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 <span class="kw">use </span>chrono::{DateTime, NaiveDateTime, Utc};
 <span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
+<span class="kw">use </span>log::error;
 <span class="kw">use </span>oauth2::{ClientId, ClientSecret};
 <span class="kw">use </span>openidconnect::Nonce;
 <span class="kw">use </span>regex::RegexSet;
-<span class="kw">use </span>sqlx::{Pool, Sqlite};
+<span class="kw">use </span>sqlx::{Pool, Sqlite, SqlitePool};
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::path::PathBuf;
 <span class="kw">use </span>std::sync::Arc;
@@ -271,9 +271,7 @@
 <span class="kw">use </span>tower::ServiceBuilder;
 <span class="kw">use </span>tower_http::compression::CompressionLayer;
 <span class="kw">use </span>tower_http::services::ServeDir;
-<span class="comment">// use tower_http::trace::{DefaultMakeSpan, TraceLayer};
-// use tracing::Level;
-</span><span class="kw">use </span>utils::handler_404;
+<span class="kw">use </span>utils::handler_404;
 
 <span class="kw">use </span><span class="self">self</span>::auth::CustomProviderMetadata;
 
@@ -349,7 +347,7 @@
 </span><span class="doccomment">/// Internal State handler for the datastore object within the API
 </span><span class="kw">pub struct </span>GoatChildState {
     <span class="kw">pub </span>tx: Sender&lt;datastore::Command&gt;,
-    <span class="kw">pub </span>connpool: Pool&lt;Sqlite&gt;,
+    <span class="kw">pub </span>connpool: SqlitePool,
     <span class="kw">pub </span>config: ConfigFile,
     <span class="kw">pub </span>oidc_config_updated: DateTime&lt;Utc&gt;,
     <span class="kw">pub </span>oidc_config: <span class="prelude-ty">Option</span>&lt;auth::CustomProviderMetadata&gt;,
@@ -396,7 +394,7 @@
 <span class="kw">pub async fn </span>build(
     tx: Sender&lt;datastore::Command&gt;,
     config: CowCellReadTxn&lt;ConfigFile&gt;,
-    connpool: Pool&lt;Sqlite&gt;,
+    connpool: SqlitePool,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), std::io::Error&gt;&gt;&gt; {
     <span class="kw">let </span>static_dir: PathBuf = shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_static_dir)
         .to_string()
@@ -425,25 +423,21 @@
         csp_matchers,
     }));
 
-    <span class="comment">// add u sum layerz https://docs.rs/tower-http/latest/tower_http/index.html
-    // #[cfg(feature = &quot;otel&quot;)]
-    // let trace_layer =
-    //     TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().level(Level::INFO));
+    <span class="kw">let </span>service_layer = ServiceBuilder::new()
+        .layer(HandleErrorLayer::new(|err: BoxError| <span class="kw">async move </span>{
+            <span class="macro">error!</span>(<span class="string">&quot;Something broke: {:?}&quot;</span>, err);
+            StatusCode::BAD_REQUEST
+        }))
+        .layer(session_layer)
+        .layer(from_fn_with_state(state.clone(), csp::cspheaders));
 
-    </span><span class="kw">let </span>service_layer = ServiceBuilder::new()
-        .layer(from_fn_with_state(state.clone(), csp::cspheaders))
-        .layer(session_layer);
-
-    <span class="comment">// #[cfg(feature = &quot;otel&quot;)]
-    // let service_layer = service_layer.layer(trace_layer);
-
-    </span><span class="kw">let </span>router = Router::new()
+    <span class="kw">let </span>router = Router::new()
         .route(<span class="string">&quot;/&quot;</span>, get(generic::index))
         .nest(<span class="string">&quot;/ui&quot;</span>, ui::new())
         .nest(<span class="string">&quot;/api&quot;</span>, api::new())
         .nest(<span class="string">&quot;/auth&quot;</span>, auth::new())
         .nest(<span class="string">&quot;/dns-query&quot;</span>, doh::new())
-        .layer(service_layer.into_inner())
+        .layer(service_layer)
         .with_state(state);
 
     <span class="comment">// here we add the tracing layer

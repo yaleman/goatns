@@ -36,11 +36,15 @@
 <a href="#36" id="36">36</a>
 <a href="#37" id="37">37</a>
 <a href="#38" id="38">38</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>axum::extract::State;
-<span class="kw">use </span>axum::middleware::Next;
-<span class="kw">use </span>axum::response::Response;
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>axum::{
+    extract::State,
+    http::{HeaderValue, Request},
+    middleware::Next,
+    response::Response,
+};
 <span class="kw">use </span>axum_csp::<span class="kw-2">*</span>;
-<span class="kw">use </span>http::{HeaderValue, Request};
 
 <span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
 

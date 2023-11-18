@@ -350,10 +350,10 @@
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZone;
 <span class="kw">use </span>axum::extract::Path;
 <span class="kw">use </span>axum::Json;
-<span class="kw">use </span>axum_sessions::extractors::ReadableSession;
 <span class="kw">use </span>goatns_macros::check_api_auth;
 <span class="kw">use </span>serde::Deserialize;
 <span class="kw">use </span>serde::Serialize;
+<span class="kw">use </span>tower_sessions::Session;
 
 <span class="attr">#[derive(Deserialize, Serialize, Debug, Clone)]
 </span><span class="kw">pub struct </span>FileZoneResponse {
@@ -366,7 +366,7 @@
 </span><span class="kw">impl </span>APIEntity <span class="kw">for </span>FileZone {
     <span class="kw">async fn </span>api_create(
         State(state): State&lt;GoatState&gt;,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json&lt;serde_json::Value&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="attr">#[cfg(test)]
@@ -472,7 +472,7 @@
 
     <span class="kw">async fn </span>api_update(
         State(state): State&lt;GoatState&gt;,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json&lt;serde_json::Value&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;String&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="macro">check_api_auth!</span>();
@@ -563,7 +563,7 @@
 
     <span class="kw">async fn </span>api_delete(
         State(state): State&lt;GoatState&gt;,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path&lt;i64&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;StatusCode, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="comment">// let id = id;
@@ -654,7 +654,7 @@
     }
     <span class="kw">async fn </span>api_get(
         State(state): State&lt;GoatState&gt;,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path&lt;i64&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="macro">check_api_auth!</span>();

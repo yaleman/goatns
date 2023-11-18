@@ -111,10 +111,10 @@
 // use axum::response::Response;
 </span><span class="kw">use </span>axum::{extract::State, Json};
 <span class="comment">// use axum_macros::debug_handler;
-</span><span class="kw">use </span>axum_sessions::extractors::WritableSession;
-<span class="kw">use </span>http::StatusCode;
+</span><span class="kw">use </span>http::StatusCode;
 <span class="comment">// use http::{Request, StatusCode};
 </span><span class="kw">use </span>serde::{Deserialize, Serialize};
+<span class="kw">use </span>tower_sessions::Session;
 
 <span class="kw">use </span><span class="kw">crate</span>::db::User;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::validate_api_token;
@@ -134,7 +134,7 @@
 <span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>login(
     State(state): State&lt;GoatState&gt;,
-    <span class="kw-2">mut </span>session: WritableSession,
+    session: Session,
     payload: Json&lt;AuthPayload&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(StatusCode, Json&lt;AuthResponse&gt;), (StatusCode, Json&lt;AuthResponse&gt;)&gt; {
     <span class="attr">#[cfg(test)]
@@ -158,7 +158,7 @@
             <span class="attr">#[cfg(test)]
             </span><span class="macro">println!</span>(<span class="string">&quot;Error: {err:?}&quot;</span>);
             <span class="macro">log::debug!</span>(<span class="string">&quot;Error: {err:?}&quot;</span>);
-            session.destroy();
+            session.flush();
             <span class="kw">let </span>resp = AuthResponse {
                 message: <span class="string">&quot;token not found&quot;</span>.to_string(),
             };
@@ -173,7 +173,7 @@
             <span class="kw">let </span>session_signin = session.insert(<span class="string">&quot;signed_in&quot;</span>, <span class="bool-val">true</span>);
 
             <span class="kw">if </span>session_authref.is_err() | session_user.is_err() | session_signin.is_err() {
-                session.destroy();
+                session.flush();
                 <span class="macro">log::info!</span>(<span class="string">&quot;action=api_login tokenkey={} result=failure reason=\&quot;failed to store session for user\&quot;&quot;</span>, payload.tokenkey);
                 <span class="kw">return </span><span class="prelude-val">Err</span>((
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -194,7 +194,7 @@
             ))
         }
         <span class="prelude-val">Err</span>(err) =&gt; {
-            session.destroy();
+            session.flush();
             <span class="attr">#[cfg(test)]
             </span><span class="macro">println!</span>(<span class="string">&quot;Failed to validate token! {err:?}&quot;</span>);
             <span class="macro">log::error!</span>(

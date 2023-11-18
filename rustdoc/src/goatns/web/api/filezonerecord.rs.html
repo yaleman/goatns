@@ -167,10 +167,12 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User, ZoneOwnership};
 <span class="kw">use </span><span class="kw">crate</span>::error_result_json;
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZoneRecord;
 <span class="kw">use </span>goatns_macros::check_api_auth;
+<span class="kw">use </span>tower_sessions::Session;
 
 <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
@@ -179,7 +181,7 @@
     <span class="doccomment">/// Save the entity to the database
     </span><span class="kw">async fn </span>api_create(
         State(state): State&lt;GoatState&gt;,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json&lt;serde_json::Value&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="macro">check_api_auth!</span>();
@@ -231,7 +233,7 @@
     <span class="doccomment">/// HTTP Put &lt;https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT&gt;
     </span><span class="kw">async fn </span>api_update(
         State(state): State&lt;GoatState&gt;,
-        session: ReadableSession,
+        session: Session,
         Json(payload): Json&lt;serde_json::Value&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;String&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="macro">check_api_auth!</span>();
@@ -269,7 +271,7 @@
     }
     <span class="kw">async fn </span>api_get(
         State(state): State&lt;GoatState&gt;,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path&lt;i64&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Json&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="macro">check_api_auth!</span>();
@@ -290,7 +292,7 @@
     /// &lt;https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE&gt;
     </span><span class="kw">async fn </span>api_delete(
         State(state): State&lt;GoatState&gt;,
-        session: ReadableSession,
+        session: Session,
         Path(id): Path&lt;i64&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;StatusCode, (StatusCode, Json&lt;ErrorResult&gt;)&gt; {
         <span class="macro">check_api_auth!</span>();

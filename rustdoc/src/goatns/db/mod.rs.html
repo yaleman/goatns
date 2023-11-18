@@ -1903,6 +1903,7 @@
 <a href="#1903" id="1903">1903</a>
 <a href="#1904" id="1904">1904</a>
 <a href="#1905" id="1905">1905</a>
+<a href="#1906" id="1906">1906</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::resourcerecord::SetTTL;
 <span class="kw">use </span>std::io::ErrorKind;
 <span class="kw">use </span>std::str::FromStr;
@@ -1920,7 +1921,7 @@
 <span class="kw">use </span>openidconnect::SubjectIdentifier;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
-<span class="kw">use </span>sqlx::{Arguments, ConnectOptions, FromRow, Pool, Row, Sqlite, SqlitePool, Transaction};
+<span class="kw">use </span>sqlx::{Arguments, ConnectOptions, FromRow, Pool, Row, Sqlite, SqliteConnection, SqlitePool};
 <span class="kw">use </span>tokio::time;
 
 <span class="attr">#[cfg(test)]
@@ -1928,14 +1929,15 @@
 
 <span class="kw">const </span>SQL_VIEW_RECORDS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;records_merged&quot;</span>;
 
-<span class="kw">pub async fn </span>get_conn(
+<span class="doccomment">/// Setup the database connection and pool
+</span><span class="kw">pub async fn </span>get_conn(
     config_reader: CowCellReadTxn&lt;ConfigFile&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Pool&lt;Sqlite&gt;, std::io::Error&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;SqlitePool, std::io::Error&gt; {
     <span class="kw">let </span>db_path: <span class="kw-2">&amp;</span>str = <span class="kw-2">&amp;</span>shellexpand::full(<span class="kw-2">&amp;</span>config_reader.sqlite_path).unwrap();
     <span class="kw">let </span>db_url = <span class="macro">format!</span>(<span class="string">&quot;sqlite://{db_path}?mode=rwc&quot;</span>);
     <span class="macro">log::debug!</span>(<span class="string">&quot;Opening Database: {db_url}&quot;</span>);
 
-    <span class="kw">let </span><span class="kw-2">mut </span>options = <span class="kw">match </span>SqliteConnectOptions::from_str(<span class="kw-2">&amp;</span>db_url) {
+    <span class="kw">let </span>options = <span class="kw">match </span>SqliteConnectOptions::from_str(<span class="kw-2">&amp;</span>db_url) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(error) =&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(std::io::Error::new(
@@ -1944,13 +1946,13 @@
             ))
         }
     };
-    <span class="kw">if </span>config_reader.sql_log_statements {
-        options.log_statements(log::LevelFilter::Trace);
+    <span class="kw">let </span>options = <span class="kw">if </span>config_reader.sql_log_statements {
+        options.log_statements(log::LevelFilter::Trace)
     } <span class="kw">else </span>{
-        options.log_statements(log::LevelFilter::Off);
-    }
+        options.log_statements(log::LevelFilter::Off)
+    };
     <span class="comment">// log anything that takes longer than 1s
-    </span>options.log_slow_statements(
+    </span><span class="kw">let </span>options = options.log_slow_statements(
         log::LevelFilter::Warn,
         Duration::from_secs(config_reader.sql_log_slow_duration),
     );
@@ -1975,7 +1977,7 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="attr">#[derive(Clone, Deserialize, Serialize, Debug, sqlx::FromRow)]
+<span class="attr">#[derive(Clone, Deserialize, Serialize, Debug)]
 </span><span class="kw">pub struct </span>User {
     <span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
     <span class="kw">pub </span>displayname: String,
@@ -2016,7 +2018,7 @@
                 .bind(<span class="kw-2">&amp;</span><span class="self">self</span>.email)
                 .bind(disabled)
                 .bind(<span class="kw-2">&amp;</span><span class="self">self</span>.authref)
-                .execute(<span class="kw-2">&amp;mut </span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
+                .execute(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
                 .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="number">1</span>)
@@ -2076,7 +2078,7 @@
 
     <span class="kw">pub async fn </span>get_zones_for_user(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         offset: i64,
         limit: i64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;FileZone&gt;, sqlx::Error&gt; {
@@ -2129,7 +2131,7 @@
                 user_tokens.tokenkey=? AND
                 user_tokens.userid=users.id&quot;</span>)
             .bind(tokenkey)
-            .fetch_one(<span class="kw-2">&amp;mut </span>txn).<span class="kw">await</span><span class="question-mark">?</span>;
+            .fetch_one(<span class="kw-2">&amp;mut </span>* txn).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(res)
     }
@@ -2199,7 +2201,7 @@
         )
         .bind(<span class="self">self</span>.zoneid)
         .bind(<span class="self">self</span>.userid)
-        .execute(<span class="kw-2">&amp;mut </span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
+        .execute(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
         .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
@@ -2209,7 +2211,7 @@
         </span><span class="kw">let </span>res = sqlx::query(<span class="string">&quot;DELETE FROM ownership WHERE zoneid = ? AND userid = ?&quot;</span>)
             .bind(<span class="self">self</span>.zoneid)
             .bind(<span class="self">self</span>.userid)
-            .execute(<span class="kw-2">&amp;mut </span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
+            .execute(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
@@ -2222,7 +2224,7 @@
 
     <span class="comment">// get the thing by the other thing
     </span><span class="kw">pub async fn </span>get_ownership_by_userid&lt;<span class="lifetime">&#39;t</span>&gt;(
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         userid: <span class="kw-2">&amp;</span>i64,
         zoneid: <span class="kw-2">&amp;</span>i64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ZoneOwnership, sqlx::Error&gt; {
@@ -2246,7 +2248,7 @@
 
 <span class="doccomment">/// Query the zones table, name_or_id can be the zoneid or the name - if they match then you&#39;re bad and you should feel bad.
 </span><span class="kw">pub async fn </span>get_zone_with_txn(
-    txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;,
+    txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
     name: <span class="prelude-ty">Option</span>&lt;String&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;FileZone&gt;, sqlx::Error&gt; {
@@ -2333,18 +2335,20 @@
     rclass: RecordClass,
     normalize_ttls: bool,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;InternalResourceRecord&gt;, sqlx::Error&gt; {
-    <span class="kw">let </span>res = sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+    <span class="kw">let </span>query = <span class="macro">format!</span>(
         <span class="string">&quot;SELECT
         record_id, zoneid, name, rclass, rrtype, rdata, ttl
         FROM {}
         WHERE name = ? AND rrtype = ? AND rclass = ?&quot;</span>,
         SQL_VIEW_RECORDS
-    ))
-    .bind(<span class="kw-2">&amp;</span>name)
-    .bind(rrtype <span class="kw">as </span>u16)
-    .bind(rclass)
-    .fetch_all(<span class="kw-2">&amp;mut </span>conn.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
-    .<span class="kw">await</span><span class="question-mark">?</span>;
+    );
+
+    <span class="kw">let </span>res = sqlx::query(<span class="kw-2">&amp;</span>query)
+        .bind(<span class="kw-2">&amp;</span>name)
+        .bind(rrtype <span class="kw">as </span>u16)
+        .bind(rclass)
+        .fetch_all(<span class="kw-2">&amp;mut *</span>conn.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">if </span>res.is_empty() {
         <span class="macro">eprintln!</span>(<span class="string">&quot;No results returned for {name} {rrtype} {rclass}&quot;</span>);
@@ -2390,7 +2394,7 @@
 }
 
 <span class="kw">impl </span>FileZone {
-    <span class="kw">pub async fn </span>with_zone_records(<span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub async fn </span>with_zone_records(<span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>SqliteConnection) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>records: Vec&lt;FileZoneRecord&gt; = <span class="kw">match </span>sqlx::query(
             <span class="string">&quot;SELECT
             id, zoneid, name, ttl, rrtype, rclass, rdata
@@ -2414,7 +2418,7 @@
     <span class="doccomment">/// the records for the zone
     </span><span class="kw">pub async fn </span>get_zone_records(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;FileZoneRecord&gt;, sqlx::Error&gt; {
         <span class="kw">let </span>res = sqlx::query(
             <span class="string">&quot;SELECT
@@ -2452,7 +2456,7 @@
             LEFT OUTER JOIN ownership on zones.id = ownership.zoneid
             where userid IS NULL&quot;</span>,
         )
-        .fetch_all(<span class="kw-2">&amp;mut </span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
+        .fetch_all(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
         .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>res: Vec&lt;FileZone&gt; = res.into_iter().map(|r| r.into()).collect();
         <span class="prelude-val">Ok</span>(res)
@@ -2475,15 +2479,15 @@
     <span class="doccomment">/// Get the entity
     </span><span class="kw">async fn </span>get(pool: <span class="kw-2">&amp;</span>Pool&lt;Sqlite&gt;, id: i64) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt;;
     <span class="kw">async fn </span>get_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _id: <span class="kw-2">&amp;</span>i64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt;;
     <span class="kw">async fn </span>get_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt;;
     <span class="kw">async fn </span>get_all_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, sqlx::Error&gt;;
     <span class="kw">async fn </span>get_all_user(pool: <span class="kw-2">&amp;</span>Pool&lt;Sqlite&gt;, id: i64) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Arc&lt;<span class="self">Self</span>&gt;&gt;, sqlx::Error&gt;;
@@ -2492,25 +2496,23 @@
     </span><span class="kw">async fn </span>save(<span class="kw-2">&amp;</span><span class="self">self</span>, pool: <span class="kw-2">&amp;</span>Pool&lt;Sqlite&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt;;
     <span class="doccomment">/// save the entity to the database, but you&#39;re in a transaction
 
-    </span><span class="kw">async fn </span>save_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt;;
+    </span><span class="kw">async fn </span>save_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>SqliteConnection)
+        -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt;;
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>create_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt;;
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>update_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt;;
 
     <span class="doccomment">/// delete the entity from the database
     </span><span class="kw">async fn </span>delete(<span class="kw-2">&amp;</span><span class="self">self</span>, pool: <span class="kw-2">&amp;</span>Pool&lt;Sqlite&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt;;
     <span class="doccomment">/// delete the entity from the database, but you&#39;re in a transaction
-    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt;;
+    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>SqliteConnection) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt;;
 
     <span class="kw">fn </span>json(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt;
     <span class="kw">where
@@ -2541,7 +2543,7 @@
                 minimum INTEGER NOT NULL
             )&quot;#</span>,
         )
-        .execute(<span class="kw-2">&amp;mut </span>tx)
+        .execute(<span class="kw-2">&amp;mut *</span>tx)
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="comment">// .execute(tx).await;
@@ -2554,7 +2556,7 @@
                 id,name
             )&quot;</span>,
         )
-        .execute(<span class="kw-2">&amp;mut </span>tx)
+        .execute(<span class="kw-2">&amp;mut *</span>tx)
         .<span class="kw">await</span><span class="question-mark">?</span>;
         tx.commit().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
@@ -2567,7 +2569,7 @@
     </span>}
 
     <span class="kw">async fn </span>get_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         id: <span class="kw-2">&amp;</span>i64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="kw">let </span>res = sqlx::query(
@@ -2603,7 +2605,7 @@
     }
 
     <span class="kw">async fn </span>get_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="kw">let </span>res = sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;SELECT * from {} where name=?&quot;</span>, <span class="self">Self</span>::TABLE))
@@ -2615,7 +2617,7 @@
         <span class="prelude-val">Ok</span>(Box::new(res))
     }
     <span class="kw">async fn </span>get_all_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, sqlx::Error&gt; {
         <span class="macro">unimplemented!</span>()
@@ -2639,7 +2641,7 @@
     <span class="doccomment">/// save the entity to the database, but you&#39;re in a transaction
     </span><span class="kw">async fn </span>save_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="comment">// check the zone exists
         </span><span class="kw">let </span>find_zone = <span class="kw">match </span>get_zone_with_txn(txn, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="self">self</span>.name.clone())).<span class="kw">await </span>{
@@ -2750,14 +2752,14 @@
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>create_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>();
     }
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>update_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="kw">let </span>_res = sqlx::query(
             <span class="string">&quot;UPDATE zones
@@ -2787,7 +2789,7 @@
     /// This one happens in the order ownership -&gt; records -&gt; zone because at the very least,
     /// if it fails after the ownership thing, then non-admin users can&#39;t see the zone
     /// and admins will just have to clean it up manually
-    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
+    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>SqliteConnection) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
         <span class="comment">// delete all the ownership records
         </span>sqlx::query(<span class="string">&quot;DELETE FROM ownership where zoneid = ?&quot;</span>)
             .bind(<span class="self">self</span>.id)
@@ -2846,7 +2848,7 @@
             FOREIGN KEY(zoneid) REFERENCES zones(id)
         )&quot;</span>,
         )
-        .execute(<span class="kw-2">&amp;mut </span>tx)
+        .execute(<span class="kw-2">&amp;mut *</span>tx)
         .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">log::debug!</span>(<span class="string">&quot;Ensuring DB Records index exists&quot;</span>);
         sqlx::query(
@@ -2857,7 +2859,7 @@
             id,zoneid,name,rrtype,rclass
         )&quot;</span>,
         )
-        .execute(<span class="kw-2">&amp;mut </span>tx)
+        .execute(<span class="kw-2">&amp;mut *</span>tx)
         .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">log::debug!</span>(<span class="string">&quot;Ensuring DB Records view exists&quot;</span>);
         <span class="comment">// this view lets us query based on the full name
@@ -2873,7 +2875,7 @@
             ELSE records.ttl
         END AS ttl
         from records, zones where records.zoneid = zones.id&quot;</span>, SQL_VIEW_RECORDS)
-    ).execute(<span class="kw-2">&amp;mut </span>tx).<span class="kw">await</span><span class="question-mark">?</span>;
+    ).execute(<span class="kw-2">&amp;mut *</span>tx).<span class="kw">await</span><span class="question-mark">?</span>;
         tx.commit().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
@@ -2885,7 +2887,7 @@
     </span>}
 
     <span class="kw">async fn </span>get_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         id: <span class="kw-2">&amp;</span>i64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="kw">let </span>res = sqlx::query(<span class="string">&quot;select * from records where id = ?&quot;</span>)
@@ -2899,14 +2901,14 @@
     }
 
     <span class="kw">async fn </span>get_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">unimplemented!</span>();
     }
 
     <span class="kw">async fn </span>get_all_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, sqlx::Error&gt; {
         <span class="kw">let </span>res = sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
@@ -2950,7 +2952,7 @@
 
     <span class="kw">async fn </span>save_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="attr">#[cfg(test)]
         </span><span class="macro">eprintln!</span>(<span class="string">&quot;Starting save_with_txn for {self:?}&quot;</span>);
@@ -3039,14 +3041,14 @@
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>create_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>();
     }
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>update_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>();
     }
@@ -3055,7 +3057,7 @@
         <span class="self">self</span>.delete_with_txn(<span class="kw-2">&amp;mut </span>txn).<span class="kw">await
     </span>}
 
-    <span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
+    <span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>SqliteConnection) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
         sqlx::query(<span class="macro">format!</span>(<span class="string">&quot;DELETE FROM {} WHERE id = ?&quot;</span>, <span class="self">Self</span>::TABLE).as_str())
             .bind(<span class="self">self</span>.id)
             .execute(<span class="kw-2">&amp;mut *</span>txn)
@@ -3092,7 +3094,7 @@
                 )&quot;#</span>,
             <span class="self">Self</span>::TABLE
         ))
-        .execute(<span class="kw-2">&amp;mut </span>tx)
+        .execute(<span class="kw-2">&amp;mut *</span>tx)
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="attr">#[cfg(test)]
@@ -3107,7 +3109,7 @@
                     userid
                 )&quot;</span>,
         )
-        .execute(<span class="kw-2">&amp;mut </span>tx)
+        .execute(<span class="kw-2">&amp;mut *</span>tx)
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
         tx.commit().<span class="kw">await
@@ -3120,7 +3122,7 @@
         <span class="kw">let </span>res: ZoneOwnership =
             sqlx::query(<span class="string">&quot;SELECT id, zoneid, userid from ownership where id = ?&quot;</span>)
                 .bind(id)
-                .fetch_one(<span class="kw-2">&amp;mut </span>conn)
+                .fetch_one(<span class="kw-2">&amp;mut *</span>conn)
                 .<span class="kw">await</span><span class="question-mark">?
                 </span>.into();
         <span class="prelude-val">Ok</span>(Box::new(res))
@@ -3128,21 +3130,21 @@
 
     <span class="doccomment">/// This getter is by zoneid, since it should return less results
     </span><span class="kw">async fn </span>get_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _id: <span class="kw-2">&amp;</span>i64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>()
     }
 
     <span class="kw">async fn </span>get_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="comment">// TODO implement ZoneOwnership get_by_name which gets by zone name
         </span><span class="macro">unimplemented!</span>(<span class="string">&quot;Not applicable for this!&quot;</span>);
     }
     <span class="kw">async fn </span>get_all_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, sqlx::Error&gt; {
         <span class="macro">unimplemented!</span>()
@@ -3153,7 +3155,7 @@
 
         <span class="kw">let </span>res = sqlx::query(<span class="string">&quot;SELECT * from ownership where id = ?&quot;</span>)
             .bind(id)
-            .fetch_all(<span class="kw-2">&amp;mut </span>conn)
+            .fetch_all(<span class="kw-2">&amp;mut *</span>conn)
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>result: Vec&lt;Arc&lt;ZoneOwnership&gt;&gt; = res.into_iter().map(|z| Arc::new(z.into())).collect();
         <span class="prelude-val">Ok</span>(result)
@@ -3170,7 +3172,7 @@
     <span class="doccomment">/// save the entity to the database, but you&#39;re in a transaction
     </span><span class="kw">async fn </span>save_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="kw">let </span>res = sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
             <span class="string">&quot;INSERT INTO {} (zoneid, userid) values ( ?, ? )&quot;</span>,
@@ -3192,14 +3194,14 @@
     <span class="doccomment">/// create new, this just calls save_with_txn
     </span><span class="kw">async fn </span>create_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="self">self</span>.save_with_txn(txn).<span class="kw">await
     </span>}
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>update_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">unimplemented!</span>(<span class="string">&quot;this should never be updated&quot;</span>);
     }
@@ -3209,7 +3211,7 @@
     }
 
     <span class="doccomment">/// delete the entity from the database, but you&#39;re in a transaction
-    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
+    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, _txn: <span class="kw-2">&amp;mut </span>SqliteConnection) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
         <span class="macro">todo!</span>();
     }
 
@@ -3253,7 +3255,7 @@
         )&quot;#</span>,
             <span class="self">Self</span>::TABLE
         ))
-        .execute(<span class="kw-2">&amp;mut </span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
+        .execute(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
         sqlx::query(
@@ -3261,7 +3263,7 @@
         ind_users_fields
         ON users ( username, email )&quot;</span>,
         )
-        .execute(<span class="kw-2">&amp;mut </span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
+        .execute(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
@@ -3275,25 +3277,25 @@
             <span class="self">Self</span>::TABLE
         ))
         .bind(id)
-        .fetch_one(<span class="kw-2">&amp;mut </span>conn)
+        .fetch_one(<span class="kw-2">&amp;mut *</span>conn)
         .<span class="kw">await</span><span class="question-mark">?
         </span>.into();
         <span class="prelude-val">Ok</span>(Box::new(res))
     }
     <span class="kw">async fn </span>get_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _id: <span class="kw-2">&amp;</span>i64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>()
     }
     <span class="kw">async fn </span>get_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>()
     }
     <span class="kw">async fn </span>get_all_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, sqlx::Error&gt; {
         <span class="macro">unimplemented!</span>()
@@ -3307,7 +3309,7 @@
             <span class="self">Self</span>::TABLE
         ))
         .bind(id)
-        .fetch_all(<span class="kw-2">&amp;mut </span>conn)
+        .fetch_all(<span class="kw-2">&amp;mut *</span>conn)
         .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>result: Vec&lt;Arc&lt;<span class="self">Self</span>&gt;&gt; = res.into_iter().map(|z| Arc::new(z.into())).collect();
         <span class="prelude-val">Ok</span>(result)
@@ -3324,7 +3326,7 @@
     <span class="doccomment">/// save the entity to the database, but you&#39;re in a transaction
     </span><span class="kw">async fn </span>save_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="kw">let </span>res = sqlx::query(
             <span class="string">&quot;INSERT INTO users
@@ -3350,14 +3352,14 @@
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>create_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>();
     }
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>update_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>();
     }
@@ -3367,7 +3369,7 @@
     }
 
     <span class="doccomment">/// delete the entity from the database, but you&#39;re in a transaction
-    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
+    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, _txn: <span class="kw-2">&amp;mut </span>SqliteConnection) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
         <span class="macro">todo!</span>();
     }
 
@@ -3400,7 +3402,7 @@
             <span class="self">Self</span>::TABLE
         ))
         .bind(tokenkey)
-        .fetch_one(<span class="kw-2">&amp;mut </span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
+        .fetch_one(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
         .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(res.into())
     }
@@ -3418,7 +3420,7 @@
             <span class="self">Self</span>::TABLE
         ))
         .bind(current_time.timestamp())
-        .execute(<span class="kw-2">&amp;mut </span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
+        .execute(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
         .<span class="kw">await
         </span>{
             <span class="prelude-val">Ok</span>(res) =&gt; {
@@ -3452,7 +3454,7 @@
             <span class="string">&quot;SELECT name FROM sqlite_master WHERE type=&#39;table&#39; AND name=&#39;{}&#39;&quot;</span>,
             <span class="self">Self</span>::TABLE
         ))
-        .fetch_optional(<span class="kw-2">&amp;mut </span>conn)
+        .fetch_optional(<span class="kw-2">&amp;mut *</span>conn)
         .<span class="kw">await</span><span class="question-mark">?
         </span>{
             <span class="prelude-val">None </span>=&gt; {
@@ -3471,14 +3473,14 @@
                     )&quot;#</span>,
                     <span class="self">Self</span>::TABLE
                 ))
-                .execute(<span class="kw-2">&amp;mut </span>conn)
+                .execute(<span class="kw-2">&amp;mut *</span>conn)
                 .<span class="kw">await</span><span class="question-mark">?</span>;
             }
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; {
                 <span class="macro">log::debug!</span>(<span class="string">&quot;Updating the table&quot;</span>);
                 <span class="comment">// get the columns in the table
                 </span><span class="kw">let </span>res = sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;PRAGMA table_info({})&quot;</span>, <span class="self">Self</span>::TABLE))
-                    .fetch_all(<span class="kw-2">&amp;mut </span>conn)
+                    .fetch_all(<span class="kw-2">&amp;mut *</span>conn)
                     .<span class="kw">await</span><span class="question-mark">?</span>;
 
                 <span class="kw">let </span><span class="kw-2">mut </span>found_name = <span class="bool-val">false</span>;
@@ -3503,7 +3505,7 @@
                         <span class="string">&quot;ALTER TABLE \&quot;{}\&quot; ADD COLUMN name TEXT NOT NULL DEFAULT \&quot;Token Name\&quot;&quot;</span>,
                         <span class="self">Self</span>::TABLE
                     ))
-                    .execute(<span class="kw-2">&amp;mut </span>conn)
+                    .execute(<span class="kw-2">&amp;mut *</span>conn)
                     .<span class="kw">await</span><span class="question-mark">?</span>;
                 }
                 <span class="kw">if </span>!found_tokenkey {
@@ -3524,20 +3526,20 @@
                         }
                     };
                     sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;DELETE FROM {}&quot;</span>, <span class="self">Self</span>::TABLE))
-                        .execute(<span class="kw-2">&amp;mut </span>conn)
+                        .execute(<span class="kw-2">&amp;mut *</span>conn)
                         .<span class="kw">await</span><span class="question-mark">?</span>;
                     sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
                         <span class="string">&quot;ALTER TABLE \&quot;{}\&quot; ADD COLUMN tokenkey TEXT NOT NULL DEFAULT \&quot;old_tokenkey\&quot;&quot;</span>,
                         <span class="self">Self</span>::TABLE
                     ))
-                    .execute(<span class="kw-2">&amp;mut </span>conn)
+                    .execute(<span class="kw-2">&amp;mut *</span>conn)
                     .<span class="kw">await</span><span class="question-mark">?</span>;
                 }
             }
         };
 
         <span class="kw">match </span>sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;DROP INDEX ind_{}_fields&quot;</span>, <span class="self">Self</span>::TABLE))
-            .execute(<span class="kw-2">&amp;mut </span>conn)
+            .execute(<span class="kw-2">&amp;mut *</span>conn)
             .<span class="kw">await
         </span>{
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">log::trace!</span>(
@@ -3564,7 +3566,7 @@
         ON {0} ( userid, tokenkey, tokenhash )&quot;</span>,
             <span class="self">Self</span>::TABLE
         ))
-        .execute(<span class="kw-2">&amp;mut </span>conn)
+        .execute(<span class="kw-2">&amp;mut *</span>conn)
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
@@ -3582,20 +3584,20 @@
     }
 
     <span class="kw">async fn </span>get_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _id: <span class="kw-2">&amp;</span>i64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>()
     }
     <span class="comment">// TODO: maybe get by name gets it by the username?
     </span><span class="kw">async fn </span>get_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>()
     }
     <span class="kw">async fn </span>get_all_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         _name: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Box&lt;<span class="self">Self</span>&gt;&gt;, sqlx::Error&gt; {
         <span class="macro">unimplemented!</span>()
@@ -3624,7 +3626,7 @@
     <span class="doccomment">/// save the entity to the database, but you&#39;re in a transaction
     </span><span class="kw">async fn </span>save_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="kw">let </span>expiry = <span class="self">self</span>.expiry.map(|v| v.timestamp());
         <span class="kw">let </span>issued = <span class="self">self</span>.issued.timestamp();
@@ -3654,14 +3656,14 @@
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>create_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>();
     }
     <span class="doccomment">/// create from scratch
     </span><span class="kw">async fn </span>update_with_txn&lt;<span class="lifetime">&#39;t</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+        _txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="self">Self</span>&gt;, sqlx::Error&gt; {
         <span class="macro">todo!</span>();
     }
@@ -3674,7 +3676,7 @@
         <span class="prelude-val">Ok</span>(())
     }
     <span class="doccomment">/// delete the entity from the database, but you&#39;re in a transaction
-    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
+    </span><span class="kw">async fn </span>delete_with_txn(<span class="kw-2">&amp;</span><span class="self">self</span>, txn: <span class="kw-2">&amp;mut </span>SqliteConnection) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
         sqlx::query(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;DELETE FROM {} where id = ?&quot;</span>, <span class="kw-2">&amp;</span><span class="self">Self</span>::TABLE))
             .bind(<span class="self">self</span>.id)
             .execute(txn)
@@ -3732,7 +3734,7 @@
 }
 
 <span class="kw">pub async fn </span>get_zones_with_txn(
-    txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;_</span>, Sqlite&gt;,
+    txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     lim: i64,
     offset: i64,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;FileZone&gt;, sqlx::Error&gt; {
@@ -3792,7 +3794,7 @@
 }
 
 <span class="kw">pub async fn </span>get_all_fzr_by_name&lt;<span class="lifetime">&#39;t</span>&gt;(
-    txn: <span class="kw-2">&amp;mut </span>Transaction&lt;<span class="lifetime">&#39;t</span>, Sqlite&gt;,
+    txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
     name: <span class="kw-2">&amp;</span>str,
     rrtype: u16,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;FileZoneRecord&gt;, sqlx::Error&gt; {

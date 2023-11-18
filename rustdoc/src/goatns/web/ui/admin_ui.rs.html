@@ -114,10 +114,10 @@
 <span class="kw">use </span>axum::response::IntoResponse;
 <span class="kw">use </span>axum::routing::get;
 <span class="kw">use </span>axum::Router;
-<span class="kw">use </span>axum_sessions::extractors::WritableSession;
 <span class="kw">use </span>http::{Response, Uri};
 <span class="kw">use </span>sqlx::Row;
 <span class="kw">use </span>std::str::FromStr;
+<span class="kw">use </span>tower_sessions::Session;
 
 <span class="kw">use </span><span class="kw">super</span>::check_logged_in;
 
@@ -144,7 +144,7 @@
     zoneid: u32,
 }
 
-<span class="kw">pub async fn </span>dashboard(<span class="kw-2">mut </span>session: WritableSession) -&gt; <span class="kw">impl </span>IntoResponse {
+<span class="kw">pub async fn </span>dashboard(<span class="kw-2">mut </span>session: Session) -&gt; <span class="kw">impl </span>IntoResponse {
     <span class="kw">let </span>user = <span class="kw">match </span>check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_str(<span class="string">&quot;/&quot;</span>).unwrap()).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(val) =&gt; val,
         <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">return </span>err.into_response(),
@@ -163,7 +163,7 @@
 
 <span class="attr">#[axum::debug_handler]
 </span><span class="kw">pub async fn </span>report_unowned_records(
-    <span class="kw-2">mut </span>session: WritableSession,
+    <span class="kw-2">mut </span>session: Session,
     axum::extract::State(state): axum::extract::State&lt;GoatState&gt;,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
     <span class="kw">let </span>user = <span class="kw">match </span>check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_str(<span class="string">&quot;/&quot;</span>).unwrap()).<span class="kw">await </span>{
@@ -179,7 +179,7 @@
         ON records_merged.record_id = ownership.id
         where ownership.id is NULL&quot;</span>,
     )
-    .fetch_all(<span class="kw-2">&amp;mut </span>pool)
+    .fetch_all(<span class="kw-2">&amp;mut *</span>pool)
     .<span class="kw">await
     </span>{
         <span class="prelude-val">Ok</span>(val) =&gt; {

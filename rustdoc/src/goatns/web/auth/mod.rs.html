@@ -481,27 +481,21 @@
 <a href="#481" id="481">481</a>
 <a href="#482" id="482">482</a>
 <a href="#483" id="483">483</a>
-<a href="#484" id="484">484</a>
-<a href="#485" id="485">485</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::time::Duration;
-
-<span class="kw">use </span><span class="kw">super</span>::utils::{redirect_to_dashboard, redirect_to_home};
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::utils::{redirect_to_dashboard, redirect_to_home};
 <span class="kw">use </span><span class="kw">super</span>::GoatState;
 <span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
 <span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
 <span class="kw">use </span><span class="kw">crate</span>::web::GoatStateTrait;
 <span class="kw">use </span><span class="kw">crate</span>::COOKIE_NAME;
-
 <span class="kw">use </span>askama::Template;
-<span class="kw">use </span>async_sqlx_session::SqliteSessionStore;
 <span class="kw">use </span>axum::extract::{Query, State};
 <span class="kw">use </span>axum::response::{IntoResponse, Redirect, Response};
 <span class="kw">use </span>axum::routing::{get, post};
 <span class="kw">use </span>axum::{Form, Router};
+<span class="kw">use </span>tower_sessions::cookie::time::Duration;
+<span class="kw">use </span>tower_sessions::{session_store::ExpiredDeletion, sqlx::SqlitePool, SqliteStore};
 <span class="comment">// use axum_macros::debug_handler;
-</span><span class="kw">use </span>axum_sessions::extractors::WritableSession;
-<span class="kw">use </span>axum_sessions::SessionLayer;
-<span class="kw">use </span>chrono::{DateTime, Utc};
+</span><span class="kw">use </span>chrono::{DateTime, Utc};
 <span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
 <span class="kw">use </span>oauth2::{PkceCodeChallenge, PkceCodeVerifier, RedirectUrl};
 <span class="kw">use </span>openidconnect::reqwest::async_http_client;
@@ -513,10 +507,10 @@
     AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
 };
 <span class="kw">use </span>serde::Deserialize;
-<span class="kw">use </span>sqlx::{Pool, Sqlite};
 
-<span class="kw">pub mod </span>sessions;
-<span class="kw">pub mod </span>traits;
+<span class="comment">// pub(crate) mod sessionstore;
+</span><span class="kw">pub mod </span>traits;
+<span class="kw">use </span>tower_sessions::{Expiry, Session, SessionManagerLayer};
 <span class="kw">use </span>traits::<span class="kw-2">*</span>;
 
 <span class="attr">#[derive(Deserialize)]
@@ -582,7 +576,9 @@
 </span><span class="kw">struct </span>AuthProvisioningDisabledTemplate {
     username: String,
     authref: String,
-    admin_contact: String,
+
+    admin_contact_name: String,
+    admin_contact_url: String,
     <span class="kw">pub </span>user_is_admin: bool,
 }
 
@@ -722,15 +718,14 @@
 <span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>login(
     Query(query): Query&lt;QueryForLogin&gt;,
-    <span class="kw-2">mut </span>session: WritableSession,
+    session: Session,
     axum::extract::State(<span class="kw-2">mut </span>state): axum::extract::State&lt;GoatState&gt;,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
     <span class="comment">// check if we&#39;ve got an existing, valid session
-    </span><span class="kw">if </span>!session.is_expired() {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(signed_in) = session.get(<span class="string">&quot;signed_in&quot;</span>) {
-            <span class="kw">if </span>signed_in {
-                <span class="kw">return </span>Redirect::to(<span class="string">&quot;/ui&quot;</span>).into_response();
-            }
+
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(signed_in) = session.get(<span class="string">&quot;signed_in&quot;</span>).unwrap() {
+        <span class="kw">if </span>signed_in {
+            <span class="kw">return </span>Redirect::to(<span class="string">&quot;/ui&quot;</span>).into_response();
         }
     }
 
@@ -775,17 +770,14 @@
                             <span class="kw">if </span>!state.read().<span class="kw">await</span>.config.user_auto_provisioning {
                                 <span class="comment">// TODO: show a &quot;sorry&quot; page when auto-provisioning&#39;s not enabled
                                 // log::warn!(&quot;User attempted login when auto-provisioning is not enabled, yeeting them to the home page.&quot;);
-                                </span><span class="kw">let </span>admin_contact =
-                                    state.read().<span class="kw">await</span>.config.admin_contact.to_string();
-                                <span class="comment">// let admin_contact = match admin_contact {
-                                //     Some(value) =&gt; value.to_string(),
-                                //     None =&gt; &quot;the administrator&quot;.to_string(),
-                                // };
+                                </span><span class="kw">let </span>(admin_contact_name, admin_contact_url) =
+                                    state.read().<span class="kw">await</span>.config.admin_contact.to_html_parts();
 
-                                </span><span class="kw">let </span>context = AuthProvisioningDisabledTemplate {
+                                <span class="kw">let </span>context = AuthProvisioningDisabledTemplate {
                                     username: claims.get_username(),
                                     authref: claims.subject().to_string(),
-                                    admin_contact,
+                                    admin_contact_name,
+                                    admin_contact_url,
                                     user_is_admin: <span class="bool-val">false</span>, <span class="comment">// TODO: ... probably not an admin but we can check
                                 </span>};
                                 <span class="kw">return </span>Response::builder()
@@ -824,10 +816,10 @@
                                 <span class="string">&quot;Database error finding user {:?}: {error:?}&quot;</span>,
                                 email.clone()
                             );
-                            <span class="kw">let </span>redirect: <span class="prelude-ty">Option</span>&lt;String&gt; = session.get(<span class="string">&quot;redirect&quot;</span>);
+                            <span class="kw">let </span>redirect: <span class="prelude-ty">Option</span>&lt;String&gt; = session.get(<span class="string">&quot;redirect&quot;</span>).unwrap();
                             <span class="kw">return match </span>redirect {
                                 <span class="prelude-val">Some</span>(destination) =&gt; {
-                                    session.remove(<span class="string">&quot;redirect&quot;</span>);
+                                    session.remove_value(<span class="string">&quot;redirect&quot;</span>);
                                     Redirect::to(<span class="kw-2">&amp;</span>destination).into_response()
                                 }
                                 <span class="prelude-val">None </span>=&gt; redirect_to_home().into_response(),
@@ -839,7 +831,7 @@
             <span class="macro">log::debug!</span>(<span class="string">&quot;Found user in database: {dbuser:?}&quot;</span>);
 
             <span class="kw">if </span>dbuser.disabled {
-                session.destroy();
+                session.flush();
                 <span class="macro">log::info!</span>(<span class="string">&quot;Disabled user attempted to log in: {dbuser:?}&quot;</span>);
                 <span class="kw">return </span>redirect_to_home().into_response();
             }
@@ -866,32 +858,36 @@
     }
 }
 
-<span class="kw">pub async fn </span>logout(<span class="kw-2">mut </span>session: WritableSession) -&gt; <span class="kw">impl </span>IntoResponse {
-    session.destroy();
+<span class="kw">pub async fn </span>logout(session: Session) -&gt; <span class="kw">impl </span>IntoResponse {
+    session.flush();
     Redirect::to(<span class="string">&quot;/&quot;</span>)
 }
 
 <span class="kw">pub async fn </span>build_auth_stores(
     config: CowCellReadTxn&lt;ConfigFile&gt;,
-    connpool: Pool&lt;Sqlite&gt;,
-) -&gt; SessionLayer&lt;SqliteSessionStore&gt; {
-    <span class="kw">let </span>session_store = SqliteSessionStore::from_client(connpool).with_table_name(<span class="string">&quot;sessions&quot;</span>);
+    connpool: SqlitePool,
+) -&gt; SessionManagerLayer&lt;SqliteStore&gt; {
+    <span class="kw">let </span>session_store = SqliteStore::new(connpool)
+        .with_table_name(<span class="string">&quot;sessions&quot;</span>)
+        .expect(<span class="string">&quot;Failed to start session store!&quot;</span>);
 
     session_store
         .migrate()
         .<span class="kw">await
         </span>.expect(<span class="string">&quot;Could not migrate session store database on startup!&quot;</span>);
 
-    tokio::spawn(sessions::session_store_cleanup(
-        Duration::from_secs(config.sql_db_cleanup_seconds.to_owned()),
-        session_store.clone(),
-    ));
+    <span class="kw">let </span>_deletion_task = tokio::task::spawn(
+        session_store
+            .clone()
+            .continuously_delete_expired(tokio::time::Duration::from_secs(<span class="number">60</span>)),
+    );
 
-    SessionLayer::new(session_store, config.api_cookie_secret())
+    SessionManagerLayer::new(session_store)
+        .with_expiry(Expiry::OnInactivity(Duration::minutes(<span class="number">5</span>)))
+        .with_name(COOKIE_NAME)
         .with_secure(<span class="bool-val">true</span>)
-        <span class="comment">// TODO: cookie domain isn&#39;t working because it sets .(hostname) for some reason.
-        // .with_cookie_domain(config.hostname.clone())
-        </span>.with_cookie_name(COOKIE_NAME)
+        <span class="comment">// If the cookies start being weird it&#39;s because they were appending a &quot;.&quot; on the start...
+        </span>.with_domain(config.hostname.clone())
 }
 
 <span class="attr">#[derive(Deserialize, Debug)]

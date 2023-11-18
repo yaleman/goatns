@@ -530,6 +530,15 @@
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
 <span class="kw">use </span><span class="kw">crate</span>::web::ui::check_logged_in;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::create_api_token;
@@ -544,13 +553,12 @@
 <span class="kw">use </span>axum::routing::post;
 <span class="kw">use </span>axum::{Form, Router};
 <span class="kw">use </span>axum_macros::debug_handler;
-<span class="comment">// use axum_macros::debug_handler;
-</span><span class="kw">use </span>axum_sessions::extractors::WritableSession;
 <span class="kw">use </span>chrono::{DateTime, Duration, Utc};
 <span class="kw">use </span>enum_iterator::Sequence;
 <span class="kw">use </span>http::Uri;
 <span class="kw">use </span>oauth2::CsrfToken;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
+<span class="kw">use </span>tower_sessions::Session;
 
 <span class="kw">use </span><span class="kw">crate</span>::db::UserAuthToken;
 <span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
@@ -582,10 +590,10 @@
     <span class="kw">pub </span>user_is_admin: bool,
 }
 
-<span class="kw">pub fn </span>validate_csrf_expiry(user_input: <span class="kw-2">&amp;</span>str, session: <span class="kw-2">&amp;mut </span>WritableSession) -&gt; bool {
-    <span class="kw">let </span>session_token: String = <span class="kw">match </span>session.get(SESSION_CSRFTOKEN_FIELD) {
+<span class="kw">pub fn </span>validate_csrf_expiry(user_input: <span class="kw-2">&amp;</span>str, session: <span class="kw-2">&amp;mut </span>Session) -&gt; bool {
+    <span class="kw">let </span>session_token: String = <span class="kw">match </span>session.get(SESSION_CSRFTOKEN_FIELD).unwrap() {
         <span class="prelude-val">None </span>=&gt; {
-            session.remove(SESSION_CSRFTOKEN_FIELD);
+            session.remove_value(SESSION_CSRFTOKEN_FIELD);
             <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get session token from storage&quot;</span>);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
@@ -609,7 +617,7 @@
     <span class="kw">let </span>expiry = <span class="kw">match </span>split.next() {
         <span class="prelude-val">None </span>=&gt; {
             <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get timestamp from stored CSRF Token&quot;</span>);
-            session.remove(SESSION_CSRFTOKEN_FIELD);
+            session.remove_value(SESSION_CSRFTOKEN_FIELD);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
         <span class="prelude-val">Some</span>(value) =&gt; value,
@@ -618,7 +626,7 @@
     <span class="kw">let </span>expiry: DateTime&lt;Utc&gt; = <span class="kw">match </span>DateTime::parse_from_rfc3339(expiry) {
         <span class="prelude-val">Err</span>(error) =&gt; {
             <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to parse {expiry:?} into datetime: {error:?}&quot;</span>);
-            session.remove(SESSION_CSRFTOKEN_FIELD);
+            session.remove_value(SESSION_CSRFTOKEN_FIELD);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
         <span class="prelude-val">Ok</span>(value) =&gt; value.into(),
@@ -627,7 +635,7 @@
 
     <span class="kw">if </span>expiry &lt; now {
         <span class="macro">log::debug!</span>(<span class="string">&quot;Token has expired at {expiry:?}, time is now {now:?}&quot;</span>);
-        session.remove(SESSION_CSRFTOKEN_FIELD);
+        session.remove_value(SESSION_CSRFTOKEN_FIELD);
         <span class="kw">return </span><span class="bool-val">false</span>;
     }
     <span class="macro">log::debug!</span>(<span class="string">&quot;CSRF Token was valid!&quot;</span>);
@@ -638,7 +646,7 @@
 ///
 /// Expiry defaults to 5 (minutes)
 </span><span class="kw">fn </span>store_api_csrf_token(
-    session: <span class="kw-2">&amp;mut </span>WritableSession,
+    session: <span class="kw-2">&amp;mut </span>Session,
     expiry_plus_seconds: <span class="prelude-ty">Option</span>&lt;i64&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
     <span class="kw">let </span>csrftoken = CsrfToken::new_random();
@@ -660,7 +668,7 @@
 <span class="doccomment">/// The user settings page at /ui/settings/api_tokens
 </span><span class="attr">#[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_get(
-    <span class="kw-2">mut </span>session: WritableSession,
+    <span class="kw-2">mut </span>session: Session,
     State(state): State&lt;GoatState&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     <span class="kw">let </span>user = check_logged_in(
@@ -678,11 +686,9 @@
     };
 
     <span class="comment">// pull token from the session store new_api_token
-    </span><span class="kw">let </span>token_value: <span class="prelude-ty">Option</span>&lt;String&gt; = session.get(<span class="string">&quot;new_api_token&quot;</span>);
-    session.remove(<span class="string">&quot;new_api_token&quot;</span>);
+    </span><span class="kw">let </span>token_value: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">&quot;new_api_token&quot;</span>).unwrap();
 
-    <span class="kw">let </span>tokenkey: <span class="prelude-ty">Option</span>&lt;String&gt; = session.get(<span class="string">&quot;new_api_tokenkey&quot;</span>);
-    session.remove(<span class="string">&quot;new_api_tokenkey&quot;</span>);
+    <span class="kw">let </span>tokenkey: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">&quot;new_api_tokenkey&quot;</span>).unwrap();
 
     <span class="kw">let </span>tokens =
         <span class="kw">match </span>UserAuthToken::get_all_user(<span class="kw-2">&amp;</span>state.read().<span class="kw">await</span>.connpool, user.id.unwrap()).<span class="kw">await </span>{
@@ -802,7 +808,7 @@
 <span class="doccomment">/// The user settings page at /ui/settings
 </span><span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_post(
-    <span class="kw-2">mut </span>session: WritableSession,
+    <span class="kw-2">mut </span>session: Session,
     State(state): State&lt;GoatState&gt;,
     Form(form): Form&lt;ApiTokenPage&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
@@ -849,7 +855,13 @@
             <span class="kw">let </span>api_cookie_secret = state_reader.config.api_cookie_secret();
             <span class="kw">let </span>lifetime: i32 = form.lifetime.unwrap().into();
             <span class="comment">// get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
-            </span><span class="kw">let </span>user: User = session.get(<span class="string">&quot;user&quot;</span>).unwrap();
+            </span><span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">&quot;user&quot;</span>).unwrap() {
+                <span class="prelude-val">Some</span>(val) =&gt; val,
+                <span class="prelude-val">None </span>=&gt; {
+                    <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get user from session store&quot;</span>);
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui&quot;</span>));
+                }
+            };
             <span class="kw">let </span>userid: i64 = user.id.unwrap();
 
             <span class="kw">let </span>api_token = create_api_token(api_cookie_secret, lifetime, userid);
@@ -947,7 +959,7 @@
     axum::extract::State(state): axum::extract::State&lt;GoatState&gt;,
     <span class="comment">// Form(form): Form&lt;ApiTokenPage&gt;,
     </span>Path(id): Path&lt;String&gt;,
-    <span class="kw-2">mut </span>session: WritableSession,
+    <span class="kw-2">mut </span>session: Session,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     <span class="kw">let </span>user = check_logged_in(
         <span class="kw-2">&amp;mut </span>session,
@@ -1005,7 +1017,7 @@
 <span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_delete_post(
     State(state): State&lt;GoatState&gt;,
-    <span class="kw-2">mut </span>session: WritableSession,
+    <span class="kw-2">mut </span>session: Session,
     Form(form): Form&lt;ApiTokenDelete&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     check_logged_in(
@@ -1021,7 +1033,13 @@
     }
 
     <span class="macro">log::debug!</span>(<span class="string">&quot;Deleting token from Form: {form:?}&quot;</span>);
-    <span class="kw">let </span>user: User = session.get(<span class="string">&quot;user&quot;</span>).unwrap();
+    <span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">&quot;user&quot;</span>).unwrap() {
+        <span class="prelude-val">Some</span>(val) =&gt; val,
+        <span class="prelude-val">None </span>=&gt; {
+            <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get user from session store&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui&quot;</span>));
+        }
+    };
     <span class="kw">let </span>pool = state.read().<span class="kw">await</span>.connpool.clone();
     <span class="kw">let </span>uat = <span class="kw">match </span>UserAuthToken::get(<span class="kw-2">&amp;</span>pool, form.id).<span class="kw">await </span>{
         <span class="prelude-val">Err</span>(err) =&gt; {
