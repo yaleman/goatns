@@ -7,10 +7,12 @@ use axum::extract::{OriginalUri, Path, State};
 use axum::http::{Response, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
-use axum::Router;
+use axum::{Form, Router};
 use axum_macros::debug_handler;
+use log::debug;
+use regex::Regex;
+use serde::Deserialize;
 use tower_sessions::Session;
-// use axum_macros::debug_handler;
 
 use super::GoatState;
 
@@ -39,6 +41,115 @@ macro_rules! check_logged_in {
     };
 }
 
+#[derive(Template)]
+#[template(path = "zone_create.html")]
+struct TemplateCreateZones {
+    user_is_admin: bool,
+    zone: String,
+    #[allow(dead_code)]
+    message: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FormCreateZone {
+    #[allow(dead_code)]
+    zone: String,
+    #[allow(dead_code)]
+    csrftoken: Option<String>,
+}
+
+static VALID_ZONE_REGEX: &str = r"^[a-zA-Z0-9\-_]+\.[a-z]+$";
+
+#[debug_handler]
+pub async fn zones_create_post(
+    State(state): State<GoatState>,
+    mut session: Session,
+    OriginalUri(path): OriginalUri,
+    Form(zoneform): Form<FormCreateZone>,
+) -> impl IntoResponse {
+    check_logged_in!(state, session, path);
+    let (os_tx, os_rx) = tokio::sync::oneshot::channel();
+
+    debug!("Zoneform: {:?}", zoneform);
+
+    let user: User = match session.get("user").unwrap() {
+        Some(val) => {
+            log::info!("current user: {val:?}");
+            val
+        }
+        None => return redirect_to_login().into_response(),
+    };
+
+    let message = if zoneform.zone.trim().is_empty() {
+        "Zone name cannot be empty".to_string()
+    } else {
+        if Regex::new(VALID_ZONE_REGEX)
+            .unwrap()
+            .is_match(zoneform.zone.trim())
+        {
+            // zone name is valid, send off a request to create it
+            let command = Command::PostZone {
+                resp: os_tx,
+                user: user.clone(),
+                zone_name: zoneform.zone.trim().to_string(),
+            };
+            match state.read().await.tx.send(command).await {
+                Err(err) => {
+                    log::error!("Failed to send message to backend: {:?}", err);
+
+                    "Failed to send message to backend, try again please.".to_string()
+                }
+                Ok(_) => {
+                    let result: bool = os_rx.await.expect("Failed to get response");
+                    if result {
+                        "Zone created".to_string()
+                    } else {
+                        "Zone already exists".to_string()
+                    }
+                }
+            }
+        } else {
+            "Zone name is invalid".to_string()
+        }
+    };
+
+    let context = TemplateCreateZones {
+        // zones,
+        user_is_admin: user.admin,
+        zone: zoneform.zone.trim().to_string(),
+        message,
+    };
+    Response::builder()
+        .status(200)
+        .body(context.render().unwrap())
+        .unwrap()
+        .into_response()
+}
+
+// #[debug_handler]
+pub async fn zones_create_get(
+    State(_state): State<GoatState>,
+    mut session: Session,
+    OriginalUri(path): OriginalUri,
+) -> impl IntoResponse {
+    let user = check_logged_in(&mut session, path)
+        .await
+        .map_err(|err| err.into_response())
+        .unwrap();
+
+    let context = TemplateCreateZones {
+        // zones,
+        user_is_admin: user.admin,
+        zone: "".to_string(),
+        message: "".to_string(),
+    };
+    Response::builder()
+        .status(200)
+        .body(context.render().unwrap())
+        .unwrap()
+        .into_response()
+}
+
 // #[debug_handler]
 pub async fn zones_list(
     State(state): State<GoatState>,
@@ -48,19 +159,14 @@ pub async fn zones_list(
     // if let Err(e) = check_logged_in(&state, &mut session, path).await {
     //     return e.into_response();
     // }
-    check_logged_in!(state, session, path);
+    let user = check_logged_in(&mut session, path)
+        .await
+        .map_err(|err| err.into_response())
+        .unwrap();
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
 
     let offset = 0;
     let limit = 20;
-
-    let user: User = match session.get("user").unwrap() {
-        Some(val) => {
-            log::info!("current user: {val:?}");
-            val
-        }
-        None => return redirect_to_login().into_response(),
-    };
 
     log::trace!("Sending request for zones");
     if let Err(err) = state
@@ -188,6 +294,10 @@ pub fn new() -> Router<GoatState> {
         .route("/", get(dashboard))
         .route("/zones/:id", get(zone_view))
         .route("/zones/list", get(zones_list))
+        .route(
+            "/zones/create",
+            get(zones_create_get).post(zones_create_post),
+        )
         .nest("/settings", user_settings::router())
         .nest("/admin", admin_ui::router())
 }

@@ -1,0 +1,15 @@
+
+{% extends "dashboard.html" %}
+{% block content %}
+<form method="POST">
+
+    <p>Zone name: <input name="zone" value="{{zone}}" /></p>
+    <p>
+        <input type="submit" value="Create zone" name="create_zone" />
+
+    </p>
+
+    {% if !message.is_empty() %}<p>{{message}}</p>{% endif %}
+</form>
+
+{% endblock content %}

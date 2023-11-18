@@ -10,6 +10,7 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Form, Router};
 use tower_sessions::cookie::time::Duration;
+use tower_sessions::cookie::SameSite;
 use tower_sessions::{session_store::ExpiredDeletion, sqlx::SqlitePool, SqliteStore};
 // use axum_macros::debug_handler;
 use chrono::{DateTime, Utc};
@@ -381,7 +382,7 @@ pub async fn logout(session: Session) -> impl IntoResponse {
 }
 
 pub async fn build_auth_stores(
-    config: CowCellReadTxn<ConfigFile>,
+    _config: CowCellReadTxn<ConfigFile>,
     connpool: SqlitePool,
 ) -> SessionManagerLayer<SqliteStore> {
     let session_store = SqliteStore::new(connpool)
@@ -400,11 +401,12 @@ pub async fn build_auth_stores(
     );
 
     SessionManagerLayer::new(session_store)
-        .with_expiry(Expiry::OnInactivity(Duration::minutes(5)))
+        .with_expiry(Expiry::OnInactivity(Duration::minutes(15)))
         .with_name(COOKIE_NAME)
         .with_secure(true)
         // If the cookies start being weird it's because they were appending a "." on the start...
-        .with_domain(config.hostname.clone())
+        // .with_domain(config.hostname.clone())
+        .with_same_site(SameSite::Strict)
 }
 
 #[derive(Deserialize, Debug)]

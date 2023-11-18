@@ -39,7 +39,11 @@ pub enum Command {
     },
     Shutdown,
 
-    PostZone,
+    PostZone {
+        zone_name: String,
+        user: User,
+        resp: Responder<bool>,
+    },
     DeleteZone,
     PatchZone,
 
@@ -281,7 +285,22 @@ pub async fn manager(
                     log::error!("{e:?}")
                 };
             }
-            Command::PostZone => todo!(),
+            Command::PostZone {
+                zone_name,
+                user,
+                resp,
+            } => {
+                debug!(
+                    "Got a postzone for zone_name: {}, user: {:?}",
+                    zone_name, user
+                );
+
+                if let Err(error) = resp.send(true) {
+                    log::error!(
+                        "Failed to send message back to caller from PostMessage: {error:?}"
+                    );
+                }
+            }
             Command::DeleteZone => todo!(),
             Command::PatchZone => todo!(),
             Command::CreateUser {
