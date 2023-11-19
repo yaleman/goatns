@@ -6,9 +6,9 @@ use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
 use crate::zones::{FileZone, ZoneRecord};
 use log::{debug, error};
-use sqlx::{Pool, Sqlite};
+use sqlx::{Acquire, Pool, Sqlite, SqlitePool};
 use tokio::sync::mpsc;
-use tokio::sync::oneshot;
+use tokio::sync::oneshot::{self, Sender};
 
 type Responder<T> = oneshot::Sender<T>;
 
@@ -305,134 +305,16 @@ pub async fn manager(
                 rname,
                 resp,
             } => {
-                debug!(
-                    "Got a CreateZone for zone_name: {}, user: {:?}",
-                    zone_name, user
-                );
-                // need to check if the zone already exists
-                let mut txn = connpool
-                    .begin()
-                    .await
-                    .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
-
-                let zone = match FileZone::get_by_name(&mut txn, &zone_name).await {
-                    Ok(zone) => {
-                        log::error!(
-                            "Zone already exists while user {:?} tried to create {}",
-                            user,
-                            zone_name
-                        );
-                        Some(zone)
-                    }
-                    Err(err) => {
-                        if let sqlx::Error::RowNotFound = err {
-                            None // this is fine
-                        } else {
-                            log::error!("Failed to query db: {err:?}");
-                            None
-                        }
-                    }
-                };
-
-                let result = match zone {
-                    None => {
-                        let new_zone = FileZone {
-                            name: zone_name.clone(),
-                            id: None,
-                            rname,
-                            serial: 0,
-                            refresh: 60,
-                            retry: 60,
-                            expire: 60,
-                            minimum: 60,
-                            records: Vec::new(),
-                        };
-                        match new_zone.save_with_txn(&mut txn).await {
-                            Err(err) => {
-                                log::error!("Failed to save zone: {err:?}");
-                                DataStoreResponse::Failure(format!("Failed to save zone: {err:?}"))
-                            }
-                            Ok(res) => {
-                                // ensure the ownership is created
-                                let ownership = ZoneOwnership {
-                                    id: None,
-                                    zoneid: res.id.unwrap(), // TODO: check for None here, or at least beforehand
-                                    userid: user.id.unwrap(), // TODO: check for None here, or at least beforehand
-                                };
-                                if let Err(err) = ownership.save_with_txn(&mut txn).await {
-                                    error!("Failed to save ownership: {err:?}");
-                                    DataStoreResponse::Failure(
-                                        "Failed to save ownership, had to roll back zone creation"
-                                            .to_string(),
-                                    )
-                                } else {
-                                    log::info!("Created zone: {:?}, sending result to user", res);
-                                    match txn.commit().await {
-                                        Ok(_) => {
-                                            DataStoreResponse::ZoneCreated(res.id.unwrap_or(-1))
-                                        }
-                                        Err(err) => {
-                                            error!("failed to commit transaction: {:?}", err);
-                                            DataStoreResponse::Failure("Failed to commit database transaction, please contact an admin".to_string())
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Some(_) => DataStoreResponse::ZoneExists,
-                };
-
-                if let Err(error) = resp.send(result) {
-                    log::error!(
-                        "Failed to send message back to caller from PostMessage: {error:?}"
-                    );
-                }
+                manager_create_zone(&connpool, zone_name, user, rname, resp).await?;
             }
             Command::DeleteZone { resp, user, id } => {
-                // confirm the zone is owned by the user, or that the user is an admin
-                let mut txn = connpool
-                    .begin()
-                    .await
-                    .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
-                let zone = match ZoneOwnership::get(&mut txn, &id).await {
-                    Ok(zone) => Some(zone),
-                    Err(err) => {
-                        log::error!("Failed to query zone ownership for zone id {id}: {err:?}");
-                        None
-                    }
+                let res = match manager_delete_zone(&connpool, user, id).await {
+                    Ok(_) => DataStoreResponse::ZoneDeleted,
+                    Err(err) => DataStoreResponse::Failure(err),
                 };
-
-                let response = if let Some(zone) = zone {
-                    if zone.userid != user.id.unwrap() && !user.admin {
-                        log::error!(
-                            "User {:?} tried to delete zone {:?} but doesn't own it",
-                            user,
-                            zone.id
-                        );
-                        DataStoreResponse::Failure("You don't own this zone".to_string())
-                    } else {
-                        DataStoreResponse::ZoneDeleted
-                    }
-                } else {
-                    log::error!(
-                        "User {:?} tried to delete zone {} but it doesn't exist",
-                        user,
-                        id
-                    );
-                    DataStoreResponse::ZoneNotFound
-                };
-
-                // delete the zone
-
-                // send the response
-
-                if let Err(err) = resp.send(response) {
-                    error!(
-                        "Failed to send response to zone deletion request: {:?}",
-                        err
-                    );
-                };
+                if let Err(err) = resp.send(res) {
+                    log::error!("Failed to send message back to caller: {:?}", err);
+                }
             }
             Command::PatchZone => todo!(),
             Command::CreateUser {
@@ -489,5 +371,143 @@ pub async fn manager(
     }
     #[cfg(test)]
     println!("### manager is done!");
+    Ok(())
+}
+
+pub async fn manager_delete_zone(connpool: &SqlitePool, user: User, id: i64) -> Result<(), String> {
+    // confirm the zone is owned by the user, or that the user is an admin
+    let mut txn = connpool
+        .begin()
+        .await
+        .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+    let zone = ZoneOwnership::get(&mut txn, &id)
+        .await
+        .map_err(|err| format!("Failed to query zone ownership for zone id {id}: {err:?}"))?;
+
+    if zone.userid != user.id.unwrap() && !user.admin {
+        log::error!(
+            "User {:?} tried to delete zone {:?} but doesn't own it",
+            user,
+            zone.id
+        );
+        return Err("User doesn't have permission to delete this zone!".to_string());
+    }
+
+    // delete the zone
+    let conn = txn.acquire().await.map_err(|err| {
+        log::error!("Failed to acquire connection: {err:?}");
+        "Failed to acquire connection".to_string()
+    })?;
+
+    let zonedata = FileZone::get_with_txn(conn, &zone.zoneid)
+        .await
+        .map_err(|err| {
+            error!(
+                "Failed to get filezone based on zone id ({}) we just got from the datastore: {:?}",
+                zone.zoneid, err
+            );
+            "Unable to get zone data from database".to_string()
+        })?;
+
+    zonedata.delete_with_txn(conn).await.map_err(|err| {
+        error!("Failed to delete zone: {:?}", err);
+        "Failed to delete zone".to_string()
+    })?;
+
+    // TODO: do we delete the zone records here, or should the cascading ownership of the zone do that, or the filezone delete?
+
+    txn.commit().await.map_err(|err| {
+        error!("Failed to commit transaction: {:?}", err);
+        "Failed to commit transaction".to_string()
+    })?;
+
+    Ok(())
+}
+
+pub async fn manager_create_zone(
+    connpool: &SqlitePool,
+    zone_name: String,
+    user: User,
+    rname: String,
+    resp: Sender<DataStoreResponse>,
+) -> Result<(), String> {
+    debug!(
+        "Got a CreateZone for zone_name: {}, user: {:?}",
+        zone_name, user
+    );
+    // need to check if the zone already exists
+    let mut txn = connpool
+        .begin()
+        .await
+        .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+
+    let zone = match FileZone::get_by_name(&mut txn, &zone_name).await {
+        Ok(zone) => {
+            log::error!(
+                "Zone already exists while user {:?} tried to create {}",
+                user,
+                zone_name
+            );
+            Some(zone)
+        }
+        Err(err) => {
+            if let sqlx::Error::RowNotFound = err {
+                None // this is fine
+            } else {
+                log::error!("Failed to query db: {err:?}");
+                None
+            }
+        }
+    };
+
+    let result = match zone {
+        None => {
+            let new_zone = FileZone {
+                name: zone_name.clone(),
+                id: None,
+                rname,
+                serial: 0,
+                refresh: 60,
+                retry: 60,
+                expire: 60,
+                minimum: 60,
+                records: Vec::new(),
+            };
+            match new_zone.save_with_txn(&mut txn).await {
+                Err(err) => {
+                    log::error!("Failed to save zone: {err:?}");
+                    DataStoreResponse::Failure(format!("Failed to save zone: {err:?}"))
+                }
+                Ok(res) => {
+                    // ensure the ownership is created
+                    let ownership = ZoneOwnership {
+                        id: None,
+                        zoneid: res.id.unwrap(), // TODO: check for None here, or at least beforehand
+                        userid: user.id.unwrap(), // TODO: check for None here, or at least beforehand
+                    };
+                    if let Err(err) = ownership.save_with_txn(&mut txn).await {
+                        error!("Failed to save ownership: {err:?}");
+                        DataStoreResponse::Failure(
+                            "Failed to save ownership, had to roll back zone creation".to_string(),
+                        )
+                    } else {
+                        log::info!("Created zone: {:?}, sending result to user", res);
+                        match txn.commit().await {
+                            Ok(_) => DataStoreResponse::ZoneCreated(res.id.unwrap_or(-1)),
+                            Err(err) => {
+                                error!("failed to commit transaction: {:?}", err);
+                                DataStoreResponse::Failure("Failed to commit database transaction, please contact an admin".to_string())
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Some(_) => DataStoreResponse::ZoneExists,
+    };
+
+    if let Err(error) = resp.send(result) {
+        log::error!("Failed to send message back to caller from PostMessage: {error:?}");
+    }
     Ok(())
 }
