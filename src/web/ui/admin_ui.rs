@@ -8,7 +8,7 @@ use sqlx::Row;
 use std::str::FromStr;
 use tower_sessions::Session;
 
-use super::check_logged_in;
+use super::check_logged_in_func;
 
 #[derive(Template)]
 #[template(path = "admin_ui.html")]
@@ -34,7 +34,7 @@ struct ZoneRecord {
 }
 
 pub async fn dashboard(mut session: Session) -> impl IntoResponse {
-    let user = match check_logged_in(&mut session, Uri::from_str("/").unwrap()).await {
+    let user = match check_logged_in_func(&mut session, Uri::from_str("/").unwrap()).await {
         Ok(val) => val,
         Err(err) => return err.into_response(),
     };
@@ -55,7 +55,7 @@ pub async fn report_unowned_records(
     mut session: Session,
     axum::extract::State(state): axum::extract::State<GoatState>,
 ) -> impl IntoResponse {
-    let user = match check_logged_in(&mut session, Uri::from_str("/").unwrap()).await {
+    let user = match check_logged_in_func(&mut session, Uri::from_str("/").unwrap()).await {
         Ok(val) => val,
         Err(err) => return err.into_response(),
     };

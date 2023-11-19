@@ -1,28 +1,23 @@
-use crate::datastore::{Command, DataStoreResponse};
 use crate::db::User;
-use crate::web::ui::user_settings::validate_csrf_expiry;
-use crate::web::utils::{
-    redirect_to_dashboard, redirect_to_login, redirect_to_zone, redirect_to_zones_list,
-};
+
+use crate::web::utils::redirect_to_login;
 use crate::zones::FileZone;
 use askama::Template;
-use axum::extract::{OriginalUri, Path, State};
+use axum::extract::OriginalUri;
 use axum::http::{Response, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
-use axum::{Form, Router};
-use axum_macros::debug_handler;
-use log::{debug, error};
-use regex::Regex;
-use serde::Deserialize;
-use tower_sessions::Session;
+use axum::Router;
 
-use self::user_settings::store_api_csrf_token;
+use tower_sessions::Session;
 
 use super::GoatState;
 
 mod admin_ui;
+mod prelude;
 mod user_settings;
+mod zones;
+use zones::*;
 
 #[derive(Template)]
 #[template(path = "view_zones.html")]
@@ -38,247 +33,124 @@ struct TemplateViewZone {
     pub user_is_admin: bool,
 }
 
+#[macro_export]
 macro_rules! check_logged_in {
     ( $state:tt, $session:tt, $path:tt ) => {
-        if let Err(e) = check_logged_in(&mut $session, $path).await {
+        if let Err(e) = check_logged_in_func(&mut $session, $path).await {
             return e.into_response();
         }
     };
 }
 
-#[derive(Template)]
-#[template(path = "zone_create.html")]
-struct TemplateCreateZones {
-    user_is_admin: bool,
-    zone: String,
+// #[derive(Debug, Deserialize)]
+// pub struct FormCreateZone {
+//     zone: String,
+//     csrftoken: Option<String>,
+// }
 
-    message: String,
-    message_is_error: bool,
-}
+// #[derive(Debug, Deserialize)]
+// pub struct FormDeleteZone {
+//     #[allow(dead_code)]
+//     id: i64,
+//     #[allow(dead_code)]
+//     csrftoken: Option<String>,
+// }
 
-#[derive(Debug, Deserialize)]
-pub struct FormCreateZone {
-    zone: String,
-    csrftoken: Option<String>,
-}
+// static VALID_ZONE_REGEX: &str = r"^[a-zA-Z0-9\-_]+\.[a-z]+$";
 
-#[derive(Debug, Deserialize)]
-pub struct FormDeleteZone {
-    #[allow(dead_code)]
-    id: i64,
-    #[allow(dead_code)]
-    csrftoken: Option<String>,
-}
+// // #[debug_handler]
+// pub async fn zones_list(
+//     State(state): State<GoatState>,
+//     mut session: Session,
+//     OriginalUri(path): OriginalUri,
+// ) -> impl IntoResponse {
+//     let user = match check_logged_in_func(&mut session, path)
+//         .await
+//         .map_err(|err| err.into_response())
+//     {
+//         Ok(val) => val,
+//         Err(err) => {
+//             return err.into_response();
+//         }
+//     };
+//     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
 
-static VALID_ZONE_REGEX: &str = r"^[a-zA-Z0-9\-_]+\.[a-z]+$";
+//     let offset = 0;
+//     let limit = 20;
 
-#[debug_handler]
-pub async fn zones_create_post(
-    State(state): State<GoatState>,
-    mut session: Session,
-    OriginalUri(path): OriginalUri,
-    Form(zoneform): Form<FormCreateZone>,
-) -> impl IntoResponse {
-    check_logged_in!(state, session, path);
-    let (os_tx, os_rx) = tokio::sync::oneshot::channel();
+//     log::trace!("Sending request for zones");
+//     if let Err(err) = state
+//         .read()
+//         .await
+//         .tx
+//         .send(Command::GetZoneNames {
+//             resp: os_tx,
+//             user: user.clone(),
+//             offset,
+//             limit,
+//         })
+//         .await
+//     {
+//         eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
+//         log::error!("failed to send GetZoneNames command to datastore: {err:?}");
+//         return redirect_to_dashboard().into_response();
+//     };
 
-    if let Some(csrf_token) = &zoneform.csrftoken {
-        if !validate_csrf_expiry(csrf_token, &mut session) {
-            error!(
-                "CSRF validation failed while trying to create a zone: {:?}",
-                zoneform
-            );
-            // TODO: this should throw an error
-            return redirect_to_login().into_response();
-        };
-    }
+//     let zones = os_rx.await.expect("Failed to get response: {res:?}");
 
-    debug!("Zoneform: {:?}", zoneform);
-
-    let user: User = match session.get("user").unwrap() {
-        Some(val) => {
-            log::info!("current user: {val:?}");
-            val
-        }
-        None => return redirect_to_login().into_response(),
-    };
-
-    let message = if zoneform.zone.trim().is_empty() {
-        "Zone name cannot be empty".to_string()
-    } else if Regex::new(VALID_ZONE_REGEX)
-        .unwrap()
-        .is_match(zoneform.zone.trim())
-    {
-        // zone name is valid, send off a request to create it
-        let command = Command::CreateZone {
-            resp: os_tx,
-            user: user.clone(),
-            rname: user.email.clone(),
-            zone_name: zoneform.zone.trim().to_string(),
-        };
-        match state.read().await.tx.send(command).await {
-            Err(err) => {
-                log::error!("Failed to send message to backend: {:?}", err);
-
-                "Failed to send message to backend, try again please.".to_string()
-            }
-            Ok(_) => {
-                let result: DataStoreResponse = os_rx.await.expect("Failed to get response");
-                match result {
-                    DataStoreResponse::ZoneCreated(id) => {
-                        if id > 0 {
-                            return redirect_to_zone(id).into_response();
-                        } else {
-                            return redirect_to_zones_list().into_response();
-                        }
-                    }
-                    DataStoreResponse::Failure(err) => {
-                        log::error!("Failed to create zone: {:?}", err);
-                        format!("Failed to create zone, try again please: {}", err)
-                    }
-                    DataStoreResponse::ZoneExists => "Zone already exists".to_string(),
-                }
-            }
-        }
-    } else {
-        "Zone name is invalid".to_string()
-    };
-
-    let context = TemplateCreateZones {
-        // zones,
-        user_is_admin: user.admin,
-        zone: zoneform.zone.trim().to_string(),
-
-        message,
-        message_is_error: true,
-    };
-    Response::builder()
-        .status(200)
-        .body(context.render().unwrap())
-        .unwrap()
-        .into_response()
-}
+//     log::debug!("about to return zone list... found {} zones", zones.len());
+//     let context = TemplateViewZones {
+//         zones,
+//         user_is_admin: user.admin,
+//     };
+//     Response::builder()
+//         .status(200)
+//         .body(context.render().unwrap())
+//         .unwrap()
+//         .into_response()
+// }
 
 // #[debug_handler]
-pub async fn zones_create_get(
-    State(_state): State<GoatState>,
-    mut session: Session,
-    OriginalUri(path): OriginalUri,
-) -> impl IntoResponse {
-    let user = check_logged_in(&mut session, path)
-        .await
-        .map_err(|err| err.into_response())
-        .unwrap();
+// pub async fn zone_view(
+//     Path(name_or_id): Path<i64>,
+//     axum::extract::State(state): axum::extract::State<GoatState>,
+//     mut session: Session,
+//     OriginalUri(path): OriginalUri,
+// ) -> impl IntoResponse {
+//     let user = match check_logged_in_func(&mut session, path).await {
+//         Ok(val) => val,
+//         Err(_) => {
+//             return redirect_to_login().into_response();
+//         }
+//     };
 
-    if let Err(err) = store_api_csrf_token(&mut session, None) {
-        error!("Failed to store CSRF token! {}", err);
-        return redirect_to_zones_list().into_response();
-    };
+//     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
+//     let cmd = Command::GetZone {
+//         resp: os_tx,
+//         id: Some(name_or_id),
+//         name: None,
+//     };
+//     log::debug!("{cmd:?}");
+//     if let Err(err) = state.read().await.tx.send(cmd).await {
+//         eprintln!("failed to send GetZone command to datastore: {err:?}");
+//         log::error!("failed to send GetZone command to datastore: {err:?}");
+//         return redirect_to_zones_list().into_response();
+//     };
 
-    let context = TemplateCreateZones {
-        user_is_admin: user.admin,
-        zone: "".to_string(),
-        message: "".to_string(),
-        message_is_error: false,
-    };
-    Response::builder()
-        .status(200)
-        .body(context.render().unwrap())
-        .unwrap()
-        .into_response()
-}
+//     let zone = match os_rx.await.expect("Failed to get response: {res:?}") {
+//         Some(value) => value,
+//         None => todo!("Send a not found"),
+//     };
 
-// #[debug_handler]
-pub async fn zones_list(
-    State(state): State<GoatState>,
-    mut session: Session,
-    OriginalUri(path): OriginalUri,
-) -> impl IntoResponse {
-    let user = match check_logged_in(&mut session, path)
-        .await
-        .map_err(|err| err.into_response())
-    {
-        Ok(val) => val,
-        Err(err) => {
-            return err.into_response();
-        }
-    };
-    let (os_tx, os_rx) = tokio::sync::oneshot::channel();
+//     log::trace!("Returning zone: {zone:?}");
+//     let context = TemplateViewZone {
+//         zone,
+//         user_is_admin: user.admin,
+//     };
+//     Response::new(context.render().unwrap()).into_response()
+// }
 
-    let offset = 0;
-    let limit = 20;
-
-    log::trace!("Sending request for zones");
-    if let Err(err) = state
-        .read()
-        .await
-        .tx
-        .send(Command::GetZoneNames {
-            resp: os_tx,
-            user: user.clone(),
-            offset,
-            limit,
-        })
-        .await
-    {
-        eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
-        log::error!("failed to send GetZoneNames command to datastore: {err:?}");
-        return redirect_to_dashboard().into_response();
-    };
-
-    let zones = os_rx.await.expect("Failed to get response: {res:?}");
-
-    log::debug!("about to return zone list... found {} zones", zones.len());
-    let context = TemplateViewZones {
-        zones,
-        user_is_admin: user.admin,
-    };
-    Response::builder()
-        .status(200)
-        .body(context.render().unwrap())
-        .unwrap()
-        .into_response()
-}
-
-#[debug_handler]
-pub async fn zone_view(
-    Path(name_or_id): Path<i64>,
-    axum::extract::State(state): axum::extract::State<GoatState>,
-    mut session: Session,
-    OriginalUri(path): OriginalUri,
-) -> impl IntoResponse {
-    let user = check_logged_in(&mut session, path)
-        .await
-        .map_err(|err| err.into_response())
-        .unwrap();
-
-    let (os_tx, os_rx) = tokio::sync::oneshot::channel();
-    let cmd = Command::GetZone {
-        resp: os_tx,
-        id: Some(name_or_id),
-        name: None,
-    };
-    log::debug!("{cmd:?}");
-    if let Err(err) = state.read().await.tx.send(cmd).await {
-        eprintln!("failed to send GetZone command to datastore: {err:?}");
-        log::error!("failed to send GetZone command to datastore: {err:?}");
-        return redirect_to_zones_list().into_response();
-    };
-
-    let zone = match os_rx.await.expect("Failed to get response: {res:?}") {
-        Some(value) => value,
-        None => todo!("Send a not found"),
-    };
-
-    log::trace!("Returning zone: {zone:?}");
-    let context = TemplateViewZone {
-        zone,
-        user_is_admin: user.admin,
-    };
-    Response::new(context.render().unwrap()).into_response()
-}
-
-pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, Redirect> {
+pub async fn check_logged_in_func(session: &mut Session, path: Uri) -> Result<User, Redirect> {
     let authref = session.get::<String>("authref").unwrap();
 
     let redirect_path = Some(path.path_and_query().unwrap().to_string());
@@ -313,7 +185,7 @@ struct DashboardTemplate /*<'a>*/ {
 
 // #[debug_handler]
 pub async fn dashboard(mut session: Session, OriginalUri(path): OriginalUri) -> impl IntoResponse {
-    let user = match check_logged_in(&mut session, path).await {
+    let user = match check_logged_in_func(&mut session, path).await {
         Ok(val) => val,
         Err(err) => return err.into_response(),
     };
@@ -328,42 +200,6 @@ pub async fn dashboard(mut session: Session, OriginalUri(path): OriginalUri) -> 
         .unwrap()
         .into_response()
 }
-#[debug_handler]
-pub async fn zones_delete_post(
-    State(_state): State<GoatState>,
-    Path(_id): Path<i64>,
-    mut session: Session,
-    OriginalUri(path): OriginalUri,
-    Form(zoneform): Form<FormCreateZone>,
-) -> impl IntoResponse {
-    check_logged_in!(state, session, path);
-    // let (os_tx, os_rx) = tokio::sync::oneshot::channel();
-
-    if let Some(csrf_token) = &zoneform.csrftoken {
-        if !validate_csrf_expiry(csrf_token, &mut session) {
-            error!(
-                "CSRF validation failed while trying to create a zone: {:?}",
-                zoneform
-            );
-            // TODO: this should throw an error
-            return redirect_to_login().into_response();
-        };
-    }
-
-    debug!("Zoneform: {:?}", zoneform);
-    todo!()
-}
-#[debug_handler]
-pub async fn zones_delete_get(
-    State(_state): State<GoatState>,
-    Path(_id): Path<i64>,
-    mut _session: Session,
-    OriginalUri(_path): OriginalUri,
-    // Form(zoneform): Form<FormCreateZone>,
-) -> impl IntoResponse {
-    todo!()
-    // TODO: show the "are you sure" button, add csrf things
-}
 
 pub fn new() -> Router<GoatState> {
     Router::new()
@@ -376,7 +212,7 @@ pub fn new() -> Router<GoatState> {
         )
         .route(
             "/zones/delete/:id",
-            get(zones_delete_get).post(zones_delete_post),
+            get(zone_delete_get).post(zone_delete_post),
         )
         .nest("/settings", user_settings::router())
         .nest("/admin", admin_ui::router())

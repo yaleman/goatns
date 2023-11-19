@@ -1,5 +1,5 @@
 use crate::db::{DBEntity, User};
-use crate::web::ui::check_logged_in;
+use crate::web::ui::check_logged_in_func;
 use crate::web::utils::create_api_token;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -130,7 +130,7 @@ pub async fn api_tokens_get(
     mut session: Session,
     State(state): State<GoatState>,
 ) -> Result<Html<String>, Redirect> {
-    let user = check_logged_in(
+    let user = check_logged_in_func(
         &mut session,
         Uri::from_str("/ui/settings/api_tokens").unwrap(),
     )
@@ -273,7 +273,7 @@ pub async fn api_tokens_post(
 ) -> Result<Html<String>, Redirect> {
     eprintln!("Got form: {form:?}");
 
-    let user = check_logged_in(
+    let user = check_logged_in_func(
         &mut session,
         Uri::from_str("/ui/settings/api_tokens").unwrap(),
     )
@@ -420,7 +420,7 @@ pub async fn api_tokens_delete_get(
     Path(id): Path<String>,
     mut session: Session,
 ) -> Result<Html<String>, Redirect> {
-    let user = check_logged_in(
+    let user = check_logged_in_func(
         &mut session,
         Uri::from_str("/ui/settings/api_tokens").unwrap(),
     )
@@ -479,7 +479,7 @@ pub async fn api_tokens_delete_post(
     mut session: Session,
     Form(form): Form<ApiTokenDelete>,
 ) -> Result<Html<String>, Redirect> {
-    check_logged_in(
+    check_logged_in_func(
         &mut session,
         Uri::from_str("/ui/settings/api_tokens").unwrap(),
     )

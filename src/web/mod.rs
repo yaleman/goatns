@@ -55,8 +55,6 @@ pub const STATUS_OK: &str = "Ok";
 
 // TODO: look at the ServiceBuilder layers bits here: https://github.com/tokio-rs/axum/blob/dea36db400f27c025b646e5720b9a6784ea4db6e/examples/key-value-store/src/main.rs
 
-// type GoatState = Arc<RwLock<State>>;
-
 #[async_trait]
 pub trait GoatStateTrait {
     async fn connpool(&self) -> Pool<Sqlite>;
@@ -106,7 +104,7 @@ impl GoatStateTrait for GoatState {
     }
 }
 
-type GoatState = Arc<RwLock<GoatChildState>>;
+pub(crate) type GoatState = Arc<RwLock<GoatChildState>>;
 
 #[derive(Clone, FromRef)]
 /// Internal State handler for the datastore object within the API

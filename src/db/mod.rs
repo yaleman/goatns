@@ -316,6 +316,19 @@ impl ZoneOwnership {
         todo!();
     }
 
+    /// Get the ownership record for a zone
+    pub async fn get(
+        txn: &mut SqliteConnection,
+        zoneid: &i64,
+    ) -> Result<ZoneOwnership, sqlx::Error> {
+        let res = sqlx::query("SELECT * from ownership where zoneid=?")
+            .bind(zoneid)
+            .fetch_one(txn)
+            .await?;
+
+        Ok(res.into())
+    }
+
     // get the thing by the other thing
     pub async fn get_ownership_by_userid<'t>(
         txn: &mut SqliteConnection,

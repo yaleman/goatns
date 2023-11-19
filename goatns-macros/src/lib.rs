@@ -73,3 +73,17 @@ pub fn check_api_auth(_item: TokenStream) -> TokenStream {
 //     .parse()
 //     .unwrap()
 // }
+
+#[proc_macro]
+/// A macro that returns the logged in user, or redirects us to the error response
+///
+/// You have to have access to the session and the `OriginalUri(path): OriginalUri,` extension
+/// Usage: `let user = get_logged_in!();`
+pub fn get_logged_in(_item: TokenStream) -> TokenStream {
+    r#"match check_logged_in_func(&mut session, path).await {
+        Ok(val) => val,
+        Err(e) => { return e.into_response(); }
+    }"#
+    .parse()
+    .unwrap()
+}

@@ -206,13 +206,14 @@ impl APIEntity for FileZone {
                 }),
             ));
         };
+
         if let Err(err) = txn.commit().await {
             // TODO: make this a better log
             println!("Failed to commit transaction while saving zone: {err:?}");
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResult {
-                    message: "failed to save zone".to_string(),
+                    message: "failed to save zone at commit step, please try again".to_string(),
                 }),
             ));
         };

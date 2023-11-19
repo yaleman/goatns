@@ -1,0 +1,15 @@
+
+{% extends "dashboard.html" %}
+{% block content %}
+<form method="POST">
+
+    <h1>Delete a Zone</h1>
+
+    <p> Are you sure you want to delete {{zone}}?</p>
+    <p>
+        <input type="submit" value="Confirm" />
+    </p>
+
+</form>
+
+{% endblock content %}

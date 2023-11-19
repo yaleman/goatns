@@ -5,7 +5,7 @@ use std::time::Duration;
 use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
 use crate::zones::{FileZone, ZoneRecord};
-use log::debug;
+use log::{debug, error};
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -45,7 +45,11 @@ pub enum Command {
         rname: String,
         resp: Responder<DataStoreResponse>,
     },
-    DeleteZone,
+    DeleteZone {
+        resp: Responder<DataStoreResponse>,
+        user: User,
+        id: i64,
+    },
     PatchZone,
 
     DeleteUser,
@@ -93,6 +97,8 @@ pub enum DataStoreResponse {
     /// Returns the zone id
     ZoneCreated(i64),
     ZoneExists,
+    ZoneDeleted,
+    ZoneNotFound,
     Failure(String),
 }
 
@@ -308,6 +314,7 @@ pub async fn manager(
                     .begin()
                     .await
                     .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+
                 let zone = match FileZone::get_by_name(&mut txn, &zone_name).await {
                     Ok(zone) => {
                         log::error!(
@@ -326,7 +333,6 @@ pub async fn manager(
                         }
                     }
                 };
-                drop(txn);
 
                 let result = match zone {
                     None => {
@@ -341,14 +347,36 @@ pub async fn manager(
                             minimum: 60,
                             records: Vec::new(),
                         };
-                        match new_zone.save(&connpool).await {
+                        match new_zone.save_with_txn(&mut txn).await {
                             Err(err) => {
                                 log::error!("Failed to save zone: {err:?}");
                                 DataStoreResponse::Failure(format!("Failed to save zone: {err:?}"))
                             }
                             Ok(res) => {
-                                log::info!("Created zone: {:?}, sending result to user", res);
-                                DataStoreResponse::ZoneCreated(res.id.unwrap_or(-1))
+                                // ensure the ownership is created
+                                let ownership = ZoneOwnership {
+                                    id: None,
+                                    zoneid: res.id.unwrap(), // TODO: check for None here, or at least beforehand
+                                    userid: user.id.unwrap(), // TODO: check for None here, or at least beforehand
+                                };
+                                if let Err(err) = ownership.save_with_txn(&mut txn).await {
+                                    error!("Failed to save ownership: {err:?}");
+                                    DataStoreResponse::Failure(
+                                        "Failed to save ownership, had to roll back zone creation"
+                                            .to_string(),
+                                    )
+                                } else {
+                                    log::info!("Created zone: {:?}, sending result to user", res);
+                                    match txn.commit().await {
+                                        Ok(_) => {
+                                            DataStoreResponse::ZoneCreated(res.id.unwrap_or(-1))
+                                        }
+                                        Err(err) => {
+                                            error!("failed to commit transaction: {:?}", err);
+                                            DataStoreResponse::Failure("Failed to commit database transaction, please contact an admin".to_string())
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -361,7 +389,51 @@ pub async fn manager(
                     );
                 }
             }
-            Command::DeleteZone => todo!(),
+            Command::DeleteZone { resp, user, id } => {
+                // confirm the zone is owned by the user, or that the user is an admin
+                let mut txn = connpool
+                    .begin()
+                    .await
+                    .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+                let zone = match ZoneOwnership::get(&mut txn, &id).await {
+                    Ok(zone) => Some(zone),
+                    Err(err) => {
+                        log::error!("Failed to query zone ownership for zone id {id}: {err:?}");
+                        None
+                    }
+                };
+
+                let response = if let Some(zone) = zone {
+                    if zone.userid != user.id.unwrap() && !user.admin {
+                        log::error!(
+                            "User {:?} tried to delete zone {:?} but doesn't own it",
+                            user,
+                            zone.id
+                        );
+                        DataStoreResponse::Failure("You don't own this zone".to_string())
+                    } else {
+                        DataStoreResponse::ZoneDeleted
+                    }
+                } else {
+                    log::error!(
+                        "User {:?} tried to delete zone {} but it doesn't exist",
+                        user,
+                        id
+                    );
+                    DataStoreResponse::ZoneNotFound
+                };
+
+                // delete the zone
+
+                // send the response
+
+                if let Err(err) = resp.send(response) {
+                    error!(
+                        "Failed to send response to zone deletion request: {:?}",
+                        err
+                    );
+                };
+            }
             Command::PatchZone => todo!(),
             Command::CreateUser {
                 username,
