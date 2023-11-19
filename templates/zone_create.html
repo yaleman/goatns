@@ -3,13 +3,17 @@
 {% block content %}
 <form method="POST">
 
+    <h1>Create a Zone</h1>
     <p>Zone name: <input name="zone" value="{{zone}}" /></p>
     <p>
         <input type="submit" value="Create zone" name="create_zone" />
 
     </p>
 
-    {% if !message.is_empty() %}<p>{{message}}</p>{% endif %}
+    {% if !message.is_empty() %}<div class="alert
+        {% if message_is_error %}alert-danger{% else %}alert-warning{% endif%}">
+        {{message}}</div>
+    {% endif %}
 </form>
 
 {% endblock content %}

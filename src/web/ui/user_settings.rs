@@ -104,7 +104,7 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
 /// Store a CSRF token with an expiry in the session store
 ///
 /// Expiry defaults to 5 (minutes)
-fn store_api_csrf_token(
+pub fn store_api_csrf_token(
     session: &mut Session,
     expiry_plus_seconds: Option<i64>,
 ) -> Result<String, String> {

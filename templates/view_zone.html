@@ -3,13 +3,16 @@
 
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
-      <li class="breadcrumb-item"><a href="/ui/zones/list">Zones</a></li>
-      <li class="breadcrumb-item active" aria-current="page">{{zone.name}}</li>
+        <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/ui/zones/list">Zones</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{zone.name}}</li>
     </ol>
 </nav>
 
 <h1>Zone: {{zone.name}}</h1>
+
+<a href="/ui/zones/delete/{{zone.id.unwrap()}}"><button type="button">Delete
+        Zone</button></a>
 
 <div class="row">
     <div class="col-2">Responsible Name (RNAME)</div>
@@ -20,25 +23,25 @@
 <div class="alert alert-warning" role="alert">No zone records found!</div>
 {% else %}
 <div class="table-responsive">
-<table class="table">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>TTL</th>
-            <th>Class</th>
-    </tr>
-    </thead>
-    {% for record in zone.records %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>TTL</th>
+                <th>Class</th>
+            </tr>
+        </thead>
+        {% for record in zone.records %}
 
-    <tr>
-        <td class="col-9 text-truncate">{{record.name}}</td>
-        <td class="col-1">{{record.rrtype}}</td>
-        <td class="col-1">{{record.ttl}}</td>
-        <td class="col-1">{{record.class}}</td>
+        <tr>
+            <td class="col-9 text-truncate">{{record.name}}</td>
+            <td class="col-1">{{record.rrtype}}</td>
+            <td class="col-1">{{record.ttl}}</td>
+            <td class="col-1">{{record.class}}</td>
         </tr>
-    {% endfor %}
-</table>
-{% endif %}
+        {% endfor %}
+    </table>
+    {% endif %}
 </div>
 {% endblock content %}

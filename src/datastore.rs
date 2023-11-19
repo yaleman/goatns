@@ -39,10 +39,11 @@ pub enum Command {
     },
     Shutdown,
 
-    PostZone {
+    CreateZone {
         zone_name: String,
         user: User,
-        resp: Responder<bool>,
+        rname: String,
+        resp: Responder<DataStoreResponse>,
     },
     DeleteZone,
     PatchZone,
@@ -86,6 +87,13 @@ pub enum Command {
     // CreateZone {
     //     zone: FileZone,
     // }
+}
+#[derive(Debug)]
+pub enum DataStoreResponse {
+    /// Returns the zone id
+    ZoneCreated(i64),
+    ZoneExists,
+    Failure(String),
 }
 
 async fn handle_get_command(
@@ -285,17 +293,69 @@ pub async fn manager(
                     log::error!("{e:?}")
                 };
             }
-            Command::PostZone {
+            Command::CreateZone {
                 zone_name,
                 user,
+                rname,
                 resp,
             } => {
                 debug!(
-                    "Got a postzone for zone_name: {}, user: {:?}",
+                    "Got a CreateZone for zone_name: {}, user: {:?}",
                     zone_name, user
                 );
+                // need to check if the zone already exists
+                let mut txn = connpool
+                    .begin()
+                    .await
+                    .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+                let zone = match FileZone::get_by_name(&mut txn, &zone_name).await {
+                    Ok(zone) => {
+                        log::error!(
+                            "Zone already exists while user {:?} tried to create {}",
+                            user,
+                            zone_name
+                        );
+                        Some(zone)
+                    }
+                    Err(err) => {
+                        if let sqlx::Error::RowNotFound = err {
+                            None // this is fine
+                        } else {
+                            log::error!("Failed to query db: {err:?}");
+                            None
+                        }
+                    }
+                };
+                drop(txn);
 
-                if let Err(error) = resp.send(true) {
+                let result = match zone {
+                    None => {
+                        let new_zone = FileZone {
+                            name: zone_name.clone(),
+                            id: None,
+                            rname,
+                            serial: 0,
+                            refresh: 60,
+                            retry: 60,
+                            expire: 60,
+                            minimum: 60,
+                            records: Vec::new(),
+                        };
+                        match new_zone.save(&connpool).await {
+                            Err(err) => {
+                                log::error!("Failed to save zone: {err:?}");
+                                DataStoreResponse::Failure(format!("Failed to save zone: {err:?}"))
+                            }
+                            Ok(res) => {
+                                log::info!("Created zone: {:?}, sending result to user", res);
+                                DataStoreResponse::ZoneCreated(res.id.unwrap_or(-1))
+                            }
+                        }
+                    }
+                    Some(_) => DataStoreResponse::ZoneExists,
+                };
+
+                if let Err(error) = resp.send(result) {
                     log::error!(
                         "Failed to send message back to caller from PostMessage: {error:?}"
                     );

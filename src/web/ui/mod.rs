@@ -1,6 +1,9 @@
-use crate::datastore::Command;
+use crate::datastore::{Command, DataStoreResponse};
 use crate::db::User;
-use crate::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zones_list};
+use crate::web::ui::user_settings::validate_csrf_expiry;
+use crate::web::utils::{
+    redirect_to_dashboard, redirect_to_login, redirect_to_zone, redirect_to_zones_list,
+};
 use crate::zones::FileZone;
 use askama::Template;
 use axum::extract::{OriginalUri, Path, State};
@@ -9,10 +12,12 @@ use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::{Form, Router};
 use axum_macros::debug_handler;
-use log::debug;
+use log::{debug, error};
 use regex::Regex;
 use serde::Deserialize;
 use tower_sessions::Session;
+
+use self::user_settings::store_api_csrf_token;
 
 use super::GoatState;
 
@@ -46,14 +51,21 @@ macro_rules! check_logged_in {
 struct TemplateCreateZones {
     user_is_admin: bool,
     zone: String,
-    #[allow(dead_code)]
+
     message: String,
+    message_is_error: bool,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FormCreateZone {
-    #[allow(dead_code)]
     zone: String,
+    csrftoken: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FormDeleteZone {
+    #[allow(dead_code)]
+    id: i64,
     #[allow(dead_code)]
     csrftoken: Option<String>,
 }
@@ -70,6 +82,17 @@ pub async fn zones_create_post(
     check_logged_in!(state, session, path);
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
 
+    if let Some(csrf_token) = &zoneform.csrftoken {
+        if !validate_csrf_expiry(csrf_token, &mut session) {
+            error!(
+                "CSRF validation failed while trying to create a zone: {:?}",
+                zoneform
+            );
+            // TODO: this should throw an error
+            return redirect_to_login().into_response();
+        };
+    }
+
     debug!("Zoneform: {:?}", zoneform);
 
     let user: User = match session.get("user").unwrap() {
@@ -82,42 +105,52 @@ pub async fn zones_create_post(
 
     let message = if zoneform.zone.trim().is_empty() {
         "Zone name cannot be empty".to_string()
-    } else {
-        if Regex::new(VALID_ZONE_REGEX)
-            .unwrap()
-            .is_match(zoneform.zone.trim())
-        {
-            // zone name is valid, send off a request to create it
-            let command = Command::PostZone {
-                resp: os_tx,
-                user: user.clone(),
-                zone_name: zoneform.zone.trim().to_string(),
-            };
-            match state.read().await.tx.send(command).await {
-                Err(err) => {
-                    log::error!("Failed to send message to backend: {:?}", err);
+    } else if Regex::new(VALID_ZONE_REGEX)
+        .unwrap()
+        .is_match(zoneform.zone.trim())
+    {
+        // zone name is valid, send off a request to create it
+        let command = Command::CreateZone {
+            resp: os_tx,
+            user: user.clone(),
+            rname: user.email.clone(),
+            zone_name: zoneform.zone.trim().to_string(),
+        };
+        match state.read().await.tx.send(command).await {
+            Err(err) => {
+                log::error!("Failed to send message to backend: {:?}", err);
 
-                    "Failed to send message to backend, try again please.".to_string()
-                }
-                Ok(_) => {
-                    let result: bool = os_rx.await.expect("Failed to get response");
-                    if result {
-                        "Zone created".to_string()
-                    } else {
-                        "Zone already exists".to_string()
+                "Failed to send message to backend, try again please.".to_string()
+            }
+            Ok(_) => {
+                let result: DataStoreResponse = os_rx.await.expect("Failed to get response");
+                match result {
+                    DataStoreResponse::ZoneCreated(id) => {
+                        if id > 0 {
+                            return redirect_to_zone(id).into_response();
+                        } else {
+                            return redirect_to_zones_list().into_response();
+                        }
                     }
+                    DataStoreResponse::Failure(err) => {
+                        log::error!("Failed to create zone: {:?}", err);
+                        format!("Failed to create zone, try again please: {}", err)
+                    }
+                    DataStoreResponse::ZoneExists => "Zone already exists".to_string(),
                 }
             }
-        } else {
-            "Zone name is invalid".to_string()
         }
+    } else {
+        "Zone name is invalid".to_string()
     };
 
     let context = TemplateCreateZones {
         // zones,
         user_is_admin: user.admin,
         zone: zoneform.zone.trim().to_string(),
+
         message,
+        message_is_error: true,
     };
     Response::builder()
         .status(200)
@@ -137,11 +170,16 @@ pub async fn zones_create_get(
         .map_err(|err| err.into_response())
         .unwrap();
 
+    if let Err(err) = store_api_csrf_token(&mut session, None) {
+        error!("Failed to store CSRF token! {}", err);
+        return redirect_to_zones_list().into_response();
+    };
+
     let context = TemplateCreateZones {
-        // zones,
         user_is_admin: user.admin,
         zone: "".to_string(),
         message: "".to_string(),
+        message_is_error: false,
     };
     Response::builder()
         .status(200)
@@ -156,13 +194,15 @@ pub async fn zones_list(
     mut session: Session,
     OriginalUri(path): OriginalUri,
 ) -> impl IntoResponse {
-    // if let Err(e) = check_logged_in(&state, &mut session, path).await {
-    //     return e.into_response();
-    // }
-    let user = check_logged_in(&mut session, path)
+    let user = match check_logged_in(&mut session, path)
         .await
         .map_err(|err| err.into_response())
-        .unwrap();
+    {
+        Ok(val) => val,
+        Err(err) => {
+            return err.into_response();
+        }
+    };
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
 
     let offset = 0;
@@ -288,6 +328,42 @@ pub async fn dashboard(mut session: Session, OriginalUri(path): OriginalUri) -> 
         .unwrap()
         .into_response()
 }
+#[debug_handler]
+pub async fn zones_delete_post(
+    State(_state): State<GoatState>,
+    Path(_id): Path<i64>,
+    mut session: Session,
+    OriginalUri(path): OriginalUri,
+    Form(zoneform): Form<FormCreateZone>,
+) -> impl IntoResponse {
+    check_logged_in!(state, session, path);
+    // let (os_tx, os_rx) = tokio::sync::oneshot::channel();
+
+    if let Some(csrf_token) = &zoneform.csrftoken {
+        if !validate_csrf_expiry(csrf_token, &mut session) {
+            error!(
+                "CSRF validation failed while trying to create a zone: {:?}",
+                zoneform
+            );
+            // TODO: this should throw an error
+            return redirect_to_login().into_response();
+        };
+    }
+
+    debug!("Zoneform: {:?}", zoneform);
+    todo!()
+}
+#[debug_handler]
+pub async fn zones_delete_get(
+    State(_state): State<GoatState>,
+    Path(_id): Path<i64>,
+    mut _session: Session,
+    OriginalUri(_path): OriginalUri,
+    // Form(zoneform): Form<FormCreateZone>,
+) -> impl IntoResponse {
+    todo!()
+    // TODO: show the "are you sure" button, add csrf things
+}
 
 pub fn new() -> Router<GoatState> {
     Router::new()
@@ -297,6 +373,10 @@ pub fn new() -> Router<GoatState> {
         .route(
             "/zones/create",
             get(zones_create_get).post(zones_create_post),
+        )
+        .route(
+            "/zones/delete/:id",
+            get(zones_delete_get).post(zones_delete_post),
         )
         .nest("/settings", user_settings::router())
         .nest("/admin", admin_ui::router())

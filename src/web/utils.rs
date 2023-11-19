@@ -23,6 +23,9 @@ pub fn redirect_to_dashboard() -> Redirect {
 pub fn redirect_to_zones_list() -> Redirect {
     Redirect::to("/ui/zones/list")
 }
+pub fn redirect_to_zone(zone_id: i64) -> Redirect {
+    Redirect::to(&format!("/ui/zones/{zone_id}"))
+}
 
 #[derive(Debug, Clone)]
 pub struct ApiToken {
