@@ -17,7 +17,7 @@ $INCLUDE <file-name> [<domain-name>] [<comment>]
 - [<class>] [<TTL>] <type> <RDATA>
 */
 
-use crate::enums::{RecordClass, RecordType};
+// use crate::enums::{RecordClass, RecordType};
 use log::{debug, error, info};
 use logos::{Logos, Source};
 use regex::Regex;
@@ -131,15 +131,15 @@ enum LexerState {
         comment: Option<String>,
     },
     PartialComment(String),
-    PartialRrEntry {
-        domain_name: Option<String>,
-        entry_type: RrEntry,
-        ttl: Option<u32>,
-        class: Option<RecordClass>,
-        rtype: Option<RecordType>,
-        rdata: Option<String>,
-        comment: Option<String>,
-    },
+    // PartialRrEntry {
+    //     domain_name: Option<String>,
+    //     entry_type: RrEntry,
+    //     ttl: Option<u32>,
+    //     class: Option<RecordClass>,
+    //     rtype: Option<RecordType>,
+    //     rdata: Option<String>,
+    //     comment: Option<String>,
+    // },
     Idle,
     Unknown(String),
     InvalidLine(String),
@@ -454,46 +454,22 @@ fn newline_state(zone: &mut ParsedZoneFile, state: LexerState) -> Result<LexerSt
     zone.lines += 1;
 
     match state {
-        LexerState::OpenParen(current_state) => {
-            match *current_state {
-                LexerState::OriginSOA { .. } => Ok(*current_state),
-                _ => panic!("Uh, how'd you get an openparen on a non-origin line?"),
-            }
-
+        LexerState::OpenParen(current_state) => match *current_state {
+            LexerState::OriginSOA { .. } => Ok(*current_state),
+            _ => panic!("Uh, how'd you get an openparen on a non-origin line?"),
         },
-        LexerState::OriginSOA { .. } | LexerState::OriginMarker => Err("Got a newline after an unfinished origin marker, seriously?".to_string()),
-        // LexerState::PartialOrigin {
-        //     domain_name,
-        //     comment,
-        // } => {
-        //     zone.origin =  (domain_name, comment);
-
-        //     Ok(LexerState::Idle)
-        // }
-        // LexerState::PartialOriginWithDomain {
-        //     domain_name,
-        //     comment,
-        // } => {
-        //     zone.origin =  (Some(domain_name), comment);
-
-        //     Ok(LexerState::Idle)
-        // }
+        LexerState::OriginSOA { .. } | LexerState::OriginMarker => {
+            Err("Got a newline after an unfinished origin marker, seriously?".to_string())
+        }
         LexerState::PartialInclude {
             filename: _,
             domain_name: _,
             comment: _,
         } => todo!(),
-        LexerState::PartialComment(comment) => {zone.comments.push((zone.lines, comment)); Ok(LexerState::Idle)},
-        LexerState::PartialRrEntry {
-            ..
-            // domain_name,
-            // entry_type,
-            // ttl,
-            // class,
-            // rtype,
-            // rdata,
-            // comment,
-        } => todo!(),
+        LexerState::PartialComment(comment) => {
+            zone.comments.push((zone.lines, comment));
+            Ok(LexerState::Idle)
+        }
         LexerState::Idle => Ok(state),
         LexerState::Unknown(_) => todo!(),
         LexerState::InvalidLine(_) => todo!(),
@@ -508,15 +484,15 @@ fn closedparen_state(zone: &mut ParsedZoneFile, state: LexerState) -> LexerState
             comment: _,
         } => todo!(),
         LexerState::PartialComment(_) => todo!(),
-        LexerState::PartialRrEntry {
-            domain_name: _,
-            entry_type: _,
-            ttl: _,
-            class: _,
-            rtype: _,
-            rdata: _,
-            comment: _,
-        } => todo!(),
+        // LexerState::PartialRrEntry {
+        //     domain_name: _,
+        //     entry_type: _,
+        //     ttl: _,
+        //     class: _,
+        //     rtype: _,
+        //     rdata: _,
+        //     comment: _,
+        // } => todo!(),
         LexerState::Idle => todo!(),
         LexerState::Unknown(_) => todo!(),
         LexerState::InvalidLine(_) => todo!(),
@@ -707,15 +683,15 @@ fn text_state(
         LexerState::PartialComment(comment) => {
             Ok(LexerState::PartialComment(format!("{} {}", comment, value)))
         }
-        LexerState::PartialRrEntry {
-            domain_name: _,
-            entry_type: _,
-            ttl: _,
-            class: _,
-            rtype: _,
-            rdata: _,
-            comment: _,
-        } => todo!(),
+        // LexerState::PartialRrEntry {
+        //     domain_name: _,
+        //     entry_type: _,
+        //     ttl: _,
+        //     class: _,
+        //     rtype: _,
+        //     rdata: _,
+        //     comment: _,
+        // } => todo!(),
         LexerState::Idle | LexerState::Unknown(_) | LexerState::InvalidLine(_) => {
             Err(format!("Uh, what've we got here? '{state:?}"))
         }
