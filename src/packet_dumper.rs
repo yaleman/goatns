@@ -5,7 +5,6 @@ use tokio::io::AsyncWriteExt;
 
 pub enum DumpType {
     ClientRequest,
-    // Header
 }
 
 impl core::fmt::Display for DumpType {

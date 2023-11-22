@@ -60,7 +60,17 @@ impl From<OpCode> for i32 {
 }
 
 #[derive(PrimitiveEnum_u8, Clone, Copy, Debug, Eq, PartialEq)]
-/// Response code, things like NOERROR, FORMATERROR, SERVFAIL etc.
+/// This 4 bit field is set as part of responses. The values have the following
+/// interpretation:
+///
+/// - 0 - NOERROR - No error condition
+/// - 1 - FORMATERROR - Format error - The name server was unable to interpret the query. 2
+/// - 2 - SERVFAIL - Server failure - The name server was unable to process this query due to a problem with the name server.
+/// - 3 Name Error - Meaningful only for responses from an authoritative name server, this code signifies that the domain name referenced in the query does not exist.
+/// - 4 Not Implemented - The name server does not support the requested kind of query.
+/// - 5 Refused - The name server refuses to perform the specified operation for policy reasons.
+///
+/// You should set this field to 0 on request, and should assert an error if you receive a response indicating an error condition, treat 3 slightly differently, as this represents the case where a requested name doesn’t exist.
 pub enum Rcode {
     // No error condition
     NoError = 0,

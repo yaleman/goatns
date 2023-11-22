@@ -657,7 +657,7 @@ async fn test_normalize_ttls() {
 
     let response = get_records(
         &pool,
-        "ttltest.hello.goat".to_string(),
+        "ttltest.hello.goat",
         RecordType::A,
         RecordClass::Internet,
         true,
@@ -701,7 +701,7 @@ async fn test_dont_normalize_ttls() {
 
     let response = get_records(
         &pool,
-        "ttltest.hello.goat".to_string(),
+        "ttltest.hello.goat",
         RecordType::A,
         RecordClass::Internet,
         false,

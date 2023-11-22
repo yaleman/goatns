@@ -1,10 +1,9 @@
 use std::str::from_utf8;
-use std::sync::Arc;
 use std::time::Duration;
 
 use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
-use crate::zones::{FileZone, ZoneRecord};
+use crate::zones::{FileZone, FileZoneRecord, ZoneRecord};
 use log::{debug, error};
 use sqlx::{Acquire, Pool, Sqlite, SqlitePool};
 use tokio::sync::mpsc;
@@ -76,37 +75,34 @@ pub enum Command {
     GetOwnership {
         zoneid: Option<i64>,
         userid: Option<i64>,
-        resp: Responder<Vec<Arc<ZoneOwnership>>>,
+        resp: Responder<ZoneOwnership>,
     },
-    PostOwnership {
+    CreateZoneOwnership {
         zoneid: i64,
         userid: i64,
         resp: Responder<ZoneOwnership>,
     },
-    // TODO: create a setter when we're ready to accept updates
-    // Set {
-    //     name: Vec<u8>,
-    //     rrtype: RecordType,
-    // }
-    // CreateZone {
-    //     zone: FileZone,
-    // }
+
+    CreateZoneRecord {
+        zoneid: i64,
+        userid: i64,
+        record: FileZoneRecord,
+        resp: Responder<DataStoreResponse>,
+    },
 }
 #[derive(Debug)]
 pub enum DataStoreResponse {
     /// Returns the zone id
-    ZoneCreated(i64),
-    ZoneExists,
-    ZoneDeleted,
-    ZoneNotFound,
+    Created(i64),
+    AlreadyExists,
+    Deleted,
+    NotFound,
     Failure(String),
 }
 
 async fn handle_get_command(
     // database pool
     conn: &Pool<Sqlite>,
-    // this is the result from the things in memory
-    // zone_get: Option<&ZoneRecord>,
     name: Vec<u8>,
     rrtype: RecordType,
     rclass: RecordClass,
@@ -127,13 +123,14 @@ async fn handle_get_command(
         typerecords: vec![],
     };
 
-    match db::get_records(conn, db_name.to_string(), rrtype, rclass, true).await {
+    match db::get_records(conn, db_name, rrtype, rclass, true).await {
         Ok(value) => zr.typerecords.extend(value),
         Err(err) => {
             log::error!("Failed to query db: {err:?}")
         }
     };
 
+    // TODO: why aren't we filtering the responses here?
     // if let Some(value) = zone_get {
     //     // check if the type we want is in there, and only return the matching records
     //     let res: Vec<InternalResourceRecord> = value
@@ -206,6 +203,8 @@ async fn handle_get_zone(
 ) -> Result<(), String> {
     let mut txn = pool.begin().await.map_err(|e| format!("{e:?}"))?;
 
+    debug!("handle_get_zone: id={id:?} name={name:?}");
+
     let zone = crate::db::get_zone_with_txn(&mut txn, id, name)
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -246,8 +245,7 @@ pub async fn manager(
     while let Some(cmd) = rx.recv().await {
         match cmd {
             Command::GetZone { id, name, resp } => {
-                let res = handle_get_zone(resp, &connpool, id, name).await;
-                if let Err(e) = res {
+                if let Err(e) = handle_get_zone(resp, &connpool, id, name).await {
                     log::error!("{e:?}")
                 };
             }
@@ -257,8 +255,19 @@ pub async fn manager(
                 offset,
                 limit,
             } => {
-                let res = handle_get_zone_names(user, resp, &connpool, offset, limit).await;
-                if let Err(e) = res {
+                if let Err(e) = handle_get_zone_names(user, resp, &connpool, offset, limit).await {
+                    log::error!("{e:?}")
+                };
+            }
+            Command::CreateZoneRecord {
+                record,
+                zoneid,
+                resp,
+                userid,
+            } => {
+                if let Err(e) =
+                    handle_create_zone_record(&connpool, userid, zoneid, resp, record).await
+                {
                     log::error!("{e:?}")
                 };
             }
@@ -290,12 +299,12 @@ pub async fn manager(
                 rclass,
                 resp,
             } => {
-                let res = handle_get_command(
+                if let Err(e) = handle_get_command(
                     &connpool, // zones.get(name.to_ascii_lowercase()),
                     name, rrtype, rclass, resp,
                 )
-                .await;
-                if let Err(e) = res {
+                .await
+                {
                     log::error!("{e:?}")
                 };
             }
@@ -305,11 +314,11 @@ pub async fn manager(
                 rname,
                 resp,
             } => {
-                manager_create_zone(&connpool, zone_name, user, rname, resp).await?;
+                handle_create_zone(&connpool, zone_name, user, rname, resp).await?;
             }
             Command::DeleteZone { resp, user, id } => {
-                let res = match manager_delete_zone(&connpool, user, id).await {
-                    Ok(_) => DataStoreResponse::ZoneDeleted,
+                let res = match handle_delete_zone(&connpool, user, id).await {
+                    Ok(_) => DataStoreResponse::Deleted,
                     Err(err) => DataStoreResponse::Failure(err),
                 };
                 if let Err(err) = resp.send(res) {
@@ -348,13 +357,14 @@ pub async fn manager(
             Command::PostUser => todo!(),
             Command::PatchUser => todo!(),
             Command::DeleteOwnership { .. } => todo!(),
-            Command::GetOwnership {
-                zoneid: _,
-                userid,
-                resp,
-            } => {
-                if let Some(userid) = userid {
-                    match ZoneOwnership::get_all_user(&connpool, userid).await {
+            Command::GetOwnership { zoneid, resp, .. } => {
+                if let Some(zoneid) = zoneid {
+                    let mut txn = connpool
+                        .begin()
+                        .await
+                        .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+
+                    match ZoneOwnership::get(&mut txn, &zoneid).await {
                         Ok(zone) => {
                             if let Err(err) = resp.send(zone) {
                                 log::error!("Failed to send zone_ownership response: {err:?}")
@@ -366,7 +376,7 @@ pub async fn manager(
                     log::error!("Unmatched arm in getownership")
                 }
             }
-            Command::PostOwnership { .. } => todo!(),
+            Command::CreateZoneOwnership { .. } => todo!(),
         }
     }
     #[cfg(test)]
@@ -374,7 +384,7 @@ pub async fn manager(
     Ok(())
 }
 
-pub async fn manager_delete_zone(connpool: &SqlitePool, user: User, id: i64) -> Result<(), String> {
+pub async fn handle_delete_zone(connpool: &SqlitePool, user: User, id: i64) -> Result<(), String> {
     // confirm the zone is owned by the user, or that the user is an admin
     let mut txn = connpool
         .begin()
@@ -424,7 +434,7 @@ pub async fn manager_delete_zone(connpool: &SqlitePool, user: User, id: i64) -> 
     Ok(())
 }
 
-pub async fn manager_create_zone(
+pub async fn handle_create_zone(
     connpool: &SqlitePool,
     zone_name: String,
     user: User,
@@ -493,7 +503,7 @@ pub async fn manager_create_zone(
                     } else {
                         log::info!("Created zone: {:?}, sending result to user", res);
                         match txn.commit().await {
-                            Ok(_) => DataStoreResponse::ZoneCreated(res.id.unwrap_or(-1)),
+                            Ok(_) => DataStoreResponse::Created(res.id.unwrap_or(-1)),
                             Err(err) => {
                                 error!("failed to commit transaction: {:?}", err);
                                 DataStoreResponse::Failure("Failed to commit database transaction, please contact an admin".to_string())
@@ -503,11 +513,61 @@ pub async fn manager_create_zone(
                 }
             }
         }
-        Some(_) => DataStoreResponse::ZoneExists,
+        Some(_) => DataStoreResponse::AlreadyExists,
     };
 
     if let Err(error) = resp.send(result) {
         log::error!("Failed to send message back to caller from PostMessage: {error:?}");
     }
     Ok(())
+}
+
+pub(crate) async fn handle_create_zone_record(
+    pool: &SqlitePool,
+    userid: i64,
+    zoneid: i64,
+
+    resp: Responder<DataStoreResponse>,
+    record: FileZoneRecord,
+) -> Result<(), String> {
+    let mut txn = pool
+        .begin()
+        .await
+        .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+
+    debug!("handle_create_zone_record getting user");
+
+    let user = User::get_with_txn(&mut txn, &userid)
+        .await
+        .map_err(|err| format!("Failed to get user: {err:?}"))?;
+
+    debug!("handle_create_zone_record getting zone ownership");
+    let ownership = ZoneOwnership::get_with_txn(&mut txn, &zoneid)
+        .await
+        .map_err(|err| format!("Failed to get ownership for zone id {}: {:?}", zoneid, err))?;
+
+    if ownership.userid != userid && !user.admin {
+        return Err("User doesn't own zone and isn't admin!".to_string());
+    }
+
+    // create the zone record
+    let record = record
+        .save_with_txn(&mut txn)
+        .await
+        .map_err(|err| format!("Failed to save zone record: {err:?}"))?;
+
+    match record.id {
+        Some(id) => {
+            txn.commit().await.map_err(|err| {
+                format!(
+                    "Failed to commit transaction while saving {:?}: {:?}",
+                    record, err
+                )
+            })?;
+            resp.send(DataStoreResponse::Created(id)).map_err(|err| {
+                format!("Failed to send response to user after saving FZR with id {id}: {err:?}")
+            })
+        }
+        None => Err("Failed to save record, no ID returned!".to_string()),
+    }
 }

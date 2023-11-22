@@ -66,6 +66,7 @@ pub struct JSONResponse {
 
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
+/// This is used to parse a DNS-over-HTTPS request using the querystring method
 pub struct GetQueryString {
     /// Base64-encoded raw question bytes
     dns: Option<String>,
@@ -121,6 +122,10 @@ async fn parse_raw_http(bytes: Vec<u8>) -> Result<GetQueryString, String> {
 
     let question = Question::from_packets(&bytes[HEADER_BYTES..])?;
     log::debug!("Question: {question:?}");
+
+    if let Err(err) = question.validate_query() {
+        return Err(format!("Failed to validate query: {err:?}"));
+    }
 
     let name = match from_utf8(&question.qname) {
         Ok(value) => value.to_string(),

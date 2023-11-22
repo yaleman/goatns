@@ -1138,3 +1138,34 @@ impl TryFrom<&str> for FileLocRecord {
 pub fn check_long_labels(testval: &str) -> bool {
     return testval.split('.').any(|x| x.len() > 63);
 }
+
+// TODO restore this test
+// #[test]
+// fn test_compression_with_no_matching_response() {
+//     // TODO check that the compression works when there's no matching tail in the bytes
+//     use crate::utils::seven_dot_three_conversion;
+//     use crate::Question;
+
+//     let qname = seven_dot_three_conversion("www.asdf.goat".as_bytes());
+
+//     let question: Question = Question {
+//         qname,
+//         qtype: RecordType::CNAME,
+//         qclass: RecordClass::Internet,
+//     };
+
+//     let qbytes = question.to_bytes();
+
+//     let res = InternalResourceRecord::CNAME {
+//         cname: DomainName {
+//             name: "www.example.com".to_string(),
+//         },
+//         ttl: 60,
+//         rclass: RecordClass::Internet,
+//     };
+
+//     let res_bytes = res.as_bytes(&qbytes);
+//     dbg!(&qbytes);
+//     dbg!(&res_bytes);
+//     panic!("res_bytes: {:?}", res_bytes);
+// }

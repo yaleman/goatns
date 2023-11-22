@@ -40,13 +40,14 @@ pub struct ConfigFile {
     pub port: u16,
     /// If we should capture packets on request/response
     pub capture_packets: bool,
-    /// Default is "DEBUG"
+    /// Default is "INFO"
     pub log_level: String,
     /// How long until we drop TCP client connections, defaults to 5 seconds.
     pub tcp_client_timeout: u64,
     /// Enable a HINFO record at hinfo.goat
+    #[serde(default)]
     pub enable_hinfo: bool,
-    /// The location for the zone sqlite file
+    /// The location for the database sqlite file
     pub sqlite_path: String,
     /// Where the JSON zone file is
     pub zone_file: Option<String>,
@@ -55,7 +56,7 @@ pub struct ConfigFile {
     /// IP Allow lists
     #[serde(flatten)]
     pub ip_allow_lists: IPAllowList,
-    /// Do you really want an API?
+    /// Do you really want an API? Defaults to off
     pub enable_api: bool,
     /// API / Web UI Port
     pub api_port: u16,
@@ -78,7 +79,6 @@ pub struct ConfigFile {
     /// OIDC Discovery URL, eg for Kanidm you'd use `https://idm.example.com/oauth2/openid/:client_id:/.well-known/openid-configuration`
     #[serde(default)]
     pub oauth2_config_url: String,
-    #[serde(default)]
     /// A list of scopes to request from the IdP
     pub oauth2_user_scopes: Vec<String>,
     /// Log things sometimes
@@ -90,6 +90,7 @@ pub struct ConfigFile {
     /// Administrator contact details
     pub admin_contact: ContactDetails,
     /// Allow auto-provisioning of users
+    #[serde(default)]
     pub user_auto_provisioning: bool,
 }
 
@@ -264,7 +265,7 @@ impl ConfigFile {
 impl Default for ConfigFile {
     fn default() -> Self {
         let hostname = gethostname();
-        let hostname = hostname.into_string().unwrap();
+        let hostname = hostname.into_string().unwrap_or("example.com".to_string());
         Self {
             hostname,
             address: "127.0.0.1".to_string(),

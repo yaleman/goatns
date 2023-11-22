@@ -85,3 +85,28 @@ clean_book:
 semgrep: ## Run semgrep
 semgrep:
 	./semgrep.sh
+
+
+.PHONY: rust/coverage
+coverage/test: ## Run coverage tests
+coverage/test:
+	LLVM_PROFILE_FILE="$(PWD)/target/profile/coverage-%p-%m.profraw" RUSTFLAGS="-C instrument-coverage" cargo test $(TESTS)
+
+.PHONY: coverage/grcov
+coverage/grcov: ## Run grcov
+coverage/grcov:
+	rm -rf ./target/coverage/html
+	grcov . --binary-path ./target/debug/deps/ \
+		-s . \
+		-t html \
+		--branch \
+		--ignore-not-existing \
+		--ignore '../*' \
+		--ignore "/*" \
+		--ignore "target/*" \
+		-o target/coverage/html
+
+.PHONY: coverage
+coverage: ## Run all the coverage tests
+coverage: coverage/test coverage/grcov
+	echo "Coverage report is in ./target/coverage/html/index.html"

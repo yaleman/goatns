@@ -9,6 +9,7 @@ use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::Router;
 
+use log::debug;
 use tower_sessions::Session;
 
 use super::GoatState;
@@ -151,6 +152,7 @@ macro_rules! check_logged_in {
 // }
 
 pub async fn check_logged_in_func(session: &mut Session, path: Uri) -> Result<User, Redirect> {
+    debug!("running check_logged_in_func");
     let authref = session.get::<String>("authref").unwrap();
 
     let redirect_path = Some(path.path_and_query().unwrap().to_string());
@@ -210,9 +212,22 @@ pub fn new() -> Router<GoatState> {
             "/zones/create",
             get(zones_create_get).post(zones_create_post),
         )
+        .route("/zones/edit/:id", get(zone_edit_get).post(zone_edit_post))
         .route(
             "/zones/delete/:id",
             get(zone_delete_get).post(zone_delete_post),
+        )
+        .route(
+            "/zones/:id/create_record",
+            get(zone_create_record_get).post(zone_create_record_post),
+        )
+        .route(
+            "/zones/:id/edit/:id",
+            get(zone_edit_record_get).post(zone_edit_record_post),
+        )
+        .route(
+            "/zones/:id/delete/:id",
+            get(zone_delete_record_get).post(zone_delete_record_post),
         )
         .nest("/settings", user_settings::router())
         .nest("/admin", admin_ui::router())

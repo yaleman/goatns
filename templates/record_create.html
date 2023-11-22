@@ -1,0 +1,35 @@
+
+{% extends "dashboard.html" %}
+{% block content %}
+<form method="POST">
+
+    <h1>Create a Record</h1>
+    <p>
+        Name: <input type="text" value="{{form.name}}" name="name" />
+    </p>
+    <p>
+        Type: <input type="text" value="{{form.rrtype}}" name="rrtype" />
+        <!-- TODO: make this a selector -->
+    </p>
+    <p>
+        Value: <input type="text" value="{{form.rdata}}" name="rdata" />
+    </p>
+    <p>
+        TTL: <input type="number" value="{{form.ttl}}" name="ttl" />
+    </p>
+    <p>
+        Record Class: <input type="text" value="IN" name="class" disabled />
+        <!-- TODO: make this a selector, maybe? -->
+    </p>
+    <p>
+        <input type="submit" value="Create record" name="create_record" />
+
+    </p>
+    <input type="hidden" name="csrftoken" value="{{csrftoken}}" />
+    {% if !message.is_empty() %}<div class="alert
+        {% if message_is_error %}alert-danger{% else %}alert-warning{% endif%}">
+        {{message}}</div>
+    {% endif %}
+</form>
+
+{% endblock content %}

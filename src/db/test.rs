@@ -149,14 +149,7 @@ async fn test_db_create_records() -> Result<(), sqlx::Error> {
         panic!("{error:?}");
     };
 
-    let res = get_records(
-        &pool,
-        "foo".to_string(),
-        RecordType::TXT,
-        RecordClass::Internet,
-        false,
-    )
-    .await?;
+    let res = get_records(&pool, "foo", RecordType::TXT, RecordClass::Internet, false).await?;
     println!("Record: {res:?}");
     Ok(())
 }
@@ -210,7 +203,7 @@ async fn test_all_db_things() -> Result<(), sqlx::Error> {
     println!("Looking for foo.example.com TXT IN");
     let result = get_records(
         &pool,
-        String::from("foo.example.com"),
+        "foo.example.com",
         RecordType::TXT,
         RecordClass::Internet,
         false,

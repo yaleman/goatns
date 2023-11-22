@@ -11,11 +11,16 @@
 
 <h1>Zone: {{zone.name}}</h1>
 
-<a href="/ui/zones/delete/{{zone.id.unwrap()}}"><button type="button">Delete
+<a href="/ui/zones/delete/{{zone.id.unwrap()}}"><button type="button"
+        class="btn btn-danger">Delete
         Zone</button></a>
 
+<a href="/ui/zones/{{zone.id.unwrap()}}/create_record"><button type="button"
+        class="btn btn-success">Create
+        Record</button></a>
+
 <div class="row">
-    <div class="col-2">Responsible Name (RNAME)</div>
+    <div class="col-4">Responsible Name (RNAME)</div>
     <div class="col">{{zone.rname}}</div>
 </div>
 
@@ -28,17 +33,27 @@
             <tr>
                 <th>Name</th>
                 <th>Type</th>
+                <th>Data</th>
                 <th>TTL</th>
                 <th>Class</th>
+                <th>&nbsp;</th>
             </tr>
         </thead>
         {% for record in zone.records %}
 
         <tr>
-            <td class="col-9 text-truncate">{{record.name}}</td>
+            <td class="col-8 text-truncate">{{record.name}}</td>
             <td class="col-1">{{record.rrtype}}</td>
+            <td class="col-1">{{record.rdata}}</td>
             <td class="col-1">{{record.ttl}}</td>
             <td class="col-1">{{record.class}}</td>
+            <td class="col-1 text-nowrap"><a
+                    href="{{zone.id.unwrap()}}/edit/{{record.id.unwrap_or(-1)}}"><i
+                        data-feather="edit">Edit</i></a>
+                <a
+                    href="{{zone.id.unwrap()}}/delete/{{record.id.unwrap_or(-1)}}">
+                    <i data-feather="trash-2">Delete</i></a>
+            </td>
         </tr>
         {% endfor %}
     </table>

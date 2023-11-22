@@ -15,6 +15,7 @@ extern crate lazy_static;
 
 use crate::enums::*;
 use crate::utils::*;
+use log::debug;
 use log::trace;
 use packed_struct::prelude::*;
 use std::fmt::{Debug, Display};
@@ -38,6 +39,7 @@ pub mod utils;
 /// Configuration and management API
 #[macro_use]
 pub mod web;
+pub(crate) mod zonefile;
 pub mod zones;
 
 /// Internal limit of in-flight requests
@@ -65,8 +67,10 @@ pub struct Header {
     qr: PacketType, // bit 16
     #[packed_field(bits = "17..=20", ty = "enum")]
     opcode: OpCode, // 17-20 actually 4 bits
+    /// Authoritative?
     #[packed_field(bits = "21")]
     authoritative: bool, // 21
+    /// Truncated? Only used on responses
     #[packed_field(bits = "22")]
     truncated: bool, // 22
     // RD - Recursion Desired - this bit may be set in a query and is copied into the response.  If RD is set, it directs the name server to pursue the query recursively. Recursive query support is optional.
@@ -74,22 +78,22 @@ pub struct Header {
     recursion_desired: bool, // 23
     #[packed_field(bits = "24")]
     recursion_available: bool, // 24
-    /// reserved, must be all 0's
+    /// reserved, must be 0
     #[packed_field(bits = "25")]
-    z: bool, // 25-27 -
+    z: bool,
     #[packed_field(bits = "26")]
     ad: bool,
     #[packed_field(bits = "27")]
     cd: bool,
     #[packed_field(bits = "28..=31", ty = "enum")]
     rcode: Rcode, // bits 28-31
-    /// an unsigned 16 bit integer specifying the number of entries in the question section.
+    /// An unsigned 16 bit integer specifying the number of entries in the question section. Should typically be 1
     #[packed_field(bits = "32..=47", endian = "msb")]
     qdcount: u16, // bits 32-47
-    /// an unsigned 16 bit integer specifying the number of entries in the answer section.
+    /// an unsigned 16 bit integer specifying the number of entries in the answer section. If this is non-zero in a query something has gone wrong.
     #[packed_field(bits = "48..=63", endian = "msb")]
     ancount: u16, // 48-63
-    /// an unsigned 16 bit integer specifying the number of name server resource records in the authority records section.
+    /// an unsigned 16 bit integer specifying the number of name server resource records in the authority records section. If this is non-zero in a query something has gone wrong.
     #[packed_field(bits = "64..=79", endian = "msb")]
     nscount: u16, // 64-79
     /// an unsigned 16 bit integer specifying the number of resource records in the additional records section.
@@ -125,6 +129,32 @@ impl Header {
         let mut response = self;
         response.qr = PacketType::Answer;
         response
+    }
+    /// Does some basic pre-checks on the query to make sure it's valid
+    pub fn validate_query(&self) -> Result<Rcode, Rcode> {
+        if self.qr != PacketType::Query {
+            debug!("Got a packet that wasn't a query");
+            return Err(Rcode::FormatError);
+        }
+
+        if self.qdcount != 1 {
+            debug!("query qdcount != 1");
+            return Err(Rcode::FormatError);
+        }
+        if self.ancount != 0 {
+            debug!("query ancount != 0");
+            return Err(Rcode::FormatError);
+        }
+        if self.nscount != 0 {
+            debug!("query nscount != 0");
+            return Err(Rcode::FormatError);
+        }
+
+        if self.arcount > 1 {
+            debug!("query arcount > 1, got {}", self.arcount);
+            return Err(Rcode::FormatError);
+        }
+        Ok(Rcode::NoError)
     }
 }
 
@@ -277,6 +307,12 @@ pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
 }
 
 impl Question {
+    fn validate_query(&self) -> Result<(), Rcode> {
+        if self.qclass == RecordClass::InvalidType {
+            return Err(Rcode::FormatError);
+        }
+        Ok(())
+    }
     fn normalized_name(&self) -> Result<String, String> {
         match from_utf8(&self.qname) {
             Ok(value) => Ok(value.to_lowercase()),
@@ -322,11 +358,16 @@ impl Question {
         qclass_bytes.copy_from_slice(&buf[read_pointer + 2..read_pointer + 4]);
         let qclass: RecordClass = RecordClass::from(&u16::from_be_bytes(qclass_bytes));
 
-        Ok(Question {
+        let res = Question {
             qname,
             qtype,
             qclass,
-        })
+        };
+
+        match res.validate_query() {
+            Ok(_) => Ok(res),
+            Err(err) => Err(format!("Failed to validate query: {err:?}")),
+        }
     }
 
     /// turn a question into a vec of bytes to send back to the user

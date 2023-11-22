@@ -1,5 +1,7 @@
 use goatns_macros::get_logged_in;
 
+use crate::zones::FileZoneRecord;
+
 use super::prelude::*;
 
 pub(crate) static VALID_ZONE_REGEX: &str = r"^[a-zA-Z0-9\-_]+\.[a-z]+$";
@@ -89,7 +91,7 @@ pub async fn zones_create_post(
             Ok(_) => {
                 let result: DataStoreResponse = os_rx.await.expect("Failed to get response");
                 match result {
-                    DataStoreResponse::ZoneCreated(id) => {
+                    DataStoreResponse::Created(id) => {
                         if id > 0 {
                             return redirect_to_zone(id).into_response();
                         } else {
@@ -100,7 +102,7 @@ pub async fn zones_create_post(
                         log::error!("Failed to create zone: {:?}", err);
                         format!("Failed to create zone, try again please: {}", err)
                     }
-                    DataStoreResponse::ZoneExists => "Zone already exists".to_string(),
+                    DataStoreResponse::AlreadyExists => "Zone already exists".to_string(),
                     _ => "Unknown error".to_string(),
                 }
             }
@@ -267,7 +269,7 @@ pub async fn zone_delete_post(
     };
 
     match os_rx.await.expect("Failed to get response: {res:?}") {
-        DataStoreResponse::ZoneDeleted | DataStoreResponse::ZoneNotFound => {
+        DataStoreResponse::Deleted | DataStoreResponse::NotFound => {
             redirect_to_zones_list().into_response()
         }
         DataStoreResponse::Failure(error) => {
@@ -313,4 +315,302 @@ pub async fn zone_delete_get(
     };
     Response::new(context.render().unwrap()).into_response()
     // TODO: show the "are you sure" button, add csrf things
+}
+
+#[derive(Deserialize)]
+pub struct FormCreateRecord {
+    pub name: String,
+    pub rrtype: String,
+    pub ttl: u32,
+    pub rdata: String,
+    pub csrftoken: Option<String>,
+}
+
+#[debug_handler]
+pub async fn zone_create_record_get(
+    State(state): State<GoatState>,
+    Path(id): Path<i64>,
+    mut session: Session,
+    OriginalUri(path): OriginalUri,
+    // Form(zoneform): Form<FormCreateZone>,
+) -> impl IntoResponse {
+    let user = get_logged_in!();
+
+    let (os_tx, os_rx) = tokio::sync::oneshot::channel();
+
+    let msg = Command::GetOwnership {
+        resp: os_tx,
+        zoneid: Some(id),
+        userid: user.id,
+    };
+    let userid = match user.id {
+        None => {
+            log::error!("User {} does not have an ID... how?", user.username);
+            return redirect_to_zone(id).into_response();
+        }
+        Some(id) => id,
+    };
+
+    if let Err(err) = state.read().await.tx.send(msg).await {
+        log::error!("Failed to send GetOwnership command to datastore: {err:?}");
+        return redirect_to_zone(id).into_response();
+    };
+
+    let ownership = match os_rx.await {
+        Ok(val) => val,
+        Err(err) => {
+            log::error!("Failed to get response: {err:?}");
+            return redirect_to_zone(id).into_response();
+        }
+    };
+    if ownership.userid == userid && !user.admin {
+        log::error!(
+            "User {} does not own zone {} and user isn't admin",
+            user.username,
+            id
+        );
+        log::error!("Ownership data: {:?}", ownership);
+        return redirect_to_zone(id).into_response();
+    };
+
+    let csrftoken = store_api_csrf_token(&mut session, Some(900)).unwrap_or("".to_string());
+
+    let form = FormCreateRecord {
+        name: "".to_string(),
+        rrtype: "A".to_string(),
+        ttl: 300, // TODO this should be the zone min TTL?
+        rdata: "".to_string(),
+        csrftoken: Some(csrftoken.clone()),
+    };
+
+    let context = TemplateCreateRecord {
+        form,
+        user_is_admin: user.admin,
+        message: "".to_string(),
+        message_is_error: false,
+        csrftoken,
+    };
+
+    Response::new(context.render().unwrap()).into_response()
+}
+
+#[derive(Template)]
+#[template(path = "record_create.html")]
+struct TemplateCreateRecord {
+    form: FormCreateRecord,
+    user_is_admin: bool,
+    csrftoken: String,
+    message: String,
+    message_is_error: bool,
+}
+
+#[debug_handler]
+pub async fn zone_create_record_post(
+    State(state): State<GoatState>,
+    Path(id): Path<i64>,
+    mut session: Session,
+    OriginalUri(path): OriginalUri,
+    Form(form): Form<FormCreateRecord>,
+) -> impl IntoResponse {
+    let user = get_logged_in!();
+
+    if form.csrftoken.is_none() {
+        error!("CSRF token is missing");
+        return redirect_to_zone(id).into_response();
+    } else if !validate_csrf_expiry(
+        &form.csrftoken.clone().unwrap_or("".to_string()),
+        &mut session,
+    ) {
+        return redirect_to_zone(id).into_response();
+    }
+    info!("CSRF validation passed");
+
+    let (os_tx, os_rx) = tokio::sync::oneshot::channel();
+
+    let msg = Command::GetOwnership {
+        resp: os_tx,
+        zoneid: Some(id),
+        userid: user.id,
+    };
+    let userid = match user.id {
+        None => {
+            log::error!("User {} does not have an ID... how?", user.username);
+            return redirect_to_zone(id).into_response();
+        }
+        Some(id) => id,
+    };
+
+    if let Err(err) = state.read().await.tx.send(msg).await {
+        log::error!("Failed to send GetOwnership command to datastore: {err:?}");
+        return redirect_to_zone(id).into_response();
+    };
+
+    let ownership = match os_rx.await {
+        Ok(val) => val,
+        Err(err) => {
+            log::error!("Failed to get response: {err:?}");
+            return redirect_to_zone(id).into_response();
+        }
+    };
+    if ownership.userid != userid && !user.admin {
+        log::error!("User {} does not own zone {}", user.username, id);
+        log::error!("Ownership data: {:?}", ownership);
+        return redirect_to_zone(id).into_response();
+    }
+
+    // TODO: we should do some validation of input here, maybe? :D
+
+    info!("about to create fzr");
+    let record = FileZoneRecord {
+        zoneid: Some(id),
+        id: None,
+        name: form.name.clone(),
+        rrtype: form.rrtype.clone(),
+        class: "IN".into(),
+        rdata: form.rdata.clone(),
+        ttl: form.ttl,
+    };
+
+    let (os_tx, os_rx) = tokio::sync::oneshot::channel();
+
+    let msg = Command::CreateZoneRecord {
+        zoneid: id,
+        userid,
+        record: record.clone(),
+        resp: os_tx,
+    };
+
+    let (message, message_is_error) = match state.read().await.tx.send(msg).await {
+        Err(err) => {
+            log::error!("Failed to send CreateZoneRecord command to datastore: {err:?}");
+            (
+                "Failed to send backend message, please try again!".to_string(),
+                true,
+            )
+        }
+        Ok(_) => match os_rx.await {
+            Ok(DataStoreResponse::Created(_)) => (String::new(), false),
+            Ok(DataStoreResponse::Failure(err)) => {
+                log::error!(
+                    "Failed to create zone (id: {} record ({:?}): {:?}",
+                    id,
+                    record,
+                    err
+                );
+                (
+                    "Failed to create zone record, try again or contact an admin if it keeeps happening!".to_string(),
+                    true,
+                )
+            }
+            Ok(DataStoreResponse::AlreadyExists) => {
+                ("Zone record already exists".to_string(), true)
+            }
+            _ => ("Unknown error".to_string(), true),
+        },
+    };
+
+    let context = TemplateCreateRecord {
+        form,
+        user_is_admin: user.admin,
+        csrftoken: store_api_csrf_token(&mut session, Some(900)).unwrap_or("".to_string()),
+        message,
+        message_is_error,
+    };
+
+    if message_is_error {
+        context.render().unwrap().into_response()
+    } else {
+        redirect_to_zone(id).into_response()
+    }
+}
+
+pub async fn zone_edit_get(
+    State(_state): State<GoatState>,
+    Path(_id): Path<i64>,
+    mut _session: Session,
+    OriginalUri(_path): OriginalUri,
+) -> impl IntoResponse {
+    todo!()
+}
+pub async fn zone_edit_post(
+    State(_state): State<GoatState>,
+    Path(_id): Path<i64>,
+    mut _session: Session,
+    OriginalUri(_path): OriginalUri,
+) -> impl IntoResponse {
+    // let user = get_logged_in!();
+
+    // if !form.csrftoken.is_some() {
+    //     error!("CSRF token is missing");
+    //     return redirect_to_zone(id).into_response();
+    // } else {
+    //     if !validate_csrf_expiry(
+    //         &form.csrftoken.clone().unwrap_or("".to_string()),
+    //         &mut session,
+    //     ) {
+    //         return redirect_to_zone(id).into_response();
+    //     }
+    // }
+    // info!("CSRF validation passed");
+    todo!()
+}
+pub async fn zone_edit_record_get(
+    State(_state): State<GoatState>,
+    Path(_id): Path<i64>,
+    mut _session: Session,
+    OriginalUri(_path): OriginalUri,
+) -> impl IntoResponse {
+    todo!()
+}
+pub async fn zone_edit_record_post(
+    State(_state): State<GoatState>,
+    Path(_id): Path<i64>,
+    mut _session: Session,
+    OriginalUri(_path): OriginalUri,
+) -> impl IntoResponse {
+    // let user = get_logged_in!();
+
+    // if !form.csrftoken.is_some() {
+    //     error!("CSRF token is missing");
+    //     return redirect_to_zone(id).into_response();
+    // } else {
+    //     if !validate_csrf_expiry(
+    //         &form.csrftoken.clone().unwrap_or("".to_string()),
+    //         &mut session,
+    //     ) {
+    //         return redirect_to_zone(id).into_response();
+    //     }
+    // }
+    // info!("CSRF validation passed");
+    todo!()
+}
+pub async fn zone_delete_record_get(
+    State(_state): State<GoatState>,
+    Path(_id): Path<i64>,
+    mut _session: Session,
+    OriginalUri(_path): OriginalUri,
+) -> impl IntoResponse {
+    todo!()
+}
+pub async fn zone_delete_record_post(
+    State(_state): State<GoatState>,
+    Path(_id): Path<i64>,
+    mut _session: Session,
+    OriginalUri(_path): OriginalUri,
+) -> impl IntoResponse {
+    // let user = get_logged_in!();
+
+    // if !form.csrftoken.is_some() {
+    //     error!("CSRF token is missing");
+    //     return redirect_to_zone(id).into_response();
+    // } else {
+    //     if !validate_csrf_expiry(
+    //         &form.csrftoken.clone().unwrap_or("".to_string()),
+    //         &mut session,
+    //     ) {
+    //         return redirect_to_zone(id).into_response();
+    //     }
+    // }
+    // info!("CSRF validation passed");
+    todo!()
 }

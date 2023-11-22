@@ -15,6 +15,7 @@ use axum_macros::debug_handler;
 use chrono::{DateTime, Duration, Utc};
 use enum_iterator::Sequence;
 use http::Uri;
+use log::debug;
 use oauth2::CsrfToken;
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
@@ -69,7 +70,7 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
     };
 
     if user_input != csrf_token {
-        log::debug!("Session and form CSRF token failed to match! user={user_input} <> session={csrf_token}");
+        log::debug!("Session and form CSRF token failed to match! user='{user_input}' <> session='{csrf_token}'");
         return false;
     }
 
@@ -108,6 +109,8 @@ pub fn store_api_csrf_token(
     session: &mut Session,
     expiry_plus_seconds: Option<i64>,
 ) -> Result<String, String> {
+    #[cfg(debug_assertions)]
+    debug!("store_api_csrf_token");
     let csrftoken = CsrfToken::new_random();
     let csrftoken = csrftoken.secret().to_string();
 

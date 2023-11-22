@@ -114,7 +114,7 @@ tower-sessions = { version = "0.6.0", features = [
     "deletion-task",
     "axum-core",
 ] }
-tracing = "^0.1.40"
+tracing = { version = "^0.1.40", features = ["release_max_level_debug", "log-always", "log"] }
 url = { version = "2.4.0", features = ["serde"] }
 
 

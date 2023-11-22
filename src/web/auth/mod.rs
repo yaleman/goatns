@@ -401,7 +401,7 @@ pub async fn build_auth_stores(
     );
 
     SessionManagerLayer::new(session_store)
-        .with_expiry(Expiry::OnInactivity(Duration::minutes(15)))
+        .with_expiry(Expiry::OnInactivity(Duration::minutes(60)))
         .with_name(COOKIE_NAME)
         .with_secure(true)
         // If the cookies start being weird it's because they were appending a "." on the start...

@@ -12,6 +12,7 @@ use crate::zones::{FileZone, FileZoneRecord};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
+use log::debug;
 use openidconnect::SubjectIdentifier;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
@@ -240,6 +241,7 @@ pub struct TokenSearchRow {
 
 impl FromRow<'_, SqliteRow> for TokenSearchRow {
     fn from_row(input: &SqliteRow) -> Result<Self, sqlx::Error> {
+        debug!("tsr fromrow");
         let user = User {
             id: input.get("userid"),
             displayname: input.get("displayname"),
@@ -259,6 +261,7 @@ impl FromRow<'_, SqliteRow> for TokenSearchRow {
 
 impl From<SqliteRow> for User {
     fn from(row: SqliteRow) -> Self {
+        debug!("from sqliterow for user");
         let id: i64 = row.get("id");
         let displayname: String = row.get("displayname");
         let username: String = row.get("username");
@@ -266,6 +269,8 @@ impl From<SqliteRow> for User {
         let disabled: bool = row.get("disabled");
         let authref: Option<String> = row.get("authref");
         let admin: bool = row.get("admin");
+
+        debug!("from sqliterow for user OK");
         User {
             id: Some(id),
             displayname,
@@ -379,13 +384,13 @@ pub async fn get_zone_with_txn(
             eprintln!("Building FileZone");
             FileZone {
                 id: row.get("id"),
-                name: row.get(1),
-                rname: row.get(2),
-                serial: row.get(3),
-                refresh: row.get(4),
-                retry: row.get(5),
-                expire: row.get(6),
-                minimum: row.get(7),
+                name: row.get("name"),
+                rname: row.get("rname"),
+                serial: row.get("serial"),
+                refresh: row.get("refresh"),
+                retry: row.get("retry"),
+                expire: row.get("expire"),
+                minimum: row.get("minimum"),
                 records: vec![],
             }
         }
@@ -437,7 +442,7 @@ impl TryFrom<SqliteRow> for InternalResourceRecord {
 /// Setting normalize_ttls=true sets the TTL on all records to the LOWEST of the returned records.
 pub async fn get_records(
     conn: &Pool<Sqlite>,
-    name: String,
+    name: &str,
     rrtype: RecordType,
     rclass: RecordClass,
     normalize_ttls: bool,
@@ -451,7 +456,7 @@ pub async fn get_records(
     );
 
     let res = sqlx::query(&query)
-        .bind(&name)
+        .bind(name)
         .bind(rrtype as u16)
         .bind(rclass)
         .fetch_all(&mut *conn.acquire().await?)
@@ -1223,6 +1228,7 @@ impl DBEntity for ZoneOwnership {
     }
 
     /// Get an ownership record by its id
+    /// TODO: this should be by zoneid or something?
     async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, sqlx::Error> {
         let mut conn = pool.acquire().await?;
 
@@ -1235,12 +1241,18 @@ impl DBEntity for ZoneOwnership {
         Ok(Box::new(res))
     }
 
-    /// This getter is by zoneid, since it should return less results
+    /// This getter is by zoneid
     async fn get_with_txn<'t>(
-        _txn: &mut SqliteConnection,
-        _id: &i64,
+        txn: &mut SqliteConnection,
+        id: &i64,
     ) -> Result<Box<Self>, sqlx::Error> {
-        todo!()
+        let res: ZoneOwnership =
+            sqlx::query("SELECT id, zoneid, userid from ownership where zoneid = ?")
+                .bind(id)
+                .fetch_one(txn)
+                .await?
+                .into();
+        Ok(Box::new(res))
     }
 
     async fn get_by_name<'t>(
@@ -1379,21 +1391,23 @@ impl DBEntity for User {
     async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, sqlx::Error> {
         let mut conn = pool.acquire().await?;
 
-        let res: User = sqlx::query(&format!(
-            "SELECT id, displayname, username, email, disabled from {} where id = ?",
-            Self::TABLE
-        ))
-        .bind(id)
-        .fetch_one(&mut *conn)
-        .await?
-        .into();
+        let res: User = sqlx::query(&format!("SELECT * from {} where id = ?", Self::TABLE))
+            .bind(id)
+            .fetch_one(&mut *conn)
+            .await?
+            .into();
         Ok(Box::new(res))
     }
     async fn get_with_txn<'t>(
-        _txn: &mut SqliteConnection,
-        _id: &i64,
+        txn: &mut SqliteConnection,
+        id: &i64,
     ) -> Result<Box<Self>, sqlx::Error> {
-        todo!()
+        let res: User = sqlx::query(&format!("SELECT * from {} where id = ?", Self::TABLE))
+            .bind(id)
+            .fetch_one(&mut *txn)
+            .await?
+            .into();
+        Ok(Box::new(res))
     }
     async fn get_by_name<'t>(
         _txn: &mut SqliteConnection,

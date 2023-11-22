@@ -9,6 +9,7 @@ use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
+use tracing::instrument;
 
 use crate::config::ConfigFile;
 use crate::datastore::Command;
@@ -377,6 +378,10 @@ pub async fn parse_query(
             return Err(format!("Failed to parse header: {:?}", error));
         }
     };
+    if let Err(err) = header.validate_query() {
+        log::debug!("Query header failed validation: {:?}", err);
+        return Err(format!("Invalid query: {:?}", err));
+    }
     log::trace!("Buffer length: {}", len);
     log::trace!("Parsed header: {:?}", header);
     get_result(header, len, buf, datastore).await
@@ -395,7 +400,8 @@ lazy_static! {
     };
 }
 
-/// The generic handler for the packets once they've been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y'know?
+/// The generic handler for requests once they've been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y'know?
+#[instrument(level = "INFO")]
 async fn get_result(
     header: Header,
     len: usize,
@@ -462,7 +468,7 @@ async fn get_result(
     // build the request to the datastore to make the query
     let (tx_oneshot, rx_oneshot) = oneshot::channel();
     let ds_req: Command = Command::GetRecord {
-        name: question.qname.clone(),
+        name: question.qname.to_vec(),
         rrtype: question.qtype,
         rclass: question.qclass,
         resp: tx_oneshot,

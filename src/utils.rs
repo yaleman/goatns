@@ -15,7 +15,7 @@ pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
 }
 
 /// does the conversion from "example.com" to "7example3com" BUT DOES NOT DO THE TRAILING NULL BECAUSE REASONS
-fn seven_dot_three_conversion(name: &[u8]) -> Vec<u8> {
+pub(crate) fn seven_dot_three_conversion(name: &[u8]) -> Vec<u8> {
     trace!("7.3 conversion for {name:?} {:?}", from_utf8(name));
     let mut result: Vec<u8> = vec![];
 
