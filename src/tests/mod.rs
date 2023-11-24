@@ -7,6 +7,7 @@ mod resourcerecord;
 mod test_api;
 pub mod test_harness;
 mod utils;
+mod zonefile;
 
 use crate::db::test::test_get_sqlite_memory;
 use crate::db::*;
