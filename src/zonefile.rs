@@ -726,7 +726,7 @@ impl TryFrom<(LexerState, &ParsedZoneFile)> for FileZoneRecord {
             refresh: _,
             retry: _,
             expire: _,
-            minimum: _,
+            minimum,
             ttl,
             in_brackets: _,
         } = value
@@ -745,7 +745,10 @@ impl TryFrom<(LexerState, &ParsedZoneFile)> for FileZoneRecord {
                     Some(val) => val,
                     None => match zone.soarecord.clone() {
                         Some(soa) => soa.ttl,
-                        None => return Err("No TTL found!".to_string()),
+                        None => match minimum {
+                            Some(val) => val,
+                            None => return Err("No TTL found!".to_string()),
+                        },
                     },
                 },
             };

@@ -250,6 +250,6 @@ fn test_busted_files() {
     let res = parse_file(example_file);
     dbg!(&res);
     if res.is_err() {
-        panic!("should have parsed the weird SOA record");
+        panic!("Couldn't parse the weird SOA record");
     };
 }
