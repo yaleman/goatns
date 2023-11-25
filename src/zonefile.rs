@@ -15,31 +15,16 @@ use log::{debug, error};
 use regex::{Captures, Regex};
 
 use crate::enums::{RecordClass, RecordType};
+use crate::zones::FileZoneRecord;
 
 #[derive(Debug)]
-pub(crate) enum LineType {
-    #[allow(dead_code)]
-    Soa {
-        class: String,
-        host: String,
-        rname: Option<String>,
-        serial: Option<u32>,
-        refresh: Option<u32>,
-        retry: Option<u32>,
-        expire: Option<u32>,
-        minimum: Option<u32>,
-        ttl: Option<u32>,
-    },
-
-    #[allow(dead_code)]
-    PartialRecord {
-        host: Option<String>,
-        class: Option<String>,
-        rtype: Option<String>,
-        preference: Option<u16>,
-        rdata: Option<String>,
-        ttl: Option<u32>,
-    },
+pub(crate) struct PartialRecord {
+    host: Option<String>,
+    class: Option<String>,
+    rtype: Option<String>,
+    preference: Option<u16>,
+    rdata: Option<String>,
+    ttl: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -69,7 +54,7 @@ enum LexerState {
     Unknown(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct ZoneInclude {
     #[allow(dead_code)]
     filename: String,
@@ -83,8 +68,8 @@ pub(crate) struct ZoneInclude {
 pub(crate) struct ParsedZoneFile {
     /// which line the comment was on, and what it was
     pub comments: Vec<(usize, String)>,
-    pub soarecord: Option<LineType>,
-    pub records: Vec<LineType>,
+    pub soarecord: Option<FileZoneRecord>,
+    pub records: Vec<PartialRecord>,
     pub origin: Option<String>,
     pub includes: Vec<ZoneInclude>,
     pub lines: usize,
@@ -132,9 +117,48 @@ lazy_static! {
     .unwrap();
 }
 
+#[derive(Debug)]
+pub enum ParserError {
+    IncompleteSoa,
+    // NoSoa,
+    NoOrigin,
+    MissingFields(String),
+    // NoTtl,
+    Regex,
+    // RegexNameMissing,
+    UnHandledState(String),
+    TooManyLoops { content_length: usize, loops: usize },
+    FailedConversion(String),
+}
+
+impl ToString for ParserError {
+    fn to_string(&self) -> String {
+        match self {
+            ParserError::IncompleteSoa => "Incomplete SOA record".to_string(),
+            ParserError::NoOrigin => "No origin found".to_string(),
+            ParserError::Regex => "Regex match error".to_string(),
+            ParserError::MissingFields(dump) => {
+                format!("Missing fields while parsing record: {dump}")
+            }
+            ParserError::UnHandledState(msg) => msg.clone(),
+            ParserError::FailedConversion(msg) => msg.clone(),
+            ParserError::TooManyLoops {
+                content_length,
+                loops,
+            } => format!(
+                "Too many loops - content_length: {}, loops: {}",
+                content_length, loops
+            ),
+            // ParserError::NoSoa => "No SOA record found".to_string(),
+            // ParserError::NoTtl => "No TTL found".to_string(),
+            // ParserError::RegexNameMissing => "Regex match name not found".to_string(),
+        }
+    }
+}
+
 #[allow(dead_code)]
 /// A hilariously overcomplicated thing
-pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
+pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, ParserError> {
     // let mut lex = ZoneFileToken::lexer(contents);
     let max_loops = contents.len() * 10;
 
@@ -164,18 +188,18 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
         if contents.starts_with(';') {
             // we're in a comment, capture until the next line break
             let data = match REGEX_COMMENT.captures(&contents) {
-                None => {
-                    return Err("We started with a comment and then couldn't match it?".to_string())
-                }
+                None => return Err(ParserError::Regex),
                 Some(val) => val,
+            };
+
+            let comment = match data.name("comment") {
+                Some(val) => val,
+                None => return Err(ParserError::Regex),
             };
             zone.comments.push((
                 zone.lines,
                 #[allow(clippy::expect_used)]
-                data.name("comment")
-                    .expect("The coder typo'd a regex group name!")
-                    .as_str()
-                    .to_string(),
+                comment.as_str().to_string(),
             ));
             read_len = get_read_len_from_caps(&data);
         } else if contents.starts_with('(') {
@@ -214,32 +238,16 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
             debug!("Found a closing bracket...");
             read_len = 1;
             match state.clone() {
-                LexerState::PartialSoaRecord {
-                    host,
-                    class,
-                    rname: rrname,
-                    serial,
-                    refresh,
-                    retry,
-                    expire,
-                    minimum,
-                    ttl,
-                    in_brackets: _,
-                } => {
-                    // keep building the soa record
-                    debug!("in the soa record");
-                    zone.soarecord = Some(LineType::Soa {
-                        host,
-                        class,
-                        rname: rrname,
-                        serial,
-                        refresh,
-                        retry,
-                        expire,
-                        minimum,
-                        ttl,
-                    });
-                    zone.ttl = ttl;
+                LexerState::PartialSoaRecord { .. } => {
+                    let soarecord: FileZoneRecord = (state, &zone).try_into().map_err(|err| {
+                        ParserError::FailedConversion(format!(
+                            "Failed to parse SOA record: {:?}",
+                            err
+                        ))
+                    })?;
+
+                    zone.ttl = Some(soarecord.ttl.clone());
+                    zone.soarecord = Some(soarecord);
                 }
                 LexerState::PartialRecord {
                     host,
@@ -249,7 +257,7 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
                     rdata,
                     ttl,
                     in_quotes: _,
-                } => zone.records.push(LineType::PartialRecord {
+                } => zone.records.push(PartialRecord {
                     host: Some(host),
                     class,
                     rtype,
@@ -258,7 +266,10 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
                     ttl,
                 }),
                 _ => {
-                    return Err(format!("end of bracket, unhandled state: {:?}", state));
+                    return Err(ParserError::UnHandledState(format!(
+                        "end of bracket, unhandled state: {:?}",
+                        state
+                    )));
                 }
             }
             state = LexerState::Idle;
@@ -328,7 +339,7 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
         } else if contents.starts_with('@') {
             match zone.origin {
                 Some(_) => zone.last_used_host = zone.origin.clone(),
-                None => return Err("@ entry without setting origin first!".to_string()),
+                None => return Err(ParserError::NoOrigin),
             }
             // zone.last_used_host = zone.origin.clone();
         } else {
@@ -361,7 +372,7 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
                     None => zone.ttl,
                 };
 
-                let new_record = LineType::PartialRecord {
+                let new_record = PartialRecord {
                     host: Some(host),
                     class: caps.name("class").map(|c| c.as_str().to_string()),
                     rtype: caps.name("rtype").map(|v| v.as_str().to_string()),
@@ -388,7 +399,7 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
                 let partial_state = if RecordClass::try_from(next_term).is_ok() {
                     let host = match zone.last_used_host.clone() {
                         None => match zone.origin.clone() {
-                            None => return Err("No last used host or origin field?".to_string()),
+                            None => return Err(ParserError::NoOrigin),
                             Some(origin) => origin,
                         },
                         Some(zone_luh) => zone_luh,
@@ -571,7 +582,10 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
                 loops
             );
             error!("{}", &errmsg);
-            return Err(errmsg);
+            return Err(ParserError::TooManyLoops {
+                content_length: contents.len(),
+                loops,
+            });
         } else {
             loops += 1;
         }
@@ -581,15 +595,15 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
     match state.clone() {
         LexerState::Idle => debug!("Idle, OK"),
         LexerState::PartialSoaRecord {
-            host,
-            class,
-            rname: rrname,
+            host: _,
+            class: _,
+            rname: _,
             serial,
             refresh,
             retry,
             expire,
             minimum,
-            ttl,
+            ttl: _,
             in_brackets: _,
         } => {
             if serial.is_none()
@@ -598,19 +612,27 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
                 | expire.is_none()
                 | minimum.is_none()
             {
-                return Err("Incomplete SOA record!".to_string());
+                return Err(ParserError::IncompleteSoa);
             }
-            zone.soarecord = Some(LineType::Soa {
-                host,
-                class,
-                rname: rrname,
-                serial,
-                refresh,
-                retry,
-                expire,
-                minimum,
-                ttl,
-            });
+
+            let soarecord: FileZoneRecord = (state, &zone)
+                .try_into()
+                .map_err(|err| ParserError::FailedConversion(err))?;
+
+            zone.ttl = Some(soarecord.ttl.clone());
+            zone.soarecord = Some(soarecord);
+
+            // zone.soarecord = Some(LineType::Soa {
+            //     host,
+            //     class,
+            //     rname: rrname,
+            //     serial,
+            //     refresh,
+            //     retry,
+            //     expire,
+            //     minimum,
+            //     ttl,
+            // });
         }
         LexerState::PartialRecord {
             host,
@@ -627,9 +649,9 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
                 | rdata.is_none()
                 | ttl.is_none()
             {
-                return Err(format!("missing fields in partial record {:?}", state));
+                return Err(ParserError::MissingFields(format!("{:?}", state)));
             }
-            zone.records.push(LineType::PartialRecord {
+            zone.records.push(PartialRecord {
                 host: Some(host),
                 class,
                 rtype,
@@ -642,4 +664,145 @@ pub(crate) fn parse_file(contents: &str) -> Result<ParsedZoneFile, String> {
     }
 
     Ok(zone)
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+enum ZoneFileLine {
+    Soa(FileZoneRecord),
+    Record(FileZoneRecord),
+    Comment(String),
+    Include(ZoneInclude),
+    Origin,
+    Ttl(u32),
+}
+
+impl TryFrom<ParsedZoneFile> for Vec<FileZoneRecord> {
+    type Error = String;
+    fn try_from(zone: ParsedZoneFile) -> Result<Self, String> {
+        let mut res = Vec::new();
+        let origin = if let Some(zone_origin) = zone.origin {
+            zone_origin
+        } else {
+            zone.soarecord.clone().expect("No SOA record?").name
+        };
+        let zone_ttl = if let Some(ttl) = zone.ttl {
+            ttl
+        } else {
+            zone.soarecord.expect("No SOA record?").ttl
+        };
+
+        res.push(FileZoneRecord {
+            id: None,
+            zoneid: None,
+            name: origin,
+            rrtype: RecordType::SOA.to_string(),
+            class: RecordClass::Internet,
+            ttl: zone_ttl,
+            rdata: "".to_string(),
+        });
+
+        for record in zone.records {
+            let fzr: FileZoneRecord = record
+                .try_into()
+                .map_err(|err| format!("Failed to parse record: {:?}", err))?;
+            res.push(fzr);
+        }
+
+        Ok(res)
+    }
+}
+
+impl TryFrom<(LexerState, &ParsedZoneFile)> for FileZoneRecord {
+    type Error = String;
+    fn try_from(input: (LexerState, &ParsedZoneFile)) -> Result<Self, Self::Error> {
+        let (value, zone) = input;
+
+        if let LexerState::PartialSoaRecord {
+            host: _,
+            class,
+            rname: _,
+            serial: _,
+            refresh: _,
+            retry: _,
+            expire: _,
+            minimum: _,
+            ttl,
+            in_brackets: _,
+        } = value
+        {
+            // keep building the soa record
+            debug!("in the soa record");
+
+            let name = match zone.origin.clone() {
+                Some(val) => val,
+                None => return Err("went to write the soa record and had no origin!".to_string()),
+            };
+
+            let ttl = match ttl {
+                Some(val) => val,
+                None => match zone.ttl {
+                    Some(val) => val,
+                    None => match zone.soarecord.clone() {
+                        Some(soa) => soa.ttl,
+                        None => return Err("No TTL found!".to_string()),
+                    },
+                },
+            };
+            let class = RecordClass::try_from(class.as_str()).map_err(|err| err.to_string())?;
+
+            Ok(FileZoneRecord {
+                id: None,
+                zoneid: None,
+                name,
+                rrtype: RecordType::SOA.to_string(),
+                class,
+                ttl,
+                rdata: "".to_string(),
+            })
+        } else {
+            Err("Not a partial SOA record!".to_string())
+        }
+    }
+}
+
+impl TryFrom<PartialRecord> for FileZoneRecord {
+    type Error = String;
+
+    fn try_from(value: PartialRecord) -> Result<Self, Self::Error> {
+        let class = match value.class.clone() {
+            Some(class) => RecordClass::try_from(class.as_str()).map_err(|err| err.to_string())?,
+            None => return Err("No class record?".to_string()),
+        };
+        let name = match value.host.clone() {
+            Some(val) => val,
+            None => return Err("No host record?".to_string()),
+        };
+
+        let rrtype = match value.rtype {
+            Some(val) => val,
+            None => return Err("No rtype record?".to_string()),
+        };
+        let ttl: u32 = match value.ttl {
+            Some(val) => val,
+            None => return Err("No ttl value?".to_string()),
+        };
+        let rdata = match value.rdata {
+            Some(val) => match value.preference {
+                Some(pref) => format!("{} {}", pref, val),
+                None => val,
+            },
+            None => return Err("No rdata value?".to_string()),
+        };
+
+        Ok(FileZoneRecord {
+            id: None,
+            zoneid: None,
+            name,
+            rrtype,
+            class,
+            ttl,
+            rdata,
+        })
+    }
 }

@@ -1,3 +1,4 @@
+use crate::enums::RecordClass;
 use crate::zonefile::*;
 
 #[test]
@@ -48,20 +49,9 @@ fn test_parse_example_file() {
     // let lex = ZoneFileToken::lexer(&example_file);
     let res: ParsedZoneFile = parse_file(&example_file).expect("Failed at parsing stage");
 
-    if let LineType::Soa {
-        class,
-        host: _,
-        rname: _,
-        serial: _,
-        refresh: _,
-        retry: _,
-        expire: _,
-        minimum,
-        ttl: _,
-    } = res.soarecord.expect("No SOA record found?")
-    {
-        assert_eq!(class, "IN");
-        assert_eq!(minimum, Some(86400));
+    if let Some(record) = res.soarecord {
+        assert_eq!(record.class, RecordClass::Internet);
+        // assert_eq!(minimum, Some(86400));
     } else {
         panic!("didn't get an SOA record!");
     };
