@@ -5,7 +5,7 @@
 #![deny(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
 
-use http::HeaderValue;
+use axum::http::HeaderValue;
 
 use regex::RegexSet;
 use std::fmt::Debug;

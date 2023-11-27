@@ -1,12 +1,12 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
 
+use axum::http::{HeaderValue, Request, StatusCode};
 use axum::middleware::{from_fn, Next};
 use axum::response::Response;
 use axum::routing::get;
 use axum::Router;
 use axum_csp::{CspDirective, CspDirectiveType, CspValue};
-use http::{HeaderValue, Request, StatusCode};
 use tokio::io;
 
 /// This is an example axum layer for implementing the axum-csp header enums

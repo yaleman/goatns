@@ -2,12 +2,12 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 
 use axum::extract::State;
+use axum::http::{HeaderValue, Request};
 use axum::middleware::{from_fn_with_state, Next};
 use axum::response::Response;
 use axum::routing::get;
 use axum::Router;
 use axum_csp::{CspDirective, CspDirectiveType, CspUrlMatcher, CspValue};
-use http::{HeaderValue, Request};
 use regex::RegexSet;
 use tokio::io;
 
