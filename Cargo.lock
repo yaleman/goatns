@@ -368,7 +368,6 @@ version = "0.0.1"
 dependencies = [
  "axum 0.6.20",
  "axum-server",
- "http 0.2.11",
  "lazy_static",
  "regex",
  "tokio",

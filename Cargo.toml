@@ -35,7 +35,7 @@ opt-level = 3
 argon2 = "0.5"
 askama = { version = "0.12.1" }
 async-trait = "0.1.74"
-axum = { version = "0.6.20", features = [
+axum = { version = "^0.6.20", features = [
     "http2",
     "headers",
     "original-uri",

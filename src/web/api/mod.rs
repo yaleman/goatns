@@ -11,8 +11,6 @@ use serde::Serialize;
 pub mod auth;
 pub mod filezone;
 pub mod filezonerecord;
-pub use filezone::*;
-pub use filezonerecord::*;
 use tower_sessions::Session;
 
 #[macro_export]

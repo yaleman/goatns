@@ -103,7 +103,7 @@ impl Default for Header {
             id: 0,
             qr: PacketType::Query,
             opcode: OpCode::Query,
-            /// we *are* an authoritative DNS server after all
+            // we *are* an authoritative DNS server after all
             authoritative: true,
             truncated: false,
             recursion_desired: false,
