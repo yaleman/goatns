@@ -2,7 +2,7 @@
 name = "axum-csp"
 description = "Some widgets for use with axum to create Content-Security-Policy headers and reduce silly typos."
 readme = "README.md"
-version = "0.0.2"
+version = "0.0.6"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/yaleman/goatns.git/axum-csp"
