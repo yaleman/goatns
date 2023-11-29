@@ -1,8 +1,9 @@
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
+use axum::debug_handler;
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect};
 use chrono::{DateTime, Duration, Utc};
-use http::StatusCode;
 use rand::distributions::{Alphanumeric, DistString};
 use rand_core::OsRng;
 use sha2::{Digest, Sha256};
@@ -95,6 +96,7 @@ pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result
         .map_err(|e| format!("validation error: {e:?}"))
 }
 
+#[debug_handler]
 pub async fn handler_404() -> impl IntoResponse {
     axum::response::Response::builder()
         .status(StatusCode::NOT_FOUND)

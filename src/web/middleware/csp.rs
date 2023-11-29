@@ -1,17 +1,12 @@
-use axum::{
-    extract::State,
-    http::{HeaderValue, Request},
-    middleware::Next,
-    response::Response,
-};
+use axum::{extract::State, http::HeaderValue, middleware::Next, response::Response};
 use axum_csp::*;
 
 use crate::web::GoatState;
 
-pub async fn cspheaders<B>(
+pub async fn cspheaders(
     State(state): State<GoatState>,
-    req: Request<B>,
-    next: Next<B>,
+    req: axum::extract::Request,
+    next: Next,
 ) -> Response {
     let uri: String = req.uri().path().to_string();
     let url_matcher: Option<CspUrlMatcher> = state.read().await.csp_matchers.iter().find_map(|c| {

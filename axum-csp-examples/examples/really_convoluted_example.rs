@@ -1,8 +1,5 @@
-use std::net::SocketAddr;
-use std::str::FromStr;
-
 use axum::extract::State;
-use axum::http::{HeaderValue, Request};
+use axum::http::HeaderValue;
 use axum::middleware::{from_fn_with_state, Next};
 use axum::response::Response;
 use axum::routing::get;
@@ -20,10 +17,10 @@ pub struct SharedState {
 ///
 /// It uses shared state to store a vec of matchers to check for URLs. yes, it's double-handling
 /// the routing system, but I'm a terrible person with reasons, and it's from the GoatNS project
-pub async fn cspheaders_layer<B>(
+pub async fn cspheaders_layer(
     State(state): State<SharedState>,
-    req: Request<B>,
-    next: Next<B>,
+    req: axum::extract::Request,
+    next: Next,
 ) -> Response {
     let uri: String = req.uri().path().to_string();
     let url_matcher: Option<CspUrlMatcher> = state.csp_matchers.iter().find_map(|c| {
@@ -61,8 +58,14 @@ async fn main() -> io::Result<()> {
         )],
     }];
 
-    async fn home() {}
-    async fn hello() {}
+    async fn home() -> String {
+        println!("Someone accessed /");
+        "Home".to_string()
+    }
+    async fn hello() -> String {
+        println!("Someone accessed /hello");
+        "hello world".to_string()
+    }
 
     let state = SharedState { csp_matchers };
 
@@ -74,9 +77,9 @@ async fn main() -> io::Result<()> {
 
     // start the server
     println!("Starting server on 127.0.0.1:6969");
-    let _server = axum_server::bind(SocketAddr::from_str("127.0.0.1:6969").unwrap())
-        .serve(router.into_make_service())
-        .await;
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:6969").await?;
+    axum::serve(listener, router).await.unwrap();
 
     Ok(())
 }

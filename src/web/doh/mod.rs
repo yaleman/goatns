@@ -1,10 +1,10 @@
-use axum::body::{Bytes, Full};
+use axum::body::{Body, Bytes};
 use axum::extract::{Query, State};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
 use axum::routing::{get, post};
 use axum::Router;
 use base64::{engine::general_purpose, Engine as _};
-use http::{HeaderMap, StatusCode};
 use packed_struct::PackedStruct;
 use serde::{Deserialize, Serialize};
 use std::str::from_utf8;
@@ -150,20 +150,20 @@ fn get_response_type_from_headers(headers: HeaderMap) -> ResponseType {
     }
 }
 
-fn response_406() -> Response<Full<Bytes>> {
+fn response_406() -> Response {
     axum::response::Response::builder()
         .status(StatusCode::from_u16(406).unwrap())
         // .header("Content-type", "application/dns-json")
         .header("Cache-Control", "max-age=3600")
-        .body(Full::new(Bytes::new()))
+        .body(Body::empty())
         .unwrap()
 }
-fn response_500() -> Response<Full<Bytes>> {
+fn response_500() -> Response<Body> {
     axum::response::Response::builder()
         .status(StatusCode::from_u16(500).unwrap())
         // .header("Content-type", "application/dns-json")
         .header("Cache-Control", "max-age=1")
-        .body(Full::new(Bytes::new()))
+        .body(Body::empty())
         .unwrap()
 }
 
@@ -171,7 +171,7 @@ pub async fn handle_get(
     State(state): State<GoatState>,
     headers: HeaderMap,
     Query(query): Query<GetQueryString>,
-) -> Response<Full<Bytes>> {
+) -> Response {
     // TODO: accept header filtering probably should be a middleware since it applies to the whole /doh route but those things are annoying as heck
     let response_type: ResponseType = get_response_type_from_headers(headers);
     if let ResponseType::Invalid = response_type {
@@ -262,7 +262,7 @@ pub async fn handle_get(
                 .header("Content-type", "application/dns-json")
                 .header("Cache-Control", format!("max-age={ttl}"));
             // TODO: add handler for DNSSEC responses
-            response_builder.body(Full::from(response)).unwrap()
+            response_builder.body(Body::from(response)).unwrap()
         }
         ResponseType::Raw => {
             let answers: Vec<InternalResourceRecord> = records
@@ -309,7 +309,7 @@ pub async fn handle_get(
                     .status(StatusCode::OK)
                     .header("Content-type", "application/dns-message")
                     .header("Cache-Control", format!("max-age={ttl}"))
-                    .body(Full::from(value))
+                    .body(Body::from(value))
                     .unwrap(),
                 Err(err) => {
                     log::error!("Failed to turn DoH GET request into bytes: {err:?}");
@@ -324,7 +324,7 @@ pub async fn handle_post(
     State(state): State<GoatState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Response<Full<Bytes>> {
+) -> Response {
     // TODO: accept header filtering probably should be a middleware since it applies to the whole /doh route but those things are annoying as heck
     let response_type: ResponseType = get_response_type_from_headers(headers);
     if let ResponseType::Invalid = response_type {
@@ -376,7 +376,7 @@ pub async fn handle_post(
                 .status(StatusCode::OK)
                 .header("Content-type", "application/dns-message")
                 .header("Cache-Control", format!("max-age={ttl}"))
-                .body(Full::from(bytes))
+                .body(Body::from(bytes))
                 .unwrap()
         }
         Err(err) => {

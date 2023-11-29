@@ -2,7 +2,6 @@ use super::*;
 use crate::enums::ContactDetails;
 use askama::Template;
 use axum::response::Html;
-// use axum_macros::debug_handler;
 
 pub async fn status() -> String {
     STATUS_OK.to_string()

@@ -10,13 +10,13 @@ use crate::datastore;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
 use axum::error_handling::HandleErrorLayer;
+use axum::extract::FromRef;
 use axum::http::StatusCode;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
 use axum::BoxError;
 use axum::Router;
 use axum_csp::CspUrlMatcher;
-use axum_macros::FromRef;
 #[cfg(feature = "otel")]
 #[cfg(not(test))]
 use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
@@ -32,6 +32,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
+// use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
@@ -60,8 +61,6 @@ pub const STATUS_OK: &str = "Ok";
 #[async_trait]
 pub trait GoatStateTrait {
     async fn connpool(&self) -> Pool<Sqlite>;
-    // async fn config(&self) -> ConfigFile;
-    // async fn oidc_config(&self) -> Option<CustomProviderMetadata>;
     async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata);
     async fn pop_verifier<'life0>(&'life0 mut self, csrftoken: String) -> Option<(String, Nonce)>;
     async fn oauth2_client_id(&self) -> ClientId;
@@ -202,8 +201,8 @@ pub async fn build(
         .nest("/api", api::new())
         .nest("/auth", auth::new())
         .nest("/dns-query", doh::new())
-        .layer(service_layer)
-        .with_state(state);
+        .with_state(state)
+        .layer(service_layer);
 
     // here we add the tracing layer
     #[cfg(feature = "otel")]
@@ -218,7 +217,11 @@ pub async fn build(
     };
     let router = router.layer(CompressionLayer::new()).fallback(handler_404);
 
-    let res = Some(tokio::spawn(
+    let listener = tokio::net::TcpListener::bind(&config.api_listener_address())
+        .await
+        .unwrap();
+
+    let res: Option<JoinHandle<Result<(), std::io::Error>>> = Some(tokio::spawn(
         axum_server::bind_rustls(config.api_listener_address(), config.get_tls_config().await)
             .serve(router.into_make_service()),
     ));

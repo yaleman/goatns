@@ -1,7 +1,4 @@
-use std::net::SocketAddr;
-use std::str::FromStr;
-
-use axum::http::{HeaderValue, Request, StatusCode};
+use axum::http::{HeaderValue, StatusCode};
 use axum::middleware::{from_fn, Next};
 use axum::response::Response;
 use axum::routing::get;
@@ -12,7 +9,10 @@ use tokio::io;
 /// This is an example axum layer for implementing the axum-csp header enums
 ///
 /// It just shoves a CSP header on /hello with the value `img-src: 'self' https:`
-pub async fn cspheaders_layer<B>(req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
+pub async fn cspheaders_layer(
+    req: axum::extract::Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
     let directive: CspDirective = CspDirective {
         directive_type: CspDirectiveType::ImgSrc,
         values: vec![CspValue::SelfSite, CspValue::SchemeHttps],
@@ -33,11 +33,13 @@ pub async fn cspheaders_layer<B>(req: Request<B>, next: Next<B>) -> Result<Respo
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    async fn home() {
+    async fn home() -> String {
         println!("Someone accessed /");
+        "Home".to_string()
     }
-    async fn hello() {
+    async fn hello() -> String {
         println!("Someone accessed /hello");
+        "hello world".to_string()
     }
 
     let router = Router::new()
@@ -46,9 +48,8 @@ async fn main() -> io::Result<()> {
         .route("/", get(home));
 
     println!("Starting server on 127.0.0.1:6969");
-    let _server = axum_server::bind(SocketAddr::from_str("127.0.0.1:6969").unwrap())
-        .serve(router.into_make_service())
-        .await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:6969").await?;
+    axum::serve(listener, router).await.unwrap();
 
     Ok(())
 }
