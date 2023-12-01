@@ -364,13 +364,10 @@ dependencies = [
 
 [[package]]
 name = "axum-csp"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
- "axum 0.6.20",
- "axum-server",
- "lazy_static",
+ "axum 0.7.1",
  "regex",
- "tokio",
 ]
 
 [[package]]
