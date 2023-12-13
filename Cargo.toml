@@ -22,7 +22,7 @@ default = []
 otel = []
 
 [workspace]
-members = [".", "axum-csp", "goatns-macros"]
+members = [".", "goatns-macros"]
 
 [lib]
 bench = false
@@ -35,16 +35,13 @@ opt-level = 3
 argon2 = "0.5"
 askama = { version = "0.12.1" }
 async-trait = "0.1.74"
-axum = { version = "0.6.20", features = [
-    "http2",
-    "headers",
-    "original-uri",
-    "macros",
+axum = { workspace = true, features = ["http2", "original-uri", "macros"] }
+axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
+axum-extra = { version = "0.8.0" }
+axum-server = { git = "https://github.com/programatik29/axum-server", rev = "e575e90", features = [
+    "tls-rustls",
 ] }
-axum-csp = { version = "^0.0.1", path = "axum-csp/" }
-axum-extra = { version = "0.9.0" }
-axum-macros = "0.3.8"
-axum-server = { version = "0.5.1", features = ["tls-rustls"] }
+# axum-server = { version = "0.5.1", features = ["tls-rustls"] }
 axum-tracing-opentelemetry = { version = "0.11.0", features = [
     "tracing_subscriber_ext",
 ] }
@@ -52,7 +49,7 @@ base64 = "0.21.5"
 bit-vec = "0.6.3"
 bytes = "1.5.0"
 chrono = { version = "0.4.31", features = ["clock"] }
-clap = { version = "4.4.11", features = ["cargo"] }
+clap = { version = "4.4.8", features = ["cargo"] }
 concread = "0.4.3"
 config = { version = "0.13", features = ["json"] }
 dialoguer = "0.11.0"
@@ -102,14 +99,14 @@ tokio = { version = "1.34.0", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.9.3"
 tokio-stream = { version = "0.1.14", features = ["net"] }
 tokio-util = { version = "0.7.10", features = ["full"] }
-tower = "0.4.13"
-tower-http = { version = "0.4.4", features = [
+tower = "^0.4.13"
+tower-http = { version = "^0.5.0", features = [
     "fs",
     "trace",
     "add-extension",
     "compression-gzip",
 ] }
-tower-sessions = { version = "0.6.0", features = [
+tower-sessions = { version = "^0.7.0", features = [
     "sqlite-store",
     "deletion-task",
     "axum-core",
@@ -119,7 +116,8 @@ url = { version = "2.4.0", features = ["serde"] }
 
 
 [workspace.dependencies]
-proc-macro2 = "1.0.70"
+axum = "^0.7.0"
+proc-macro2 = "1.0.69"
 syn = "2.0.39"
 
 [dev-dependencies]

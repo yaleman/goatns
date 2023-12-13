@@ -100,9 +100,8 @@ async fn handle_get_command(
     );
 
     // query the database
-    let db_name = from_utf8(&name)
-        .map_err(|e| format!("Failed to convert name to utf8 - {e:?}"))
-        .unwrap();
+    let db_name =
+        from_utf8(&name).map_err(|e| format!("Failed to convert name to utf8 - {e:?}"))?;
 
     let mut zr = ZoneRecord {
         name: name.clone(),

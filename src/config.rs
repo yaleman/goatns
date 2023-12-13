@@ -99,10 +99,8 @@ fn generate_cookie_secret() -> String {
 
 impl ConfigFile {
     /// JSONify the configfile in a pretty way using serde
-    pub fn as_json_pretty(&self) -> String {
-        serde_json::to_string_pretty(self)
-            .map_err(|e| format!("Failed to serialize config: {e:?}"))
-            .unwrap()
+    pub fn as_json_pretty(&self) -> Result<String, String> {
+        serde_json::to_string_pretty(self).map_err(|e| format!("Failed to serialize config: {e:?}"))
     }
 
     /// Get a bindable SocketAddr for use in the DNS listeners
@@ -117,7 +115,10 @@ impl ConfigFile {
 
     /// get a string version of the listener address
     pub fn api_listener_address(&self) -> SocketAddr {
-        SocketAddr::from_str(&format!("{}:{}", self.address, self.api_port)).unwrap()
+        SocketAddr::new(
+            self.address.parse().expect("Failed to parse IP"),
+            self.api_port,
+        )
     }
 
     /// It's a sekret!
@@ -130,10 +131,10 @@ impl ConfigFile {
             "https://{}:{}/status",
             self.hostname, self.api_port
         ))
-        .unwrap()
+        .expect("Failed to generate a status URL!")
     }
 
-    pub async fn get_tls_config(&self) -> RustlsConfig {
+    pub async fn get_tls_config(&self) -> Result<RustlsConfig, String> {
         log::trace!(
             "tls config: cert={:?} key={:?}",
             self.api_tls_cert,
@@ -141,7 +142,7 @@ impl ConfigFile {
         );
         RustlsConfig::from_pem_file(self.api_tls_cert.clone(), self.api_tls_key.clone())
             .await
-            .unwrap()
+            .map_err(|e| format!("Failed to load TLS config: {e:?}"))
     }
 
     pub async fn check_config(
@@ -155,15 +156,28 @@ impl ConfigFile {
                 "updating tls cert from {:#?} to shellex",
                 config.api_tls_cert
             );
+
             config.api_tls_cert = PathBuf::from(
-                shellexpand::tilde(&config.api_tls_cert.to_str().unwrap()).to_string(),
+                shellexpand::tilde(
+                    &config
+                        .api_tls_cert
+                        .to_str()
+                        .expect("Failed to string-ify api_tls_cert"),
+                )
+                .to_string(),
             );
         }
         if config.api_tls_key.starts_with("~") {
             #[cfg(test)]
             eprintln!("updating tls key from {:#?} to shellex", config.api_tls_key);
             config.api_tls_key = PathBuf::from(
-                shellexpand::tilde(&config.api_tls_key.to_str().unwrap()).to_string(),
+                shellexpand::tilde(
+                    &config
+                        .api_tls_key
+                        .to_str()
+                        .expect("Failed to expand api_tls_key path"),
+                )
+                .to_string(),
             );
         }
 
@@ -264,7 +278,7 @@ impl ConfigFile {
 impl Default for ConfigFile {
     fn default() -> Self {
         let hostname = gethostname();
-        let hostname = hostname.into_string().unwrap();
+        let hostname = hostname.into_string().unwrap_or("example.com".to_string());
         Self {
             hostname,
             address: "127.0.0.1".to_string(),
@@ -344,7 +358,9 @@ impl From<Config> for ConfigFile {
                 // eprintln!("OAuth2 Redirect URL: {url:?}");
                 if !url.path().ends_with("/auth/login") {
                     // println!("Adding authlogin tail");
-                    url = url.join("/auth/login").unwrap();
+                    url = url
+                        .join("/auth/login")
+                        .expect("Failed to join URL path to create login URL");
                 }
                 // eprintln!("OAuth2 Redirect URL after update: {url:?}");
                 url
@@ -503,11 +519,12 @@ impl LogLineFilter for LogFilter {
         record: &log::Record,
         log_line_writer: &dyn LogLineWriter,
     ) -> std::io::Result<()> {
-        if self
-            .filters
-            .iter()
-            .any(|r| record.module_path().unwrap().contains(r))
-        {
+        if self.filters.iter().any(|r| {
+            record
+                .module_path()
+                .expect("Failed to get record module path in logger")
+                .contains(r)
+        }) {
             return Ok(());
         }
 

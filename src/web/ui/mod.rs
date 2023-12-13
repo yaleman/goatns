@@ -3,14 +3,13 @@ use crate::db::User;
 use crate::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zones_list};
 use crate::zones::FileZone;
 use askama::Template;
+use axum::debug_handler;
 use axum::extract::{OriginalUri, Path, State};
 use axum::http::{Response, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::Router;
-use axum_macros::debug_handler;
 use tower_sessions::Session;
-// use axum_macros::debug_handler;
 
 use super::GoatState;
 
@@ -96,10 +95,10 @@ pub async fn zones_list(
 
 #[debug_handler]
 pub async fn zone_view(
-    Path(name_or_id): Path<i64>,
-    axum::extract::State(state): axum::extract::State<GoatState>,
-    mut session: Session,
     OriginalUri(path): OriginalUri,
+    Path(name_or_id): Path<i64>,
+    State(state): State<GoatState>,
+    mut session: Session,
 ) -> impl IntoResponse {
     let user = check_logged_in(&mut session, path)
         .await

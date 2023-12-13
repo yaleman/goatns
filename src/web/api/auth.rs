@@ -1,11 +1,5 @@
-// use std::str::from_utf8;
-
-// use axum::middleware::Next;
-// use axum::response::Response;
+use axum::http::StatusCode;
 use axum::{extract::State, Json};
-// use axum_macros::debug_handler;
-use http::StatusCode;
-// use http::{Request, StatusCode};
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
 
@@ -34,7 +28,6 @@ pub async fn login(
     println!("Got login payload: {payload:?}");
     #[cfg(not(test))]
     log::debug!("Got login payload: {payload:?}");
-
     let mut pool = state.read().await.connpool.clone();
     let token = match User::get_token(&mut pool, &payload.tokenkey).await {
         Ok(val) => val,

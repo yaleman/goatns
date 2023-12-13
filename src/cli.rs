@@ -184,24 +184,28 @@ pub async fn export_zone_file(
     };
     eprintln!("Got filezone: {zone:?}");
 
-    if zone.is_none() {
-        log::warn!("Couldn't find the zone {zone_name}");
-        return Ok(());
-    }
-
-    // dump the zone
-    let zone_bytes = serde_json::to_string_pretty(&zone.unwrap()).unwrap();
+    let zone_bytes = match zone {
+        None => {
+            log::warn!("Couldn't find the zone {zone_name}");
+            return Ok(());
+        }
+        Some(zone) => serde_json::to_string_pretty(&zone).map_err(|err| {
+            format!(
+                "Failed to serialize zone {zone_name} to json: {err:?}",
+                zone_name = zone_name,
+                err = err
+            )
+        })?,
+    };
 
     // open the file
     let mut file = tokio::fs::File::create(filename)
         .await
-        .map_err(|e| format!("Failed to open file {e:?}"))
-        .unwrap();
+        .map_err(|e| format!("Failed to open file {e:?}"))?;
     // write the thing
     file.write_all(zone_bytes.as_bytes())
         .await
-        .map_err(|e| format!("Failed to write file: {e:?}"))
-        .unwrap();
+        .map_err(|e| format!("Failed to write file: {e:?}"))?;
     // make some cake
 
     Ok(())
@@ -245,7 +249,9 @@ pub async fn add_admin_user(tx: mpsc::Sender<Command>) -> Result<(), ()> {
     let username: String = Input::with_theme(&ColorfulTheme::default())
         .with_prompt("Username")
         .interact_text()
-        .unwrap();
+        .map_err(|e| {
+            log::error!("Failed to get username from user: {e:?}");
+        })?;
 
     println!(
         "The authentication reference is the unique user identifier in the Identity Provider."
@@ -253,7 +259,9 @@ pub async fn add_admin_user(tx: mpsc::Sender<Command>) -> Result<(), ()> {
     let authref: String = Input::with_theme(&ColorfulTheme::default())
         .with_prompt("Authentication Reference:")
         .interact_text()
-        .unwrap();
+        .map_err(|e| {
+            log::error!("Failed to get auth reference from user: {e:?}");
+        })?;
 
     println!(
         r#"
@@ -270,10 +278,14 @@ Authref:  {authref}
     let confirm = Confirm::with_theme(&ColorfulTheme::default())
         .with_prompt("Do these details look correct?")
         .interact_opt();
-    if confirm.is_err() || confirm.unwrap().is_none() {
-        log::warn!("Cancelled user creation");
-        return Err(());
-    };
+
+    match confirm {
+        Ok(Some(true)) => {}
+        Ok(Some(false)) | Ok(None) | Err(_) => {
+            log::warn!("Cancelled user creation");
+            return Err(());
+        }
+    }
 
     // create oneshot
     let (tx_oneshot, rx_oneshot) = oneshot::channel();

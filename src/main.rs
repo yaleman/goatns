@@ -31,7 +31,14 @@ async fn run() -> Result<(), io::Error> {
     let config_result = ConfigFile::check_config(config.write().await).await;
 
     if clap_results.get_flag("configcheck") {
-        log::info!("{}", config.read().await.as_json_pretty());
+        log::info!(
+            "{}",
+            config
+                .read()
+                .await
+                .as_json_pretty()
+                .expect("Failed to serialize config!")
+        );
         match config_result {
             Ok(_) => log::info!("Checking config... [OK!]"),
             Err(_) => log::error!("Checking config... [ERR!]"),

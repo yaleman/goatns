@@ -1,3 +1,3 @@
-# axum-csp
+# axum-csp has moved
 
-Some widgets for use with axum to create Content-Security-Policy headers and reduce silly typos.
+This has been moved to <https://github.com/yaleman/axum-csp>

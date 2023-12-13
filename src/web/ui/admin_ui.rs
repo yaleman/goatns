@@ -1,9 +1,9 @@
 use crate::web::GoatState;
 use askama::Template;
+use axum::http::{Response, Uri};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
-use http::{Response, Uri};
 use sqlx::Row;
 use std::str::FromStr;
 use tower_sessions::Session;

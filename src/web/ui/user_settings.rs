@@ -10,11 +10,11 @@ use axum::extract::{Path, State};
 use axum::response::{Html, Redirect};
 use axum::routing::get;
 use axum::routing::post;
-use axum::{Form, Router};
-use axum_macros::debug_handler;
+use axum::{debug_handler, Form, Router};
+
+use axum::http::Uri;
 use chrono::{DateTime, Duration, Utc};
 use enum_iterator::Sequence;
-use http::Uri;
 use oauth2::CsrfToken;
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
@@ -127,8 +127,8 @@ fn store_api_csrf_token(
 /// The user settings page at /ui/settings/api_tokens
 #[debug_handler]
 pub async fn api_tokens_get(
-    mut session: Session,
     State(state): State<GoatState>,
+    mut session: Session,
 ) -> Result<Html<String>, Redirect> {
     let user = check_logged_in(
         &mut session,
