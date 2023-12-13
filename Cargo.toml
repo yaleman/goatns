@@ -38,7 +38,10 @@ async-trait = "0.1.74"
 axum = { workspace = true, features = ["http2", "original-uri", "macros"] }
 axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
 axum-extra = { version = "0.8.0" }
-axum-server = { version = "0.5.1", features = ["tls-rustls"] }
+axum-server = { git = "https://github.com/programatik29/axum-server", rev = "e575e90", features = [
+    "tls-rustls",
+] }
+# axum-server = { version = "0.5.1", features = ["tls-rustls"] }
 axum-tracing-opentelemetry = { version = "0.11.0", features = [
     "tracing_subscriber_ext",
 ] }

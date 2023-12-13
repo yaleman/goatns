@@ -16,7 +16,7 @@ pub fn check_api_auth(_item: TokenStream) -> TokenStream {
     };
     "#
     .parse()
-    .unwrap()
+    .expect("Failed to parse code")
 }
 
 // TODO: go back and revisit this weirdness.

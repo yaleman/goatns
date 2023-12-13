@@ -217,12 +217,16 @@ pub async fn build(
     };
     let router = router.layer(CompressionLayer::new()).fallback(handler_404);
 
-    let listener = tokio::net::TcpListener::bind(&config.api_listener_address())
-        .await
-        .unwrap();
+    let tls_config = match config.get_tls_config().await {
+        Ok(val) => val,
+        Err(err) => {
+            error!("{}", err);
+            return None;
+        }
+    };
 
     let res: Option<JoinHandle<Result<(), std::io::Error>>> = Some(tokio::spawn(
-        axum_server::bind_rustls(config.api_listener_address(), config.get_tls_config().await)
+        axum_server::bind_rustls(config.api_listener_address(), tls_config)
             .serve(router.into_make_service()),
     ));
     #[cfg(test)]

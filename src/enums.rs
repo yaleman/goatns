@@ -434,47 +434,58 @@ impl TryFrom<String> for ContactDetails {
         let mut split_value = value.split(':');
         let contact_type = split_value.next();
         let contact_value = split_value.next();
-        if contact_type.is_none() || contact_value.is_none() {
-            return Err(ContactDetailsDeserializerError::InputLengthWrong{
-                msg: "Length of input is wrong please ensure it's in the format type:username@server (server for Mastodon)",
-                len: split_value.count(),
-            });
-        }
-        let contact_value = contact_value.unwrap();
-        match contact_type.unwrap() {
-            "Mastodon" => {
-                let contact_value = match contact_value.starts_with('@') {
-                    false => contact_value,
-                    true => contact_value.trim_start_matches(
-                        '@'
-                    )
-                };
-                if !contact_value.contains('@') {
-                    return Err(ContactDetailsDeserializerError::InputFormatWrong{unexp: contact_value.to_string(),exp: "Input format is wrong please ensure it's in the format Mastodon:username@server for Mastodon",
-                });
+
+        match (contact_type, contact_value) {
+            (Some(contact_type), Some(contact_value)) => {
+                // return Err(ContactDetailsDeserializerError::InputLengthWrong{
+                //     msg: "Length of input is wrong please ensure it's in the format type:username@server (server for Mastodon)",
+                //     len: split_value.count(),
+                // });
+
+                match contact_type {
+                    "Mastodon" => {
+                        let contact_value = match contact_value.starts_with('@') {
+                            false => contact_value,
+                            true => contact_value.trim_start_matches(
+                                '@'
+                            )
+                        };
+                        if !contact_value.contains('@') {
+                            Err(ContactDetailsDeserializerError::InputFormatWrong{unexp: contact_value.to_string(),exp: "Input format is wrong please ensure it's in the format Mastodon:username@server for Mastodon",
+                        })
+                        }
+
+                        else {
+                            let mut contact_split = contact_value.split('@');
+
+                            Ok( Self::Mastodon {
+                                contact: contact_split.next().expect("THe length was checked and then we couldn't get it!").to_string(),
+                                server: contact_split.next().expect("THe length was checked and then we couldn't get it!").to_string(),
+                            })
+                        }
+
+                    },
+                    "Email" => {
+                        Ok(Self::Email { contact: contact_value.to_string() })
+
+                    },
+                    "Twitter" => {
+                        Ok(Self::Twitter { contact: contact_value.to_string() })
+
+                    },
+                    &_ => {
+                        Err(ContactDetailsDeserializerError::WrongContactType(format!(
+                                "Contact type ({}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon",
+                                contact_type
+                                ) ))
+                    }
                 }
-
-                let mut contact_split = contact_value.split('@');
-
-                Ok( Self::Mastodon {
-                    contact: contact_split.next().unwrap().to_string(),
-                    server: contact_split.next().unwrap().to_string(),
+            }
+            _ => {
+                Err(ContactDetailsDeserializerError::InputLengthWrong{
+                    msg: "Length/value of input is wrong. please ensure it's in the format type:username@server (server for Mastodon)",
+                    len: split_value.count(),
                 })
-
-            },
-            "Email" => {
-                Ok(Self::Email { contact: contact_value.to_string() })
-
-            },
-            "Twitter" => {
-                Ok(Self::Twitter { contact: contact_value.to_string() })
-
-            },
-            &_ => {
-                Err(ContactDetailsDeserializerError::WrongContactType(format!(
-                        "Contact type ({}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon",
-                        contact_type.unwrap()
-                        ) ))
             }
         }
     }
