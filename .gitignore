@@ -10,8 +10,6 @@ flamegraph.svg
 vendor
 certificates/*
 
-axum-csp/target/*
-
 # certificates!
 *.pem
 results.xml
