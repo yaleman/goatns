@@ -22,7 +22,7 @@ default = []
 otel = []
 
 [workspace]
-members = [".", "axum-csp", "axum-csp-examples", "goatns-macros"]
+members = [".", "goatns-macros"]
 
 [lib]
 bench = false
