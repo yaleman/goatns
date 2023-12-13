@@ -12,9 +12,10 @@ use std::str::{from_utf8, FromStr};
 use std::string::FromUtf8Error;
 
 lazy_static! {
-    static ref CAA_TAG_VALIDATOR: Regex = Regex::new(r"[a-zA-Z0-9]").unwrap();
-    static ref URI_RECORD: Regex =
-        Regex::new(r"^(?P<priority>\d+) (?P<weight>\d+) (?P<target>.*)").unwrap();
+    static ref CAA_TAG_VALIDATOR: Regex =
+        Regex::new(r"[a-zA-Z0-9]").expect("Failed to parse an internal regex!");
+    static ref URI_RECORD: Regex = Regex::new(r"^(?P<priority>\d+) (?P<weight>\d+) (?P<target>.*)")
+        .expect("Failed to parse an internal regex!");
 }
 
 const DEFAULT_LOC_HORIZ_PRE: u32 = 10000;
@@ -912,7 +913,7 @@ lazy_static! {
     // Thanks to the folks from #regex on Liberachat
     static ref LOC_REGEX: Regex = Regex::new(
         r"^(?P<d1>\d+)(?:[ ](?P<m1>\d+)(?:[ ](?P<s1>\d+(?:[.]\d+)?))?)?[ ](?P<lat_dir>[NS])[ ](?P<d2>\d+)(?:[ ](?P<m2>\d+)(?:[ ](?P<s2>\d+(?:[.]\d+)?))?)?[ ](?P<lon_dir>[EW])[ ](?P<alt>-?\d+(?:[.]\d+)?)m(?:[ ](?P<size>\d+(?:[.]\d+)?)m(?:[ ](?P<hp>\d+(?:[.]\d+)?)m(?:[ ](?P<vp>\d+(?:[.]\d+)?)m)?)?)?",
-    ).unwrap();
+    ).expect("Faled to parse LOC regex!");
 
 }
 

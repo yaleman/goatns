@@ -140,6 +140,6 @@ fn main() -> Result<(), io::Error> {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .unwrap()
+        .expect("Failed to start main thread!")
         .block_on(async { run().await })
 }
