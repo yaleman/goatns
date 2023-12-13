@@ -85,3 +85,9 @@ clean_book:
 semgrep: ## Run semgrep
 semgrep:
 	./semgrep.sh
+
+.PHONY: coverage
+coverage: ## Run all the coverage tests
+coverage: 
+	LLVM_PROFILE_FILE="$(PWD)/target/profile/coverage-%p-%m.profraw" RUSTFLAGS="-C instrument-coverage" cargo test $(TESTS)
+	echo "Coverage report is in ./target/coverage/html/index.html"
