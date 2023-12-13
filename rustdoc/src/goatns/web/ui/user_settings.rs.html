@@ -551,11 +551,11 @@
 <span class="kw">use </span>axum::response::{Html, Redirect};
 <span class="kw">use </span>axum::routing::get;
 <span class="kw">use </span>axum::routing::post;
-<span class="kw">use </span>axum::{Form, Router};
-<span class="kw">use </span>axum_macros::debug_handler;
+<span class="kw">use </span>axum::{debug_handler, Form, Router};
+
+<span class="kw">use </span>axum::http::Uri;
 <span class="kw">use </span>chrono::{DateTime, Duration, Utc};
 <span class="kw">use </span>enum_iterator::Sequence;
-<span class="kw">use </span>http::Uri;
 <span class="kw">use </span>oauth2::CsrfToken;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>tower_sessions::Session;
@@ -668,8 +668,8 @@
 <span class="doccomment">/// The user settings page at /ui/settings/api_tokens
 </span><span class="attr">#[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_get(
-    <span class="kw-2">mut </span>session: Session,
     State(state): State&lt;GoatState&gt;,
+    <span class="kw-2">mut </span>session: Session,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     <span class="kw">let </span>user = check_logged_in(
         <span class="kw-2">&amp;mut </span>session,

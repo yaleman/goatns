@@ -33,25 +33,15 @@
 <a href="#33" id="33">33</a>
 <a href="#34" id="34">34</a>
 <a href="#35" id="35">35</a>
-<a href="#36" id="36">36</a>
-<a href="#37" id="37">37</a>
-<a href="#38" id="38">38</a>
-<a href="#39" id="39">39</a>
-<a href="#40" id="40">40</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>axum::{
-    extract::State,
-    http::{HeaderValue, Request},
-    middleware::Next,
-    response::Response,
-};
+</pre></div><pre class="rust"><code><span class="kw">use </span>axum::{extract::State, http::HeaderValue, middleware::Next, response::Response};
 <span class="kw">use </span>axum_csp::<span class="kw-2">*</span>;
 
 <span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
 
-<span class="kw">pub async fn </span>cspheaders&lt;B&gt;(
+<span class="kw">pub async fn </span>cspheaders(
     State(state): State&lt;GoatState&gt;,
-    req: Request&lt;B&gt;,
-    next: Next&lt;B&gt;,
+    req: axum::extract::Request,
+    next: Next,
 ) -&gt; Response {
     <span class="kw">let </span>uri: String = req.uri().path().to_string();
     <span class="kw">let </span>url_matcher: <span class="prelude-ty">Option</span>&lt;CspUrlMatcher&gt; = state.read().<span class="kw">await</span>.csp_matchers.iter().find_map(|c| {

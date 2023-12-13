@@ -515,6 +515,23 @@
 <a href="#515" id="515">515</a>
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>axum_server::tls_rustls::RustlsConfig;
 <span class="kw">use </span>clap::ArgMatches;
 <span class="kw">use </span>concread::cowcell::asynch::{CowCell, CowCellReadTxn, CowCellWriteTxn};
@@ -616,10 +633,8 @@
 
 <span class="kw">impl </span>ConfigFile {
     <span class="doccomment">/// JSONify the configfile in a pretty way using serde
-    </span><span class="kw">pub fn </span>as_json_pretty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        serde_json::to_string_pretty(<span class="self">self</span>)
-            .map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to serialize config: {e:?}&quot;</span>))
-            .unwrap()
+    </span><span class="kw">pub fn </span>as_json_pretty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
+        serde_json::to_string_pretty(<span class="self">self</span>).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to serialize config: {e:?}&quot;</span>))
     }
 
     <span class="doccomment">/// Get a bindable SocketAddr for use in the DNS listeners
@@ -634,7 +649,10 @@
 
     <span class="doccomment">/// get a string version of the listener address
     </span><span class="kw">pub fn </span>api_listener_address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SocketAddr {
-        SocketAddr::from_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="self">self</span>.address, <span class="self">self</span>.api_port)).unwrap()
+        SocketAddr::new(
+            <span class="self">self</span>.address.parse().expect(<span class="string">&quot;Failed to parse IP&quot;</span>),
+            <span class="self">self</span>.api_port,
+        )
     }
 
     <span class="doccomment">/// It&#39;s a sekret!
@@ -647,10 +665,10 @@
             <span class="string">&quot;https://{}:{}/status&quot;</span>,
             <span class="self">self</span>.hostname, <span class="self">self</span>.api_port
         ))
-        .unwrap()
+        .expect(<span class="string">&quot;Failed to generate a status URL!&quot;</span>)
     }
 
-    <span class="kw">pub async fn </span>get_tls_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RustlsConfig {
+    <span class="kw">pub async fn </span>get_tls_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;RustlsConfig, String&gt; {
         <span class="macro">log::trace!</span>(
             <span class="string">&quot;tls config: cert={:?} key={:?}&quot;</span>,
             <span class="self">self</span>.api_tls_cert,
@@ -658,7 +676,7 @@
         );
         RustlsConfig::from_pem_file(<span class="self">self</span>.api_tls_cert.clone(), <span class="self">self</span>.api_tls_key.clone())
             .<span class="kw">await
-            </span>.unwrap()
+            </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to load TLS config: {e:?}&quot;</span>))
     }
 
     <span class="kw">pub async fn </span>check_config(
@@ -672,15 +690,28 @@
                 <span class="string">&quot;updating tls cert from {:#?} to shellex&quot;</span>,
                 config.api_tls_cert
             );
+
             config.api_tls_cert = PathBuf::from(
-                shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_tls_cert.to_str().unwrap()).to_string(),
+                shellexpand::tilde(
+                    <span class="kw-2">&amp;</span>config
+                        .api_tls_cert
+                        .to_str()
+                        .expect(<span class="string">&quot;Failed to string-ify api_tls_cert&quot;</span>),
+                )
+                .to_string(),
             );
         }
         <span class="kw">if </span>config.api_tls_key.starts_with(<span class="string">&quot;~&quot;</span>) {
             <span class="attr">#[cfg(test)]
             </span><span class="macro">eprintln!</span>(<span class="string">&quot;updating tls key from {:#?} to shellex&quot;</span>, config.api_tls_key);
             config.api_tls_key = PathBuf::from(
-                shellexpand::tilde(<span class="kw-2">&amp;</span>config.api_tls_key.to_str().unwrap()).to_string(),
+                shellexpand::tilde(
+                    <span class="kw-2">&amp;</span>config
+                        .api_tls_key
+                        .to_str()
+                        .expect(<span class="string">&quot;Failed to expand api_tls_key path&quot;</span>),
+                )
+                .to_string(),
             );
         }
 
@@ -781,7 +812,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>ConfigFile {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>hostname = gethostname();
-        <span class="kw">let </span>hostname = hostname.into_string().unwrap();
+        <span class="kw">let </span>hostname = hostname.into_string().unwrap_or(<span class="string">&quot;example.com&quot;</span>.to_string());
         <span class="self">Self </span>{
             hostname,
             address: <span class="string">&quot;127.0.0.1&quot;</span>.to_string(),
@@ -861,7 +892,9 @@
                 // eprintln!(&quot;OAuth2 Redirect URL: {url:?}&quot;);
                 </span><span class="kw">if </span>!url.path().ends_with(<span class="string">&quot;/auth/login&quot;</span>) {
                     <span class="comment">// println!(&quot;Adding authlogin tail&quot;);
-                    </span>url = url.join(<span class="string">&quot;/auth/login&quot;</span>).unwrap();
+                    </span>url = url
+                        .join(<span class="string">&quot;/auth/login&quot;</span>)
+                        .expect(<span class="string">&quot;Failed to join URL path to create login URL&quot;</span>);
                 }
                 <span class="comment">// eprintln!(&quot;OAuth2 Redirect URL after update: {url:?}&quot;);
                 </span>url
@@ -1020,11 +1053,12 @@
         record: <span class="kw-2">&amp;</span>log::Record,
         log_line_writer: <span class="kw-2">&amp;</span><span class="kw">dyn </span>LogLineWriter,
     ) -&gt; std::io::Result&lt;()&gt; {
-        <span class="kw">if </span><span class="self">self
-            </span>.filters
-            .iter()
-            .any(|r| record.module_path().unwrap().contains(r))
-        {
+        <span class="kw">if </span><span class="self">self</span>.filters.iter().any(|r| {
+            record
+                .module_path()
+                .expect(<span class="string">&quot;Failed to get record module path in logger&quot;</span>)
+                .contains(r)
+        }) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 

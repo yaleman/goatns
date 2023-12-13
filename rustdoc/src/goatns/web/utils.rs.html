@@ -106,11 +106,14 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>argon2::password_hash::SaltString;
 <span class="kw">use </span>argon2::{Argon2, PasswordHasher, PasswordVerifier};
+<span class="kw">use </span>axum::debug_handler;
+<span class="kw">use </span>axum::http::StatusCode;
 <span class="kw">use </span>axum::response::{IntoResponse, Redirect};
 <span class="kw">use </span>chrono::{DateTime, Duration, Utc};
-<span class="kw">use </span>http::StatusCode;
 <span class="kw">use </span>rand::distributions::{Alphanumeric, DistString};
 <span class="kw">use </span>rand_core::OsRng;
 <span class="kw">use </span>sha2::{Digest, Sha256};
@@ -203,7 +206,8 @@
         .map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;validation error: {e:?}&quot;</span>))
 }
 
-<span class="kw">pub async fn </span>handler_404() -&gt; <span class="kw">impl </span>IntoResponse {
+<span class="attr">#[debug_handler]
+</span><span class="kw">pub async fn </span>handler_404() -&gt; <span class="kw">impl </span>IntoResponse {
     axum::response::Response::builder()
         .status(StatusCode::NOT_FOUND)
         .header(<span class="string">&quot;Content-type&quot;</span>, <span class="string">&quot;text/html&quot;</span>)

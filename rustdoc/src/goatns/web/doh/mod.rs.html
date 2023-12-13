@@ -392,13 +392,13 @@
 <a href="#392" id="392">392</a>
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>axum::body::{Bytes, Full};
+</pre></div><pre class="rust"><code><span class="kw">use </span>axum::body::{Body, Bytes};
 <span class="kw">use </span>axum::extract::{Query, State};
+<span class="kw">use </span>axum::http::{HeaderMap, StatusCode};
 <span class="kw">use </span>axum::response::Response;
 <span class="kw">use </span>axum::routing::{get, post};
 <span class="kw">use </span>axum::Router;
 <span class="kw">use </span>base64::{engine::general_purpose, Engine <span class="kw">as _</span>};
-<span class="kw">use </span>http::{HeaderMap, StatusCode};
 <span class="kw">use </span>packed_struct::PackedStruct;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>std::str::from_utf8;
@@ -544,20 +544,20 @@
     }
 }
 
-<span class="kw">fn </span>response_406() -&gt; Response&lt;Full&lt;Bytes&gt;&gt; {
+<span class="kw">fn </span>response_406() -&gt; Response {
     axum::response::Response::builder()
         .status(StatusCode::from_u16(<span class="number">406</span>).unwrap())
         <span class="comment">// .header(&quot;Content-type&quot;, &quot;application/dns-json&quot;)
         </span>.header(<span class="string">&quot;Cache-Control&quot;</span>, <span class="string">&quot;max-age=3600&quot;</span>)
-        .body(Full::new(Bytes::new()))
+        .body(Body::empty())
         .unwrap()
 }
-<span class="kw">fn </span>response_500() -&gt; Response&lt;Full&lt;Bytes&gt;&gt; {
+<span class="kw">fn </span>response_500() -&gt; Response&lt;Body&gt; {
     axum::response::Response::builder()
         .status(StatusCode::from_u16(<span class="number">500</span>).unwrap())
         <span class="comment">// .header(&quot;Content-type&quot;, &quot;application/dns-json&quot;)
         </span>.header(<span class="string">&quot;Cache-Control&quot;</span>, <span class="string">&quot;max-age=1&quot;</span>)
-        .body(Full::new(Bytes::new()))
+        .body(Body::empty())
         .unwrap()
 }
 
@@ -565,7 +565,7 @@
     State(state): State&lt;GoatState&gt;,
     headers: HeaderMap,
     Query(query): Query&lt;GetQueryString&gt;,
-) -&gt; Response&lt;Full&lt;Bytes&gt;&gt; {
+) -&gt; Response {
     <span class="comment">// TODO: accept header filtering probably should be a middleware since it applies to the whole /doh route but those things are annoying as heck
     </span><span class="kw">let </span>response_type: ResponseType = get_response_type_from_headers(headers);
     <span class="kw">if let </span>ResponseType::Invalid = response_type {
@@ -656,7 +656,7 @@
                 .header(<span class="string">&quot;Content-type&quot;</span>, <span class="string">&quot;application/dns-json&quot;</span>)
                 .header(<span class="string">&quot;Cache-Control&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;max-age={ttl}&quot;</span>));
             <span class="comment">// TODO: add handler for DNSSEC responses
-            </span>response_builder.body(Full::from(response)).unwrap()
+            </span>response_builder.body(Body::from(response)).unwrap()
         }
         ResponseType::Raw =&gt; {
             <span class="kw">let </span>answers: Vec&lt;InternalResourceRecord&gt; = records
@@ -703,7 +703,7 @@
                     .status(StatusCode::OK)
                     .header(<span class="string">&quot;Content-type&quot;</span>, <span class="string">&quot;application/dns-message&quot;</span>)
                     .header(<span class="string">&quot;Cache-Control&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;max-age={ttl}&quot;</span>))
-                    .body(Full::from(value))
+                    .body(Body::from(value))
                     .unwrap(),
                 <span class="prelude-val">Err</span>(err) =&gt; {
                     <span class="macro">log::error!</span>(<span class="string">&quot;Failed to turn DoH GET request into bytes: {err:?}&quot;</span>);
@@ -718,7 +718,7 @@
     State(state): State&lt;GoatState&gt;,
     headers: HeaderMap,
     body: Bytes,
-) -&gt; Response&lt;Full&lt;Bytes&gt;&gt; {
+) -&gt; Response {
     <span class="comment">// TODO: accept header filtering probably should be a middleware since it applies to the whole /doh route but those things are annoying as heck
     </span><span class="kw">let </span>response_type: ResponseType = get_response_type_from_headers(headers);
     <span class="kw">if let </span>ResponseType::Invalid = response_type {
@@ -770,7 +770,7 @@
                 .status(StatusCode::OK)
                 .header(<span class="string">&quot;Content-type&quot;</span>, <span class="string">&quot;application/dns-message&quot;</span>)
                 .header(<span class="string">&quot;Cache-Control&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;max-age={ttl}&quot;</span>))
-                .body(Full::from(bytes))
+                .body(Body::from(bytes))
                 .unwrap()
         }
         <span class="prelude-val">Err</span>(err) =&gt; {

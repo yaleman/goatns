@@ -308,6 +308,18 @@
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Code related to CLI things
 //!
 
@@ -494,24 +506,28 @@
     };
     <span class="macro">eprintln!</span>(<span class="string">&quot;Got filezone: {zone:?}&quot;</span>);
 
-    <span class="kw">if </span>zone.is_none() {
-        <span class="macro">log::warn!</span>(<span class="string">&quot;Couldn&#39;t find the zone {zone_name}&quot;</span>);
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-    }
-
-    <span class="comment">// dump the zone
-    </span><span class="kw">let </span>zone_bytes = serde_json::to_string_pretty(<span class="kw-2">&amp;</span>zone.unwrap()).unwrap();
+    <span class="kw">let </span>zone_bytes = <span class="kw">match </span>zone {
+        <span class="prelude-val">None </span>=&gt; {
+            <span class="macro">log::warn!</span>(<span class="string">&quot;Couldn&#39;t find the zone {zone_name}&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        }
+        <span class="prelude-val">Some</span>(zone) =&gt; serde_json::to_string_pretty(<span class="kw-2">&amp;</span>zone).map_err(|err| {
+            <span class="macro">format!</span>(
+                <span class="string">&quot;Failed to serialize zone {zone_name} to json: {err:?}&quot;</span>,
+                zone_name = zone_name,
+                err = err
+            )
+        })<span class="question-mark">?</span>,
+    };
 
     <span class="comment">// open the file
     </span><span class="kw">let </span><span class="kw-2">mut </span>file = tokio::fs::File::create(filename)
         .<span class="kw">await
-        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to open file {e:?}&quot;</span>))
-        .unwrap();
+        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to open file {e:?}&quot;</span>))<span class="question-mark">?</span>;
     <span class="comment">// write the thing
     </span>file.write_all(zone_bytes.as_bytes())
         .<span class="kw">await
-        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to write file: {e:?}&quot;</span>))
-        .unwrap();
+        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to write file: {e:?}&quot;</span>))<span class="question-mark">?</span>;
     <span class="comment">// make some cake
 
     </span><span class="prelude-val">Ok</span>(())
@@ -555,7 +571,9 @@
     <span class="kw">let </span>username: String = Input::with_theme(<span class="kw-2">&amp;</span>ColorfulTheme::default())
         .with_prompt(<span class="string">&quot;Username&quot;</span>)
         .interact_text()
-        .unwrap();
+        .map_err(|e| {
+            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to get username from user: {e:?}&quot;</span>);
+        })<span class="question-mark">?</span>;
 
     <span class="macro">println!</span>(
         <span class="string">&quot;The authentication reference is the unique user identifier in the Identity Provider.&quot;
@@ -563,7 +581,9 @@
     <span class="kw">let </span>authref: String = Input::with_theme(<span class="kw-2">&amp;</span>ColorfulTheme::default())
         .with_prompt(<span class="string">&quot;Authentication Reference:&quot;</span>)
         .interact_text()
-        .unwrap();
+        .map_err(|e| {
+            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to get auth reference from user: {e:?}&quot;</span>);
+        })<span class="question-mark">?</span>;
 
     <span class="macro">println!</span>(
         <span class="string">r#&quot;
@@ -580,10 +600,14 @@ Authref:  {authref}
     </span><span class="kw">let </span>confirm = Confirm::with_theme(<span class="kw-2">&amp;</span>ColorfulTheme::default())
         .with_prompt(<span class="string">&quot;Do these details look correct?&quot;</span>)
         .interact_opt();
-    <span class="kw">if </span>confirm.is_err() || confirm.unwrap().is_none() {
-        <span class="macro">log::warn!</span>(<span class="string">&quot;Cancelled user creation&quot;</span>);
-        <span class="kw">return </span><span class="prelude-val">Err</span>(());
-    };
+
+    <span class="kw">match </span>confirm {
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>)) =&gt; {}
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>)) | <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) | <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
+            <span class="macro">log::warn!</span>(<span class="string">&quot;Cancelled user creation&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(());
+        }
+    }
 
     <span class="comment">// create oneshot
     </span><span class="kw">let </span>(tx_oneshot, rx_oneshot) = oneshot::channel();

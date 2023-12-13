@@ -190,22 +190,20 @@
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::datastore::Command;
 <span class="kw">use </span><span class="kw">crate</span>::db::User;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zones_list};
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZone;
 <span class="kw">use </span>askama::Template;
+<span class="kw">use </span>axum::debug_handler;
 <span class="kw">use </span>axum::extract::{OriginalUri, Path, State};
 <span class="kw">use </span>axum::http::{Response, Uri};
 <span class="kw">use </span>axum::response::{IntoResponse, Redirect};
 <span class="kw">use </span>axum::routing::get;
 <span class="kw">use </span>axum::Router;
-<span class="kw">use </span>axum_macros::debug_handler;
 <span class="kw">use </span>tower_sessions::Session;
-<span class="comment">// use axum_macros::debug_handler;
 
-</span><span class="kw">use </span><span class="kw">super</span>::GoatState;
+<span class="kw">use </span><span class="kw">super</span>::GoatState;
 
 <span class="kw">mod </span>admin_ui;
 <span class="kw">mod </span>user_settings;
@@ -289,10 +287,10 @@
 
 <span class="attr">#[debug_handler]
 </span><span class="kw">pub async fn </span>zone_view(
-    Path(name_or_id): Path&lt;i64&gt;,
-    axum::extract::State(state): axum::extract::State&lt;GoatState&gt;,
-    <span class="kw-2">mut </span>session: Session,
     OriginalUri(path): OriginalUri,
+    Path(name_or_id): Path&lt;i64&gt;,
+    State(state): State&lt;GoatState&gt;,
+    <span class="kw-2">mut </span>session: Session,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
     <span class="kw">let </span>user = check_logged_in(<span class="kw-2">&amp;mut </span>session, path)
         .<span class="kw">await

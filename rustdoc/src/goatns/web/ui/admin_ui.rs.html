@@ -111,10 +111,10 @@
 <a href="#111" id="111">111</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
 <span class="kw">use </span>askama::Template;
+<span class="kw">use </span>axum::http::{Response, Uri};
 <span class="kw">use </span>axum::response::IntoResponse;
 <span class="kw">use </span>axum::routing::get;
 <span class="kw">use </span>axum::Router;
-<span class="kw">use </span>http::{Response, Uri};
 <span class="kw">use </span>sqlx::Row;
 <span class="kw">use </span>std::str::FromStr;
 <span class="kw">use </span>tower_sessions::Session;

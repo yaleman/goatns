@@ -98,22 +98,9 @@
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-</pre></div><pre class="rust"><code><span class="comment">// use std::str::from_utf8;
-
-// use axum::middleware::Next;
-// use axum::response::Response;
-</span><span class="kw">use </span>axum::{extract::State, Json};
-<span class="comment">// use axum_macros::debug_handler;
-</span><span class="kw">use </span>http::StatusCode;
-<span class="comment">// use http::{Request, StatusCode};
-</span><span class="kw">use </span>serde::{Deserialize, Serialize};
+</pre></div><pre class="rust"><code><span class="kw">use </span>axum::http::StatusCode;
+<span class="kw">use </span>axum::{extract::State, Json};
+<span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>tower_sessions::Session;
 
 <span class="kw">use </span><span class="kw">crate</span>::db::User;
@@ -141,7 +128,6 @@
     </span><span class="macro">println!</span>(<span class="string">&quot;Got login payload: {payload:?}&quot;</span>);
     <span class="attr">#[cfg(not(test))]
     </span><span class="macro">log::debug!</span>(<span class="string">&quot;Got login payload: {payload:?}&quot;</span>);
-
     <span class="kw">let </span><span class="kw-2">mut </span>pool = state.read().<span class="kw">await</span>.connpool.clone();
     <span class="kw">let </span>token = <span class="kw">match </span>User::get_token(<span class="kw-2">&amp;mut </span>pool, <span class="kw-2">&amp;</span>payload.tokenkey).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(val) =&gt; val,
