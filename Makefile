@@ -88,6 +88,18 @@ semgrep:
 
 .PHONY: coverage
 coverage: ## Run all the coverage tests
-coverage: 
+coverage:
 	LLVM_PROFILE_FILE="$(PWD)/target/profile/coverage-%p-%m.profraw" RUSTFLAGS="-C instrument-coverage" cargo test $(TESTS)
+
+	rm -rf ./target/coverage/html
+	mkdir -p target/coverage/
+	grcov . --binary-path ./target/debug/deps/ \
+		-s . \
+		-t html \
+		--branch \
+		--ignore-not-existing \
+		--ignore '../*' \
+		--ignore "/*" \
+		--ignore "target/*" \
+		-o target/coverage/html
 	echo "Coverage report is in ./target/coverage/html/index.html"

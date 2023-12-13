@@ -1,7 +1,7 @@
 use chrono::Utc;
 
 use crate::db::test::test_get_sqlite_memory;
-use crate::db::{start_db, DBEntity, ZoneOwnership};
+use crate::db::{cron_db_cleanup, get_zones_with_txn, start_db, DBEntity, ZoneOwnership};
 use crate::tests::test_harness;
 
 #[test]
@@ -111,6 +111,46 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
     assert!(UserAuthToken::get(&pool, 2).await.is_ok());
 
     println!("Done!");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_cron_db_cleanup() -> Result<(), sqlx::Error> {
+    let pool = test_get_sqlite_memory().await;
+
+    println!("Starting DB");
+    start_db(&pool).await.unwrap();
+
+    test_harness::create_test_user(&pool).await?;
+    println!("doing cleanup");
+    cron_db_cleanup(pool, core::time::Duration::from_micros(100), Some(2)).await;
+    println!("done with cleanup cycle");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn testget_zones_with_txn() -> Result<(), sqlx::Error> {
+    let pool = test_get_sqlite_memory().await;
+
+    println!("Starting DB");
+    start_db(&pool).await.unwrap();
+
+    test_harness::create_test_user(&pool).await?;
+
+    let mut txn = pool.begin().await?;
+    let zones = get_zones_with_txn(&mut txn, 0, 10).await?;
+    drop(txn);
+
+    assert!(zones.is_empty());
+
+    test_harness::import_test_zone_file(&pool).await.unwrap();
+
+    let mut txn = pool.begin().await?;
+    let zones = get_zones_with_txn(&mut txn, 100, 0).await?;
+
+    assert!(!zones.is_empty());
 
     Ok(())
 }

@@ -130,11 +130,7 @@ pub async fn api_tokens_get(
     State(state): State<GoatState>,
     mut session: Session,
 ) -> Result<Html<String>, Redirect> {
-    let user = check_logged_in(
-        &mut session,
-        Uri::from_str("/ui/settings/api_tokens").unwrap(),
-    )
-    .await?;
+    let user = check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
 
     let csrftoken = match store_api_csrf_token(&mut session, None) {
         Ok(value) => value,
@@ -273,11 +269,7 @@ pub async fn api_tokens_post(
 ) -> Result<Html<String>, Redirect> {
     eprintln!("Got form: {form:?}");
 
-    let user = check_logged_in(
-        &mut session,
-        Uri::from_str("/ui/settings/api_tokens").unwrap(),
-    )
-    .await?;
+    let user = check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
 
     if !validate_csrf_expiry(&form.csrftoken, &mut session) {
         // TODO: redirect to the start
@@ -413,6 +405,8 @@ pub struct ApiTokenDelete {
     pub user_is_admin: bool,
 }
 
+const URI_SETTINGS_API_TOKENS: &str = "/ui/settings/api_tokens";
+
 // #[debug_handler]
 pub async fn api_tokens_delete_get(
     axum::extract::State(state): axum::extract::State<GoatState>,
@@ -420,17 +414,13 @@ pub async fn api_tokens_delete_get(
     Path(id): Path<String>,
     mut session: Session,
 ) -> Result<Html<String>, Redirect> {
-    let user = check_logged_in(
-        &mut session,
-        Uri::from_str("/ui/settings/api_tokens").unwrap(),
-    )
-    .await?;
+    let user = check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
 
     let csrftoken = match store_api_csrf_token(&mut session, None) {
         Ok(val) => val,
         Err(err) => {
             log::error!("Failed to store CSRF token in the session store: {err:?}");
-            return Err(Redirect::to("/ui/settings/api_tokens"));
+            return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
         }
     };
 
@@ -447,7 +437,7 @@ pub async fn api_tokens_delete_get(
     let uat = match UserAuthToken::get(&pool, id).await {
         Err(err) => {
             log::debug!("Requested delete for token: {err:?}");
-            return Err(Redirect::to("/ui/settings/api_tokens"));
+            return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
         }
         Ok(res) => {
             if res.userid != user.id.unwrap() {
@@ -456,7 +446,7 @@ pub async fn api_tokens_delete_get(
                     user.id.unwrap(),
                     res.userid
                 );
-                return Err(Redirect::to("/ui/settings/api_tokens"));
+                return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
             };
 
             res
@@ -479,11 +469,7 @@ pub async fn api_tokens_delete_post(
     mut session: Session,
     Form(form): Form<ApiTokenDelete>,
 ) -> Result<Html<String>, Redirect> {
-    check_logged_in(
-        &mut session,
-        Uri::from_str("/ui/settings/api_tokens").unwrap(),
-    )
-    .await?;
+    check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
 
     if !validate_csrf_expiry(&form.csrftoken, &mut session) {
         // TODO: redirect to the start
@@ -503,7 +489,7 @@ pub async fn api_tokens_delete_post(
     let uat = match UserAuthToken::get(&pool, form.id).await {
         Err(err) => {
             log::debug!("Requested delete for existing token: {err:?}");
-            return Err(Redirect::to("/ui/settings/api_tokens"));
+            return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
         }
         Ok(res) => {
             if res.userid != user.id.unwrap() {
@@ -512,7 +498,7 @@ pub async fn api_tokens_delete_post(
                     user.id.unwrap(),
                     res.userid
                 );
-                return Err(Redirect::to("/ui/settings/api_tokens"));
+                return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
             };
 
             res
@@ -528,7 +514,7 @@ pub async fn api_tokens_delete_post(
         uat.userid,
         uat.id.unwrap()
     );
-    Err(Redirect::to("/ui/settings/api_tokens"))
+    Err(Redirect::to(URI_SETTINGS_API_TOKENS))
 }
 /// Build the router for user settings
 pub fn router() -> Router<GoatState> {

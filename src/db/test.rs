@@ -122,10 +122,10 @@ async fn test_db_create_records() -> Result<(), sqlx::Error> {
     start_db(&pool).await?;
 
     println!("Creating Zone");
-    let zone = match test_example_com_zone().save(&pool).await {
-        Ok(value) => value,
-        Err(err) => panic!("{err:?}"),
-    };
+    let zone = test_example_com_zone()
+        .save(&pool)
+        .await
+        .expect("Failed to save the zone!");
 
     let mut txn = pool.begin().await?;
     eprintln!(
