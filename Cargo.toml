@@ -37,7 +37,7 @@ askama = { version = "0.12.1" }
 async-trait = "0.1.74"
 axum = { workspace = true, features = ["http2", "original-uri", "macros"] }
 axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
-axum-extra = { version = "0.8.0" }
+axum-extra = { version = "0.9.0" }
 axum-server = { git = "https://github.com/programatik29/axum-server", rev = "e575e90", features = [
     "tls-rustls",
 ] }
