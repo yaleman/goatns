@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
 use sqlx::{Arguments, ConnectOptions, FromRow, Pool, Row, Sqlite, SqliteConnection, SqlitePool};
 use tokio::time;
+use tracing::instrument;
 
 #[cfg(test)]
 pub mod test;
@@ -100,19 +101,19 @@ impl Default for User {
 
 impl User {
     // Query the DB looking for a user
-    pub async fn get_by_email(pool: &SqlitePool, email: String) -> Result<Self, sqlx::Error> {
-        let res = sqlx::query(
-            "
-            select * from users
-            where email = ?
-            ",
-        )
-        .bind(email)
-        .fetch_one(pool)
-        .await?;
+    // pub async fn get_by_email(pool: &SqlitePool, email: String) -> Result<Self, sqlx::Error> {
+    //     let res = sqlx::query(
+    //         "
+    //         select * from users
+    //         where email = ?
+    //         ",
+    //     )
+    //     .bind(email)
+    //     .fetch_one(pool)
+    //     .await?;
 
-        Ok(User::from(res))
-    }
+    //     Ok(User::from(res))
+    // }
 
     /// Query the DB looking for a user
     pub async fn get_by_subject(
@@ -132,6 +133,7 @@ impl User {
         Ok(User::from(res))
     }
 
+    #[instrument(skip(txn))]
     pub async fn get_zones_for_user(
         &self,
         txn: &mut SqliteConnection,
@@ -174,9 +176,10 @@ impl User {
         Ok(rows)
     }
 
+    #[instrument(skip(pool))]
     pub async fn get_token(
         pool: &mut Pool<Sqlite>,
-        tokenkey: &String,
+        tokenkey: &str,
     ) -> Result<TokenSearchRow, sqlx::Error> {
         let mut txn = pool.begin().await?;
         let res: TokenSearchRow = sqlx::query_as(
@@ -336,7 +339,7 @@ pub async fn get_zone_with_txn(
     .await?;
 
     zone.records = result
-        .into_iter()
+        .iter()
         .filter_map(|r| match FileZoneRecord::try_from(r) {
             Ok(val) => Some(val),
             Err(_) => None,
