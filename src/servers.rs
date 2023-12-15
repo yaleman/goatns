@@ -90,7 +90,7 @@ pub async fn udp_server(
     let udp_sock = match UdpSocket::bind(
         config
             .dns_listener_address()
-            .expect("Failed to get DNS listener address on sartup!"),
+            .expect("Failed to get DNS listener address on startup!"),
     )
     .await
     {
