@@ -118,7 +118,7 @@ url = { version = "2.4.0", features = ["serde"] }
 [workspace.dependencies]
 axum = "^0.7.0"
 proc-macro2 = "1.0.69"
-syn = "2.0.39"
+syn = "2.0.42"
 
 [dev-dependencies]
 console-subscriber = "0.2.0"
