@@ -1138,6 +1138,7 @@
 <a href="#1138" id="1138">1138</a>
 <a href="#1139" id="1139">1139</a>
 <a href="#1140" id="1140">1140</a>
+<a href="#1141" id="1141">1141</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::{RecordClass, RecordType};
 <span class="kw">use </span><span class="kw">crate</span>::utils::{dms_to_u32, hexdump, name_as_bytes};
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZoneRecord;
@@ -1152,9 +1153,10 @@
 <span class="kw">use </span>std::string::FromUtf8Error;
 
 <span class="macro">lazy_static! </span>{
-    <span class="kw">static </span><span class="kw-2">ref </span>CAA_TAG_VALIDATOR: Regex = Regex::new(<span class="string">r&quot;[a-zA-Z0-9]&quot;</span>).unwrap();
-    <span class="kw">static </span><span class="kw-2">ref </span>URI_RECORD: Regex =
-        Regex::new(<span class="string">r&quot;^(?P&lt;priority&gt;\d+) (?P&lt;weight&gt;\d+) (?P&lt;target&gt;.*)&quot;</span>).unwrap();
+    <span class="kw">static </span><span class="kw-2">ref </span>CAA_TAG_VALIDATOR: Regex =
+        Regex::new(<span class="string">r&quot;[a-zA-Z0-9]&quot;</span>).expect(<span class="string">&quot;Failed to parse an internal regex!&quot;</span>);
+    <span class="kw">static </span><span class="kw-2">ref </span>URI_RECORD: Regex = Regex::new(<span class="string">r&quot;^(?P&lt;priority&gt;\d+) (?P&lt;weight&gt;\d+) (?P&lt;target&gt;.*)&quot;</span>)
+        .expect(<span class="string">&quot;Failed to parse an internal regex!&quot;</span>);
 }
 
 <span class="kw">const </span>DEFAULT_LOC_HORIZ_PRE: u32 = <span class="number">10000</span>;
@@ -2052,7 +2054,7 @@
     <span class="comment">// Thanks to the folks from #regex on Liberachat
     </span><span class="kw">static </span><span class="kw-2">ref </span>LOC_REGEX: Regex = Regex::new(
         <span class="string">r&quot;^(?P&lt;d1&gt;\d+)(?:[ ](?P&lt;m1&gt;\d+)(?:[ ](?P&lt;s1&gt;\d+(?:[.]\d+)?))?)?[ ](?P&lt;lat_dir&gt;[NS])[ ](?P&lt;d2&gt;\d+)(?:[ ](?P&lt;m2&gt;\d+)(?:[ ](?P&lt;s2&gt;\d+(?:[.]\d+)?))?)?[ ](?P&lt;lon_dir&gt;[EW])[ ](?P&lt;alt&gt;-?\d+(?:[.]\d+)?)m(?:[ ](?P&lt;size&gt;\d+(?:[.]\d+)?)m(?:[ ](?P&lt;hp&gt;\d+(?:[.]\d+)?)m(?:[ ](?P&lt;vp&gt;\d+(?:[.]\d+)?)m)?)?)?&quot;</span>,
-    ).unwrap();
+    ).expect(<span class="string">&quot;Faled to parse LOC regex!&quot;</span>);
 
 }
 

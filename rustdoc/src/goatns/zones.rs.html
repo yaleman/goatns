@@ -145,6 +145,8 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::RecordClass;
 <span class="kw">use </span><span class="kw">crate</span>::resourcerecord::InternalResourceRecord;
 <span class="kw">use </span>log::<span class="kw-2">*</span>;
@@ -266,7 +268,8 @@
         }
     };
     <span class="kw">let </span><span class="kw-2">mut </span>buf: String = String::new();
-    file.read_to_string(<span class="kw-2">&amp;mut </span>buf).unwrap();
+    file.read_to_string(<span class="kw-2">&amp;mut </span>buf)
+        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;Failed to read {}: {:?}&quot;</span>, <span class="kw-2">&amp;</span>filename.display(), err))<span class="question-mark">?</span>;
     <span class="kw">let </span>jsonstruct: FileZone = <span class="kw">match </span>json5::from_str(<span class="kw-2">&amp;</span>buf) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(error) =&gt; {
@@ -287,7 +290,8 @@
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>buf: String = String::new();
-    file.read_to_string(<span class="kw-2">&amp;mut </span>buf).unwrap();
+    file.read_to_string(<span class="kw-2">&amp;mut </span>buf)
+        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;Failed to read {}: {:?}&quot;</span>, filename, err))<span class="question-mark">?</span>;
     <span class="kw">let </span>jsonstruct: <span class="prelude-ty">Result</span>&lt;Vec&lt;FileZone&gt;, String&gt; =
         json5::from_str(<span class="kw-2">&amp;</span>buf).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to read JSON file: {e:?}&quot;</span>));
     jsonstruct

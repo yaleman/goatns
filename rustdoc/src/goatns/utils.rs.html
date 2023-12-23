@@ -578,7 +578,7 @@ name_as_bytes(
         <span class="kw">match </span>byte.len() {
             <span class="number">2 </span>=&gt; {
                 <span class="kw">let </span>byte1_alpha = <span class="kw">match </span>byte[<span class="number">1</span>].is_ascii_alphanumeric() {
-                    <span class="bool-val">true </span>=&gt; from_utf8(byte[<span class="number">1</span>..<span class="number">2</span>].into()).unwrap(),
+                    <span class="bool-val">true </span>=&gt; from_utf8(byte[<span class="number">1</span>..<span class="number">2</span>].into()).expect(<span class="string">&quot;Failed to decode bytes&quot;</span>),
                     <span class="bool-val">false </span>=&gt; <span class="string">&quot; &quot;</span>,
                 };
 

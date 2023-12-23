@@ -1861,49 +1861,6 @@
 <a href="#1861" id="1861">1861</a>
 <a href="#1862" id="1862">1862</a>
 <a href="#1863" id="1863">1863</a>
-<a href="#1864" id="1864">1864</a>
-<a href="#1865" id="1865">1865</a>
-<a href="#1866" id="1866">1866</a>
-<a href="#1867" id="1867">1867</a>
-<a href="#1868" id="1868">1868</a>
-<a href="#1869" id="1869">1869</a>
-<a href="#1870" id="1870">1870</a>
-<a href="#1871" id="1871">1871</a>
-<a href="#1872" id="1872">1872</a>
-<a href="#1873" id="1873">1873</a>
-<a href="#1874" id="1874">1874</a>
-<a href="#1875" id="1875">1875</a>
-<a href="#1876" id="1876">1876</a>
-<a href="#1877" id="1877">1877</a>
-<a href="#1878" id="1878">1878</a>
-<a href="#1879" id="1879">1879</a>
-<a href="#1880" id="1880">1880</a>
-<a href="#1881" id="1881">1881</a>
-<a href="#1882" id="1882">1882</a>
-<a href="#1883" id="1883">1883</a>
-<a href="#1884" id="1884">1884</a>
-<a href="#1885" id="1885">1885</a>
-<a href="#1886" id="1886">1886</a>
-<a href="#1887" id="1887">1887</a>
-<a href="#1888" id="1888">1888</a>
-<a href="#1889" id="1889">1889</a>
-<a href="#1890" id="1890">1890</a>
-<a href="#1891" id="1891">1891</a>
-<a href="#1892" id="1892">1892</a>
-<a href="#1893" id="1893">1893</a>
-<a href="#1894" id="1894">1894</a>
-<a href="#1895" id="1895">1895</a>
-<a href="#1896" id="1896">1896</a>
-<a href="#1897" id="1897">1897</a>
-<a href="#1898" id="1898">1898</a>
-<a href="#1899" id="1899">1899</a>
-<a href="#1900" id="1900">1900</a>
-<a href="#1901" id="1901">1901</a>
-<a href="#1902" id="1902">1902</a>
-<a href="#1903" id="1903">1903</a>
-<a href="#1904" id="1904">1904</a>
-<a href="#1905" id="1905">1905</a>
-<a href="#1906" id="1906">1906</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::resourcerecord::SetTTL;
 <span class="kw">use </span>std::io::ErrorKind;
 <span class="kw">use </span>std::str::FromStr;
@@ -1923,6 +1880,7 @@
 <span class="kw">use </span>sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
 <span class="kw">use </span>sqlx::{Arguments, ConnectOptions, FromRow, Pool, Row, Sqlite, SqliteConnection, SqlitePool};
 <span class="kw">use </span>tokio::time;
+<span class="kw">use </span>tracing::instrument;
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">pub mod </span>test;
@@ -2005,60 +1963,22 @@
 }
 
 <span class="kw">impl </span>User {
-    <span class="attr">#[allow(dead_code, unused_variables)]
-    </span><span class="kw">pub async fn </span>create_old(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        pool: <span class="kw-2">&amp;</span>SqlitePool,
-        disabled: bool,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, sqlx::Error&gt; {
-        <span class="comment">// TODO: test user create
-        </span><span class="kw">let </span>res =
-            sqlx::query(<span class="string">&quot;INSERT into users (username, email, disabled, authref) VALUES(?, ?, ?)&quot;</span>)
-                .bind(<span class="kw-2">&amp;</span><span class="self">self</span>.username)
-                .bind(<span class="kw-2">&amp;</span><span class="self">self</span>.email)
-                .bind(disabled)
-                .bind(<span class="kw-2">&amp;</span><span class="self">self</span>.authref)
-                .execute(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
-                .<span class="kw">await</span><span class="question-mark">?</span>;
-
-        <span class="prelude-val">Ok</span>(<span class="number">1</span>)
-    }
-    <span class="attr">#[allow(dead_code, unused_variables)]
-    </span><span class="kw">pub async fn </span>delete(<span class="kw-2">&amp;</span><span class="self">self</span>, pool: <span class="kw-2">&amp;</span>SqlitePool) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
-        <span class="comment">// TODO: test user delete
-        </span><span class="kw">let </span><span class="kw-2">mut </span>txn = pool.begin().<span class="kw">await</span><span class="question-mark">?</span>;
-
-        <span class="kw">let </span>res = sqlx::query(<span class="string">&quot;DELETE FROM ownership WHERE userid = ?&quot;</span>)
-            .bind(<span class="self">self</span>.id.unwrap())
-            .execute(<span class="kw-2">&amp;mut *</span>txn)
-            .<span class="kw">await</span><span class="question-mark">?</span>;
-
-        <span class="kw">let </span>res = sqlx::query(<span class="string">&quot;DELETE FROM users WHERE id = ?&quot;</span>)
-            .bind(<span class="self">self</span>.id.unwrap())
-            .execute(<span class="kw-2">&amp;mut *</span>txn)
-            .<span class="kw">await</span><span class="question-mark">?</span>;
-
-        txn.commit().<span class="kw">await</span><span class="question-mark">?</span>;
-
-        <span class="prelude-val">Ok</span>(())
-    }
-
     <span class="comment">// Query the DB looking for a user
-    </span><span class="kw">pub async fn </span>get_by_email(pool: <span class="kw-2">&amp;</span>SqlitePool, email: String) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, sqlx::Error&gt; {
-        <span class="kw">let </span>res = sqlx::query(
-            <span class="string">&quot;
-            select * from users
-            where email = ?
-            &quot;</span>,
-        )
-        .bind(email)
-        .fetch_one(pool)
-        .<span class="kw">await</span><span class="question-mark">?</span>;
+    // pub async fn get_by_email(pool: &amp;SqlitePool, email: String) -&gt; Result&lt;Self, sqlx::Error&gt; {
+    //     let res = sqlx::query(
+    //         &quot;
+    //         select * from users
+    //         where email = ?
+    //         &quot;,
+    //     )
+    //     .bind(email)
+    //     .fetch_one(pool)
+    //     .await?;
 
-        <span class="prelude-val">Ok</span>(User::from(res))
-    }
+    //     Ok(User::from(res))
+    // }
 
-    <span class="doccomment">/// Query the DB looking for a user
+    </span><span class="doccomment">/// Query the DB looking for a user
     </span><span class="kw">pub async fn </span>get_by_subject(
         pool: <span class="kw-2">&amp;</span>SqlitePool,
         subject: <span class="kw-2">&amp;</span>SubjectIdentifier,
@@ -2076,7 +1996,8 @@
         <span class="prelude-val">Ok</span>(User::from(res))
     }
 
-    <span class="kw">pub async fn </span>get_zones_for_user(
+    <span class="attr">#[instrument(skip(txn))]
+    </span><span class="kw">pub async fn </span>get_zones_for_user(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         txn: <span class="kw-2">&amp;mut </span>SqliteConnection,
         offset: i64,
@@ -2118,9 +2039,10 @@
         <span class="prelude-val">Ok</span>(rows)
     }
 
-    <span class="kw">pub async fn </span>get_token(
+    <span class="attr">#[instrument(skip(pool))]
+    </span><span class="kw">pub async fn </span>get_token(
         pool: <span class="kw-2">&amp;mut </span>Pool&lt;Sqlite&gt;,
-        tokenkey: <span class="kw-2">&amp;</span>String,
+        tokenkey: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;TokenSearchRow, sqlx::Error&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>txn = pool.begin().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>res: TokenSearchRow = sqlx::query_as(
@@ -2194,18 +2116,6 @@
 
 <span class="kw">impl </span>ZoneOwnership {
     <span class="attr">#[allow(dead_code, unused_variables)]
-    </span><span class="kw">pub async fn </span>create_old(<span class="kw-2">&amp;</span><span class="self">self</span>, pool: <span class="kw-2">&amp;</span>SqlitePool) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
-        <span class="comment">// TODO: test ownership create
-        </span>sqlx::query(
-            <span class="string">&quot;INSERT INTO ownership (zoneid, userid) VALUES ( ?, ? ) ON CONFLICT DO NOTHING&quot;</span>,
-        )
-        .bind(<span class="self">self</span>.zoneid)
-        .bind(<span class="self">self</span>.userid)
-        .execute(<span class="kw-2">&amp;mut *</span>pool.acquire().<span class="kw">await</span><span class="question-mark">?</span>)
-        .<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(())
-    }
-    <span class="attr">#[allow(dead_code, unused_variables)]
     </span><span class="kw">pub async fn </span>delete(<span class="kw-2">&amp;</span><span class="self">self</span>, pool: <span class="kw-2">&amp;</span>SqlitePool) -&gt; <span class="prelude-ty">Result</span>&lt;(), sqlx::Error&gt; {
         <span class="comment">// TODO: test ownership delete
         </span><span class="kw">let </span>res = sqlx::query(<span class="string">&quot;DELETE FROM ownership WHERE zoneid = ? AND userid = ?&quot;</span>)
@@ -2252,10 +2162,7 @@
     id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
     name: <span class="prelude-ty">Option</span>&lt;String&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;FileZone&gt;, sqlx::Error&gt; {
-    <span class="comment">// let mut args = SqliteArguments::default();
-    // args.add(name);
-
-    </span><span class="kw">let </span>result = sqlx::query(
+    <span class="kw">let </span>result = sqlx::query(
         <span class="string">&quot;SELECT
         id, name, rname, serial, refresh, retry, expire, minimum
         FROM zones
@@ -2295,7 +2202,7 @@
     .<span class="kw">await</span><span class="question-mark">?</span>;
 
     zone.records = result
-        .into_iter()
+        .iter()
         .filter_map(|r| <span class="kw">match </span>FileZoneRecord::try_from(r) {
             <span class="prelude-val">Ok</span>(val) =&gt; <span class="prelude-val">Some</span>(val),
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
@@ -3722,13 +3629,20 @@
 }
 
 <span class="doccomment">/// Run this periodically to clean up expired DB things
-</span><span class="kw">pub async fn </span>cron_db_cleanup(pool: Pool&lt;Sqlite&gt;, period: Duration) {
+</span><span class="kw">pub async fn </span>cron_db_cleanup(pool: Pool&lt;Sqlite&gt;, period: Duration, max_iter: <span class="prelude-ty">Option</span>&lt;usize&gt;) {
     <span class="kw">let </span><span class="kw-2">mut </span>interval = time::interval(period);
+    <span class="kw">let </span><span class="kw-2">mut </span>iterations = <span class="number">0</span>;
     <span class="kw">loop </span>{
         interval.tick().<span class="kw">await</span>;
 
         <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = UserAuthToken::cleanup(<span class="kw-2">&amp;</span>pool).<span class="kw">await </span>{
             <span class="macro">log::error!</span>(<span class="string">&quot;Failed to clean up UserAuthToken objects in DB cron: {error:?}&quot;</span>);
+        }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(max_iter) = max_iter {
+            iterations += <span class="number">1</span>;
+            <span class="kw">if </span>iterations &gt;= max_iter {
+                <span class="kw">break</span>;
+            }
         }
     }
 }

@@ -612,6 +612,11 @@
 <a href="#612" id="612">612</a>
 <a href="#613" id="613">613</a>
 <a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>concread::cowcell::asynch::CowCellReadTxn;
 <span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>std::io::Error;
@@ -633,7 +638,7 @@
 <span class="kw">use crate</span>::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
 <span class="macro">lazy_static! </span>{
-    <span class="kw">static </span><span class="kw-2">ref </span>LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str(<span class="string">&quot;127.0.0.1&quot;</span>).unwrap();
+    <span class="kw">static </span><span class="kw-2">ref </span>LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str(<span class="string">&quot;127.0.0.1&quot;</span>).expect(<span class="string">&quot;Failed to parse localhost IP address&quot;</span>);
     <span class="comment">// static ref VERSION_STRINGS: Vec&lt;String&gt; =
         // vec![String::from(&quot;version&quot;), String::from(&quot;version.bind&quot;),];
 </span>}
@@ -701,7 +706,13 @@
     datastore_sender: mpsc::Sender&lt;<span class="kw">crate</span>::datastore::Command&gt;,
     _agent_tx: broadcast::Sender&lt;AgentState&gt;,
 ) -&gt; io::Result&lt;()&gt; {
-    <span class="kw">let </span>udp_sock = <span class="kw">match </span>UdpSocket::bind(config.dns_listener_address().unwrap()).<span class="kw">await </span>{
+    <span class="kw">let </span>udp_sock = <span class="kw">match </span>UdpSocket::bind(
+        config
+            .dns_listener_address()
+            .expect(<span class="string">&quot;Failed to get DNS listener address on startup!&quot;</span>),
+    )
+    .<span class="kw">await
+    </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; {
             <span class="macro">log::info!</span>(<span class="string">&quot;Started UDP listener on {}:{}&quot;</span>, config.address, config.port);
             value
@@ -910,11 +921,19 @@
     <span class="comment">// mut agent_rx: broadcast::Receiver&lt;AgentState&gt;,
 </span>) -&gt; io::Result&lt;()&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>agent_rx = agent_tx.subscribe();
-    <span class="kw">let </span>tcpserver = <span class="kw">match </span>TcpListener::bind(config.dns_listener_address().unwrap()).<span class="kw">await </span>{
+    <span class="kw">let </span>tcpserver = <span class="kw">match </span>TcpListener::bind(
+        config
+            .dns_listener_address()
+            .expect(<span class="string">&quot;Failed to get DNS listener address on startup!&quot;</span>),
+    )
+    .<span class="kw">await
+    </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; {
             <span class="macro">log::info!</span>(
                 <span class="string">&quot;Started TCP listener on {}&quot;</span>,
-                config.dns_listener_address().unwrap()
+                config
+                    .dns_listener_address()
+                    .expect(<span class="string">&quot;Failed to get DNS listener address on startup!&quot;</span>)
             );
             value
         }
@@ -1056,17 +1075,8 @@
                 authorities: <span class="macro">vec!</span>[],
                 additional: <span class="macro">vec!</span>[],
             });
-        } <span class="comment">/*else if VERSION_STRINGS.contains(&amp;question.normalized_name().unwrap()) {
-              trace!(&quot;Got CHAOS VERSION&quot;);
-              return Ok(Reply {
-                  header,
-                  question: Some(question),
-                  answers: vec![],
-                  authorities: vec![],
-                  additional: vec![],
-              });
-          }*/
-    </span>}
+        }
+    }
 
     <span class="kw">if let </span>RecordType::ANY {} = question.qtype {
         <span class="comment">// TODO this should check to see if we have a zone record, but that requires walking down the qname record recursively, which is its own thing. We just YOLO a HINFO back for any request now.

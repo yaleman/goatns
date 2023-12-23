@@ -525,20 +525,6 @@
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
 <span class="kw">use </span><span class="kw">crate</span>::web::ui::check_logged_in;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::create_api_token;
@@ -671,11 +657,7 @@
     State(state): State&lt;GoatState&gt;,
     <span class="kw-2">mut </span>session: Session,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
-    <span class="kw">let </span>user = check_logged_in(
-        <span class="kw-2">&amp;mut </span>session,
-        Uri::from_str(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>).unwrap(),
-    )
-    .<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>user = check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_static(URI_SETTINGS_API_TOKENS)).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>csrftoken = <span class="kw">match </span>store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
@@ -814,11 +796,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     <span class="macro">eprintln!</span>(<span class="string">&quot;Got form: {form:?}&quot;</span>);
 
-    <span class="kw">let </span>user = check_logged_in(
-        <span class="kw-2">&amp;mut </span>session,
-        Uri::from_str(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>).unwrap(),
-    )
-    .<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>user = check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_static(URI_SETTINGS_API_TOKENS)).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">if </span>!validate_csrf_expiry(<span class="kw-2">&amp;</span>form.csrftoken, <span class="kw-2">&amp;mut </span>session) {
         <span class="comment">// TODO: redirect to the start
@@ -954,6 +932,8 @@
     <span class="kw">pub </span>user_is_admin: bool,
 }
 
+<span class="kw">const </span>URI_SETTINGS_API_TOKENS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/ui/settings/api_tokens&quot;</span>;
+
 <span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_delete_get(
     axum::extract::State(state): axum::extract::State&lt;GoatState&gt;,
@@ -961,17 +941,13 @@
     </span>Path(id): Path&lt;String&gt;,
     <span class="kw-2">mut </span>session: Session,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
-    <span class="kw">let </span>user = check_logged_in(
-        <span class="kw-2">&amp;mut </span>session,
-        Uri::from_str(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>).unwrap(),
-    )
-    .<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>user = check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_static(URI_SETTINGS_API_TOKENS)).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">let </span>csrftoken = <span class="kw">match </span>store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>) {
         <span class="prelude-val">Ok</span>(val) =&gt; val,
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">log::error!</span>(<span class="string">&quot;Failed to store CSRF token in the session store: {err:?}&quot;</span>);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(URI_SETTINGS_API_TOKENS));
         }
     };
 
@@ -988,7 +964,7 @@
     <span class="kw">let </span>uat = <span class="kw">match </span>UserAuthToken::get(<span class="kw-2">&amp;</span>pool, id).<span class="kw">await </span>{
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">log::debug!</span>(<span class="string">&quot;Requested delete for token: {err:?}&quot;</span>);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(URI_SETTINGS_API_TOKENS));
         }
         <span class="prelude-val">Ok</span>(res) =&gt; {
             <span class="kw">if </span>res.userid != user.id.unwrap() {
@@ -997,7 +973,7 @@
                     user.id.unwrap(),
                     res.userid
                 );
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(URI_SETTINGS_API_TOKENS));
             };
 
             res
@@ -1020,11 +996,7 @@
     <span class="kw-2">mut </span>session: Session,
     Form(form): Form&lt;ApiTokenDelete&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
-    check_logged_in(
-        <span class="kw-2">&amp;mut </span>session,
-        Uri::from_str(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>).unwrap(),
-    )
-    .<span class="kw">await</span><span class="question-mark">?</span>;
+    check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_static(URI_SETTINGS_API_TOKENS)).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">if </span>!validate_csrf_expiry(<span class="kw-2">&amp;</span>form.csrftoken, <span class="kw-2">&amp;mut </span>session) {
         <span class="comment">// TODO: redirect to the start
@@ -1044,7 +1016,7 @@
     <span class="kw">let </span>uat = <span class="kw">match </span>UserAuthToken::get(<span class="kw-2">&amp;</span>pool, form.id).<span class="kw">await </span>{
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">log::debug!</span>(<span class="string">&quot;Requested delete for existing token: {err:?}&quot;</span>);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(URI_SETTINGS_API_TOKENS));
         }
         <span class="prelude-val">Ok</span>(res) =&gt; {
             <span class="kw">if </span>res.userid != user.id.unwrap() {
@@ -1053,7 +1025,7 @@
                     user.id.unwrap(),
                     res.userid
                 );
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(URI_SETTINGS_API_TOKENS));
             };
 
             res
@@ -1069,7 +1041,7 @@
         uat.userid,
         uat.id.unwrap()
     );
-    <span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings/api_tokens&quot;</span>))
+    <span class="prelude-val">Err</span>(Redirect::to(URI_SETTINGS_API_TOKENS))
 }
 <span class="doccomment">/// Build the router for user settings
 </span><span class="kw">pub fn </span>router() -&gt; Router&lt;GoatState&gt; {
