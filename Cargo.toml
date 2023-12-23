@@ -37,9 +37,6 @@ async-trait = "0.1.75"
 axum = { workspace = true, features = ["http2", "original-uri", "macros"] }
 axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
 axum-extra = { version = "0.9.0" }
-# axum-server = { git = "https://github.com/programatik29/axum-server", rev = "e575e90", features = [
-# "tls-rustls",
-# ] }
 axum-server = { version = "^0.6.0", features = ["tls-rustls"] }
 axum-tracing-opentelemetry = { version = "0.11.0", features = [
   "tracing_subscriber_ext",
@@ -59,7 +56,7 @@ futures-util = "0.3.28"
 gethostname = "0.4.3"
 goatns-macros = { path = "./goatns-macros" }
 hex = "0.4.3"
-http = "0.2.10"
+http = "^1.0.0"
 ipnet = { version = "2.9.0", features = ["json", "serde"] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"
