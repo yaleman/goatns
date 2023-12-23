@@ -1,21 +1,20 @@
 [package]
 name = "goatns"
-description = "Yet another authoritative DNS name server. But with goat references."
 version = "0.4.0"
+categories = ["network-programming"]
 edition = "2021"
-rust-version = "1.70"
+include = [
+  "src/**/*",
+  "LICENSE.md",
+  "README.md",
+  "!**/*_test.*",
+  "!**/tests/**/*",
+]
+keywords = ["dns", "server", "tokio", "api", "oauth2", "oidc"]
 license = "MIT"
 repository = "https://github.com/yaleman/goatns.git"
-keywords = ["dns", "server", "tokio", "api", "oauth2", "oidc"]
-categories = ["network-programming"]
-include = [
-    "src/**/*",
-    "LICENSE.md",
-    "README.md",
-    "!**/*_test.*",
-    "!**/tests/**/*",
-]
-
+rust-version = "1.70"
+description = "Yet another authoritative DNS name server. But with goat references."
 
 [features]
 default = []
@@ -38,12 +37,9 @@ async-trait = "0.1.75"
 axum = { workspace = true, features = ["http2", "original-uri", "macros"] }
 axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
 axum-extra = { version = "0.9.0" }
-axum-server = { git = "https://github.com/programatik29/axum-server", rev = "e575e90", features = [
-    "tls-rustls",
-] }
-# axum-server = { version = "0.5.1", features = ["tls-rustls"] }
+axum-server = { version = "^0.6.0", features = ["tls-rustls"] }
 axum-tracing-opentelemetry = { version = "0.11.0", features = [
-    "tracing_subscriber_ext",
+  "tracing_subscriber_ext",
 ] }
 base64 = "0.21.5"
 bit-vec = "0.6.3"
@@ -60,7 +56,6 @@ futures-util = "0.3.28"
 gethostname = "0.4.3"
 goatns-macros = { path = "./goatns-macros" }
 hex = "0.4.3"
-http = "0.2.10"
 ipnet = { version = "2.9.0", features = ["json", "serde"] }
 json5 = "0.4.1"
 lazy_static = "1.4.0"
@@ -74,10 +69,10 @@ rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
 regex = "1.10.2"
 reqwest = { version = "0.11.22", features = [
-    "blocking",
-    "cookies",
-    "json",
-    "rustls-tls",
+  "blocking",
+  "cookies",
+  "json",
+  "rustls-tls",
 ] }
 rmp-serde = "1.1.2"
 serde = { version = "1.0.193", features = ["derive"] }
@@ -87,11 +82,11 @@ serde_json = "1.0.108"
 sha2 = { version = "0.10.8", features = ["asm", "asm-aarch64"] }
 shellexpand = "3.1.0"
 sqlx = { version = "0.7.3", features = [
-    "runtime-tokio-rustls",
-    "sqlite",
-    "json",
-    "time",
-    "uuid",
+  "runtime-tokio-rustls",
+  "sqlite",
+  "json",
+  "time",
+  "uuid",
 ], default-features = false }
 thiserror = "1.0.50"
 time = "0.3.31"
@@ -101,19 +96,18 @@ tokio-stream = { version = "0.1.14", features = ["net"] }
 tokio-util = { version = "0.7.10", features = ["full"] }
 tower = "^0.4.13"
 tower-http = { version = "^0.5.0", features = [
-    "fs",
-    "trace",
-    "add-extension",
-    "compression-gzip",
+  "fs",
+  "trace",
+  "add-extension",
+  "compression-gzip",
 ] }
 tower-sessions = { version = "^0.7.0", features = [
-    "sqlite-store",
-    "deletion-task",
-    "axum-core",
+  "sqlite-store",
+  "deletion-task",
+  "axum-core",
 ] }
 tracing = "^0.1.40"
 url = { version = "2.4.0", features = ["serde"] }
-
 
 [workspace.dependencies]
 axum = "^0.7.0"
@@ -126,8 +120,8 @@ criterion = "^0.5"
 scopeguard = "1.2.0"
 tracing-subscriber = "0.3.18"
 trust-dns-resolver = { version = "0.23.2", features = [
-    "tokio",
-    "tokio-runtime",
+  "tokio",
+  "tokio-runtime",
 ] }
 
 [[bench]]

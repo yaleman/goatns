@@ -1,251 +1,247 @@
 [
-    {
-    "name" : "hello.goat",
-    "rname" : "billy@hello.goat",
-    "serial" : 1,
-    "refresh" : 2,
-    "retry" : 3,
-    "expire" : 4,
-    "minimum" : 60,
-    "records" :
-        [
-            {
-                "name" : "foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890",
-                "rrtype" : "TXT",
-                "rdata" : "1",
-                "ttl" : 1,
-                "class" : "HS"
-            },
-            {
-                "rrtype" : "URI",
-                "ttl" : 5,
-                "name" : "_mqtt._http",
-                "rdata" : "1 2 mqtt://example.goat"
-            },
-            {
-                "rrtype" : "LOC",
-                "ttl" : 1,
-                "name" : "pizza",
-                "rdata" : "27 28 26.916 S 153 7 30.813 E 8m 10m 10000m 10m"
-            },
-            {
-                "rrtype" : "LOC",
-                "ttl" : 1,
-                "name" : "cambridge",
-                "rdata" : "42 21 54 N 71 06 18 W -24m 30m"
-            },
-            {
-                "rrtype" : "LOC",
-                "ttl" : 1,
-                "name" : "loiosh",
-                "rdata" : "42 21 43.952 N 71 5 6.344 W -24m 1m 200m"
-            },
-            {
-                "rrtype" : "LOC",
-                "ttl" : 1,
-                "name" : "pipex",
-                "rdata" : "52 14 05 N 00 08 50 E 10m"
-            },
-            {
-                "rrtype" : "LOC",
-                "ttl" : 1,
-                "name" : "curtin",
-                "rdata" : "32 7 19 S 116 2 25 E 10m"
-            },
-            {
-                "rrtype" : "LOC",
-                "ttl" : 1,
-                "name" : "rwy04L",
-                "rdata" : "42 21 28.764 N 71 00 51.617 W -44m 2000m"
-            },
-            {
-                "rrtype" : "CAA",
-                "ttl" : 1,
-                "rdata" : "0 issue ca.example.net; account=230123"
-            },
-            {
-                "rrtype" : "CAA",
-                "ttl" : 1,
-                "rdata" : "128 tbs Unknown"
-            },
-            {
-                "name" : "foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890",
-                "rrtype" : "TXT",
-                "rdata" : "1",
-                "ttl" : 1
-            },
-            {
-                "rrtype" : "NS",
-                "rdata" : "ns1.hello.goat",
-                "ttl" : 3600
-            },
-            {
-                "rrtype" : "MX",
-                "ttl" : 60,
-                "rdata" : "10 mx.hello.goat"
-            },
-            {
-                "rrtype" : "MX",
-                "ttl" : 60,
-                "rdata" : "150 mx2.hello.goat"
-            },
-            {
-                "name" : "fooptr",
-                "rrtype" : "PTR",
-                "rdata" : "ns1.hello.goat",
-                "ttl" : 3600
-            },
-            {
-                "rrtype" : "NS",
-                "rdata" : "ns2.hello.goat",
-                "ttl" : 300
-            },
-            {
-                "name" : "test",
-                "rrtype" : "A",
-                "rdata" : "1.2.3.4",
-                "ttl" : 60
-            },
-            {
-                "name" : "test",
-                "rrtype" : "A",
-                "rdata" : "12.2.3.4",
-                "ttl" : 60
-            },
-            {
-                "name" : "@",
-                "rrtype" : "A",
-                "rdata" : "6.6.6.6",
-                "ttl" : 60
-            },
-            {
-                "name" : "a",
-                "rrtype" : "A",
-                "rdata" : "1.2.3.5",
-                "ttl" : 60
-            },
-            {
-                "name" : "cname",
-                "rrtype" : "CNAME",
-                "rdata" : "a.hello.goat",
-                "ttl" : 60
-            },
-            {
-                "name" : "aaaa" ,
-                "rrtype" : "AAAA",
-                "rdata" : "1234:5678:cafe:beef:ca75:0:4b9:e94d",
-                "ttl" : 60
-            },
-            {
-                "name" : "cafe",
-                "rrtype" : "AAAA",
-                "rdata" : "fe80:580a:2d::caf3:b33f",
-                "ttl" : 60
-            },
-            {
-                "name" : "cafe",
-                "rrtype" : "TXT",
-                "rdata" : "Hello world",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "reallybig",
-                "rrtype" : "TXT",
-                "rdata" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                "ttl" : 60
-            },
-            {
-                "name" : "ttltest",
-                "rrtype" : "A",
-                "rdata" : "1.1.1.1",
-                "ttl" : 1
-            },
-            {
-                "name" : "ttltest",
-                "rrtype" : "A",
-                "rdata" : "2.2.2.2",
-                "ttl" : 2
-            },
+  {
+    "name": "hello.goat",
+    "rname": "billy@hello.goat",
+    "serial": 1,
+    "refresh": 2,
+    "retry": 3,
+    "expire": 4,
+    "minimum": 60,
+    "records": [
+      {
+        "name": "foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+        "rrtype": "TXT",
+        "rdata": "1",
+        "ttl": 1,
+        "class": "HS"
+      },
+      {
+        "rrtype": "URI",
+        "ttl": 5,
+        "name": "_mqtt._http",
+        "rdata": "1 2 mqtt://example.goat"
+      },
+      {
+        "rrtype": "LOC",
+        "ttl": 1,
+        "name": "pizza",
+        "rdata": "27 28 26.916 S 153 7 30.813 E 8m 10m 10000m 10m"
+      },
+      {
+        "rrtype": "LOC",
+        "ttl": 1,
+        "name": "cambridge",
+        "rdata": "42 21 54 N 71 06 18 W -24m 30m"
+      },
+      {
+        "rrtype": "LOC",
+        "ttl": 1,
+        "name": "loiosh",
+        "rdata": "42 21 43.952 N 71 5 6.344 W -24m 1m 200m"
+      },
+      {
+        "rrtype": "LOC",
+        "ttl": 1,
+        "name": "pipex",
+        "rdata": "52 14 05 N 00 08 50 E 10m"
+      },
+      {
+        "rrtype": "LOC",
+        "ttl": 1,
+        "name": "curtin",
+        "rdata": "32 7 19 S 116 2 25 E 10m"
+      },
+      {
+        "rrtype": "LOC",
+        "ttl": 1,
+        "name": "rwy04L",
+        "rdata": "42 21 28.764 N 71 00 51.617 W -44m 2000m"
+      },
+      {
+        "rrtype": "CAA",
+        "ttl": 1,
+        "rdata": "0 issue ca.example.net; account=230123"
+      },
+      {
+        "rrtype": "CAA",
+        "ttl": 1,
+        "rdata": "128 tbs Unknown"
+      },
+      {
+        "name": "foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+        "rrtype": "TXT",
+        "rdata": "1",
+        "ttl": 1
+      },
+      {
+        "rrtype": "NS",
+        "rdata": "ns1.hello.goat",
+        "ttl": 3600
+      },
+      {
+        "rrtype": "MX",
+        "ttl": 60,
+        "rdata": "10 mx.hello.goat"
+      },
+      {
+        "rrtype": "MX",
+        "ttl": 60,
+        "rdata": "150 mx2.hello.goat"
+      },
+      {
+        "name": "fooptr",
+        "rrtype": "PTR",
+        "rdata": "ns1.hello.goat",
+        "ttl": 3600
+      },
+      {
+        "rrtype": "NS",
+        "rdata": "ns2.hello.goat",
+        "ttl": 300
+      },
+      {
+        "name": "test",
+        "rrtype": "A",
+        "rdata": "1.2.3.4",
+        "ttl": 60
+      },
+      {
+        "name": "test",
+        "rrtype": "A",
+        "rdata": "12.2.3.4",
+        "ttl": 60
+      },
+      {
+        "name": "@",
+        "rrtype": "A",
+        "rdata": "6.6.6.6",
+        "ttl": 60
+      },
+      {
+        "name": "a",
+        "rrtype": "A",
+        "rdata": "1.2.3.5",
+        "ttl": 60
+      },
+      {
+        "name": "cname",
+        "rrtype": "CNAME",
+        "rdata": "a.hello.goat",
+        "ttl": 60
+      },
+      {
+        "name": "aaaa",
+        "rrtype": "AAAA",
+        "rdata": "1234:5678:cafe:beef:ca75:0:4b9:e94d",
+        "ttl": 60
+      },
+      {
+        "name": "cafe",
+        "rrtype": "AAAA",
+        "rdata": "fe80:580a:2d::caf3:b33f",
+        "ttl": 60
+      },
+      {
+        "name": "cafe",
+        "rrtype": "TXT",
+        "rdata": "Hello world",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "reallybig",
+        "rrtype": "TXT",
+        "rdata": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        "ttl": 60
+      },
+      {
+        "name": "ttltest",
+        "rrtype": "A",
+        "rdata": "1.1.1.1",
+        "ttl": 1
+      },
+      {
+        "name": "ttltest",
+        "rrtype": "A",
+        "rdata": "2.2.2.2",
+        "ttl": 2
+      },
 
-            {
-                "name" : "ttltest",
-                "rrtype" : "A",
-                "rdata" : "3.3.3.3",
-                "ttl" : 3
-            }
-
-        ]
-    },
-    {
-        "name" : "cheeky.goat",
-        "rname" : "billy@cheeky.goat",
-        "serial" : 1,
-        "refresh" : 2,
-        "retry" : 3,
-        "expire" : 4,
-        "minimum" : 60,
-        "records" :
-            [
-            ]
-        }
+      {
+        "name": "ttltest",
+        "rrtype": "A",
+        "rdata": "3.3.3.3",
+        "ttl": 3
+      }
+    ]
+  },
+  {
+    "name": "cheeky.goat",
+    "rname": "billy@cheeky.goat",
+    "serial": 1,
+    "refresh": 2,
+    "retry": 3,
+    "expire": 4,
+    "minimum": 60,
+    "records": []
+  }
 ]

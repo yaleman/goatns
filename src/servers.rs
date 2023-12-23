@@ -19,7 +19,7 @@ use crate::zones::ZoneRecord;
 use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
 lazy_static! {
-    static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").unwrap();
+    static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").expect("Failed to parse localhost IP address");
     // static ref VERSION_STRINGS: Vec<String> =
         // vec![String::from("version"), String::from("version.bind"),];
 }
@@ -87,7 +87,13 @@ pub async fn udp_server(
     datastore_sender: mpsc::Sender<crate::datastore::Command>,
     _agent_tx: broadcast::Sender<AgentState>,
 ) -> io::Result<()> {
-    let udp_sock = match UdpSocket::bind(config.dns_listener_address().unwrap()).await {
+    let udp_sock = match UdpSocket::bind(
+        config
+            .dns_listener_address()
+            .expect("Failed to get DNS listener address on startup!"),
+    )
+    .await
+    {
         Ok(value) => {
             log::info!("Started UDP listener on {}:{}", config.address, config.port);
             value
@@ -296,11 +302,19 @@ pub async fn tcp_server(
     // mut agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
     let mut agent_rx = agent_tx.subscribe();
-    let tcpserver = match TcpListener::bind(config.dns_listener_address().unwrap()).await {
+    let tcpserver = match TcpListener::bind(
+        config
+            .dns_listener_address()
+            .expect("Failed to get DNS listener address on startup!"),
+    )
+    .await
+    {
         Ok(value) => {
             log::info!(
                 "Started TCP listener on {}",
-                config.dns_listener_address().unwrap()
+                config
+                    .dns_listener_address()
+                    .expect("Failed to get DNS listener address on startup!")
             );
             value
         }
@@ -442,16 +456,7 @@ async fn get_result(
                 authorities: vec![],
                 additional: vec![],
             });
-        } /*else if VERSION_STRINGS.contains(&question.normalized_name().unwrap()) {
-              trace!("Got CHAOS VERSION");
-              return Ok(Reply {
-                  header,
-                  question: Some(question),
-                  answers: vec![],
-                  authorities: vec![],
-                  additional: vec![],
-              });
-          }*/
+        }
     }
 
     if let RecordType::ANY {} = question.qtype {

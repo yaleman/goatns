@@ -31,7 +31,7 @@ async fn test_doh_get_json() -> Result<(), ()> {
 
     eprintln!("FZR result: {fzr:?}");
 
-    let mut headers = http::HeaderMap::new();
+    let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("Accept", "application/dns-json".parse().unwrap());
 
     let client = reqwest::ClientBuilder::new()
@@ -48,7 +48,7 @@ async fn test_doh_get_json() -> Result<(), ()> {
         .send()
         .await
         .unwrap();
-    assert_eq!(res.status(), http::StatusCode::from_u16(200).unwrap());
+    assert_eq!(res.status(), reqwest::StatusCode::from_u16(200).unwrap());
     eprintln!("{:?}", res);
     eprintln!("{:?}", res.bytes().await);
 
@@ -61,7 +61,7 @@ async fn test_doh_ask_raw_accept() -> Result<(), ()> {
     let (_pool, _servers, config) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
-    let mut headers = http::HeaderMap::new();
+    let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("Accept", "application/dns-message".parse().unwrap());
 
     let client = reqwest::ClientBuilder::new()
@@ -79,7 +79,7 @@ async fn test_doh_ask_raw_accept() -> Result<(), ()> {
         .await
         .unwrap();
     eprintln!("{res:?}");
-    assert_eq!(res.status(), http::StatusCode::from_u16(200).unwrap());
+    assert_eq!(res.status(), reqwest::StatusCode::from_u16(200).unwrap());
     Ok(())
 }
 
@@ -88,7 +88,7 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
     let (_pool, _servers, config) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
-    let mut headers = http::HeaderMap::new();
+    let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("Accept", "application/dns-json".parse().unwrap());
 
     let client = reqwest::ClientBuilder::new()
@@ -106,7 +106,7 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
         .await
         .unwrap();
     eprintln!("{res:?}");
-    assert_eq!(res.status(), http::StatusCode::from_u16(200).unwrap());
+    assert_eq!(res.status(), reqwest::StatusCode::from_u16(200).unwrap());
     Ok(())
 }
 
@@ -115,7 +115,7 @@ async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
     let (_pool, _servers, config) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
-    let mut headers = http::HeaderMap::new();
+    let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("Accept", "application/cheese".parse().unwrap());
 
     let client = reqwest::ClientBuilder::new()
@@ -133,6 +133,6 @@ async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
         .await
         .unwrap();
     eprintln!("{res:?}");
-    assert_eq!(res.status(), http::StatusCode::from_u16(406).unwrap());
+    assert_eq!(res.status(), reqwest::StatusCode::from_u16(406).unwrap());
     Ok(())
 }

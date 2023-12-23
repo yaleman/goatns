@@ -1,19 +1,19 @@
 {
-	"hostname" : "ns1.dotgoat.net",
-	"port" : 15353,
-	"log_level" : "DEBUG",
-	"capture_packets" :false,
-	"enable_hinfo" : true,
-	"tcp_client_timeout" : "5",
-	"ip_allow_lists" : {
-		"shutdown" : [
-			"127.0.0.1"
-		]
-	},
-	"enable_api" : true,
-	"api_tls_key" : "privkey.pem",
-	"api_tls_cert" : "fullchain.pem",
-	"api_static_dir" : "./static_files",
-	"oauth2_rs_name" : "goatns",
-	"oauth2_secret" : "supersecret_message"
+  "hostname": "ns1.dotgoat.net",
+  "port": 15353,
+  "log_level": "DEBUG",
+  "capture_packets": false,
+  "enable_hinfo": true,
+  "tcp_client_timeout": "5",
+  "ip_allow_lists": {
+    "shutdown": [
+      "127.0.0.1"
+    ]
+  },
+  "enable_api": true,
+  "api_tls_key": "privkey.pem",
+  "api_tls_cert": "fullchain.pem",
+  "api_static_dir": "./static_files",
+  "oauth2_rs_name": "goatns",
+  "oauth2_secret": "supersecret_message"
 }

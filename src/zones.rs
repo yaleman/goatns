@@ -119,7 +119,8 @@ pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, String> {
         }
     };
     let mut buf: String = String::new();
-    file.read_to_string(&mut buf).unwrap();
+    file.read_to_string(&mut buf)
+        .map_err(|err| format!("Failed to read {}: {:?}", &filename.display(), err))?;
     let jsonstruct: FileZone = match json5::from_str(&buf) {
         Ok(value) => value,
         Err(error) => {
@@ -140,7 +141,8 @@ pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, String> {
     };
 
     let mut buf: String = String::new();
-    file.read_to_string(&mut buf).unwrap();
+    file.read_to_string(&mut buf)
+        .map_err(|err| format!("Failed to read {}: {:?}", filename, err))?;
     let jsonstruct: Result<Vec<FileZone>, String> =
         json5::from_str(&buf).map_err(|e| format!("Failed to read JSON file: {e:?}"));
     jsonstruct

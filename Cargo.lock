@@ -411,8 +411,9 @@ dependencies = [
 
 [[package]]
 name = "axum-server"
-version = "0.5.1"
-source = "git+https://github.com/programatik29/axum-server?rev=e575e90#e575e90d1fc796401d144f306648553909336700"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1ad46c3ec4e12f4a4b6835e173ba21c25e484c9d02b49770bf006ce5367c036"
 dependencies = [
  "arc-swap",
  "bytes",
@@ -1558,7 +1559,6 @@ dependencies = [
  "gethostname",
  "goatns-macros",
  "hex",
- "http 0.2.11",
  "ipnet",
  "json5",
  "lazy_static",

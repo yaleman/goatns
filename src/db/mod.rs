@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
 use sqlx::{Arguments, ConnectOptions, FromRow, Pool, Row, Sqlite, SqliteConnection, SqlitePool};
 use tokio::time;
+use tracing::instrument;
 
 #[cfg(test)]
 pub mod test;
@@ -99,58 +100,20 @@ impl Default for User {
 }
 
 impl User {
-    #[allow(dead_code, unused_variables)]
-    pub async fn create_old(
-        &self,
-        pool: &SqlitePool,
-        disabled: bool,
-    ) -> Result<usize, sqlx::Error> {
-        // TODO: test user create
-        let res =
-            sqlx::query("INSERT into users (username, email, disabled, authref) VALUES(?, ?, ?)")
-                .bind(&self.username)
-                .bind(&self.email)
-                .bind(disabled)
-                .bind(&self.authref)
-                .execute(&mut *pool.acquire().await?)
-                .await?;
-
-        Ok(1)
-    }
-    #[allow(dead_code, unused_variables)]
-    pub async fn delete(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        // TODO: test user delete
-        let mut txn = pool.begin().await?;
-
-        let res = sqlx::query("DELETE FROM ownership WHERE userid = ?")
-            .bind(self.id.unwrap())
-            .execute(&mut *txn)
-            .await?;
-
-        let res = sqlx::query("DELETE FROM users WHERE id = ?")
-            .bind(self.id.unwrap())
-            .execute(&mut *txn)
-            .await?;
-
-        txn.commit().await?;
-
-        Ok(())
-    }
-
     // Query the DB looking for a user
-    pub async fn get_by_email(pool: &SqlitePool, email: String) -> Result<Self, sqlx::Error> {
-        let res = sqlx::query(
-            "
-            select * from users
-            where email = ?
-            ",
-        )
-        .bind(email)
-        .fetch_one(pool)
-        .await?;
+    // pub async fn get_by_email(pool: &SqlitePool, email: String) -> Result<Self, sqlx::Error> {
+    //     let res = sqlx::query(
+    //         "
+    //         select * from users
+    //         where email = ?
+    //         ",
+    //     )
+    //     .bind(email)
+    //     .fetch_one(pool)
+    //     .await?;
 
-        Ok(User::from(res))
-    }
+    //     Ok(User::from(res))
+    // }
 
     /// Query the DB looking for a user
     pub async fn get_by_subject(
@@ -170,6 +133,7 @@ impl User {
         Ok(User::from(res))
     }
 
+    #[instrument(skip(txn))]
     pub async fn get_zones_for_user(
         &self,
         txn: &mut SqliteConnection,
@@ -212,9 +176,10 @@ impl User {
         Ok(rows)
     }
 
+    #[instrument(skip(pool))]
     pub async fn get_token(
         pool: &mut Pool<Sqlite>,
-        tokenkey: &String,
+        tokenkey: &str,
     ) -> Result<TokenSearchRow, sqlx::Error> {
         let mut txn = pool.begin().await?;
         let res: TokenSearchRow = sqlx::query_as(
@@ -288,18 +253,6 @@ pub struct ZoneOwnership {
 
 impl ZoneOwnership {
     #[allow(dead_code, unused_variables)]
-    pub async fn create_old(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        // TODO: test ownership create
-        sqlx::query(
-            "INSERT INTO ownership (zoneid, userid) VALUES ( ?, ? ) ON CONFLICT DO NOTHING",
-        )
-        .bind(self.zoneid)
-        .bind(self.userid)
-        .execute(&mut *pool.acquire().await?)
-        .await?;
-        Ok(())
-    }
-    #[allow(dead_code, unused_variables)]
     pub async fn delete(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
         // TODO: test ownership delete
         let res = sqlx::query("DELETE FROM ownership WHERE zoneid = ? AND userid = ?")
@@ -346,9 +299,6 @@ pub async fn get_zone_with_txn(
     id: Option<i64>,
     name: Option<String>,
 ) -> Result<Option<FileZone>, sqlx::Error> {
-    // let mut args = SqliteArguments::default();
-    // args.add(name);
-
     let result = sqlx::query(
         "SELECT
         id, name, rname, serial, refresh, retry, expire, minimum
@@ -389,7 +339,7 @@ pub async fn get_zone_with_txn(
     .await?;
 
     zone.records = result
-        .into_iter()
+        .iter()
         .filter_map(|r| match FileZoneRecord::try_from(r) {
             Ok(val) => Some(val),
             Err(_) => None,
@@ -1816,13 +1766,20 @@ impl From<SqliteRow> for UserAuthToken {
 }
 
 /// Run this periodically to clean up expired DB things
-pub async fn cron_db_cleanup(pool: Pool<Sqlite>, period: Duration) {
+pub async fn cron_db_cleanup(pool: Pool<Sqlite>, period: Duration, max_iter: Option<usize>) {
     let mut interval = time::interval(period);
+    let mut iterations = 0;
     loop {
         interval.tick().await;
 
         if let Err(error) = UserAuthToken::cleanup(&pool).await {
             log::error!("Failed to clean up UserAuthToken objects in DB cron: {error:?}");
+        }
+        if let Some(max_iter) = max_iter {
+            iterations += 1;
+            if iterations >= max_iter {
+                break;
+            }
         }
     }
 }

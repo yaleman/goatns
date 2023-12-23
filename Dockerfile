@@ -25,7 +25,7 @@ RUN mv /root/.cargo/bin/* /usr/local/bin/
 RUN cargo build --release --bin goatns
 RUN chmod +x /goatns/target/release/goatns
 
-FROM gcr.io/distroless/cc-debian12 as goatns
+FROM gcr.io/distroless/cc-debian12 AS goatns
 # # ======================
 # https://github.com/GoogleContainerTools/distroless/blob/main/examples/rust/Dockerfile
 COPY --from=builder /goatns/target/release/goatns /

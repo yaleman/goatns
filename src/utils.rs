@@ -237,7 +237,7 @@ pub fn hexdump(bytes: Vec<u8>) {
         match byte.len() {
             2 => {
                 let byte1_alpha = match byte[1].is_ascii_alphanumeric() {
-                    true => from_utf8(byte[1..2].into()).unwrap(),
+                    true => from_utf8(byte[1..2].into()).expect("Failed to decode bytes"),
                     false => " ",
                 };
 
