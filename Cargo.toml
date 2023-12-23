@@ -117,7 +117,7 @@ url = { version = "2.4.0", features = ["serde"] }
 
 [workspace.dependencies]
 axum = "^0.7.0"
-proc-macro2 = "1.0.69"
+proc-macro2 = "1.0.71"
 syn = "2.0.42"
 
 [dev-dependencies]
