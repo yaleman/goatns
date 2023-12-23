@@ -1559,7 +1559,6 @@ dependencies = [
  "gethostname",
  "goatns-macros",
  "hex",
- "http 1.0.0",
  "ipnet",
  "json5",
  "lazy_static",
