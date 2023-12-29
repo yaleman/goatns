@@ -18,6 +18,7 @@ use enum_iterator::Sequence;
 use oauth2::CsrfToken;
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
+use tracing::error;
 
 use crate::db::UserAuthToken;
 use crate::web::GoatState;
@@ -49,10 +50,17 @@ struct ApiTokensGetPage {
     pub user_is_admin: bool,
 }
 
-pub fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
-    let session_token: String = match session.get(SESSION_CSRFTOKEN_FIELD).unwrap() {
+pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
+    let session_token: String = match session.get(SESSION_CSRFTOKEN_FIELD).await.unwrap() {
         None => {
-            session.remove_value(SESSION_CSRFTOKEN_FIELD);
+            session
+                .remove_value(SESSION_CSRFTOKEN_FIELD)
+                .await
+                .map_err(|err| {
+                    error!("Failed to remove CSRF token from session: {err:?}");
+                    false
+                })
+                .unwrap();
             log::debug!("Couldn't get session token from storage");
             return false;
         }
@@ -76,7 +84,14 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
     let expiry = match split.next() {
         None => {
             log::debug!("Couldn't get timestamp from stored CSRF Token");
-            session.remove_value(SESSION_CSRFTOKEN_FIELD);
+            session
+                .remove_value(SESSION_CSRFTOKEN_FIELD)
+                .await
+                .map_err(|err| {
+                    error!("Failed to remove CSRF token from session: {err:?}");
+                    false
+                })
+                .unwrap();
             return false;
         }
         Some(value) => value,
@@ -85,7 +100,14 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
     let expiry: DateTime<Utc> = match DateTime::parse_from_rfc3339(expiry) {
         Err(error) => {
             log::debug!("Failed to parse {expiry:?} into datetime: {error:?}");
-            session.remove_value(SESSION_CSRFTOKEN_FIELD);
+            session
+                .remove_value(SESSION_CSRFTOKEN_FIELD)
+                .await
+                .map_err(|err| {
+                    error!("Failed to remove CSRF token from session: {err:?}");
+                    false
+                })
+                .unwrap();
             return false;
         }
         Ok(value) => value.into(),
@@ -94,7 +116,14 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
 
     if expiry < now {
         log::debug!("Token has expired at {expiry:?}, time is now {now:?}");
-        session.remove_value(SESSION_CSRFTOKEN_FIELD);
+        session
+            .remove_value(SESSION_CSRFTOKEN_FIELD)
+            .await
+            .map_err(|err| {
+                error!("Failed to remove CSRF token from session: {err:?}");
+                false
+            })
+            .unwrap();
         return false;
     }
     log::debug!("CSRF Token was valid!");
@@ -104,7 +133,7 @@ pub fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
 /// Store a CSRF token with an expiry in the session store
 ///
 /// Expiry defaults to 5 (minutes)
-fn store_api_csrf_token(
+async fn store_api_csrf_token(
     session: &mut Session,
     expiry_plus_seconds: Option<i64>,
 ) -> Result<String, String> {
@@ -117,7 +146,7 @@ fn store_api_csrf_token(
     let stored_csrf = format!("{csrftoken}|{}", csrf_expiry.to_rfc3339());
 
     // store it in the session storage
-    if let Err(error) = session.insert(SESSION_CSRFTOKEN_FIELD, stored_csrf) {
+    if let Err(error) = session.insert(SESSION_CSRFTOKEN_FIELD, stored_csrf).await {
         // TODO: nice errors are nice but secure errors are better
         return Err(format!("Failed to store CSRF Token for user: {error:?}"));
     };
@@ -132,7 +161,7 @@ pub async fn api_tokens_get(
 ) -> Result<Html<String>, Redirect> {
     let user = check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
 
-    let csrftoken = match store_api_csrf_token(&mut session, None) {
+    let csrftoken = match store_api_csrf_token(&mut session, None).await {
         Ok(value) => value,
         Err(error) => {
             log::error!("Failed to store csrf token in DB: {error:?}");
@@ -141,9 +170,9 @@ pub async fn api_tokens_get(
     };
 
     // pull token from the session store new_api_token
-    let token_value: Option<String> = session.remove("new_api_token").unwrap();
+    let token_value: Option<String> = session.remove("new_api_token").await.unwrap();
 
-    let tokenkey: Option<String> = session.remove("new_api_tokenkey").unwrap();
+    let tokenkey: Option<String> = session.remove("new_api_tokenkey").await.unwrap();
 
     let tokens =
         match UserAuthToken::get_all_user(&state.read().await.connpool, user.id.unwrap()).await {
@@ -271,7 +300,7 @@ pub async fn api_tokens_post(
 
     let user = check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
 
-    if !validate_csrf_expiry(&form.csrftoken, &mut session) {
+    if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
         // TODO: redirect to the start
         log::debug!("Failed to validate csrf expiry");
         return Err(Redirect::to("/ui/settings"));
@@ -286,7 +315,7 @@ pub async fn api_tokens_post(
                 .collect();
             eprintln!("Lifetimes: {lifetimes:?}");
             ApiTokenPage {
-                csrftoken: store_api_csrf_token(&mut session, None).unwrap(),
+                csrftoken: store_api_csrf_token(&mut session, None).await.unwrap(),
                 state: ApiTokenCreatePageState::Start,
                 token_name: None,
                 lifetimes: Some(lifetimes),
@@ -306,7 +335,7 @@ pub async fn api_tokens_post(
             let api_cookie_secret = state_reader.config.api_cookie_secret();
             let lifetime: i32 = form.lifetime.unwrap().into();
             // get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
-            let user: User = match session.get("user").unwrap() {
+            let user: User = match session.get("user").await.unwrap() {
                 Some(val) => val,
                 None => {
                     log::debug!("Couldn't get user from session store");
@@ -343,7 +372,10 @@ pub async fn api_tokens_post(
                 Err(error) => todo!("Need to handle this! {error:?}"),
                 Ok(_) => {
                     // store the api token in the session store
-                    if let Err(error) = session.insert("new_api_token", &api_token.token_secret) {
+                    if let Err(error) = session
+                        .insert("new_api_token", &api_token.token_secret)
+                        .await
+                    {
                         log::error!(
                             "Failed to store new API token in the session, ruh roh? {error:?}"
                         );
@@ -358,7 +390,10 @@ pub async fn api_tokens_post(
                         todo!("Failed to store new API token in the session, ruh roh? {error:?}");
                     };
 
-                    if let Err(error) = session.insert("new_api_tokenkey", &api_token.token_key) {
+                    if let Err(error) = session
+                        .insert("new_api_tokenkey", &api_token.token_key)
+                        .await
+                    {
                         log::error!(
                             "Failed to store new API tokenkey in the session, ruh roh? {error:?}"
                         );
@@ -382,7 +417,7 @@ pub async fn api_tokens_post(
                 }
             };
             // redirect the user to the display page
-            let csrftoken = store_api_csrf_token(&mut session, Some(30)).unwrap();
+            let csrftoken = store_api_csrf_token(&mut session, Some(30)).await.unwrap();
             return Err(Redirect::to(&format!(
                 "/ui/settings/api_tokens?state={csrftoken}?token_created=1"
             )));
@@ -416,7 +451,7 @@ pub async fn api_tokens_delete_get(
 ) -> Result<Html<String>, Redirect> {
     let user = check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
 
-    let csrftoken = match store_api_csrf_token(&mut session, None) {
+    let csrftoken = match store_api_csrf_token(&mut session, None).await {
         Ok(val) => val,
         Err(err) => {
             log::error!("Failed to store CSRF token in the session store: {err:?}");
@@ -471,14 +506,14 @@ pub async fn api_tokens_delete_post(
 ) -> Result<Html<String>, Redirect> {
     check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
 
-    if !validate_csrf_expiry(&form.csrftoken, &mut session) {
+    if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
         // TODO: redirect to the start
         log::debug!("Failed to validate csrf expiry");
         return Err(Redirect::to("/ui/settings"));
     }
 
     log::debug!("Deleting token from Form: {form:?}");
-    let user: User = match session.get("user").unwrap() {
+    let user: User = match session.get("user").await.unwrap() {
         Some(val) => val,
         None => {
             log::debug!("Couldn't get user from session store");

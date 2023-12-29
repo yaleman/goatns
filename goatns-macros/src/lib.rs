@@ -4,7 +4,7 @@ use proc_macro::TokenStream;
 #[proc_macro]
 pub fn check_api_auth(_item: TokenStream) -> TokenStream {
     r#"
-    let user: User = match session.get("user").unwrap() {
+    let user: User = match session.get("user").await.unwrap() {
         Some(val) => val,
         None => {
             #[cfg(test)]

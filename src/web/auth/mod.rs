@@ -27,6 +27,7 @@ use tower_sessions::{session_store::ExpiredDeletion, sqlx::SqlitePool, SqliteSto
 // pub(crate) mod sessionstore;
 pub mod traits;
 use tower_sessions::{Expiry, Session, SessionManagerLayer};
+use tracing::error;
 use traits::*;
 
 #[derive(Deserialize)]
@@ -239,7 +240,7 @@ pub async fn login(
 ) -> impl IntoResponse {
     // check if we've got an existing, valid session
 
-    if let Some(signed_in) = session.get("signed_in").unwrap() {
+    if let Some(signed_in) = session.get("signed_in").await.unwrap() {
         if signed_in {
             return Redirect::to("/ui").into_response();
         }
@@ -332,10 +333,20 @@ pub async fn login(
                                 "Database error finding user {:?}: {error:?}",
                                 email.clone()
                             );
-                            let redirect: Option<String> = session.get("redirect").unwrap();
+                            let redirect: Option<String> = session.get("redirect").await.unwrap();
                             return match redirect {
                                 Some(destination) => {
-                                    session.remove_value("redirect");
+                                    session.remove_value("redirect").await.map_err(
+                                        |err| {
+                                            error!("Failed to flush session: {err:?}");
+                                            (
+                                                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                                                format!(
+                                                    "Failed to remove redirect value from session store!"
+                                                ),
+                                            )
+                                        },
+                                    ).unwrap();
                                     Redirect::to(&destination).into_response()
                                 }
                                 None => redirect_to_home().into_response(),
@@ -347,16 +358,27 @@ pub async fn login(
             log::debug!("Found user in database: {dbuser:?}");
 
             if dbuser.disabled {
-                session.flush();
+                session
+                    .flush()
+                    .await
+                    .map_err(|err| {
+                        error!("Failed to flush session: {err:?}");
+                        (
+                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("Failed to flush session store!"),
+                        )
+                    })
+                    .unwrap();
                 log::info!("Disabled user attempted to log in: {dbuser:?}");
                 return redirect_to_home().into_response();
             }
 
             session
                 .insert("authref", claims.subject().to_string())
+                .await
                 .unwrap();
-            session.insert("user", dbuser).unwrap();
-            session.insert("signed_in", true).unwrap();
+            session.insert("user", dbuser).await.unwrap();
+            session.insert("signed_in", true).await.unwrap();
 
             redirect_to_dashboard().into_response()
         }
@@ -375,7 +397,17 @@ pub async fn login(
 }
 
 pub async fn logout(session: Session) -> impl IntoResponse {
-    session.flush();
+    session
+        .flush()
+        .await
+        .map_err(|err| {
+            error!("Failed to flush session: {err:?}");
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to flush session store!"),
+            )
+        })
+        .unwrap();
     Redirect::to("/")
 }
 
