@@ -2,6 +2,7 @@ use axum::http::StatusCode;
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
+use tracing::error;
 
 use crate::db::User;
 use crate::web::utils::validate_api_token;
@@ -16,6 +17,12 @@ pub struct AuthPayload {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct AuthResponse {
     pub message: String,
+}
+
+impl From<String> for AuthResponse {
+    fn from(message: String) -> Self {
+        AuthResponse { message }
+    }
 }
 
 // #[debug_handler]
@@ -44,7 +51,13 @@ pub async fn login(
             #[cfg(test)]
             println!("Error: {err:?}");
             log::debug!("Error: {err:?}");
-            session.flush();
+            session.flush().await.map_err(|err| {
+                error!("Failed to flush session: {err:?}");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(AuthResponse::from(format!("Failed to flush session!"))),
+                )
+            })?;
             let resp = AuthResponse {
                 message: "token not found".to_string(),
             };
@@ -54,12 +67,18 @@ pub async fn login(
     match validate_api_token(&token, &payload.token) {
         Ok(_) => {
             println!("Successfully validated token on login");
-            let session_user = session.insert("user", &token.user);
-            let session_authref = session.insert("authref", token.user.authref);
-            let session_signin = session.insert("signed_in", true);
+            let session_user = session.insert("user", &token.user).await;
+            let session_authref = session.insert("authref", token.user.authref).await;
+            let session_signin = session.insert("signed_in", true).await;
 
             if session_authref.is_err() | session_user.is_err() | session_signin.is_err() {
-                session.flush();
+                session.flush().await.map_err(|err| {
+                    error!("Failed to flush session: {err:?}");
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(AuthResponse::from(format!("Failed to flush session!"))),
+                    )
+                })?;
                 log::info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.tokenkey);
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -80,7 +99,13 @@ pub async fn login(
             ))
         }
         Err(err) => {
-            session.flush();
+            session.flush().await.map_err(|err| {
+                error!("Failed to flush session: {err:?}");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(AuthResponse::from(format!("Failed to flush session!"))),
+                )
+            })?;
             #[cfg(test)]
             println!("Failed to validate token! {err:?}");
             log::error!(

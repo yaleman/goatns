@@ -53,7 +53,7 @@ pub async fn zones_list(
     let offset = 0;
     let limit = 20;
 
-    let user: User = match session.get("user").unwrap() {
+    let user: User = match session.get("user").await.unwrap() {
         Some(val) => {
             log::info!("current user: {val:?}");
             val
@@ -132,14 +132,15 @@ pub async fn zone_view(
 }
 
 pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, Redirect> {
-    let authref = session.get::<String>("authref").unwrap();
+    let authref = session.get::<String>("authref").await.unwrap();
 
     let redirect_path = Some(path.path_and_query().unwrap().to_string());
     if authref.is_none() {
-        session.clear();
+        session.clear().await;
 
         session
             .insert("redirect", redirect_path)
+            .await
             .map_err(|e| log::debug!("Couldn't store redirect for user: {e:?}"))
             .unwrap();
         log::warn!("Not-logged-in-user tried to log in, how rude!");
@@ -148,7 +149,7 @@ pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, R
     }
     log::debug!("session ok!");
 
-    let user = match session.get("user").unwrap() {
+    let user = match session.get("user").await.unwrap() {
         Some(val) => val,
         None => return Err(redirect_to_login()),
     };
