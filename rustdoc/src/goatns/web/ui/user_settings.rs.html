@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/web/ui/user_settings.rs`."><title>user_settings.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.1 (a28077b28 2023-12-04)" data-channel="1.74.1" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../goatns/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/web/ui/user_settings.rs`."><title>user_settings.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -525,6 +525,41 @@
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::db::{DBEntity, User};
 <span class="kw">use </span><span class="kw">crate</span>::web::ui::check_logged_in;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::create_api_token;
@@ -545,6 +580,7 @@
 <span class="kw">use </span>oauth2::CsrfToken;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>tower_sessions::Session;
+<span class="kw">use </span>tracing::error;
 
 <span class="kw">use </span><span class="kw">crate</span>::db::UserAuthToken;
 <span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
@@ -576,10 +612,17 @@
     <span class="kw">pub </span>user_is_admin: bool,
 }
 
-<span class="kw">pub fn </span>validate_csrf_expiry(user_input: <span class="kw-2">&amp;</span>str, session: <span class="kw-2">&amp;mut </span>Session) -&gt; bool {
-    <span class="kw">let </span>session_token: String = <span class="kw">match </span>session.get(SESSION_CSRFTOKEN_FIELD).unwrap() {
+<span class="kw">pub async fn </span>validate_csrf_expiry(user_input: <span class="kw-2">&amp;</span>str, session: <span class="kw-2">&amp;mut </span>Session) -&gt; bool {
+    <span class="kw">let </span>session_token: String = <span class="kw">match </span>session.get(SESSION_CSRFTOKEN_FIELD).<span class="kw">await</span>.unwrap() {
         <span class="prelude-val">None </span>=&gt; {
-            session.remove_value(SESSION_CSRFTOKEN_FIELD);
+            session
+                .remove_value(SESSION_CSRFTOKEN_FIELD)
+                .<span class="kw">await
+                </span>.map_err(|err| {
+                    <span class="macro">error!</span>(<span class="string">&quot;Failed to remove CSRF token from session: {err:?}&quot;</span>);
+                    <span class="bool-val">false
+                </span>})
+                .unwrap();
             <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get session token from storage&quot;</span>);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
@@ -603,7 +646,14 @@
     <span class="kw">let </span>expiry = <span class="kw">match </span>split.next() {
         <span class="prelude-val">None </span>=&gt; {
             <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get timestamp from stored CSRF Token&quot;</span>);
-            session.remove_value(SESSION_CSRFTOKEN_FIELD);
+            session
+                .remove_value(SESSION_CSRFTOKEN_FIELD)
+                .<span class="kw">await
+                </span>.map_err(|err| {
+                    <span class="macro">error!</span>(<span class="string">&quot;Failed to remove CSRF token from session: {err:?}&quot;</span>);
+                    <span class="bool-val">false
+                </span>})
+                .unwrap();
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
         <span class="prelude-val">Some</span>(value) =&gt; value,
@@ -612,7 +662,14 @@
     <span class="kw">let </span>expiry: DateTime&lt;Utc&gt; = <span class="kw">match </span>DateTime::parse_from_rfc3339(expiry) {
         <span class="prelude-val">Err</span>(error) =&gt; {
             <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to parse {expiry:?} into datetime: {error:?}&quot;</span>);
-            session.remove_value(SESSION_CSRFTOKEN_FIELD);
+            session
+                .remove_value(SESSION_CSRFTOKEN_FIELD)
+                .<span class="kw">await
+                </span>.map_err(|err| {
+                    <span class="macro">error!</span>(<span class="string">&quot;Failed to remove CSRF token from session: {err:?}&quot;</span>);
+                    <span class="bool-val">false
+                </span>})
+                .unwrap();
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
         <span class="prelude-val">Ok</span>(value) =&gt; value.into(),
@@ -621,7 +678,14 @@
 
     <span class="kw">if </span>expiry &lt; now {
         <span class="macro">log::debug!</span>(<span class="string">&quot;Token has expired at {expiry:?}, time is now {now:?}&quot;</span>);
-        session.remove_value(SESSION_CSRFTOKEN_FIELD);
+        session
+            .remove_value(SESSION_CSRFTOKEN_FIELD)
+            .<span class="kw">await
+            </span>.map_err(|err| {
+                <span class="macro">error!</span>(<span class="string">&quot;Failed to remove CSRF token from session: {err:?}&quot;</span>);
+                <span class="bool-val">false
+            </span>})
+            .unwrap();
         <span class="kw">return </span><span class="bool-val">false</span>;
     }
     <span class="macro">log::debug!</span>(<span class="string">&quot;CSRF Token was valid!&quot;</span>);
@@ -631,7 +695,7 @@
 <span class="doccomment">/// Store a CSRF token with an expiry in the session store
 ///
 /// Expiry defaults to 5 (minutes)
-</span><span class="kw">fn </span>store_api_csrf_token(
+</span><span class="kw">async fn </span>store_api_csrf_token(
     session: <span class="kw-2">&amp;mut </span>Session,
     expiry_plus_seconds: <span class="prelude-ty">Option</span>&lt;i64&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
@@ -644,7 +708,7 @@
     <span class="kw">let </span>stored_csrf = <span class="macro">format!</span>(<span class="string">&quot;{csrftoken}|{}&quot;</span>, csrf_expiry.to_rfc3339());
 
     <span class="comment">// store it in the session storage
-    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(SESSION_CSRFTOKEN_FIELD, stored_csrf) {
+    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(SESSION_CSRFTOKEN_FIELD, stored_csrf).<span class="kw">await </span>{
         <span class="comment">// TODO: nice errors are nice but secure errors are better
         </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to store CSRF Token for user: {error:?}&quot;</span>));
     };
@@ -659,7 +723,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     <span class="kw">let </span>user = check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_static(URI_SETTINGS_API_TOKENS)).<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="kw">let </span>csrftoken = <span class="kw">match </span>store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>) {
+    <span class="kw">let </span>csrftoken = <span class="kw">match </span>store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(error) =&gt; {
             <span class="macro">log::error!</span>(<span class="string">&quot;Failed to store csrf token in DB: {error:?}&quot;</span>);
@@ -668,9 +732,9 @@
     };
 
     <span class="comment">// pull token from the session store new_api_token
-    </span><span class="kw">let </span>token_value: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">&quot;new_api_token&quot;</span>).unwrap();
+    </span><span class="kw">let </span>token_value: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">&quot;new_api_token&quot;</span>).<span class="kw">await</span>.unwrap();
 
-    <span class="kw">let </span>tokenkey: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">&quot;new_api_tokenkey&quot;</span>).unwrap();
+    <span class="kw">let </span>tokenkey: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">&quot;new_api_tokenkey&quot;</span>).<span class="kw">await</span>.unwrap();
 
     <span class="kw">let </span>tokens =
         <span class="kw">match </span>UserAuthToken::get_all_user(<span class="kw-2">&amp;</span>state.read().<span class="kw">await</span>.connpool, user.id.unwrap()).<span class="kw">await </span>{
@@ -798,7 +862,7 @@
 
     <span class="kw">let </span>user = check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_static(URI_SETTINGS_API_TOKENS)).<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="kw">if </span>!validate_csrf_expiry(<span class="kw-2">&amp;</span>form.csrftoken, <span class="kw-2">&amp;mut </span>session) {
+    <span class="kw">if </span>!validate_csrf_expiry(<span class="kw-2">&amp;</span>form.csrftoken, <span class="kw-2">&amp;mut </span>session).<span class="kw">await </span>{
         <span class="comment">// TODO: redirect to the start
         </span><span class="macro">log::debug!</span>(<span class="string">&quot;Failed to validate csrf expiry&quot;</span>);
         <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings&quot;</span>));
@@ -813,7 +877,7 @@
                 .collect();
             <span class="macro">eprintln!</span>(<span class="string">&quot;Lifetimes: {lifetimes:?}&quot;</span>);
             ApiTokenPage {
-                csrftoken: store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>).unwrap(),
+                csrftoken: store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap(),
                 state: ApiTokenCreatePageState::Start,
                 token_name: <span class="prelude-val">None</span>,
                 lifetimes: <span class="prelude-val">Some</span>(lifetimes),
@@ -833,7 +897,7 @@
             <span class="kw">let </span>api_cookie_secret = state_reader.config.api_cookie_secret();
             <span class="kw">let </span>lifetime: i32 = form.lifetime.unwrap().into();
             <span class="comment">// get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
-            </span><span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">&quot;user&quot;</span>).unwrap() {
+            </span><span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">&quot;user&quot;</span>).<span class="kw">await</span>.unwrap() {
                 <span class="prelude-val">Some</span>(val) =&gt; val,
                 <span class="prelude-val">None </span>=&gt; {
                     <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get user from session store&quot;</span>);
@@ -870,7 +934,10 @@
                 <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">todo!</span>(<span class="string">&quot;Need to handle this! {error:?}&quot;</span>),
                 <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {
                     <span class="comment">// store the api token in the session store
-                    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(<span class="string">&quot;new_api_token&quot;</span>, <span class="kw-2">&amp;</span>api_token.token_secret) {
+                    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session
+                        .insert(<span class="string">&quot;new_api_token&quot;</span>, <span class="kw-2">&amp;</span>api_token.token_secret)
+                        .<span class="kw">await
+                    </span>{
                         <span class="macro">log::error!</span>(
                             <span class="string">&quot;Failed to store new API token in the session, ruh roh? {error:?}&quot;
                         </span>);
@@ -885,7 +952,10 @@
                         </span><span class="macro">todo!</span>(<span class="string">&quot;Failed to store new API token in the session, ruh roh? {error:?}&quot;</span>);
                     };
 
-                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(<span class="string">&quot;new_api_tokenkey&quot;</span>, <span class="kw-2">&amp;</span>api_token.token_key) {
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session
+                        .insert(<span class="string">&quot;new_api_tokenkey&quot;</span>, <span class="kw-2">&amp;</span>api_token.token_key)
+                        .<span class="kw">await
+                    </span>{
                         <span class="macro">log::error!</span>(
                             <span class="string">&quot;Failed to store new API tokenkey in the session, ruh roh? {error:?}&quot;
                         </span>);
@@ -909,7 +979,7 @@
                 }
             };
             <span class="comment">// redirect the user to the display page
-            </span><span class="kw">let </span>csrftoken = store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">Some</span>(<span class="number">30</span>)).unwrap();
+            </span><span class="kw">let </span>csrftoken = store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">Some</span>(<span class="number">30</span>)).<span class="kw">await</span>.unwrap();
             <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
                 <span class="string">&quot;/ui/settings/api_tokens?state={csrftoken}?token_created=1&quot;
             </span>)));
@@ -943,7 +1013,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     <span class="kw">let </span>user = check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_static(URI_SETTINGS_API_TOKENS)).<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="kw">let </span>csrftoken = <span class="kw">match </span>store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>) {
+    <span class="kw">let </span>csrftoken = <span class="kw">match </span>store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(val) =&gt; val,
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="macro">log::error!</span>(<span class="string">&quot;Failed to store CSRF token in the session store: {err:?}&quot;</span>);
@@ -998,14 +1068,14 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
     check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_static(URI_SETTINGS_API_TOKENS)).<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="kw">if </span>!validate_csrf_expiry(<span class="kw-2">&amp;</span>form.csrftoken, <span class="kw-2">&amp;mut </span>session) {
+    <span class="kw">if </span>!validate_csrf_expiry(<span class="kw-2">&amp;</span>form.csrftoken, <span class="kw-2">&amp;mut </span>session).<span class="kw">await </span>{
         <span class="comment">// TODO: redirect to the start
         </span><span class="macro">log::debug!</span>(<span class="string">&quot;Failed to validate csrf expiry&quot;</span>);
         <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings&quot;</span>));
     }
 
     <span class="macro">log::debug!</span>(<span class="string">&quot;Deleting token from Form: {form:?}&quot;</span>);
-    <span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">&quot;user&quot;</span>).unwrap() {
+    <span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">&quot;user&quot;</span>).<span class="kw">await</span>.unwrap() {
         <span class="prelude-val">Some</span>(val) =&gt; val,
         <span class="prelude-val">None </span>=&gt; {
             <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get user from session store&quot;</span>);
