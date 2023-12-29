@@ -52,7 +52,7 @@ dialoguer = "0.11.0"
 enum-iterator = "1.4.1"
 flexi_logger = { version = "0.27", features = ["async", "default"] }
 futures = "0.3.29"
-futures-util = "0.3.28"
+futures-util = "0.3.30"
 gethostname = "0.4.3"
 goatns-macros = { path = "./goatns-macros" }
 hex = "0.4.3"
