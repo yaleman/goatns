@@ -35,6 +35,7 @@ jobs:
           mkdir .cargo
           cargo vendor > .cargo/config.toml
       - name: Build and export to Docker
+        id: build_and_export
         uses: docker/build-push-action@v5
         with:
           # platforms: linux/amd64,linux/arm64
@@ -45,6 +46,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: GITHUB_SHA=${GITHUB_SHA}
       - name: Test
+        id: test
         run: |
           touch fullchain.pem
           touch privkey.pem
@@ -63,3 +65,4 @@ jobs:
           push:  ${{ github.ref == 'refs/heads/main' }}
           cache-from: type=gha
           build-args: GITHUB_SHA=${GITHUB_SHA}
+        if: github.event.pull_request.merged == true
