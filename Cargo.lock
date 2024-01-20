@@ -4557,9 +4557,9 @@ checksum = "b6bc1c9ce2b5135ac7f93c72918fc37feb872bdc6a5533a8b85eb4b86bfdae52"
 
 [[package]]
 name = "tower-sessions"
-version = "0.8.2"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "645170f7fa7975a65ccb4a14ba2271c4df9598afc2755c2bfe05f294cda3a556"
+checksum = "201aa0cccd55f565d89086d231328877fb897ba01163a224b6b917e2361a6db6"
 dependencies = [
  "tower-sessions-core",
  "tower-sessions-memory-store",
@@ -4568,9 +4568,9 @@ dependencies = [
 
 [[package]]
 name = "tower-sessions-core"
-version = "0.8.2"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f01972091af543726f9a48afb73efcd6b142699f1bc743975c774117db4bba2"
+checksum = "12564616434c7c811a229a223552b984f272e772d5dec4f71e61ca5bea7d3a3f"
 dependencies = [
  "async-trait",
  "axum-core 0.4.3",
@@ -4591,9 +4591,9 @@ dependencies = [
 
 [[package]]
 name = "tower-sessions-memory-store"
-version = "0.8.2"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a09281f8b4d3a847b9479658bafc2dab1224f76f03e877c8eca354ed42fb2c3"
+checksum = "d6800cb4ae79785b1bb413e48813306950902ef902f8ea93fce0a25032e2c254"
 dependencies = [
  "async-trait",
  "time",
@@ -4603,9 +4603,9 @@ dependencies = [
 
 [[package]]
 name = "tower-sessions-sqlx-store"
-version = "0.8.2"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df50c47fa6b79ebc4c54ca814f087469f47293fb08025b7822597f9a55a39304"
+checksum = "afc1e122c612305c128a8d6cd116b0a8024efce9313726db60b7a2d625b18492"
 dependencies = [
  "async-trait",
  "rmp-serde",

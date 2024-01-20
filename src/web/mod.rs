@@ -9,12 +9,10 @@ use crate::config::ConfigFile;
 use crate::datastore;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
-use axum::error_handling::HandleErrorLayer;
 use axum::extract::FromRef;
 use axum::http::StatusCode;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
-use axum::BoxError;
 use axum::Router;
 use axum_csp::CspUrlMatcher;
 #[cfg(feature = "otel")]
@@ -188,10 +186,6 @@ pub async fn build(
     }));
 
     let service_layer = ServiceBuilder::new()
-        .layer(HandleErrorLayer::new(|err: BoxError| async move {
-            error!("Something broke: {:?}", err);
-            StatusCode::BAD_REQUEST
-        }))
         .layer(session_layer)
         .layer(from_fn_with_state(state.clone(), csp::cspheaders));
 
