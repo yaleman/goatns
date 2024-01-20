@@ -234,12 +234,6 @@
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Web things
 //!
 //! Uses axum/tower for protocol, askama for templating, confusion for the rest.
@@ -251,12 +245,10 @@
 <span class="kw">use </span><span class="kw">crate</span>::datastore;
 <span class="kw">use </span><span class="kw">crate</span>::web::middleware::csp;
 <span class="kw">use </span>async_trait::async_trait;
-<span class="kw">use </span>axum::error_handling::HandleErrorLayer;
 <span class="kw">use </span>axum::extract::FromRef;
 <span class="kw">use </span>axum::http::StatusCode;
 <span class="kw">use </span>axum::middleware::from_fn_with_state;
 <span class="kw">use </span>axum::routing::get;
-<span class="kw">use </span>axum::BoxError;
 <span class="kw">use </span>axum::Router;
 <span class="kw">use </span>axum_csp::CspUrlMatcher;
 <span class="attr">#[cfg(feature = <span class="string">&quot;otel&quot;</span>)]
@@ -430,10 +422,6 @@
     }));
 
     <span class="kw">let </span>service_layer = ServiceBuilder::new()
-        .layer(HandleErrorLayer::new(|err: BoxError| <span class="kw">async move </span>{
-            <span class="macro">error!</span>(<span class="string">&quot;Something broke: {:?}&quot;</span>, err);
-            StatusCode::BAD_REQUEST
-        }))
         .layer(session_layer)
         .layer(from_fn_with_state(state.clone(), csp::cspheaders));
 
