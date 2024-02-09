@@ -46,7 +46,7 @@ bit-vec = "0.6.3"
 bytes = "1.5.0"
 chrono = { version = "0.4.33", features = ["clock"] }
 clap = { version = "4.4.18", features = ["cargo"] }
-concread = "0.4.3"
+concread = "0.4.4"
 config = { version = "0.14", features = ["json"] }
 dialoguer = "0.11.0"
 enum-iterator = "1.5.0"
