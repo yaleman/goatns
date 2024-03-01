@@ -33,7 +33,7 @@ opt-level = 3
 [dependencies]
 argon2 = "0.5"
 askama = { version = "0.12.1" }
-async-trait = "0.1.75"
+async-trait = "0.1.77"
 axum = { workspace = true, features = ["http2", "original-uri", "macros"] }
 axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
 axum-extra = { version = "0.9.2" }
