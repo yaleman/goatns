@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["new","version_get"],"mod":["auth","filezone","filezonerecord"],"struct":["ErrorResult","FileZoneResponse","GoatNSVersion","NotImplemented"],"trait":["APIEntity"]};
+window.SIDEBAR_ITEMS = {"fn":["new","version_get"],"mod":["auth","docs","filezone","filezonerecord"],"struct":["ErrorResult","FileZoneResponse","GoatNSVersion","NotImplemented"],"trait":["APIEntity"]};

@@ -127,6 +127,7 @@
 <span class="kw">use </span>serde::Serialize;
 
 <span class="kw">pub mod </span>auth;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>docs;
 <span class="kw">pub mod </span>filezone;
 <span class="kw">pub mod </span>filezonerecord;
 <span class="kw">use </span>tower_sessions::Session;
@@ -222,8 +223,7 @@
 
 <span class="kw">pub fn </span>new() -&gt; Router&lt;GoatState&gt; {
     Router::new()
-        <span class="comment">// just zone things
-        </span>.route(<span class="string">"/zone"</span>, post(FileZone::api_create))
+        .route(<span class="string">"/zone"</span>, post(FileZone::api_create))
         .route(<span class="string">"/zone"</span>, put(FileZone::api_update))
         .route(<span class="string">"/zone/:id"</span>, get(FileZone::api_get))
         .route(<span class="string">"/zone/:id"</span>, delete(FileZone::api_delete))

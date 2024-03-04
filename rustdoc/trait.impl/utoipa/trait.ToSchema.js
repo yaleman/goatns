@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"goatns":[["impl&lt;'__s&gt; ToSchema&lt;'__s&gt; for <a class=\"struct\" href=\"goatns/web/api/auth/struct.AuthPayload.html\" title=\"struct goatns::web::api::auth::AuthPayload\">AuthPayload</a>"],["impl&lt;'__s&gt; ToSchema&lt;'__s&gt; for <a class=\"struct\" href=\"goatns/web/api/auth/struct.AuthResponse.html\" title=\"struct goatns::web::api::auth::AuthResponse\">AuthResponse</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

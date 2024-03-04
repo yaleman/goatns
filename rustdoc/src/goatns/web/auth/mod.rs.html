@@ -511,8 +511,6 @@
 <a href="#510" id="510">510</a>
 <a href="#511" id="511">511</a>
 <a href="#512" id="512">512</a>
-<a href="#513" id="513">513</a>
-<a href="#514" id="514">514</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::utils::{redirect_to_dashboard, redirect_to_home};
 <span class="kw">use </span><span class="kw">super</span>::GoatState;
 <span class="kw">use </span><span class="kw">crate</span>::config::ConfigFile;
@@ -856,10 +854,8 @@
                                             <span class="macro">error!</span>(<span class="string">"Failed to flush session: {err:?}"</span>);
                                             (
                                                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                                                <span class="macro">format!</span>(
-                                                    <span class="string">"Failed to remove redirect value from session store!"
-                                                </span>),
-                                            )
+                                                <span class="string">"Failed to remove redirect value from session store!"
+                                            </span>)
                                         },
                                     ).unwrap();
                                     Redirect::to(<span class="kw-2">&amp;</span>destination).into_response()
@@ -880,7 +876,7 @@
                         <span class="macro">error!</span>(<span class="string">"Failed to flush session: {err:?}"</span>);
                         (
                             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                            <span class="macro">format!</span>(<span class="string">"Failed to flush session store!"</span>),
+                            <span class="string">"Failed to flush session store!"</span>,
                         )
                     })
                     .unwrap();
@@ -919,7 +915,7 @@
             <span class="macro">error!</span>(<span class="string">"Failed to flush session: {err:?}"</span>);
             (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                <span class="macro">format!</span>(<span class="string">"Failed to flush session store!"</span>),
+                <span class="string">"Failed to flush session store!"</span>,
             )
         })
         .unwrap();

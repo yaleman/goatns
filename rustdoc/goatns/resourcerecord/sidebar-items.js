@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["DEFAULT_LOC_HORIZ_PRE","DEFAULT_LOC_SIZE","DEFAULT_LOC_VERT_PRE"],"enum":["InternalResourceRecord"],"fn":["check_long_labels"],"struct":["CAA_TAG_VALIDATOR","DNSCharString","DomainName","FileLocRecord","LOC_REGEX","LocRecord","URI_RECORD"],"trait":["SetTTL"]};
+window.SIDEBAR_ITEMS = {"enum":["InternalResourceRecord"],"fn":["check_long_labels"],"struct":["DNSCharString","DomainName","FileLocRecord","LOC_REGEX","LocRecord"],"trait":["SetTTL"]};

@@ -1131,20 +1131,13 @@
 <a href="#1130" id="1130">1130</a>
 <a href="#1131" id="1131">1131</a>
 <a href="#1132" id="1132">1132</a>
-<a href="#1133" id="1133">1133</a>
-<a href="#1134" id="1134">1134</a>
-<a href="#1135" id="1135">1135</a>
-<a href="#1136" id="1136">1136</a>
-<a href="#1137" id="1137">1137</a>
-<a href="#1138" id="1138">1138</a>
-<a href="#1139" id="1139">1139</a>
-<a href="#1140" id="1140">1140</a>
-<a href="#1141" id="1141">1141</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::enums::{RecordClass, RecordType};
 <span class="kw">use </span><span class="kw">crate</span>::utils::{dms_to_u32, hexdump, name_as_bytes};
 <span class="kw">use </span><span class="kw">crate</span>::zones::FileZoneRecord;
 <span class="kw">use </span><span class="kw">crate</span>::HEADER_BYTES;
 <span class="kw">use </span>core::fmt::Debug;
+<span class="kw">use </span>goat_lib::constants::{DEFAULT_LOC_HORIZ_PRE, DEFAULT_LOC_SIZE, DEFAULT_LOC_VERT_PRE};
+<span class="kw">use </span>goat_lib::validators::{CAA_TAG_VALIDATOR, URI_RECORD};
 <span class="kw">use </span>num_traits::Num;
 <span class="kw">use </span>packed_struct::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>regex::Regex;
@@ -1152,17 +1145,6 @@
 <span class="kw">use </span>std::env::consts;
 <span class="kw">use </span>std::str::{from_utf8, FromStr};
 <span class="kw">use </span>std::string::FromUtf8Error;
-
-<span class="macro">lazy_static! </span>{
-    <span class="kw">static </span><span class="kw-2">ref </span>CAA_TAG_VALIDATOR: Regex =
-        Regex::new(<span class="string">r"[a-zA-Z0-9]"</span>).expect(<span class="string">"Failed to parse an internal regex!"</span>);
-    <span class="kw">static </span><span class="kw-2">ref </span>URI_RECORD: Regex = Regex::new(<span class="string">r"^(?P&lt;priority&gt;\d+) (?P&lt;weight&gt;\d+) (?P&lt;target&gt;.*)"</span>)
-        .expect(<span class="string">"Failed to parse an internal regex!"</span>);
-}
-
-<span class="kw">const </span>DEFAULT_LOC_HORIZ_PRE: u32 = <span class="number">10000</span>;
-<span class="kw">const </span>DEFAULT_LOC_VERT_PRE: u32 = <span class="number">10</span>;
-<span class="kw">const </span>DEFAULT_LOC_SIZE: u32 = <span class="number">1</span>;
 
 <span class="attr">#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 </span><span class="kw">pub struct </span>DomainName {
@@ -1982,7 +1964,7 @@
 
     <span class="kw">use super</span>::{DNSCharString, InternalResourceRecord};
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_eq_resourcerecord() {
+    </span><span class="kw">fn </span>eq_resourcerecord() {
         <span class="macro">assert_eq!</span>(
             InternalResourceRecord::A {
                 address: <span class="number">12345</span>,
@@ -2002,7 +1984,7 @@
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_resourcerecord_from_ipv6_string() {
+    </span><span class="kw">fn </span>resourcerecord_from_ipv6_string() {
         <span class="kw">let </span>fzr = FileZoneRecord {
             name: <span class="string">"test"</span>.to_string(),
             rrtype: <span class="string">"AAAA"</span>.to_string(),
@@ -2031,7 +2013,7 @@
         );
     }
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_dnscharstring() {
+    </span><span class="kw">fn </span>dnscharstring() {
         <span class="kw">let </span>test: DNSCharString = <span class="string">"hello world"</span>.into();
         <span class="kw">let </span>testbytes: Vec&lt;u8&gt; = test.into();
         <span class="macro">assert_eq!</span>(testbytes[<span class="number">0</span>], <span class="number">11</span>);

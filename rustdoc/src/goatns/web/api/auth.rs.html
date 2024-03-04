@@ -124,23 +124,36 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>axum::http::StatusCode;
 <span class="kw">use </span>axum::{extract::State, Json};
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>tower_sessions::Session;
 <span class="kw">use </span>tracing::error;
+<span class="kw">use </span>utoipa::ToSchema;
 
 <span class="kw">use </span><span class="kw">crate</span>::db::User;
 <span class="kw">use </span><span class="kw">crate</span>::web::utils::validate_api_token;
 <span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
 
-<span class="attr">#[derive(Debug, Deserialize, Clone)]
+<span class="attr">#[derive(Debug, Deserialize, Clone, ToSchema)]
 </span><span class="kw">pub struct </span>AuthPayload {
     <span class="kw">pub </span>tokenkey: String,
     <span class="kw">pub </span>token: String,
 }
 
-<span class="attr">#[derive(Debug, Deserialize, Serialize, Clone)]
+<span class="attr">#[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
 </span><span class="kw">pub struct </span>AuthResponse {
     <span class="kw">pub </span>message: String,
 }
@@ -151,7 +164,18 @@
     }
 }
 
-<span class="comment">// #[debug_handler]
+<span class="attr">#[utoipa::path(
+    post,
+    path = <span class="string">"/login"</span>,
+    operation_id = <span class="string">"login"</span>,
+    request_body = AuthPayload,
+    responses(
+        (status = <span class="number">200</span>, description = <span class="string">"Login Successful"</span>),
+        (status = <span class="number">403</span>, description = <span class="string">"Auth failed"</span>),
+        (status = <span class="number">500</span>, description = <span class="string">"Something broke!"</span>),
+    ),
+    tag = <span class="string">"Authentication"</span>,
+)]
 </span><span class="kw">pub async fn </span>login(
     State(state): State&lt;GoatState&gt;,
     session: Session,
@@ -181,7 +205,7 @@
                 <span class="macro">error!</span>(<span class="string">"Failed to flush session: {err:?}"</span>);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AuthResponse::from(<span class="macro">format!</span>(<span class="string">"Failed to flush session!"</span>))),
+                    Json(AuthResponse::from(<span class="string">"Failed to flush session!"</span>.to_string())),
                 )
             })<span class="question-mark">?</span>;
             <span class="kw">let </span>resp = AuthResponse {
@@ -202,7 +226,7 @@
                     <span class="macro">error!</span>(<span class="string">"Failed to flush session: {err:?}"</span>);
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(AuthResponse::from(<span class="macro">format!</span>(<span class="string">"Failed to flush session!"</span>))),
+                        Json(AuthResponse::from(<span class="string">"Failed to flush session!"</span>.to_string())),
                     )
                 })<span class="question-mark">?</span>;
                 <span class="macro">log::info!</span>(<span class="string">"action=api_login tokenkey={} result=failure reason=\"failed to store session for user\""</span>, payload.tokenkey);
@@ -229,7 +253,7 @@
                 <span class="macro">error!</span>(<span class="string">"Failed to flush session: {err:?}"</span>);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AuthResponse::from(<span class="macro">format!</span>(<span class="string">"Failed to flush session!"</span>))),
+                    Json(AuthResponse::from(<span class="string">"Failed to flush session!"</span>.to_string())),
                 )
             })<span class="question-mark">?</span>;
             <span class="attr">#[cfg(test)]
