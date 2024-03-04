@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/zones.rs`."><title>zones.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/zones.rs`."><title>zones.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -160,16 +161,16 @@
 
 <span class="doccomment">/// A DNS Zone
 </span><span class="attr">#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(rename(serialize = <span class="string">&quot;UPPERCASE&quot;</span>))]
+#[serde(rename(serialize = <span class="string">"UPPERCASE"</span>))]
 </span><span class="kw">pub struct </span>FileZone {
     <span class="doccomment">/// Database row ID
     </span><span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
     <span class="doccomment">/// MNAME The `domain-name` of the name server that was the original or primary source of data for this zone.
-    </span><span class="comment">// #[serde(rename(serialize = &quot;MNAME&quot;))]
+    </span><span class="comment">// #[serde(rename(serialize = "MNAME"))]
     </span><span class="kw">pub </span>name: String,
     <span class="comment">// RNAME A `domain-name` which specifies the mailbox of the person responsible for this zone.
-    // #[serde(rename(serialize = &quot;RNAME&quot;), default = &quot;rname_default&quot;)]
-    </span><span class="attr">#[serde(default = <span class="string">&quot;rname_default&quot;</span>)]
+    // #[serde(rename(serialize = "RNAME"), default = "rname_default")]
+    </span><span class="attr">#[serde(default = <span class="string">"rname_default"</span>)]
     </span><span class="kw">pub </span>rname: String,
     <span class="doccomment">/// SERIAL - The unsigned 32 bit version number of the original copy of the zone.  Zone transfers preserve this value.  This value wraps and should be compared using sequence space arithmetic.
     </span><span class="attr">#[serde(default)]
@@ -190,7 +191,7 @@
 }
 
 <span class="kw">impl </span>FileZone {
-    <span class="doccomment">/// Checks if they&#39;re equal, ignores the zone id and records
+    <span class="doccomment">/// Checks if they're equal, ignores the zone id and records
     </span><span class="kw">pub fn </span>matching_data(<span class="kw-2">&amp;</span><span class="self">self</span>, cmp: <span class="kw-2">&amp;</span>FileZone) -&gt; bool {
         <span class="self">self</span>.expire == cmp.expire
             &amp;&amp; <span class="self">self</span>.minimum == cmp.minimum
@@ -203,7 +204,7 @@
 }
 <span class="doccomment">/// default RNAME value for FileZone
 </span><span class="kw">pub fn </span>rname_default() -&gt; String {
-    String::from(<span class="string">&quot;barry.dot.goat&quot;</span>)
+    String::from(<span class="string">"barry.dot.goat"</span>)
 }
 
 <span class="doccomment">/// A DNS Record from the JSON file
@@ -214,17 +215,17 @@
     <span class="doccomment">/// Database row ID
     </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;i64&gt;,
-    <span class="attr">#[serde(default = <span class="string">&quot;default_record_name&quot;</span>)]
+    <span class="attr">#[serde(default = <span class="string">"default_record_name"</span>)]
     </span><span class="kw">pub </span>name: String,
     <span class="kw">pub </span>rrtype: String,
-    <span class="attr">#[serde(default = <span class="string">&quot;default_record_class&quot;</span>)]
+    <span class="attr">#[serde(default = <span class="string">"default_record_class"</span>)]
     </span><span class="kw">pub </span>class: RecordClass,
     <span class="kw">pub </span>rdata: String,
     <span class="kw">pub </span>ttl: u32,
 }
-<span class="doccomment">/// If you don&#39;t specify a name, it&#39;s the root.
+<span class="doccomment">/// If you don't specify a name, it's the root.
 </span><span class="kw">fn </span>default_record_name() -&gt; String {
-    String::from(<span class="string">&quot;@&quot;</span>)
+    String::from(<span class="string">"@"</span>)
 }
 <span class="doccomment">/// Sets a default of IN because well, what else would you use?
 </span><span class="kw">fn </span>default_record_class() -&gt; RecordClass {
@@ -232,9 +233,9 @@
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>FileZoneRecord {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;FileZoneRecord {{ name={} class={} rrtype={}, ttl={}, zoneid={:#?}, id={:#?}, rdata={} }}&quot;</span>,
+            <span class="string">"FileZoneRecord {{ name={} class={} rrtype={}, ttl={}, zoneid={:#?}, id={:#?}, rdata={} }}"</span>,
             <span class="self">self</span>.name, <span class="self">self</span>.class, <span class="self">self</span>.rrtype, <span class="self">self</span>.ttl, <span class="self">self</span>.zoneid, <span class="self">self</span>.id, <span class="self">self</span>.rdata
         ))
     }
@@ -250,9 +251,9 @@
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>ZoneRecord {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;Name: {:?} Name Bytes: {:?} Records: {:?}&quot;</span>,
+            <span class="string">"Name: {:?} Name Bytes: {:?} Records: {:?}"</span>,
             from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.name),
             <span class="kw-2">&amp;</span><span class="self">self</span>.name,
             <span class="self">self</span>.typerecords,
@@ -264,17 +265,17 @@
     <span class="kw">let </span><span class="kw-2">mut </span>file = <span class="kw">match </span>File::open(filename) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to open zone file: {:?}&quot;</span>, error));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"Failed to open zone file: {:?}"</span>, error));
         }
     };
     <span class="kw">let </span><span class="kw-2">mut </span>buf: String = String::new();
     file.read_to_string(<span class="kw-2">&amp;mut </span>buf)
-        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;Failed to read {}: {:?}&quot;</span>, <span class="kw-2">&amp;</span>filename.display(), err))<span class="question-mark">?</span>;
+        .map_err(|err| <span class="macro">format!</span>(<span class="string">"Failed to read {}: {:?}"</span>, <span class="kw-2">&amp;</span>filename.display(), err))<span class="question-mark">?</span>;
     <span class="kw">let </span>jsonstruct: FileZone = <span class="kw">match </span>json5::from_str(<span class="kw-2">&amp;</span>buf) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="kw">let </span>emsg = <span class="macro">format!</span>(<span class="string">&quot;Failed to read JSON file: {:?}&quot;</span>, error);
-            <span class="macro">error!</span>(<span class="string">&quot;{}&quot;</span>, emsg);
+            <span class="kw">let </span>emsg = <span class="macro">format!</span>(<span class="string">"Failed to read JSON file: {:?}"</span>, error);
+            <span class="macro">error!</span>(<span class="string">"{}"</span>, emsg);
             <span class="kw">return </span><span class="prelude-val">Err</span>(emsg);
         }
     };
@@ -285,15 +286,15 @@
     <span class="kw">let </span><span class="kw-2">mut </span>file = <span class="kw">match </span>File::open(filename) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to open zone file: {:?}&quot;</span>, error));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"Failed to open zone file: {:?}"</span>, error));
         }
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>buf: String = String::new();
     file.read_to_string(<span class="kw-2">&amp;mut </span>buf)
-        .map_err(|err| <span class="macro">format!</span>(<span class="string">&quot;Failed to read {}: {:?}&quot;</span>, filename, err))<span class="question-mark">?</span>;
+        .map_err(|err| <span class="macro">format!</span>(<span class="string">"Failed to read {}: {:?}"</span>, filename, err))<span class="question-mark">?</span>;
     <span class="kw">let </span>jsonstruct: <span class="prelude-ty">Result</span>&lt;Vec&lt;FileZone&gt;, String&gt; =
-        json5::from_str(<span class="kw-2">&amp;</span>buf).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to read JSON file: {e:?}&quot;</span>));
+        json5::from_str(<span class="kw-2">&amp;</span>buf).map_err(|e| <span class="macro">format!</span>(<span class="string">"Failed to read JSON file: {e:?}"</span>));
     jsonstruct
 }
 </code></pre></div></section></main></body></html>

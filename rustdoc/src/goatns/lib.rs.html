@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -340,7 +341,7 @@
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
 <a href="#342" id="342">342</a>
-</pre></div><pre class="rust"><code><span class="doccomment">//! Goats are cool, but they make for poor DNS record stores. So here&#39;s an authoritative DNS server INSPIRED by goats.
+</pre></div><pre class="rust"><code><span class="doccomment">//! Goats are cool, but they make for poor DNS record stores. So here's an authoritative DNS server INSPIRED by goats.
 
 </span><span class="comment">// #![warn(clippy::complexity)]
 // #![warn(clippy::cargo)]
@@ -387,55 +388,55 @@
 <span class="doccomment">/// The size of a DNS request header
 </span><span class="kw">pub const </span>HEADER_BYTES: usize = <span class="number">12</span>;
 
-<span class="doccomment">/// The default &quot;cancel a server response&quot; timeout
+<span class="doccomment">/// The default "cancel a server response" timeout
 </span><span class="kw">pub const </span>REPLY_TIMEOUT_MS: u64 = <span class="number">1000</span>;
 <span class="doccomment">/// The maximum size of a UDP packet &lt;https://dnsflagday.net/2020/#dns-flag-day-2020&gt;
 </span><span class="kw">pub const </span>UDP_BUFFER_SIZE: usize = <span class="number">1232</span>;
 
-<span class="kw">pub const </span>COOKIE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;goatns_session&quot;</span>;
+<span class="kw">pub const </span>COOKIE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"goatns_session"</span>;
 
 <span class="doccomment">/// The header of a DNS transmission, either a Query or Reply. Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.1) section 4.1.1.
 </span><span class="attr">#[derive(Debug, PackedStruct, PartialEq, Eq, Clone)]
-#[packed_struct(bit_numbering = <span class="string">&quot;msb0&quot;</span>, size_bytes = <span class="string">&quot;12&quot;</span>)]
+#[packed_struct(bit_numbering = <span class="string">"msb0"</span>, size_bytes = <span class="string">"12"</span>)]
 #[allow(clippy::struct_excessive_bools)]
 </span><span class="kw">pub struct </span>Header {
     <span class="doccomment">/// The query ID
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;0..=15&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"0..=15"</span>, endian = <span class="string">"msb"</span>)]
     </span>id: u16,
     <span class="comment">// Is it a query or response
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;16&quot;</span>, ty = <span class="string">&quot;enum&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"16"</span>, ty = <span class="string">"enum"</span>)]
     </span>qr: PacketType, <span class="comment">// bit 16
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;17..=20&quot;</span>, ty = <span class="string">&quot;enum&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"17..=20"</span>, ty = <span class="string">"enum"</span>)]
     </span>opcode: OpCode, <span class="comment">// 17-20 actually 4 bits
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;21&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"21"</span>)]
     </span>authoritative: bool, <span class="comment">// 21
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;22&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"22"</span>)]
     </span>truncated: bool, <span class="comment">// 22
     // RD - Recursion Desired - this bit may be set in a query and is copied into the response.  If RD is set, it directs the name server to pursue the query recursively. Recursive query support is optional.
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;23&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"23"</span>)]
     </span>recursion_desired: bool, <span class="comment">// 23
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;24&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"24"</span>)]
     </span>recursion_available: bool, <span class="comment">// 24
-    </span><span class="doccomment">/// reserved, must be all 0&#39;s
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;25&quot;</span>)]
+    </span><span class="doccomment">/// reserved, must be all 0's
+    </span><span class="attr">#[packed_field(bits = <span class="string">"25"</span>)]
     </span>z: bool, <span class="comment">// 25-27 -
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;26&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"26"</span>)]
     </span>ad: bool,
-    <span class="attr">#[packed_field(bits = <span class="string">&quot;27&quot;</span>)]
+    <span class="attr">#[packed_field(bits = <span class="string">"27"</span>)]
     </span>cd: bool,
-    <span class="attr">#[packed_field(bits = <span class="string">&quot;28..=31&quot;</span>, ty = <span class="string">&quot;enum&quot;</span>)]
+    <span class="attr">#[packed_field(bits = <span class="string">"28..=31"</span>, ty = <span class="string">"enum"</span>)]
     </span>rcode: Rcode, <span class="comment">// bits 28-31
     </span><span class="doccomment">/// an unsigned 16 bit integer specifying the number of entries in the question section.
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;32..=47&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"32..=47"</span>, endian = <span class="string">"msb"</span>)]
     </span>qdcount: u16, <span class="comment">// bits 32-47
     </span><span class="doccomment">/// an unsigned 16 bit integer specifying the number of entries in the answer section.
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;48..=63&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"48..=63"</span>, endian = <span class="string">"msb"</span>)]
     </span>ancount: u16, <span class="comment">// 48-63
     </span><span class="doccomment">/// an unsigned 16 bit integer specifying the number of name server resource records in the authority records section.
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;64..=79&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"64..=79"</span>, endian = <span class="string">"msb"</span>)]
     </span>nscount: u16, <span class="comment">// 64-79
     </span><span class="doccomment">/// an unsigned 16 bit integer specifying the number of resource records in the additional records section.
-    </span><span class="attr">#[packed_field(bits = <span class="string">&quot;80..=95&quot;</span>, endian = <span class="string">&quot;msb&quot;</span>)]
+    </span><span class="attr">#[packed_field(bits = <span class="string">"80..=95"</span>, endian = <span class="string">"msb"</span>)]
     </span>arcount: u16, <span class="comment">// 80-95
 </span>}
 
@@ -479,7 +480,7 @@
 </span><span class="kw">pub struct </span>ResourceRecord {
     <span class="doccomment">/// A domain name to which this resource record pertains.
     </span><span class="kw">pub </span>name: Vec&lt;u8&gt;,
-    <span class="doccomment">/// Two octets containing one of the RR type codes. This field specifies the meaning of the data in the RDATA field. The official name is &quot;type&quot;.
+    <span class="doccomment">/// Two octets containing one of the RR type codes. This field specifies the meaning of the data in the RDATA field. The official name is "type".
     </span><span class="kw">pub </span>record_type: RecordType,
     <span class="doccomment">/// Two octets which specify the class of the data in the RDATA field.
     </span><span class="kw">pub </span>class: RecordClass,
@@ -502,7 +503,7 @@
     <span class="kw">fn </span>from(record: <span class="kw-2">&amp;</span>ResourceRecord) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>retval: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
 
-        <span class="macro">trace!</span>(<span class="string">&quot;{:?}&quot;</span>, record);
+        <span class="macro">trace!</span>(<span class="string">"{:?}"</span>, record);
 
         <span class="kw">let </span>record_name_bytes =
             name_as_bytes(record.name.to_vec(), <span class="prelude-val">Some</span>(HEADER_BYTES <span class="kw">as </span>u16), <span class="prelude-val">None</span>);
@@ -513,7 +514,7 @@
         </span>retval.extend((record.class <span class="kw">as </span>u16).to_be_bytes());
         <span class="comment">// reply ttl
         </span><span class="kw">let </span>ttl_bytes: [u8; <span class="number">4</span>] = record.ttl.to_be_bytes();
-        <span class="macro">trace!</span>(<span class="string">&quot;ttl_bytes: {:?}&quot;</span>, ttl_bytes);
+        <span class="macro">trace!</span>(<span class="string">"ttl_bytes: {:?}"</span>, ttl_bytes);
         retval.extend(ttl_bytes);
         <span class="attr">#[allow(clippy::cast_possible_truncation)]
         </span><span class="comment">// reply data length
@@ -526,26 +527,26 @@
 }
 
 <span class="attr">#[derive(Clone, Debug, PartialEq, Eq)]
-</span><span class="doccomment">/// A DNS Question section, from Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.2) section 4.1.2 &quot;Question section format&quot;.
+</span><span class="doccomment">/// A DNS Question section, from Ref [RFC1035](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.2) section 4.1.2 "Question section format".
 </span><span class="kw">pub struct </span>Question {
     <span class="doccomment">/// The name which is being queried
     </span>qname: Vec&lt;u8&gt;,
     <span class="doccomment">/// The Record type that is being requested, eg A, NS, MX, TXT etc.
     </span>qtype: RecordType,
-    <span class="doccomment">/// The class, (typically IN for &quot;Internet&quot;)
+    <span class="doccomment">/// The class, (typically IN for "Internet")
     </span>qclass: RecordClass,
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>Question {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">let </span>qname = <span class="kw">match </span>from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.qname) {
             <span class="prelude-val">Ok</span>(value) =&gt; value.to_string(),
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.qname)
+                <span class="macro">format!</span>(<span class="string">"{:?}"</span>, <span class="self">self</span>.qname)
             }
         };
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;QNAME={} QTYPE={:?} QCLASS={}&quot;</span>,
+            <span class="string">"QNAME={} QTYPE={:?} QCLASS={}"</span>,
             qname, <span class="self">self</span>.qtype, <span class="self">self</span>.qclass,
         ))
     }
@@ -555,13 +556,13 @@
 /// (ie, example.com = [101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109])
 ///
 /// # Errors
-/// Will return Strings telling you what&#39;s gone wrong.
+/// Will return Strings telling you what's gone wrong.
 </span><span class="kw">pub fn </span>get_question_qname(input_val: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, String&gt; {
-    <span class="macro">trace!</span>(<span class="string">&quot;got buf: {input_val:?}&quot;</span>);
+    <span class="macro">trace!</span>(<span class="string">"got buf: {input_val:?}"</span>);
     <span class="kw">if </span>input_val.is_empty() {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;zero-length buffer? That&#39;s bad.&quot;</span>.to_string());
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"zero-length buffer? That's bad."</span>.to_string());
     }
-    <span class="comment">// let&#39;s make a mut copy of the input so we can do things to do it
+    <span class="comment">// let's make a mut copy of the input so we can do things to do it
     </span><span class="kw">let </span><span class="kw-2">mut </span>buf = input_val.to_owned();
 
     <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
@@ -571,50 +572,50 @@
             <span class="comment">// we got to the end
             </span><span class="kw">break</span>;
         } <span class="kw">else if </span>label_len &gt; <span class="number">63 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Label length provided was {label_len}, needs to be &lt;=63 while parsing {input_val:?}&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"Label length provided was {label_len}, needs to be &lt;=63 while parsing {input_val:?}"</span>));
         }
         <span class="kw">if </span>buf.len() &lt; label_len + <span class="number">1 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Label length was {label_len} but remaining size was too short: {} while parsing {input_val:?}&quot;</span>,
+                <span class="string">"Label length was {label_len} but remaining size was too short: {} while parsing {input_val:?}"</span>,
                 buf.len()
             ));
         }
         <span class="attr">#[cfg(test)]
-        </span><span class="macro">eprintln!</span>(<span class="string">&quot;Before extend: {result:?}&quot;</span>);
+        </span><span class="macro">eprintln!</span>(<span class="string">"Before extend: {result:?}"</span>);
         <span class="kw">if </span>buf.len() &lt; label_len {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Buffer was too sort to pull bytes from ({})&quot;</span>,
+                <span class="string">"Buffer was too sort to pull bytes from ({})"</span>,
                 buf.len()
             ));
         }
         result.extend(buf[<span class="number">1</span>..=label_len].to_vec());
         <span class="attr">#[cfg(test)]
-        </span><span class="macro">eprintln!</span>(<span class="string">&quot;After extend:  {result:?}&quot;</span>);
+        </span><span class="macro">eprintln!</span>(<span class="string">"After extend:  {result:?}"</span>);
 
         <span class="comment">// slice off the front part
         </span><span class="attr">#[cfg(test)]
         </span><span class="macro">eprintln!</span>(
-            <span class="string">&quot;Before slicing buf: {buf:?}, about to grab {}..{}&quot;</span>,
+            <span class="string">"Before slicing buf: {buf:?}, about to grab {}..{}"</span>,
             label_len + <span class="number">1</span>,
             buf.len()
         );
         buf = buf[label_len + <span class="number">1</span>..buf.len()].to_vec();
-        <span class="macro">trace!</span>(<span class="string">&quot;After slicing buf:  {buf:?}&quot;</span>);
+        <span class="macro">trace!</span>(<span class="string">"After slicing buf:  {buf:?}"</span>);
         <span class="kw">if </span>buf[<span class="number">0</span>] != <span class="number">0 </span>{
             result.push(<span class="number">46</span>);
         }
         <span class="kw">if </span>result.len() &gt; <span class="number">255 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;qname length over 255 while parsing question: {result:?}&quot;
+                <span class="string">"qname length over 255 while parsing question: {result:?}"
             </span>));
         }
     }
     <span class="kw">let </span>result_string = <span class="kw">match </span>from_utf8(<span class="kw-2">&amp;</span>result) {
         <span class="prelude-val">Ok</span>(value) =&gt; value.to_owned().to_lowercase(),
-        <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>)),
+        <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"{error:?}"</span>)),
     };
     <span class="attr">#[cfg(test)]
-    </span><span class="macro">eprintln!</span>(<span class="string">&quot;Returning from get_question_qname {result_string:?}&quot;</span>);
+    </span><span class="macro">eprintln!</span>(<span class="string">"Returning from get_question_qname {result_string:?}"</span>);
     <span class="prelude-val">Ok</span>(result_string.as_bytes().to_vec())
 }
 
@@ -623,7 +624,7 @@
         <span class="kw">match </span>from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.qname) {
             <span class="prelude-val">Ok</span>(value) =&gt; <span class="prelude-val">Ok</span>(value.to_lowercase()),
             <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Failed to normalize {:?}: {:?}&quot;</span>,
+                <span class="string">"Failed to normalize {:?}: {:?}"</span>,
                 <span class="kw-2">&amp;</span><span class="self">self</span>.qname, error
             )),
         }
@@ -637,14 +638,14 @@
         </span><span class="kw">let </span>read_pointer = qname.len() + <span class="number">2</span>;
         <span class="kw">if </span>buf.len() &lt;= read_pointer + <span class="number">1 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Packet not long enough, looked for {read_pointer}, got {}&quot;</span>,
+                <span class="string">"Packet not long enough, looked for {read_pointer}, got {}"</span>,
                 buf.len()
             ));
         }
         <span class="kw">let </span><span class="kw-2">mut </span>qtype_bytes: [u8; <span class="number">2</span>] = [<span class="number">0</span>; <span class="number">2</span>];
         <span class="kw">if </span>buf[read_pointer..read_pointer + <span class="number">2</span>].len() != <span class="number">2 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(
-                <span class="string">&quot;Couldn&#39;t get two bytes when I asked for it from the header for the QTYPE&quot;
+                <span class="string">"Couldn't get two bytes when I asked for it from the header for the QTYPE"
                     </span>.to_string(),
             );
         }
@@ -652,12 +653,12 @@
         <span class="kw">let </span>qtype = RecordType::from(<span class="kw-2">&amp;</span>u16::from_be_bytes(qtype_bytes));
         <span class="kw">let </span><span class="kw-2">mut </span>qclass_bytes: [u8; <span class="number">2</span>] = [<span class="number">0</span>; <span class="number">2</span>];
         <span class="kw">if </span>buf.len() &lt;= read_pointer + <span class="number">3 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Buffer length too short to get two bytes when I asked for it from the header for the QCLASS&quot;
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Buffer length too short to get two bytes when I asked for it from the header for the QCLASS"
             </span>.to_string(),);
         }
         <span class="kw">if </span>buf[read_pointer + <span class="number">2</span>..read_pointer + <span class="number">4</span>].len() != <span class="number">2 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(
-                <span class="string">&quot;Couldn&#39;t get two bytes when I asked for it from the header for the QCLASS&quot;
+                <span class="string">"Couldn't get two bytes when I asked for it from the header for the QCLASS"
                     </span>.to_string(),
             );
         }

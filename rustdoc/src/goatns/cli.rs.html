@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/cli.rs`."><title>cli.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/cli.rs`."><title>cli.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -340,61 +341,61 @@
     <span class="macro">command!</span>()
         .arg(
             <span class="macro">arg!</span>(
-                -c --config &lt;FILE&gt; <span class="string">&quot;Sets a custom config file&quot;
+                -c --config &lt;FILE&gt; <span class="string">"Sets a custom config file"
             </span>)
             .required(<span class="bool-val">false</span>)
             .value_parser(<span class="macro">value_parser!</span>(String)),
         )
         .arg(
-            Arg::new(<span class="string">&quot;configcheck&quot;</span>)
-                .short(<span class="string">&#39;t&#39;</span>)
-                .long(<span class="string">&quot;configcheck&quot;</span>)
-                .help(<span class="string">&quot;Check the config file, show it and then quit.&quot;</span>)
+            Arg::new(<span class="string">"configcheck"</span>)
+                .short(<span class="string">'t'</span>)
+                .long(<span class="string">"configcheck"</span>)
+                .help(<span class="string">"Check the config file, show it and then quit."</span>)
                 .action(clap::ArgAction::SetTrue),
         )
         .arg(
-            Arg::new(<span class="string">&quot;export_config&quot;</span>)
-                .long(<span class="string">&quot;export-default-config&quot;</span>)
-                .help(<span class="string">&quot;Export a default config file.&quot;</span>)
+            Arg::new(<span class="string">"export_config"</span>)
+                .long(<span class="string">"export-default-config"</span>)
+                .help(<span class="string">"Export a default config file."</span>)
                 .action(clap::ArgAction::SetTrue),
         )
         .arg(
-            Arg::new(<span class="string">&quot;export_zone&quot;</span>)
-                .short(<span class="string">&#39;e&#39;</span>)
-                .long(<span class="string">&quot;export-zone&quot;</span>)
-                .help(<span class="string">&quot;Export a single zone.&quot;</span>)
+            Arg::new(<span class="string">"export_zone"</span>)
+                .short(<span class="string">'e'</span>)
+                .long(<span class="string">"export-zone"</span>)
+                .help(<span class="string">"Export a single zone."</span>)
                 .value_parser(<span class="macro">value_parser!</span>(String)),
         )
         .arg(
-            Arg::new(<span class="string">&quot;import_zones&quot;</span>)
-                .short(<span class="string">&#39;i&#39;</span>)
-                .long(<span class="string">&quot;import-zones&quot;</span>)
-                .help(<span class="string">&quot;Import a single zone file.&quot;</span>)
+            Arg::new(<span class="string">"import_zones"</span>)
+                .short(<span class="string">'i'</span>)
+                .long(<span class="string">"import-zones"</span>)
+                .help(<span class="string">"Import a single zone file."</span>)
                 .action(clap::ArgAction::SetTrue),
         )
         .arg(
-            Arg::new(<span class="string">&quot;import_zone&quot;</span>)
-                .long(<span class="string">&quot;import-zone&quot;</span>)
-                .help(<span class="string">&quot;Import a single zone from a file.&quot;</span>)
+            Arg::new(<span class="string">"import_zone"</span>)
+                .long(<span class="string">"import-zone"</span>)
+                .help(<span class="string">"Import a single zone from a file."</span>)
                 .value_parser(<span class="macro">value_parser!</span>(String)),
         )
         .arg(
-            Arg::new(<span class="string">&quot;filename&quot;</span>)
-                .short(<span class="string">&#39;f&#39;</span>)
-                .long(<span class="string">&quot;filename&quot;</span>)
-                .help(<span class="string">&quot;Filename to save to (used in other commands).&quot;</span>)
+            Arg::new(<span class="string">"filename"</span>)
+                .short(<span class="string">'f'</span>)
+                .long(<span class="string">"filename"</span>)
+                .help(<span class="string">"Filename to save to (used in other commands)."</span>)
                 .value_parser(<span class="macro">value_parser!</span>(String)),
         )
         .arg(
-            Arg::new(<span class="string">&quot;add_admin&quot;</span>)
-                .long(<span class="string">&quot;add-admin&quot;</span>)
-                .help(<span class="string">&quot;Add a new admin user.&quot;</span>)
+            Arg::new(<span class="string">"add_admin"</span>)
+                .long(<span class="string">"add-admin"</span>)
+                .help(<span class="string">"Add a new admin user."</span>)
                 .action(clap::ArgAction::SetTrue),
         )
         .arg(
-            Arg::new(<span class="string">&quot;use_zonefile&quot;</span>)
-                .long(<span class="string">&quot;using-zonefile&quot;</span>)
-                .help(<span class="string">&quot;Load the zone file into the DB on startup, typically used for testing.&quot;</span>)
+            Arg::new(<span class="string">"use_zonefile"</span>)
+                .long(<span class="string">"using-zonefile"</span>)
+                .help(<span class="string">"Load the zone file into the DB on startup, typically used for testing."</span>)
                 .action(clap::ArgAction::SetTrue),
         )
         .get_matches()
@@ -406,62 +407,62 @@
     clap_results: <span class="kw-2">&amp;</span>ArgMatches,
     zone_file: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;SystemState, String&gt; {
-    <span class="kw">if </span>clap_results.get_flag(<span class="string">&quot;add_admin&quot;</span>) {
+    <span class="kw">if </span>clap_results.get_flag(<span class="string">"add_admin"</span>) {
         <span class="kw">let _ </span>= add_admin_user(tx).<span class="kw">await</span>;
         <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
     }
-    <span class="kw">if </span>clap_results.get_flag(<span class="string">&quot;export_config&quot;</span>) {
+    <span class="kw">if </span>clap_results.get_flag(<span class="string">"export_config"</span>) {
         default_config();
         <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
     }
 
     <span class="comment">// Load the specified zone file on startup
-    </span><span class="kw">if </span>clap_results.get_flag(<span class="string">&quot;use_zonefile&quot;</span>) {
+    </span><span class="kw">if </span>clap_results.get_flag(<span class="string">"use_zonefile"</span>) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(zone_file) = zone_file {
             <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = import_zones(tx.clone(), zone_file.to_owned(), <span class="prelude-val">None</span>).<span class="kw">await </span>{
-                <span class="macro">log::error!</span>(<span class="string">&quot;Failed to import zone file! {error:?}&quot;</span>);
+                <span class="macro">log::error!</span>(<span class="string">"Failed to import zone file! {error:?}"</span>);
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
             }
         }
     }
 
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(zone_name) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;export_zone&quot;</span>) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(output_filename) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;filename&quot;</span>) {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Exporting zone {zone_name} to {output_filename}&quot;</span>);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(zone_name) = clap_results.get_one::&lt;String&gt;(<span class="string">"export_zone"</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(output_filename) = clap_results.get_one::&lt;String&gt;(<span class="string">"filename"</span>) {
+            <span class="macro">log::info!</span>(<span class="string">"Exporting zone {zone_name} to {output_filename}"</span>);
             <span class="kw">let </span>res = export_zone_file(tx, zone_name, output_filename).<span class="kw">await</span>;
             <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = res {
-                <span class="macro">log::error!</span>(<span class="string">&quot;{err}&quot;</span>);
+                <span class="macro">log::error!</span>(<span class="string">"{err}"</span>);
             }
             <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::Export);
         } <span class="kw">else </span>{
-            <span class="macro">log::error!</span>(<span class="string">&quot;You need to specify a a filename to save to.&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">"You need to specify a a filename to save to."</span>);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
         }
     };
 
-    <span class="kw">if </span>clap_results.get_flag(<span class="string">&quot;import_zones&quot;</span>) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;filename&quot;</span>) {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Importing zones from {filename}&quot;</span>);
+    <span class="kw">if </span>clap_results.get_flag(<span class="string">"import_zones"</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = clap_results.get_one::&lt;String&gt;(<span class="string">"filename"</span>) {
+            <span class="macro">log::info!</span>(<span class="string">"Importing zones from {filename}"</span>);
             import_zones(tx, filename.to_owned(), <span class="prelude-val">None</span>)
                 .<span class="kw">await
-                </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Error importing {filename}: {e:?}&quot;</span>))<span class="question-mark">?</span>;
+                </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">"Error importing {filename}: {e:?}"</span>))<span class="question-mark">?</span>;
 
             <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::Import);
         } <span class="kw">else </span>{
-            <span class="macro">log::error!</span>(<span class="string">&quot;You need to specify a a filename to save to.&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">"You need to specify a a filename to save to."</span>);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
         }
     };
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(zone_name) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;import_zone&quot;</span>) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = clap_results.get_one::&lt;String&gt;(<span class="string">&quot;filename&quot;</span>) {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Importing zones from {filename}&quot;</span>);
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(zone_name) = clap_results.get_one::&lt;String&gt;(<span class="string">"import_zone"</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(filename) = clap_results.get_one::&lt;String&gt;(<span class="string">"filename"</span>) {
+            <span class="macro">log::info!</span>(<span class="string">"Importing zones from {filename}"</span>);
             import_zones(tx, filename.to_owned(), <span class="prelude-val">Some</span>(zone_name.to_owned()))
                 .<span class="kw">await
-                </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Error importing {filename}: {e:?}&quot;</span>))<span class="question-mark">?</span>;
+                </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">"Error importing {filename}: {e:?}"</span>))<span class="question-mark">?</span>;
 
             <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::Import);
         } <span class="kw">else </span>{
-            <span class="macro">log::error!</span>(<span class="string">&quot;You need to specify a a filename to save to.&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">"You need to specify a a filename to save to."</span>);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(SystemState::ShuttingDown);
         }
     };
@@ -473,11 +474,11 @@
     <span class="kw">let </span>output = <span class="kw">match </span>serde_json::to_string_pretty(<span class="kw-2">&amp;</span>ConfigFile::default()) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;I don&#39;t know how, but we couldn&#39;t parse our own config file def.&quot;</span>);
-            <span class="string">&quot;&quot;</span>.to_string()
+            <span class="macro">log::error!</span>(<span class="string">"I don't know how, but we couldn't parse our own config file def."</span>);
+            <span class="string">""</span>.to_string()
         }
     };
-    <span class="macro">println!</span>(<span class="string">&quot;{output}&quot;</span>);
+    <span class="macro">println!</span>(<span class="string">"{output}"</span>);
 }
 
 <span class="doccomment">/// Dump a zone to a file
@@ -496,24 +497,24 @@
     };
     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = tx.send(ds_req).<span class="kw">await </span>{
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-            <span class="string">&quot;failed to send to datastore from export_zone_file {error:?}&quot;
+            <span class="string">"failed to send to datastore from export_zone_file {error:?}"
         </span>));
     };
 
     <span class="kw">let </span>zone: <span class="prelude-ty">Option</span>&lt;FileZone&gt; = <span class="kw">match </span>rx_oneshot.<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; value,
-        <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;rx from ds failed {err:?}&quot;</span>)),
+        <span class="prelude-val">Err</span>(err) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"rx from ds failed {err:?}"</span>)),
     };
-    <span class="macro">eprintln!</span>(<span class="string">&quot;Got filezone: {zone:?}&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">"Got filezone: {zone:?}"</span>);
 
     <span class="kw">let </span>zone_bytes = <span class="kw">match </span>zone {
         <span class="prelude-val">None </span>=&gt; {
-            <span class="macro">log::warn!</span>(<span class="string">&quot;Couldn&#39;t find the zone {zone_name}&quot;</span>);
+            <span class="macro">log::warn!</span>(<span class="string">"Couldn't find the zone {zone_name}"</span>);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
         <span class="prelude-val">Some</span>(zone) =&gt; serde_json::to_string_pretty(<span class="kw-2">&amp;</span>zone).map_err(|err| {
             <span class="macro">format!</span>(
-                <span class="string">&quot;Failed to serialize zone {zone_name} to json: {err:?}&quot;</span>,
+                <span class="string">"Failed to serialize zone {zone_name} to json: {err:?}"</span>,
                 zone_name = zone_name,
                 err = err
             )
@@ -523,11 +524,11 @@
     <span class="comment">// open the file
     </span><span class="kw">let </span><span class="kw-2">mut </span>file = tokio::fs::File::create(filename)
         .<span class="kw">await
-        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to open file {e:?}&quot;</span>))<span class="question-mark">?</span>;
+        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">"Failed to open file {e:?}"</span>))<span class="question-mark">?</span>;
     <span class="comment">// write the thing
     </span>file.write_all(zone_bytes.as_bytes())
         .<span class="kw">await
-        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to write file: {e:?}&quot;</span>))<span class="question-mark">?</span>;
+        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">"Failed to write file: {e:?}"</span>))<span class="question-mark">?</span>;
     <span class="comment">// make some cake
 
     </span><span class="prelude-val">Ok</span>(())
@@ -546,7 +547,7 @@
         zone_name,
     };
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = tx.send(msg).<span class="kw">await </span>{
-        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send message to datastore: {err:?}&quot;</span>);
+        <span class="macro">log::error!</span>(<span class="string">"Failed to send message to datastore: {err:?}"</span>);
     }
     <span class="kw">loop </span>{
         <span class="kw">let </span>res = rx_oneshot.try_recv();
@@ -561,32 +562,32 @@
         sleep(std::time::Duration::from_micros(<span class="number">500</span>)).<span class="kw">await</span>;
     }
     <span class="prelude-val">Ok</span>(())
-    <span class="comment">// rx_oneshot.await.map_err(|e| format!(&quot;Failed to receive result: {e:?}&quot;))
+    <span class="comment">// rx_oneshot.await.map_err(|e| format!("Failed to receive result: {e:?}"))
 </span>}
 
 <span class="doccomment">/// Presents the CLI UI to add an admin user.
 </span><span class="kw">pub async fn </span>add_admin_user(tx: mpsc::Sender&lt;Command&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
     <span class="comment">// prompt for the username
-    </span><span class="macro">println!</span>(<span class="string">&quot;Creating admin user, please enter their username from the identity provider&quot;</span>);
+    </span><span class="macro">println!</span>(<span class="string">"Creating admin user, please enter their username from the identity provider"</span>);
     <span class="kw">let </span>username: String = Input::with_theme(<span class="kw-2">&amp;</span>ColorfulTheme::default())
-        .with_prompt(<span class="string">&quot;Username&quot;</span>)
+        .with_prompt(<span class="string">"Username"</span>)
         .interact_text()
         .map_err(|e| {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to get username from user: {e:?}&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">"Failed to get username from user: {e:?}"</span>);
         })<span class="question-mark">?</span>;
 
     <span class="macro">println!</span>(
-        <span class="string">&quot;The authentication reference is the unique user identifier in the Identity Provider.&quot;
+        <span class="string">"The authentication reference is the unique user identifier in the Identity Provider."
     </span>);
     <span class="kw">let </span>authref: String = Input::with_theme(<span class="kw-2">&amp;</span>ColorfulTheme::default())
-        .with_prompt(<span class="string">&quot;Authentication Reference:&quot;</span>)
+        .with_prompt(<span class="string">"Authentication Reference:"</span>)
         .interact_text()
         .map_err(|e| {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to get auth reference from user: {e:?}&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">"Failed to get auth reference from user: {e:?}"</span>);
         })<span class="question-mark">?</span>;
 
     <span class="macro">println!</span>(
-        <span class="string">r#&quot;
+        <span class="string">r#"
 
 Creating the following user:
 
@@ -594,17 +595,17 @@ Creating the following user:
 Username: {username}
 Authref:  {authref}
 
-&quot;#
+"#
     </span>);
     <span class="comment">// show the details and confirm them
     </span><span class="kw">let </span>confirm = Confirm::with_theme(<span class="kw-2">&amp;</span>ColorfulTheme::default())
-        .with_prompt(<span class="string">&quot;Do these details look correct?&quot;</span>)
+        .with_prompt(<span class="string">"Do these details look correct?"</span>)
         .interact_opt();
 
     <span class="kw">match </span>confirm {
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="bool-val">true</span>)) =&gt; {}
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="bool-val">false</span>)) | <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) | <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-            <span class="macro">log::warn!</span>(<span class="string">&quot;Cancelled user creation&quot;</span>);
+            <span class="macro">log::warn!</span>(<span class="string">"Cancelled user creation"</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(());
         }
     }
@@ -621,23 +622,23 @@ Authref:  {authref}
     };
     <span class="comment">// send command
     </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = tx.send(new_user).<span class="kw">await </span>{
-        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send new user command for username {username:?}: {error:?}&quot;</span>);
+        <span class="macro">log::error!</span>(<span class="string">"Failed to send new user command for username {username:?}: {error:?}"</span>);
         <span class="kw">return </span><span class="prelude-val">Err</span>(());
     };
     <span class="comment">// wait for the response
     </span><span class="kw">match </span>rx_oneshot.<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(res) =&gt; <span class="kw">match </span>res {
             <span class="bool-val">true </span>=&gt; {
-                <span class="macro">log::info!</span>(<span class="string">&quot;Successfully created user!&quot;</span>);
+                <span class="macro">log::info!</span>(<span class="string">"Successfully created user!"</span>);
                 <span class="prelude-val">Ok</span>(())
             }
             <span class="bool-val">false </span>=&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;Failed to create user! Check datastore logs.&quot;</span>);
+                <span class="macro">log::error!</span>(<span class="string">"Failed to create user! Check datastore logs."</span>);
                 <span class="prelude-val">Err</span>(())
             }
         },
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to rx result from datastore: {error:?}&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"Failed to rx result from datastore: {error:?}"</span>);
             <span class="prelude-val">Err</span>(())
         }
     }

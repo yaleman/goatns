@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/web/auth/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/web/auth/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -551,7 +552,7 @@
     </span><span class="kw">pub </span>state: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// OAuth2 code
     </span><span class="kw">pub </span>code: <span class="prelude-ty">Option</span>&lt;String&gt;,
-    <span class="doccomment">/// Where we&#39;ll redirect users to after successful login
+    <span class="doccomment">/// Where we'll redirect users to after successful login
     </span><span class="kw">pub </span>redirect: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
@@ -576,7 +577,7 @@
 <span class="kw">type </span>CustomClaimType = IdTokenClaims&lt;EmptyAdditionalClaims, CoreGenderClaim&gt;;
 
 <span class="attr">#[derive(Template)]
-#[template(path = <span class="string">&quot;auth_login.html.j2&quot;</span>)]
+#[template(path = <span class="string">"auth_login.html.j2"</span>)]
 </span><span class="kw">struct </span>AuthLoginTemplate {
     errors: Vec&lt;String&gt;,
     redirect_url: String,
@@ -584,7 +585,7 @@
 }
 
 <span class="attr">#[derive(Template)]
-#[template(path = <span class="string">&quot;auth_new_user.html&quot;</span>)]
+#[template(path = <span class="string">"auth_new_user.html"</span>)]
 </span><span class="kw">struct </span>AuthNewUserTemplate {
     state: String,
     code: String,
@@ -596,13 +597,13 @@
 }
 
 <span class="attr">#[derive(Template)]
-#[template(path = <span class="string">&quot;auth_logout.html&quot;</span>)]
+#[template(path = <span class="string">"auth_logout.html"</span>)]
 </span><span class="kw">struct </span>AuthLogoutTemplate {
     <span class="kw">pub </span>user_is_admin: bool,
 }
 
 <span class="attr">#[derive(Template)]
-#[template(path = <span class="string">&quot;auth_provisioning_disabled.html&quot;</span>)]
+#[template(path = <span class="string">"auth_provisioning_disabled.html"</span>)]
 </span><span class="doccomment">/// This renders a page telling the user that auto-provisioning is disabled and to tell the admin which username to add
 </span><span class="kw">struct </span>AuthProvisioningDisabledTemplate {
     username: String,
@@ -615,16 +616,16 @@
 
 <span class="kw">pub enum </span>ParserError {
     Redirect { content: Redirect },
-    ErrorMessage { content: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str },
+    ErrorMessage { content: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str },
     ClaimsVerificationError { content: ClaimsVerificationError },
 }
 
 <span class="doccomment">/// Pull the OIDC Discovery details
 </span><span class="kw">pub async fn </span>oauth_get_discover(state: <span class="kw-2">&amp;mut </span>GoatState) -&gt; <span class="prelude-ty">Result</span>&lt;CustomProviderMetadata, String&gt; {
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Getting discovery data&quot;</span>);
+    <span class="macro">log::debug!</span>(<span class="string">"Getting discovery data"</span>);
     <span class="kw">let </span>issuer_url = IssuerUrl::new(state.read().<span class="kw">await</span>.config.oauth2_config_url.clone());
     <span class="kw">match </span>CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client).<span class="kw">await </span>{
-        <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>)),
+        <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"{e:?}"</span>)),
         <span class="prelude-val">Ok</span>(val) =&gt; {
             state.oidc_update(val.clone()).<span class="kw">await</span>;
             <span class="prelude-val">Ok</span>(val)
@@ -640,14 +641,14 @@
     <span class="kw">let </span>provider_metadata: CustomProviderMetadata = <span class="kw">match </span>delta.num_minutes() &gt; <span class="number">5 </span>{
         <span class="bool-val">true </span>=&gt; oauth_get_discover(state).<span class="kw">await</span>.unwrap(),
         <span class="bool-val">false </span>=&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;using cached OIDC discovery data&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"using cached OIDC discovery data"</span>);
             <span class="kw">let </span>config = state.read().<span class="kw">await</span>.oidc_config.clone();
             <span class="kw">let </span>meta = config.unwrap_or(oauth_get_discover(state).<span class="kw">await</span>.unwrap());
             state.oidc_update(meta.clone()).<span class="kw">await</span>;
             meta
         }
     };
-    <span class="macro">log::trace!</span>(<span class="string">&quot;provider metadata: {provider_metadata:?}&quot;</span>);
+    <span class="macro">log::trace!</span>(<span class="string">"provider metadata: {provider_metadata:?}"</span>);
 
     <span class="comment">// Generate a PKCE challenge.
     </span><span class="kw">let </span>(pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -662,16 +663,16 @@
         state.read().<span class="kw">await</span>.config.oauth2_redirect_url.clone(),
     ));
 
-    <span class="comment">// Generate the authorization URL to which we&#39;ll redirect the user.
+    <span class="comment">// Generate the authorization URL to which we'll redirect the user.
     </span><span class="kw">let </span>(authorize_url, csrf_state, nonce) = client
         .authorize_url(
             AuthenticationFlow::&lt;CoreResponseType&gt;::AuthorizationCode,
             CsrfToken::new_random,
             Nonce::new_random,
         )
-        <span class="comment">// This example is requesting access to the the user&#39;s profile including email.
-        </span>.add_scope(Scope::new(<span class="string">&quot;email&quot;</span>.to_string()))
-        .add_scope(Scope::new(<span class="string">&quot;profile&quot;</span>.to_string()))
+        <span class="comment">// This example is requesting access to the the user's profile including email.
+        </span>.add_scope(Scope::new(<span class="string">"email"</span>.to_string()))
+        .add_scope(Scope::new(<span class="string">"profile"</span>.to_string()))
         .set_pkce_challenge(pkce_challenge)
         .url();
     state
@@ -695,7 +696,7 @@
         <span class="prelude-val">Some</span>(value) =&gt; value,
         <span class="prelude-val">None </span>=&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(ParserError::ErrorMessage {
-                content: <span class="string">&quot;Failed to pull provider metadata!&quot;</span>,
+                content: <span class="string">"Failed to pull provider metadata!"</span>,
             })
         }
     };
@@ -717,7 +718,7 @@
         </span>.set_pkce_verifier(pkce_verifier)
         .request_async(async_http_client)
         .<span class="kw">await
-        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))
+        </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">"{e:?}"</span>))
         .unwrap();
 
     <span class="comment">// Extract the ID token claims after verifying its authenticity and nonce.
@@ -725,11 +726,11 @@
         <span class="prelude-val">Some</span>(token) =&gt; token,
         <span class="prelude-val">None </span>=&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(ParserError::ErrorMessage {
-                content: <span class="string">&quot;couldn&#39;t parse token&quot;</span>,
+                content: <span class="string">"couldn't parse token"</span>,
             })
         }
     };
-    <span class="macro">log::trace!</span>(<span class="string">&quot;id_token: {id_token:?}&quot;</span>);
+    <span class="macro">log::trace!</span>(<span class="string">"id_token: {id_token:?}"</span>);
     <span class="kw">let </span>allowed_algs = <span class="macro">vec!</span>[
         CoreJwsSigningAlgorithm::EcdsaP256Sha256,
         CoreJwsSigningAlgorithm::RsaSsaPkcs1V15Sha256,
@@ -738,7 +739,7 @@
     ];
     <span class="kw">let </span>verifier = <span class="kw-2">&amp;</span>client.id_token_verifier().set_allowed_algs(allowed_algs);
     <span class="comment">// if verifier.is_none() {
-    // return Err(ParserError::ErrorMessage{content: &quot;Couldn&#39;t find a known session!&quot;});
+    // return Err(ParserError::ErrorMessage{content: "Couldn't find a known session!"});
     // }
     </span>id_token
         .claims(verifier, <span class="kw-2">&amp;</span>nonce)
@@ -752,11 +753,11 @@
     session: Session,
     axum::extract::State(<span class="kw-2">mut </span>state): axum::extract::State&lt;GoatState&gt;,
 ) -&gt; <span class="kw">impl </span>IntoResponse {
-    <span class="comment">// check if we&#39;ve got an existing, valid session
+    <span class="comment">// check if we've got an existing, valid session
 
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(signed_in) = session.get(<span class="string">&quot;signed_in&quot;</span>).<span class="kw">await</span>.unwrap() {
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(signed_in) = session.get(<span class="string">"signed_in"</span>).<span class="kw">await</span>.unwrap() {
         <span class="kw">if </span>signed_in {
-            <span class="kw">return </span>Redirect::to(<span class="string">&quot;/ui&quot;</span>).into_response();
+            <span class="kw">return </span>Redirect::to(<span class="string">"/ui"</span>).into_response();
         }
     }
 
@@ -773,8 +774,8 @@
     <span class="kw">let </span>(pkce_verifier_secret, nonce) = <span class="kw">match </span>verifier {
         <span class="prelude-val">Some</span>((p, n)) =&gt; (p, n),
         <span class="prelude-val">None </span>=&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find a session, redirecting...&quot;</span>);
-            <span class="kw">return </span>Redirect::to(<span class="string">&quot;/auth/login&quot;</span>).into_response();
+            <span class="macro">log::error!</span>(<span class="string">"Couldn't find a session, redirecting..."</span>);
+            <span class="kw">return </span>Redirect::to(<span class="string">"/auth/login"</span>).into_response();
         }
     };
     <span class="kw">let </span>verifier_copy = PkceCodeVerifier::new(pkce_verifier_secret.clone());
@@ -788,7 +789,7 @@
     .<span class="kw">await</span>;
     <span class="kw">match </span>claims {
         <span class="prelude-val">Ok</span>(claims) =&gt; {
-            <span class="comment">// check if they&#39;re in the database
+            <span class="comment">// check if they're in the database
 
             </span><span class="kw">let </span>email = claims.get_email().unwrap();
 
@@ -799,8 +800,8 @@
                     <span class="kw">match </span>error {
                         sqlx::Error::RowNotFound =&gt; {
                             <span class="kw">if </span>!state.read().<span class="kw">await</span>.config.user_auto_provisioning {
-                                <span class="comment">// TODO: show a &quot;sorry&quot; page when auto-provisioning&#39;s not enabled
-                                // log::warn!(&quot;User attempted login when auto-provisioning is not enabled, yeeting them to the home page.&quot;);
+                                <span class="comment">// TODO: show a "sorry" page when auto-provisioning's not enabled
+                                // log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
                                 </span><span class="kw">let </span>(admin_contact_name, admin_contact_url) =
                                     state.read().<span class="kw">await</span>.config.admin_contact.to_html_parts();
 
@@ -823,7 +824,7 @@
                                 code: query.code.clone().unwrap(),
                                 email,
                                 displayname: claims.get_displayname(),
-                                redirect_url: <span class="string">&quot;&quot;</span>.to_string(),
+                                redirect_url: <span class="string">""</span>.to_string(),
                                 errors: <span class="macro">vec!</span>[],
                                 user_is_admin: <span class="bool-val">false</span>, <span class="comment">// TODO: ... probably not an admin but we can check
                             </span>};
@@ -844,19 +845,19 @@
                         }
                         <span class="kw">_ </span>=&gt; {
                             <span class="macro">log::error!</span>(
-                                <span class="string">&quot;Database error finding user {:?}: {error:?}&quot;</span>,
+                                <span class="string">"Database error finding user {:?}: {error:?}"</span>,
                                 email.clone()
                             );
-                            <span class="kw">let </span>redirect: <span class="prelude-ty">Option</span>&lt;String&gt; = session.get(<span class="string">&quot;redirect&quot;</span>).<span class="kw">await</span>.unwrap();
+                            <span class="kw">let </span>redirect: <span class="prelude-ty">Option</span>&lt;String&gt; = session.get(<span class="string">"redirect"</span>).<span class="kw">await</span>.unwrap();
                             <span class="kw">return match </span>redirect {
                                 <span class="prelude-val">Some</span>(destination) =&gt; {
-                                    session.remove_value(<span class="string">&quot;redirect&quot;</span>).<span class="kw">await</span>.map_err(
+                                    session.remove_value(<span class="string">"redirect"</span>).<span class="kw">await</span>.map_err(
                                         |err| {
-                                            <span class="macro">error!</span>(<span class="string">&quot;Failed to flush session: {err:?}&quot;</span>);
+                                            <span class="macro">error!</span>(<span class="string">"Failed to flush session: {err:?}"</span>);
                                             (
                                                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                                                 <span class="macro">format!</span>(
-                                                    <span class="string">&quot;Failed to remove redirect value from session store!&quot;
+                                                    <span class="string">"Failed to remove redirect value from session store!"
                                                 </span>),
                                             )
                                         },
@@ -869,41 +870,41 @@
                     }
                 }
             };
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Found user in database: {dbuser:?}&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"Found user in database: {dbuser:?}"</span>);
 
             <span class="kw">if </span>dbuser.disabled {
                 session
                     .flush()
                     .<span class="kw">await
                     </span>.map_err(|err| {
-                        <span class="macro">error!</span>(<span class="string">&quot;Failed to flush session: {err:?}&quot;</span>);
+                        <span class="macro">error!</span>(<span class="string">"Failed to flush session: {err:?}"</span>);
                         (
                             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                            <span class="macro">format!</span>(<span class="string">&quot;Failed to flush session store!&quot;</span>),
+                            <span class="macro">format!</span>(<span class="string">"Failed to flush session store!"</span>),
                         )
                     })
                     .unwrap();
-                <span class="macro">log::info!</span>(<span class="string">&quot;Disabled user attempted to log in: {dbuser:?}&quot;</span>);
+                <span class="macro">log::info!</span>(<span class="string">"Disabled user attempted to log in: {dbuser:?}"</span>);
                 <span class="kw">return </span>redirect_to_home().into_response();
             }
 
             session
-                .insert(<span class="string">&quot;authref&quot;</span>, claims.subject().to_string())
+                .insert(<span class="string">"authref"</span>, claims.subject().to_string())
                 .<span class="kw">await
                 </span>.unwrap();
-            session.insert(<span class="string">&quot;user&quot;</span>, dbuser).<span class="kw">await</span>.unwrap();
-            session.insert(<span class="string">&quot;signed_in&quot;</span>, <span class="bool-val">true</span>).<span class="kw">await</span>.unwrap();
+            session.insert(<span class="string">"user"</span>, dbuser).<span class="kw">await</span>.unwrap();
+            session.insert(<span class="string">"signed_in"</span>, <span class="bool-val">true</span>).<span class="kw">await</span>.unwrap();
 
             redirect_to_dashboard().into_response()
         }
         <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">match </span>error {
             ParserError::Redirect { content } =&gt; content.into_response(),
             ParserError::ErrorMessage { content } =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to parse state: {content}&quot;</span>);
+                <span class="macro">log::debug!</span>(<span class="string">"Failed to parse state: {content}"</span>);
                 <span class="macro">todo!</span>();
             }
             ParserError::ClaimsVerificationError { content } =&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;Failed to verify claim token: {content:?}&quot;</span>);
+                <span class="macro">log::error!</span>(<span class="string">"Failed to verify claim token: {content:?}"</span>);
                 redirect_to_home().into_response()
             }
         },
@@ -915,14 +916,14 @@
         .flush()
         .<span class="kw">await
         </span>.map_err(|err| {
-            <span class="macro">error!</span>(<span class="string">&quot;Failed to flush session: {err:?}&quot;</span>);
+            <span class="macro">error!</span>(<span class="string">"Failed to flush session: {err:?}"</span>);
             (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                <span class="macro">format!</span>(<span class="string">&quot;Failed to flush session store!&quot;</span>),
+                <span class="macro">format!</span>(<span class="string">"Failed to flush session store!"</span>),
             )
         })
         .unwrap();
-    Redirect::to(<span class="string">&quot;/&quot;</span>)
+    Redirect::to(<span class="string">"/"</span>)
 }
 
 <span class="kw">pub async fn </span>build_auth_stores(
@@ -930,13 +931,13 @@
     connpool: SqlitePool,
 ) -&gt; SessionManagerLayer&lt;SqliteStore&gt; {
     <span class="kw">let </span>session_store = SqliteStore::new(connpool)
-        .with_table_name(<span class="string">&quot;sessions&quot;</span>)
-        .expect(<span class="string">&quot;Failed to start session store!&quot;</span>);
+        .with_table_name(<span class="string">"sessions"</span>)
+        .expect(<span class="string">"Failed to start session store!"</span>);
 
     session_store
         .migrate()
         .<span class="kw">await
-        </span>.expect(<span class="string">&quot;Could not migrate session store database on startup!&quot;</span>);
+        </span>.expect(<span class="string">"Could not migrate session store database on startup!"</span>);
 
     <span class="kw">let </span>_deletion_task = tokio::task::spawn(
         session_store
@@ -948,12 +949,12 @@
         .with_expiry(Expiry::OnInactivity(Duration::minutes(<span class="number">5</span>)))
         .with_name(COOKIE_NAME)
         .with_secure(<span class="bool-val">true</span>)
-        <span class="comment">// If the cookies start being weird it&#39;s because they were appending a &quot;.&quot; on the start...
+        <span class="comment">// If the cookies start being weird it's because they were appending a "." on the start...
         </span>.with_domain(config.hostname.clone())
 }
 
 <span class="attr">#[derive(Deserialize, Debug)]
-</span><span class="doccomment">/// This handles the POST from &quot;would you like to create your user&quot;
+</span><span class="doccomment">/// This handles the POST from "would you like to create your user"
 </span><span class="kw">pub struct </span>SignupForm {
     <span class="kw">pub </span>state: String,
     <span class="kw">pub </span>code: String,
@@ -964,7 +965,7 @@
     State(<span class="kw-2">mut </span>state): State&lt;GoatState&gt;,
     Form(form): Form&lt;SignupForm&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Response, ()&gt; {
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Dumping form: {form:?}&quot;</span>);
+    <span class="macro">log::debug!</span>(<span class="string">"Dumping form: {form:?}"</span>);
 
     <span class="kw">let </span>query_state = form.state;
 
@@ -973,8 +974,8 @@
     <span class="kw">let </span>(pkce_verifier, nonce) = <span class="kw">match </span>verifier {
         <span class="prelude-val">Some</span>((p, n)) =&gt; (p, n),
         <span class="prelude-val">None </span>=&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Couldn&#39;t find a signup session, redirecting user...&quot;</span>);
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(Redirect::to(<span class="string">&quot;/auth/login&quot;</span>).into_response());
+            <span class="macro">log::error!</span>(<span class="string">"Couldn't find a signup session, redirecting user..."</span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(Redirect::to(<span class="string">"/auth/login"</span>).into_response());
         }
     };
     <span class="kw">let </span>claims = parse_state_code(
@@ -988,16 +989,16 @@
         <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">match </span>error {
             ParserError::Redirect { content } =&gt; <span class="prelude-val">Ok</span>(content.into_response()),
             ParserError::ErrorMessage { content } =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;{content}&quot;</span>);
+                <span class="macro">log::debug!</span>(<span class="string">"{content}"</span>);
                 <span class="macro">todo!</span>();
             }
             ParserError::ClaimsVerificationError { content } =&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;Failed to verify claim token: {content:?}&quot;</span>);
+                <span class="macro">log::error!</span>(<span class="string">"Failed to verify claim token: {content:?}"</span>);
                 <span class="prelude-val">Ok</span>(redirect_to_home().into_response())
             }
         },
         <span class="prelude-val">Ok</span>(claims) =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Verified claims in signup form: {claims:?}&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"Verified claims in signup form: {claims:?}"</span>);
             <span class="kw">let </span>email = claims.get_email().unwrap();
             <span class="kw">let </span>user = User {
                 id: <span class="prelude-val">None</span>,
@@ -1011,7 +1012,7 @@
             <span class="kw">match </span>user.save(<span class="kw-2">&amp;</span>state.connpool().<span class="kw">await</span>).<span class="kw">await </span>{
                 <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(redirect_to_dashboard().into_response()),
                 <span class="prelude-val">Err</span>(error) =&gt; {
-                    <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to save new user signup... oh no! {error:?}&quot;</span>);
+                    <span class="macro">log::debug!</span>(<span class="string">"Failed to save new user signup... oh no! {error:?}"</span>);
                     <span class="comment">// TODO: throw an error page on this one
                     </span><span class="prelude-val">Ok</span>(redirect_to_home().into_response())
                 }
@@ -1022,8 +1023,8 @@
 
 <span class="kw">pub fn </span>new() -&gt; Router&lt;GoatState&gt; {
     Router::new()
-        .route(<span class="string">&quot;/login&quot;</span>, get(login))
-        .route(<span class="string">&quot;/logout&quot;</span>, get(logout))
-        .route(<span class="string">&quot;/signup&quot;</span>, post(signup))
+        .route(<span class="string">"/login"</span>, get(login))
+        .route(<span class="string">"/logout"</span>, get(logout))
+        .route(<span class="string">"/signup"</span>, post(signup))
 }
 </code></pre></div></section></main></body></html>

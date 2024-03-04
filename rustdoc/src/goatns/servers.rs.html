@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/servers.rs`."><title>servers.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/servers.rs`."><title>servers.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -638,37 +639,37 @@
 <span class="kw">use crate</span>::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
 <span class="macro">lazy_static! </span>{
-    <span class="kw">static </span><span class="kw-2">ref </span>LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str(<span class="string">&quot;127.0.0.1&quot;</span>).expect(<span class="string">&quot;Failed to parse localhost IP address&quot;</span>);
+    <span class="kw">static </span><span class="kw-2">ref </span>LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str(<span class="string">"127.0.0.1"</span>).expect(<span class="string">"Failed to parse localhost IP address"</span>);
     <span class="comment">// static ref VERSION_STRINGS: Vec&lt;String&gt; =
-        // vec![String::from(&quot;version&quot;), String::from(&quot;version.bind&quot;),];
+        // vec![String::from("version"), String::from("version.bind"),];
 </span>}
 
 <span class="doccomment">/// this handles a shutdown CHAOS request
 </span><span class="kw">async fn </span>check_for_shutdown(r: <span class="kw-2">&amp;</span>Reply, allowed_shutdown: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, <span class="prelude-ty">Option</span>&lt;Reply&gt;&gt; {
-    <span class="comment">// when you get a CHAOS from localhost with &quot;shutdown&quot; break dat loop
+    <span class="comment">// when you get a CHAOS from localhost with "shutdown" break dat loop
     </span><span class="kw">if let </span><span class="prelude-val">Some</span>(q) = <span class="kw-2">&amp;</span>r.question {
         <span class="kw">if </span>q.qclass == RecordClass::Chaos {
             <span class="kw">let </span>qname = from_utf8(<span class="kw-2">&amp;</span>q.qname)
                 .map_err(|e| {
                     <span class="macro">log::error!</span>(
-                        <span class="string">&quot;Failed to parse qname from {:?}, this shouldn&#39;t be able to happen! {e:?}&quot;</span>,
+                        <span class="string">"Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}"</span>,
                         q.qname
                     );
                 })
                 .unwrap();
-            <span class="comment">// Just don&#39;t do this on UDP, because we can&#39;t really tell who it&#39;s coming from.
-            </span><span class="kw">if </span>qname == <span class="string">&quot;shutdown&quot; </span>{
-                <span class="comment">// when we get a request, we update the response to say if we&#39;re going to do it or not
+            <span class="comment">// Just don't do this on UDP, because we can't really tell who it's coming from.
+            </span><span class="kw">if </span>qname == <span class="string">"shutdown" </span>{
+                <span class="comment">// when we get a request, we update the response to say if we're going to do it or not
                 </span><span class="kw">match </span>allowed_shutdown {
                     <span class="bool-val">true </span>=&gt; {
-                        <span class="macro">log::info!</span>(<span class="string">&quot;Got CHAOS shutdown, shutting down&quot;</span>);
+                        <span class="macro">log::info!</span>(<span class="string">"Got CHAOS shutdown, shutting down"</span>);
                         <span class="kw">let </span><span class="kw-2">mut </span>chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_OK.clone());
                         <span class="kw">return </span><span class="prelude-val">Ok</span>(chaos_reply);
                     }
                     <span class="bool-val">false </span>=&gt; {
                         <span class="comment">// get lost!  🤣
-                        </span><span class="macro">log::warn!</span>(<span class="string">&quot;Got CHAOS shutdown, ignoring!&quot;</span>);
+                        </span><span class="macro">log::warn!</span>(<span class="string">"Got CHAOS shutdown, ignoring!"</span>);
                         <span class="kw">let </span><span class="kw-2">mut </span>chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_NO.clone());
                         chaos_reply.header.rcode = Rcode::Refused;
@@ -683,18 +684,18 @@
 
 <span class="doccomment">/// this handles a version CHAOS request
 </span><span class="comment">// async fn check_for_version(r: &amp;Reply, addr: &amp;SocketAddr, config: &amp;ConfigFile) -&gt; Result&lt;(), ()&gt; {
-//     // when you get a CHAOS from localhost with &quot;VERSION&quot; or &quot;VERSION.BIND&quot; we might respond
+//     // when you get a CHAOS from localhost with "VERSION" or "VERSION.BIND" we might respond
 //     if let Some(q) = &amp;r.question {
 //         if q.qclass == RecordClass::Chaos {
 //             if let Ok(qname) = from_utf8(&amp;q.qname) {
 //                 if VERSION_STRINGS.contains(&amp;qname.to_ascii_lowercase()) &amp; (config.ip_allow_lists.shutdown.contains(&amp;addr.ip())) {
-//                     info!(&quot;Got CHAOS VERSION from {:?}, responding.&quot;, addr.ip());
+//                     info!("Got CHAOS VERSION from {:?}, responding.", addr.ip());
 //                     return Ok(());
 //                 } else {
-//                     warn!(&quot;Got CHAOS VERSION from {:?}, ignoring!&quot;, addr.ip());
+//                     warn!("Got CHAOS VERSION from {:?}, ignoring!", addr.ip());
 //                 }
 //             } else {
-//                 error!(&quot;Failed to parse qname from {:?}, this shouldn&#39;t be able to happen!&quot;, q.qname);
+//                 error!("Failed to parse qname from {:?}, this shouldn't be able to happen!", q.qname);
 //             }
 //         }
 //     };
@@ -709,16 +710,16 @@
     <span class="kw">let </span>udp_sock = <span class="kw">match </span>UdpSocket::bind(
         config
             .dns_listener_address()
-            .expect(<span class="string">&quot;Failed to get DNS listener address on startup!&quot;</span>),
+            .expect(<span class="string">"Failed to get DNS listener address on startup!"</span>),
     )
     .<span class="kw">await
     </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Started UDP listener on {}:{}&quot;</span>, config.address, config.port);
+            <span class="macro">log::info!</span>(<span class="string">"Started UDP listener on {}:{}"</span>, config.address, config.port);
             value
         }
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to start UDP listener: {:?}&quot;</span>, error);
+            <span class="macro">log::error!</span>(<span class="string">"Failed to start UDP listener: {:?}"</span>, error);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
     };
@@ -730,12 +731,12 @@
         <span class="kw">let </span>(len, addr) = <span class="kw">match </span>udp_sock.recv_from(<span class="kw-2">&amp;mut </span>udp_buffer).<span class="kw">await </span>{
             <span class="prelude-val">Ok</span>(value) =&gt; value,
             <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;Error accepting connection via UDP: {:?}&quot;</span>, error);
+                <span class="macro">log::error!</span>(<span class="string">"Error accepting connection via UDP: {:?}"</span>, error);
                 <span class="kw">continue</span>;
             }
         };
 
-        <span class="macro">log::debug!</span>(<span class="string">&quot;{:?} bytes received from {:?}&quot;</span>, len, addr);
+        <span class="macro">log::debug!</span>(<span class="string">"{:?} bytes received from {:?}"</span>, len, addr);
 
         <span class="kw">let </span>udp_result = <span class="kw">match </span>timeout(
             Duration::from_millis(REPLY_TIMEOUT_MS),
@@ -750,18 +751,18 @@
         </span>{
             <span class="prelude-val">Ok</span>(reply) =&gt; reply,
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;Did not receive response from parse_query within 10 ms&quot;</span>);
+                <span class="macro">log::error!</span>(<span class="string">"Did not receive response from parse_query within 10 ms"</span>);
                 <span class="kw">continue</span>;
             }
         };
 
         <span class="kw">match </span>udp_result {
             <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>r) =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;Result: {:?}&quot;</span>, r);
+                <span class="macro">log::debug!</span>(<span class="string">"Result: {:?}"</span>, r);
 
                 <span class="kw">let </span>reply_bytes: Vec&lt;u8&gt; = <span class="kw">match </span>r.as_bytes().<span class="kw">await </span>{
                     <span class="prelude-val">Ok</span>(value) =&gt; {
-                        <span class="comment">// Check if it&#39;s too long and set truncate flag if so, it&#39;s safe to unwrap since we&#39;ve already gone
+                        <span class="comment">// Check if it's too long and set truncate flag if so, it's safe to unwrap since we've already gone
                         </span><span class="kw">if </span>value.len() &gt; UDP_BUFFER_SIZE {
                             <span class="kw">let </span><span class="kw-2">mut </span>response_bytes = value.to_vec();
                             response_bytes.truncate(UDP_BUFFER_SIZE);
@@ -773,23 +774,23 @@
                         }
                     }
                     <span class="prelude-val">Err</span>(error) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse reply {:?} into bytes: {:?}&quot;</span>, r, error);
+                        <span class="macro">log::error!</span>(<span class="string">"Failed to parse reply {:?} into bytes: {:?}"</span>, r, error);
                         <span class="kw">continue</span>;
                     }
                 };
 
-                <span class="macro">log::trace!</span>(<span class="string">&quot;reply_bytes: {:?}&quot;</span>, reply_bytes);
+                <span class="macro">log::trace!</span>(<span class="string">"reply_bytes: {:?}"</span>, reply_bytes);
                 <span class="kw">let </span>len = <span class="kw">match </span>udp_sock.send_to(<span class="kw-2">&amp;</span>reply_bytes <span class="kw">as </span><span class="kw-2">&amp;</span>[u8], addr).<span class="kw">await </span>{
                     <span class="prelude-val">Ok</span>(value) =&gt; value,
                     <span class="prelude-val">Err</span>(err) =&gt; {
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
+                        <span class="macro">log::error!</span>(<span class="string">"Failed to send data back to {:?}: {:?}"</span>, addr, err);
                         <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                     }
                 };
                 <span class="comment">// let len = sock.send_to(r.answer.as_bytes(), addr).await?;
-                </span><span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
+                </span><span class="macro">log::trace!</span>(<span class="string">"{:?} bytes sent"</span>, len);
             }
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error: {}&quot;</span>, error),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">"Error: {}"</span>, error),
         }
     }
 }
@@ -804,19 +805,19 @@
 ) -&gt; io::Result&lt;()&gt; {
     <span class="kw">let </span>(<span class="kw-2">mut </span>reader, writer) = stream.split();
     <span class="kw">let </span>msg_length: usize = reader.read_u16().<span class="kw">await</span><span class="question-mark">?</span>.into();
-    <span class="macro">log::debug!</span>(<span class="string">&quot;msg_length={msg_length}&quot;</span>);
+    <span class="macro">log::debug!</span>(<span class="string">"msg_length={msg_length}"</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>buf: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
 
     <span class="kw">while </span>buf.len() &lt; msg_length {
         <span class="kw">let </span>len = <span class="kw">match </span>reader.read_buf(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await </span>{
             <span class="prelude-val">Ok</span>(size) =&gt; size,
             <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;Failed to read from TCP Stream: {:?}&quot;</span>, error);
+                <span class="macro">log::error!</span>(<span class="string">"Failed to read from TCP Stream: {:?}"</span>, error);
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(());
             }
         };
         <span class="kw">if </span>len &gt; <span class="number">0 </span>{
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Read {:?} bytes from TCP stream&quot;</span>, len);
+            <span class="macro">log::debug!</span>(<span class="string">"Read {:?} bytes from TCP stream"</span>, len);
         }
     }
 
@@ -827,12 +828,12 @@
     // check the message is long enough
     </span><span class="kw">if </span>buf.len() &lt; msg_length {
         <span class="macro">log::warn!</span>(
-            <span class="string">&quot;Message length too short {}, wanted {}&quot;</span>,
+            <span class="string">"Message length too short {}, wanted {}"</span>,
             buf.len(),
             msg_length + <span class="number">2
         </span>);
     } <span class="kw">else </span>{
-        <span class="macro">log::info!</span>(<span class="string">&quot;TCP Message length ftw!&quot;</span>);
+        <span class="macro">log::info!</span>(<span class="string">"TCP Message length ftw!"</span>);
     }
 
     <span class="comment">// skip the TCP length header because rad
@@ -845,16 +846,16 @@
     </span>{
         <span class="prelude-val">Ok</span>(reply) =&gt; reply,
         <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">"Did not receive response from parse_query within {REPLY_TIMEOUT_MS} ms"</span>);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
     };
 
     <span class="kw">match </span>result {
         <span class="prelude-val">Ok</span>(r) =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;TCP Result: {r:?}&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"TCP Result: {r:?}"</span>);
 
-            <span class="comment">// when you get a CHAOS from the allow-list with &quot;shutdown&quot; it&#39;s quitting time
+            <span class="comment">// when you get a CHAOS from the allow-list with "shutdown" it's quitting time
             </span><span class="kw">let </span>r = <span class="kw">match </span>check_for_shutdown(<span class="kw-2">&amp;</span>r, allowed_shutdown).<span class="kw">await </span>{
                 <span class="comment">// no change here
                 </span><span class="prelude-val">Err</span>(reply) =&gt; <span class="kw">match </span>reply {
@@ -865,10 +866,10 @@
                     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = agent_tx.send(AgentState::Stopped {
                         agent: Agent::TCPServer,
                     }) {
-                        <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send UDPServer shutdown message: {error:?}&quot;</span>);
+                        <span class="macro">eprintln!</span>(<span class="string">"Failed to send UDPServer shutdown message: {error:?}"</span>);
                     };
                     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = datastore_sender.send(Command::Shutdown).<span class="kw">await </span>{
-                        <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send shutdown command to datastore.. {error:?}&quot;</span>);
+                        <span class="macro">eprintln!</span>(<span class="string">"Failed to send shutdown command to datastore.. {error:?}"</span>);
                     };
                     reply
                 }
@@ -877,12 +878,12 @@
             <span class="kw">let </span>reply_bytes: Vec&lt;u8&gt; = <span class="kw">match </span>r.as_bytes().<span class="kw">await </span>{
                 <span class="prelude-val">Ok</span>(value) =&gt; value,
                 <span class="prelude-val">Err</span>(error) =&gt; {
-                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse reply {:?} into bytes: {:?}&quot;</span>, r, error);
+                    <span class="macro">log::error!</span>(<span class="string">"Failed to parse reply {:?} into bytes: {:?}"</span>, r, error);
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
             };
 
-            <span class="macro">log::trace!</span>(<span class="string">&quot;reply_bytes: {:?}&quot;</span>, reply_bytes);
+            <span class="macro">log::trace!</span>(<span class="string">"reply_bytes: {:?}"</span>, reply_bytes);
 
             <span class="kw">let </span>reply_bytes = <span class="kw-2">&amp;</span>reply_bytes <span class="kw">as </span><span class="kw-2">&amp;</span>[u8];
             <span class="comment">// send the outgoing message length
@@ -890,23 +891,23 @@
             <span class="kw">let </span>len = <span class="kw">match </span>writer.try_write(<span class="kw-2">&amp;</span>response_length.to_be_bytes()) {
                 <span class="prelude-val">Ok</span>(value) =&gt; value,
                 <span class="prelude-val">Err</span>(err) =&gt; {
-                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
+                    <span class="macro">log::error!</span>(<span class="string">"Failed to send data back to {:?}: {:?}"</span>, addr, err);
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
             };
-            <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
+            <span class="macro">log::trace!</span>(<span class="string">"{:?} bytes sent"</span>, len);
 
             <span class="comment">// send the data
             </span><span class="kw">let </span>len = <span class="kw">match </span>writer.try_write(reply_bytes) {
                 <span class="prelude-val">Ok</span>(value) =&gt; value,
                 <span class="prelude-val">Err</span>(err) =&gt; {
-                    <span class="macro">log::error!</span>(<span class="string">&quot;Failed to send data back to {:?}: {:?}&quot;</span>, addr, err);
+                    <span class="macro">log::error!</span>(<span class="string">"Failed to send data back to {:?}: {:?}"</span>, addr, err);
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
             };
-            <span class="macro">log::trace!</span>(<span class="string">&quot;{:?} bytes sent&quot;</span>, len);
+            <span class="macro">log::trace!</span>(<span class="string">"{:?} bytes sent"</span>, len);
         }
-        <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error: {}&quot;</span>, error),
+        <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">"Error: {}"</span>, error),
     }
     <span class="prelude-val">Ok</span>(())
 }
@@ -924,21 +925,21 @@
     <span class="kw">let </span>tcpserver = <span class="kw">match </span>TcpListener::bind(
         config
             .dns_listener_address()
-            .expect(<span class="string">&quot;Failed to get DNS listener address on startup!&quot;</span>),
+            .expect(<span class="string">"Failed to get DNS listener address on startup!"</span>),
     )
     .<span class="kw">await
     </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; {
             <span class="macro">log::info!</span>(
-                <span class="string">&quot;Started TCP listener on {}&quot;</span>,
+                <span class="string">"Started TCP listener on {}"</span>,
                 config
                     .dns_listener_address()
-                    .expect(<span class="string">&quot;Failed to get DNS listener address on startup!&quot;</span>)
+                    .expect(<span class="string">"Failed to get DNS listener address on startup!"</span>)
             );
             value
         }
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to start TCP Server: {:?}&quot;</span>, error);
+            <span class="macro">log::error!</span>(<span class="string">"Failed to start TCP Server: {:?}"</span>, error);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
     };
@@ -949,11 +950,11 @@
     <span class="kw">loop </span>{
         <span class="kw">let </span>(<span class="kw-2">mut </span>stream, addr) = <span class="kw">match </span>tcpserver.accept().<span class="kw">await </span>{
             <span class="prelude-val">Ok</span>(value) =&gt; value,
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Couldn&#39;t get data from TcpStream: {:?}&quot;</span>, error),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">"Couldn't get data from TcpStream: {:?}"</span>, error),
         };
 
         <span class="kw">let </span>allowed_shutdown = shutdown_ip_address_list.contains(<span class="kw-2">&amp;</span>addr.ip());
-        <span class="macro">log::debug!</span>(<span class="string">&quot;TCP connection from {:?}&quot;</span>, addr);
+        <span class="macro">log::debug!</span>(<span class="string">"TCP connection from {:?}"</span>, addr);
         <span class="kw">let </span>loop_tx = tx.clone();
         <span class="kw">let </span>loop_agent_tx = agent_tx.clone();
         tokio::spawn(<span class="kw">async move </span>{
@@ -972,7 +973,7 @@
             </span>.is_err()
             {
                 <span class="macro">log::warn!</span>(
-                    <span class="string">&quot;TCP Connection from {addr:?} terminated after {} seconds.&quot;</span>,
+                    <span class="string">"TCP Connection from {addr:?} terminated after {} seconds."</span>,
                     tcp_client_timeout
                 );
             }
@@ -980,7 +981,7 @@
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(agent_state) = agent_rx.try_recv() {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Got agent state: {:?}&quot;</span>, agent_state);
+            <span class="macro">log::info!</span>(<span class="string">"Got agent state: {:?}"</span>, agent_state);
         };
     }
 }
@@ -1006,58 +1007,58 @@
     </span><span class="kw">let </span>header = <span class="kw">match </span><span class="kw">crate</span>::Header::unpack(<span class="kw-2">&amp;</span>split_header) {
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="comment">// can&#39;t return a servfail if we can&#39;t unpack the header, they&#39;re probably doing something bad.
-            </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to parse header: {:?}&quot;</span>, error));
+            <span class="comment">// can't return a servfail if we can't unpack the header, they're probably doing something bad.
+            </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"Failed to parse header: {:?}"</span>, error));
         }
     };
-    <span class="macro">log::trace!</span>(<span class="string">&quot;Buffer length: {}&quot;</span>, len);
-    <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed header: {:?}&quot;</span>, header);
+    <span class="macro">log::trace!</span>(<span class="string">"Buffer length: {}"</span>, len);
+    <span class="macro">log::trace!</span>(<span class="string">"Parsed header: {:?}"</span>, header);
     get_result(header, len, buf, datastore).<span class="kw">await
 </span>}
 
 <span class="macro">lazy_static! </span>{
     <span class="kw">static </span><span class="kw-2">ref </span>CHAOS_OK: InternalResourceRecord = InternalResourceRecord::TXT {
-        txtdata: DNSCharString::from(<span class="string">&quot;OK&quot;</span>),
+        txtdata: DNSCharString::from(<span class="string">"OK"</span>),
         ttl: <span class="number">0</span>,
         class: RecordClass::Chaos,
     };
     <span class="kw">static </span><span class="kw-2">ref </span>CHAOS_NO: InternalResourceRecord = InternalResourceRecord::TXT {
-        txtdata: DNSCharString::from(<span class="string">&quot;NO&quot;</span>),
+        txtdata: DNSCharString::from(<span class="string">"NO"</span>),
         ttl: <span class="number">0</span>,
         class: RecordClass::Chaos,
     };
 }
 
-<span class="doccomment">/// The generic handler for the packets once they&#39;ve been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y&#39;know?
+<span class="doccomment">/// The generic handler for the packets once they've been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y'know?
 </span><span class="kw">async fn </span>get_result(
     header: Header,
     len: usize,
     buf: <span class="kw-2">&amp;</span>[u8],
     datastore: mpsc::Sender&lt;<span class="kw">crate</span>::datastore::Command&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Reply, String&gt; {
-    <span class="macro">log::trace!</span>(<span class="string">&quot;called get_result(header={header}, len={len})&quot;</span>);
+    <span class="macro">log::trace!</span>(<span class="string">"called get_result(header={header}, len={len})"</span>);
 
     <span class="comment">// if we get something other than a query, yeah nah.
     </span><span class="kw">if </span>header.opcode != OpCode::Query {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Invalid OPCODE, got {:?}&quot;</span>, header.opcode));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"Invalid OPCODE, got {:?}"</span>, header.opcode));
     };
 
     <span class="kw">let </span>question = <span class="kw">match </span>Question::from_packets(<span class="kw-2">&amp;</span>buf[HEADER_BYTES..len]) {
         <span class="prelude-val">Ok</span>(value) =&gt; {
-            <span class="macro">log::trace!</span>(<span class="string">&quot;Parsed question: {:?}&quot;</span>, value);
+            <span class="macro">log::trace!</span>(<span class="string">"Parsed question: {:?}"</span>, value);
             value
         }
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to parse question: {} id={}&quot;</span>, error, header.id);
+            <span class="macro">log::debug!</span>(<span class="string">"Failed to parse question: {} id={}"</span>, error, header.id);
             <span class="kw">return </span>reply_builder(header.id, Rcode::ServFail);
         }
     };
 
-    <span class="comment">// yeet them when we get a request we can&#39;t handle
+    <span class="comment">// yeet them when we get a request we can't handle
     </span><span class="kw">if </span>!question.qtype.supported() {
         <span class="macro">log::debug!</span>(
-            <span class="string">&quot;Unsupported request: {} {:?}, returning NotImplemented&quot;</span>,
-            from_utf8(<span class="kw-2">&amp;</span>question.qname).unwrap_or(<span class="string">&quot;&lt;unable to parse&gt;&quot;</span>),
+            <span class="string">"Unsupported request: {} {:?}, returning NotImplemented"</span>,
+            from_utf8(<span class="kw-2">&amp;</span>question.qname).unwrap_or(<span class="string">"&lt;unable to parse&gt;"</span>),
             question.qtype,
         );
         <span class="kw">return </span>reply_builder(header.id, Rcode::NotImplemented);
@@ -1066,8 +1067,8 @@
     <span class="comment">// Check for CHAOS commands
     </span><span class="attr">#[allow(clippy::collapsible_if)]
     </span><span class="kw">if </span>question.qclass == RecordClass::Chaos {
-        <span class="kw">if </span><span class="kw-2">&amp;</span>question.normalized_name()<span class="question-mark">? </span>== <span class="string">&quot;shutdown&quot; </span>{
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Got CHAOS shutdown!&quot;</span>);
+        <span class="kw">if </span><span class="kw-2">&amp;</span>question.normalized_name()<span class="question-mark">? </span>== <span class="string">"shutdown" </span>{
+            <span class="macro">log::debug!</span>(<span class="string">"Got CHAOS shutdown!"</span>);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(Reply {
                 header,
                 question: <span class="prelude-val">Some</span>(question),
@@ -1094,40 +1095,40 @@
 
     <span class="comment">// here we talk to the datastore to pull the result
     </span><span class="kw">match </span>datastore.send(ds_req).<span class="kw">await </span>{
-        <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">log::trace!</span>(<span class="string">&quot;Sent a request to the datastore!&quot;</span>),
+        <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">log::trace!</span>(<span class="string">"Sent a request to the datastore!"</span>),
         <span class="comment">// TODO: handle errors sending to the DS properly
-        </span><span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">&quot;Error sending to datastore: {:?}&quot;</span>, error),
+        </span><span class="prelude-val">Err</span>(error) =&gt; <span class="macro">log::error!</span>(<span class="string">"Error sending to datastore: {:?}"</span>, error),
     };
 
     <span class="kw">let </span>record: ZoneRecord = <span class="kw">match </span>rx_oneshot.<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; <span class="kw">match </span>value {
             <span class="prelude-val">Some</span>(zr) =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;DS Response: {}&quot;</span>, zr);
+                <span class="macro">log::debug!</span>(<span class="string">"DS Response: {}"</span>, zr);
                 zr
             }
             <span class="prelude-val">None </span>=&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;No response from datastore&quot;</span>);
+                <span class="macro">log::debug!</span>(<span class="string">"No response from datastore"</span>);
                 <span class="kw">return </span>reply_nxdomain(header.id);
             }
         },
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to get response from datastore: {:?}&quot;</span>, error);
+            <span class="macro">log::error!</span>(<span class="string">"Failed to get response from datastore: {:?}"</span>, error);
             <span class="kw">return </span>reply_builder(header.id, Rcode::ServFail);
         }
     };
 
-    <span class="comment">// this is our reply - static until that bit&#39;s done
+    <span class="comment">// this is our reply - static until that bit's done
     </span><span class="prelude-val">Ok</span>(Reply {
         header: Header {
             id: header.id,
             qr: PacketType::Answer,
             opcode: header.opcode,
             authoritative: <span class="bool-val">true</span>,
-            truncated: <span class="bool-val">false</span>, <span class="comment">// TODO: work out if it&#39;s truncated (ie, UDP)
+            truncated: <span class="bool-val">false</span>, <span class="comment">// TODO: work out if it's truncated (ie, UDP)
             </span>recursion_desired: header.recursion_desired,
             recursion_available: header.recursion_available, <span class="comment">// TODO: work this out
             </span>z: <span class="bool-val">false</span>,
-            ad: <span class="bool-val">true</span>, <span class="comment">// TODO: decide how the ad flag should be set -  &quot;authentic data&quot; - This requests the server to return whether all of the answer and
+            ad: <span class="bool-val">true</span>, <span class="comment">// TODO: decide how the ad flag should be set -  "authentic data" - This requests the server to return whether all of the answer and
             // authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all
             // records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer
             // was insecure or not validated. This bit is set by default.
@@ -1140,7 +1141,7 @@
         },
         question: <span class="prelude-val">Some</span>(question),
         answers: record.typerecords,
-        authorities: <span class="macro">vec!</span>[], <span class="comment">// TODO: we&#39;re authoritative, we should respond with our records!
+        authorities: <span class="macro">vec!</span>[], <span class="comment">// TODO: we're authoritative, we should respond with our records!
         </span>additional: <span class="macro">vec!</span>[],
     })
 }
@@ -1197,9 +1198,9 @@
     }
 
     <span class="kw">fn </span>send_shutdown(<span class="kw-2">&amp;</span><span class="self">self</span>, agent: Agent) {
-        <span class="macro">log::info!</span>(<span class="string">&quot;{agent:?} shut down&quot;</span>);
+        <span class="macro">log::info!</span>(<span class="string">"{agent:?} shut down"</span>);
         <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = <span class="self">self</span>.agent_tx.send(AgentState::Stopped { agent }) {
-            <span class="macro">eprintln!</span>(<span class="string">&quot;Failed to send agent shutdown message: {error:?}&quot;</span>);
+            <span class="macro">eprintln!</span>(<span class="string">"Failed to send agent shutdown message: {error:?}"</span>);
         };
     }
 
@@ -1207,28 +1208,28 @@
         <span class="kw">let </span><span class="kw-2">mut </span>results = <span class="macro">vec!</span>[];
         <span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="kw-2">&amp;</span><span class="self">self</span>.apiserver {
             <span class="kw">if </span>server.is_finished() {
-                <span class="macro">println!</span>(<span class="string">&quot;Sending API Shutdown&quot;</span>);
+                <span class="macro">println!</span>(<span class="string">"Sending API Shutdown"</span>);
                 <span class="self">self</span>.send_shutdown(Agent::API);
             }
             results.push(server.is_finished())
         }
         <span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="kw-2">&amp;</span><span class="self">self</span>.datastore {
             <span class="kw">if </span>server.is_finished() {
-                <span class="macro">println!</span>(<span class="string">&quot;Sending Datastore Shutdown&quot;</span>);
+                <span class="macro">println!</span>(<span class="string">"Sending Datastore Shutdown"</span>);
                 <span class="self">self</span>.send_shutdown(Agent::Datastore);
             }
             results.push(server.is_finished())
         }
         <span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="kw-2">&amp;</span><span class="self">self</span>.tcpserver {
             <span class="kw">if </span>server.is_finished() {
-                <span class="macro">println!</span>(<span class="string">&quot;Sending TCP Server Shutdown&quot;</span>);
+                <span class="macro">println!</span>(<span class="string">"Sending TCP Server Shutdown"</span>);
                 <span class="self">self</span>.send_shutdown(Agent::TCPServer);
             }
             results.push(server.is_finished())
         }
         <span class="kw">if let </span><span class="prelude-val">Some</span>(server) = <span class="kw-2">&amp;</span><span class="self">self</span>.udpserver {
             <span class="kw">if </span>server.is_finished() {
-                <span class="macro">println!</span>(<span class="string">&quot;Sending UDP Server Shutdown&quot;</span>);
+                <span class="macro">println!</span>(<span class="string">"Sending UDP Server Shutdown"</span>);
                 <span class="self">self</span>.send_shutdown(Agent::UDPServer);
             }
             results.push(server.is_finished())

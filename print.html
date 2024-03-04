@@ -228,7 +228,7 @@ repository if that's your thing.</p>
 <pre><code class="language-shell">cargo test
 </code></pre>
 <p>A handy load testing tool is <a href="https://github.com/jedisct1/dnsblast">dnsblast</a>. This'll run 50,000
-&quot;valid&quot; queries, 1500 packets per second, to port 15353:</p>
+"valid" queries, 1500 packets per second, to port 15353:</p>
 <pre><code class="language-shell">./dnsblast 127.0.0.1 50000 1500 15353
 </code></pre>
 <p>Or if you want to fuzz the server and test that it doesn't blow up:</p>
@@ -238,13 +238,13 @@ repository if that's your thing.</p>
 <p>This list is now <a href="https://goatns.dotgoat.net/rrtypes.html">in the book</a>.</p>
 <h2 id="additional-thanks"><a class="header" href="#additional-thanks">Additional thanks</a></h2>
 <ul>
-<li>&quot;Home&quot; by Kiki Rizky from <a href="https://thenounproject.com/browse/icons/term/home/">Noun Project</a></li>
+<li>"Home" by Kiki Rizky from <a href="https://thenounproject.com/browse/icons/term/home/">Noun Project</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h1>
 <p>I'll totally forget to update this, so check
 <a href="https://goatns.dotgoat.net/rustdoc/goatns/config/struct.ConfigFile.html">the rustdoc for ConfigFile</a>
 for up-to-date information.</p>
-<p>To write out a &quot;default&quot; config file, run <code>goatns --export-default-config</code> which will dump the
+<p>To write out a "default" config file, run <code>goatns --export-default-config</code> which will dump the
 contents of the system defaults.</p>
 <h2 id="user-authentication"><a class="header" href="#user-authentication">User Authentication</a></h2>
 <p>This is build for <a href="https://kanidm.com">Kanidm</a> but should work with any OIDC identity provider.</p>
@@ -304,7 +304,7 @@ ANY (255) RFC8482
 <li><input disabled="" type="checkbox"/>
 should check for zones, is currently just YOLOing a response to any request</li>
 <li><input disabled="" type="checkbox" checked=""/>
-return a HINFO record of &quot;RFC8482&quot;, can't be stored</li>
+return a HINFO record of "RFC8482", can't be stored</li>
 </ul>
 </li>
 <li><input disabled="" type="checkbox" checked=""/>
@@ -338,7 +338,7 @@ HINFO (13) RFC8482 Providing Minimal-Sized Responses to DNS Queries That Have QT
 <li><input disabled="" type="checkbox" checked=""/>
 RFC1035 interpretation is done</li>
 <li><input disabled="" type="checkbox" checked=""/>
-Check up on the details in RFC8482 - &quot;Unobsoleted by RFC 8482.&quot;</li>
+Check up on the details in RFC8482 - "Unobsoleted by RFC 8482."</li>
 </ul>
 </li>
 <li><input disabled="" type="checkbox"/>
@@ -460,11 +460,11 @@ DNS zone data at rest.</li>
   jaegertracing/all-in-one:latest
 </code></pre>
 <p>Example environment variables:</p>
-<pre><code class="language-bash">export OTEL_EXPORTER_OTLP_ENDPOINT=&quot;http://localhost:4317&quot; #grpc
-export OTEL_SERVICE_NAME=&quot;goatns&quot;
-export OTEL_LOG_LEVEL=&quot;debug&quot;
-export OTEL_TRACES_SAMPLER=&quot;always_on&quot;
-export OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=&quot;grpc&quot;
+<pre><code class="language-bash">export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317" #grpc
+export OTEL_SERVICE_NAME="goatns"
+export OTEL_LOG_LEVEL="debug"
+export OTEL_TRACES_SAMPLER="always_on"
+export OTEL_EXPORTER_OTLP_TRACES_PROTOCOL="grpc"
 </code></pre>
 
                     </main>

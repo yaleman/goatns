@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils.rs`."><title>utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils.rs`."><title>utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -355,16 +356,16 @@
     <span class="prelude-val">None
 </span>}
 
-<span class="doccomment">/// does the conversion from &quot;example.com&quot; to &quot;7example3com&quot; BUT DOES NOT DO THE TRAILING NULL BECAUSE REASONS
+<span class="doccomment">/// does the conversion from "example.com" to "7example3com" BUT DOES NOT DO THE TRAILING NULL BECAUSE REASONS
 </span><span class="kw">fn </span>seven_dot_three_conversion(name: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt; {
-    <span class="macro">trace!</span>(<span class="string">&quot;7.3 conversion for {name:?} {:?}&quot;</span>, from_utf8(name));
+    <span class="macro">trace!</span>(<span class="string">"7.3 conversion for {name:?} {:?}"</span>, from_utf8(name));
     <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
 
     <span class="comment">// TODO: reimplement this with slices and stuff
     </span><span class="kw">let </span><span class="kw-2">mut </span>next_dot: usize = <span class="kw">match </span>vec_find(<span class="number">46</span>, name) {
         <span class="prelude-val">Some</span>(value) =&gt; value,
         <span class="prelude-val">None </span>=&gt; {
-            <span class="comment">// if there&#39;s no dots, then just push a length on the front and include the data. then bail
+            <span class="comment">// if there's no dots, then just push a length on the front and include the data. then bail
             </span>result.push(name.len() <span class="kw">as </span>u8);
             result.extend(name);
             <span class="kw">return </span>result;
@@ -385,16 +386,16 @@
             };
             current_position = <span class="number">0</span>;
             <span class="comment">// this should be the
-            // debug!(&quot;. - {:?} ({:?})&quot;, next_dot, name_bytes);
+            // debug!(". - {:?} ({:?})", next_dot, name_bytes);
             </span><span class="kw">if </span>next_dot != <span class="number">0 </span>{
                 result.push(next_dot <span class="kw">as </span>u8);
-                <span class="macro">trace!</span>(<span class="string">&quot;pushing next_dot {}&quot;</span>, next_dot <span class="kw">as </span>u8);
+                <span class="macro">trace!</span>(<span class="string">"pushing next_dot {}"</span>, next_dot <span class="kw">as </span>u8);
             }
         } <span class="kw">else </span>{
             <span class="comment">// we are processing bytes
-            </span><span class="macro">trace!</span>(<span class="string">&quot;pushing {}&quot;</span>, name_bytes[current_position]);
+            </span><span class="macro">trace!</span>(<span class="string">"pushing {}"</span>, name_bytes[current_position]);
             result.push(name_bytes[current_position]);
-            <span class="comment">// debug!(&quot;{:?} {:?}&quot;, current_position, name_bytes.as_bytes()[current_position]);
+            <span class="comment">// debug!("{:?} {:?}", current_position, name_bytes.as_bytes()[current_position]);
             </span>current_position += <span class="number">1</span>;
         }
         <span class="kw">if </span>current_position == name_bytes.len() {
@@ -408,24 +409,24 @@
 </span><span class="kw">pub fn </span>find_tail_match(name: <span class="kw-2">&amp;</span>[u8], target: <span class="kw-2">&amp;</span>Vec&lt;u8&gt;) -&gt; usize {
     <span class="comment">// #[cfg(debug)]
     // {
-    </span><span class="kw">let </span>name_str = <span class="macro">format!</span>(<span class="string">&quot;{name:?}&quot;</span>);
-    <span class="kw">let </span>target_str = <span class="macro">format!</span>(<span class="string">&quot;{target:?}&quot;</span>);
+    </span><span class="kw">let </span>name_str = <span class="macro">format!</span>(<span class="string">"{name:?}"</span>);
+    <span class="kw">let </span>target_str = <span class="macro">format!</span>(<span class="string">"{target:?}"</span>);
     <span class="kw">let </span>longest = <span class="kw">match </span>name_str.len() &gt; target_str.len() {
         <span class="bool-val">true </span>=&gt; name_str.len(),
         <span class="bool-val">false </span>=&gt; target_str.len(),
     };
-    <span class="macro">trace!</span>(<span class="string">&quot;find_tail_match(\n  name={name_str:&gt;longest$}, \ntarget={target_str:&gt;longest$}\n)&quot;</span>,);
+    <span class="macro">trace!</span>(<span class="string">"find_tail_match(\n  name={name_str:&gt;longest$}, \ntarget={target_str:&gt;longest$}\n)"</span>,);
     <span class="comment">// }
     </span><span class="kw">let </span><span class="kw-2">mut </span>tail_index: usize = <span class="number">0</span>;
     <span class="kw">for </span>(i, <span class="kw">_</span>) <span class="kw">in </span>target.iter().enumerate() {
-        <span class="macro">trace!</span>(<span class="string">&quot;Tail index={i}&quot;</span>);
+        <span class="macro">trace!</span>(<span class="string">"Tail index={i}"</span>);
         <span class="kw">let </span>tail = <span class="kw-2">&amp;</span>target[i..];
         <span class="kw">if </span>name.ends_with(tail) {
-            <span class="macro">trace!</span>(<span class="string">&quot;Found a tail at index {i}&quot;</span>);
+            <span class="macro">trace!</span>(<span class="string">"Found a tail at index {i}"</span>);
             tail_index = i;
             <span class="kw">break</span>;
         } <span class="kw">else </span>{
-            <span class="macro">trace!</span>(<span class="string">&quot;Didn&#39;t match: name / target \n{name:?}\n{:?}&quot;</span>, <span class="kw-2">&amp;</span>target[i..]);
+            <span class="macro">trace!</span>(<span class="string">"Didn't match: name / target \n{name:?}\n{:?}"</span>, <span class="kw-2">&amp;</span>target[i..]);
         }
     }
     tail_index
@@ -443,9 +444,9 @@ which should typically be the qname in the question bytes
 
 compress_reference is the vec of bytes of the compression target, ie this is the kind of terrible thing you should do
 name_as_bytes(
-    &quot;lol.example.com&quot;.as_bytes().to_vec(),
+    "lol.example.com".as_bytes().to_vec(),
     Some(12),
-    Some(&quot;example.com&quot;.as_bytes().to_vec())
+    Some("example.com".as_bytes().to_vec())
 )
 */
 </span><span class="kw">pub fn </span>name_as_bytes(
@@ -453,24 +454,24 @@ name_as_bytes(
     compress_target: <span class="prelude-ty">Option</span>&lt;u16&gt;,
     compress_reference: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Vec&lt;u8&gt;&gt;,
 ) -&gt; Vec&lt;u8&gt; {
-    <span class="macro">trace!</span>(<span class="string">&quot;################################&quot;</span>);
+    <span class="macro">trace!</span>(<span class="string">"################################"</span>);
     <span class="kw">match </span>from_utf8(<span class="kw-2">&amp;</span>name) {
-        <span class="prelude-val">Ok</span>(nstr) =&gt; <span class="macro">trace!</span>(<span class="string">&quot;name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}&quot;</span>),
-        <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt;  <span class="macro">trace!</span>(<span class="string">&quot;failed to utf-8 name name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}&quot;</span>),
+        <span class="prelude-val">Ok</span>(nstr) =&gt; <span class="macro">trace!</span>(<span class="string">"name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"</span>),
+        <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt;  <span class="macro">trace!</span>(<span class="string">"failed to utf-8 name name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"</span>),
     };
 
-    <span class="comment">// if we&#39;re given a compression target and no reference just compress it and return
+    <span class="comment">// if we're given a compression target and no reference just compress it and return
     </span><span class="kw">if let </span>(<span class="prelude-val">Some</span>(target), <span class="prelude-val">None</span>) = (compress_target, compress_reference) {
-        <span class="macro">trace!</span>(<span class="string">&quot;we got a compress target ({target}) but no reference we&#39;re just going to compress&quot;</span>);
+        <span class="macro">trace!</span>(<span class="string">"we got a compress target ({target}) but no reference we're just going to compress"</span>);
         <span class="comment">// we need the first two bits to be 1, to mark it as compressed
         // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
         </span><span class="kw">let </span>result: Vec&lt;u8&gt; = (<span class="number">0b1100000000000000 </span>| target).to_be_bytes().into();
-        <span class="macro">trace!</span>(<span class="string">&quot;result of name_as_bytes {result:?}&quot;</span>);
+        <span class="macro">trace!</span>(<span class="string">"result of name_as_bytes {result:?}"</span>);
         <span class="kw">return </span>result;
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
-    <span class="comment">// if somehow it&#39;s a weird bare domain then we don&#39;t have to do much it
+    <span class="comment">// if somehow it's a weird bare domain then we don't have to do much it
     </span><span class="kw">if </span>!name.contains(<span class="kw-2">&amp;</span><span class="number">46</span>) {
         result.push(name.len() <span class="kw">as </span>u8);
         result.extend(<span class="kw-2">&amp;</span>name);
@@ -480,34 +481,34 @@ name_as_bytes(
     result = seven_dot_three_conversion(<span class="kw-2">&amp;</span>name);
 
     <span class="kw">if </span>compress_target.is_none() {
-        <span class="macro">trace!</span>(<span class="string">&quot;no compression target, adding the trailing null and returning!&quot;</span>);
+        <span class="macro">trace!</span>(<span class="string">"no compression target, adding the trailing null and returning!"</span>);
         result.push(<span class="number">0</span>);
         <span class="kw">return </span>result;
     };
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(ct) = compress_reference {
-        <span class="macro">trace!</span>(<span class="string">&quot;you gave me {ct:?} as a compression reference&quot;</span>);
+        <span class="macro">trace!</span>(<span class="string">"you gave me {ct:?} as a compression reference"</span>);
 
         <span class="kw">if </span><span class="kw-2">&amp;</span>name == ct {
-            <span class="macro">trace!</span>(<span class="string">&quot;The thing we&#39;re converting is the same as the compression reference!&quot;</span>);
+            <span class="macro">trace!</span>(<span class="string">"The thing we're converting is the same as the compression reference!"</span>);
             <span class="comment">// return a pointer to the target_byte (probably the name in the header)
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(target) = compress_target {
                 <span class="kw">let </span>result: u16 = <span class="number">0b1100000000000000 </span>| target;
                 <span class="kw">return </span>result.to_be_bytes().to_vec();
             } <span class="kw">else </span>{
-                <span class="macro">panic!</span>(<span class="string">&quot;you didn&#39;t give us a target, dude!&quot;</span>)
+                <span class="macro">panic!</span>(<span class="string">"you didn't give us a target, dude!"</span>)
             }
         }
         <span class="kw">if </span>name.ends_with(ct) {
-            <span class="macro">trace!</span>(<span class="string">&quot;the name ends with the target! woo!&quot;</span>);
-            <span class="comment">// Ok, we&#39;ve gotten this far. We need to slice off the &quot;front&quot; of the string and return that.
+            <span class="macro">trace!</span>(<span class="string">"the name ends with the target! woo!"</span>);
+            <span class="comment">// Ok, we've gotten this far. We need to slice off the "front" of the string and return that.
             </span>result = name.clone();
             result.truncate(name.len() - ct.len());
-            <span class="macro">trace!</span>(<span class="string">&quot;The result is trimmed and now {:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>result));
+            <span class="macro">trace!</span>(<span class="string">"The result is trimmed and now {:?}"</span>, from_utf8(<span class="kw-2">&amp;</span>result));
 
             <span class="comment">// do the 7.3 conversion
             </span>result = seven_dot_three_conversion(<span class="kw-2">&amp;</span>result);
-            <span class="macro">trace!</span>(<span class="string">&quot;7.3converted: {:?}&quot;</span>, from_utf8(<span class="kw-2">&amp;</span>result));
+            <span class="macro">trace!</span>(<span class="string">"7.3converted: {:?}"</span>, from_utf8(<span class="kw-2">&amp;</span>result));
 
             <span class="comment">// then we need to return the pointer to the tail
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(target) = compress_target {
@@ -515,39 +516,39 @@ name_as_bytes(
                 result.extend(pointer_bytes.to_be_bytes());
             } <span class="kw">else </span>{
                 <span class="attr">#[cfg(debug)]
-                </span><span class="macro">panic!</span>(<span class="string">&quot;No compression target and we totally could have compressed this.&quot;</span>)
+                </span><span class="macro">panic!</span>(<span class="string">"No compression target and we totally could have compressed this."</span>)
             }
 
-            <span class="macro">trace!</span>(<span class="string">&quot;The result is trimmed and now {:?}&quot;</span>, result);
+            <span class="macro">trace!</span>(<span class="string">"The result is trimmed and now {:?}"</span>, result);
         } <span class="kw">else </span>{
-            <span class="comment">// dropped into tail-finding mode where we&#39;re looking for a sub-string of the parent to target a compression pointer
-            </span><span class="macro">trace!</span>(<span class="string">&quot;trying to find a sub-part of {ct:?} in {name:?}&quot;</span>);
+            <span class="comment">// dropped into tail-finding mode where we're looking for a sub-string of the parent to target a compression pointer
+            </span><span class="macro">trace!</span>(<span class="string">"trying to find a sub-part of {ct:?} in {name:?}"</span>);
 
             <span class="kw">let </span>tail_index = find_tail_match(<span class="kw-2">&amp;</span>name, ct);
-            <span class="macro">trace!</span>(<span class="string">&quot;tail_index: {tail_index}&quot;</span>);
-            <span class="comment">// if we get to here and the tail_index is 0 then we haven&#39;t set it - because we&#39;d have caught the whole thing in the ends_with matcher earlier.
+            <span class="macro">trace!</span>(<span class="string">"tail_index: {tail_index}"</span>);
+            <span class="comment">// if we get to here and the tail_index is 0 then we haven't set it - because we'd have caught the whole thing in the ends_with matcher earlier.
             </span><span class="kw">if </span>tail_index != <span class="number">0 </span>{
-                <span class="macro">trace!</span>(<span class="string">&quot;Found a tail-match: {tail_index}&quot;</span>);
+                <span class="macro">trace!</span>(<span class="string">"Found a tail-match: {tail_index}"</span>);
                 <span class="comment">// slice the tail off the name
                 </span><span class="kw">let </span><span class="kw-2">mut </span>name_copy = name.to_vec();
                 <span class="comment">// the amount of the tail that matched to the name, ie abc, bc = 2, aab, bbb = 1
                 </span><span class="kw">let </span>matched_length = ct.len() - tail_index;
                 name_copy.truncate(name.len() - matched_length);
-                <span class="macro">trace!</span>(<span class="string">&quot;sliced name down to {name_copy:?}&quot;</span>);
+                <span class="macro">trace!</span>(<span class="string">"sliced name down to {name_copy:?}"</span>);
                 <span class="comment">// put the pointer on there
                 </span>result = seven_dot_three_conversion(<span class="kw-2">&amp;</span>name_copy);
-                <span class="macro">trace!</span>(<span class="string">&quot;converted result to {result:?}&quot;</span>);
+                <span class="macro">trace!</span>(<span class="string">"converted result to {result:?}"</span>);
                 <span class="kw">let </span>pointer: u16 = <span class="number">0b1100000000000000 </span>| (HEADER_BYTES + tail_index + <span class="number">1</span>) <span class="kw">as </span>u16;
                 result.extend(pointer.to_be_bytes());
             }
         }
     }
-    <span class="macro">trace!</span>(<span class="string">&quot;Final result {result:?}&quot;</span>);
+    <span class="macro">trace!</span>(<span class="string">"Final result {result:?}"</span>);
     result
 }
 
 <span class="comment">// lazy_static!{
-//     static ref GOATNS_VERSION: DNSCharString = DNSCharString::from(format!(&quot;GoatNS {}&quot;, env!(&quot;CARGO_PKG_VERSION&quot;)).as_str());
+//     static ref GOATNS_VERSION: DNSCharString = DNSCharString::from(format!("GoatNS {}", env!("CARGO_PKG_VERSION")).as_str());
 // }
 
 // lazy_static!{
@@ -563,8 +564,8 @@ name_as_bytes(
 //     reply.question = question.to_owned();
 //     reply.answers = VERSION_RESPONSE.clone();
 //     reply.header.ancount = 1;
-//     debug!(&quot;Version: {reply:?}&quot;);
-//     debug!(&quot;Goatns version: {:?}&quot;, GOATNS_VERSION.to_owned());
+//     debug!("Version: {reply:?}");
+//     debug!("Goatns version: {:?}", GOATNS_VERSION.to_owned());
 //     Ok(reply)
 // }
 
@@ -572,24 +573,24 @@ name_as_bytes(
 </span><span class="kw">pub fn </span>hexdump(bytes: Vec&lt;u8&gt;) {
     <span class="kw">for </span>byte <span class="kw">in </span>bytes.chunks(<span class="number">2</span>) {
         <span class="kw">let </span>byte0_alpha = <span class="kw">match </span>byte[<span class="number">0</span>].is_ascii_alphanumeric() {
-            <span class="bool-val">true </span>=&gt; from_utf8(byte[<span class="number">0</span>..<span class="number">1</span>].into()).expect(<span class="string">&quot;Failed to decode bytes&quot;</span>),
-            <span class="bool-val">false </span>=&gt; <span class="string">&quot; &quot;</span>,
+            <span class="bool-val">true </span>=&gt; from_utf8(byte[<span class="number">0</span>..<span class="number">1</span>].into()).expect(<span class="string">"Failed to decode bytes"</span>),
+            <span class="bool-val">false </span>=&gt; <span class="string">" "</span>,
         };
         <span class="kw">match </span>byte.len() {
             <span class="number">2 </span>=&gt; {
                 <span class="kw">let </span>byte1_alpha = <span class="kw">match </span>byte[<span class="number">1</span>].is_ascii_alphanumeric() {
-                    <span class="bool-val">true </span>=&gt; from_utf8(byte[<span class="number">1</span>..<span class="number">2</span>].into()).expect(<span class="string">&quot;Failed to decode bytes&quot;</span>),
-                    <span class="bool-val">false </span>=&gt; <span class="string">&quot; &quot;</span>,
+                    <span class="bool-val">true </span>=&gt; from_utf8(byte[<span class="number">1</span>..<span class="number">2</span>].into()).expect(<span class="string">"Failed to decode bytes"</span>),
+                    <span class="bool-val">false </span>=&gt; <span class="string">" "</span>,
                 };
 
                 <span class="macro">debug!</span>(
-                    <span class="string">&quot;{:02x} {:02x} {:#010b} {:#010b} {:3} {:3} {byte0_alpha} {byte1_alpha}&quot;</span>,
+                    <span class="string">"{:02x} {:02x} {:#010b} {:#010b} {:3} {:3} {byte0_alpha} {byte1_alpha}"</span>,
                     byte[<span class="number">0</span>], byte[<span class="number">1</span>], byte[<span class="number">0</span>], byte[<span class="number">1</span>], byte[<span class="number">0</span>], byte[<span class="number">1</span>],
                 );
             }
             <span class="kw">_ </span>=&gt; {
                 <span class="macro">debug!</span>(
-                    <span class="string">&quot;{:02x}    {:#010b}    {:3} {byte0_alpha}&quot;</span>,
+                    <span class="string">"{:02x}    {:#010b}    {:3} {byte0_alpha}"</span>,
                     byte[<span class="number">0</span>], byte[<span class="number">0</span>], byte[<span class="number">0</span>],
                 );
             }
@@ -600,7 +601,7 @@ name_as_bytes(
 <span class="doccomment">/// turn a degrees/minutes/seconds format into unsigned 32-bit integer matching the format
 /// required for a DNS LOC record
 ///
-/// when positive = true, you&#39;re North or West
+/// when positive = true, you're North or West
 </span><span class="kw">pub fn </span>dms_to_u32(deg: u8, min: u8, sec: f32, positive: bool) -&gt; u32 {
     <span class="kw">let </span>secsfrac = sec % <span class="number">1f32</span>;
 
@@ -625,16 +626,16 @@ name_as_bytes(
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">10 </span>{
         <span class="kw">if </span>(cmval <span class="kw">as </span>f64) &lt; (<span class="number">10u64</span>.pow(i + <span class="number">1</span>) <span class="kw">as </span>f64) {
             exponent = i;
-            <span class="comment">// eprintln!(&quot;CMVAL: {cmval} Exponent #{i} {}&quot;, (poweroften[i+1] as u64));
+            <span class="comment">// eprintln!("CMVAL: {cmval} Exponent #{i} {}", (poweroften[i+1] as u64));
             </span><span class="kw">break</span>;
         }
     }
-    <span class="comment">// eprintln!(&quot;{:?}&quot;, ((cmval as f64) / (poweroften[exponent] as f64) ).ceil());
+    <span class="comment">// eprintln!("{:?}", ((cmval as f64) / (poweroften[exponent] as f64) ).ceil());
     </span>mantissa = ((cmval <span class="kw">as </span>f64) / (<span class="number">10u64</span>.pow(exponent) <span class="kw">as </span>f64)).ceil() <span class="kw">as </span>u8;
     <span class="kw">if </span>mantissa &gt; <span class="number">9u8 </span>{
         mantissa = <span class="number">9u8</span>;
     }
-    <span class="comment">// eprintln!(&quot;mantissa: {mantissa}, exponent: {exponent}&quot;);
+    <span class="comment">// eprintln!("mantissa: {mantissa}, exponent: {exponent}");
     // turn it into the magic ugly numbers
     </span><span class="kw">let </span>retval: u8 = (mantissa &lt;&lt; <span class="number">4</span>) | (exponent <span class="kw">as </span>u8);
     retval
@@ -658,15 +659,15 @@ name_as_bytes(
 /// use goatns::utils::check_valid_tld;
 ///
 /// let valid_tlds = vec![];
-/// let zone_name = &quot;hello.example.goat&quot;;
+/// let zone_name = "hello.example.goat";
 /// assert_eq!(check_valid_tld(&amp;zone_name, &amp;valid_tlds), true);
 ///
-/// let valid_tlds = vec![&quot;goat&quot;.to_string()];
-/// let zone_name = &quot;hello.example.goat&quot;;
+/// let valid_tlds = vec!["goat".to_string()];
+/// let zone_name = "hello.example.goat";
 /// assert_eq!(check_valid_tld(&amp;zone_name, &amp;valid_tlds), true);
 ///
-/// let valid_tlds = vec![&quot;cheese&quot;.to_string()];
-/// let zone_name = &quot;hello.example.goat&quot;;
+/// let valid_tlds = vec!["cheese".to_string()];
+/// let zone_name = "hello.example.goat";
 /// assert_eq!(check_valid_tld(&amp;zone_name, &amp;valid_tlds), false);
 /// ```
 </span><span class="kw">pub fn </span>check_valid_tld(zone_name: <span class="kw-2">&amp;</span>str, allowed_tlds: <span class="kw-2">&amp;</span>Vec&lt;String&gt;) -&gt; bool {
@@ -674,7 +675,7 @@ name_as_bytes(
         <span class="kw">return </span><span class="bool-val">true</span>;
     }
     <span class="kw">for </span>tld <span class="kw">in </span>allowed_tlds.iter() {
-        <span class="kw">if </span>zone_name.ends_with(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;.{tld}&quot;</span>)) {
+        <span class="kw">if </span>zone_name.ends_with(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">".{tld}"</span>)) {
             <span class="kw">return </span><span class="bool-val">true</span>;
         }
     }

@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/web/ui/user_settings.rs`."><title>user_settings.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/web/ui/user_settings.rs`."><title>user_settings.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -585,10 +586,10 @@
 <span class="kw">use </span><span class="kw">crate</span>::db::UserAuthToken;
 <span class="kw">use </span><span class="kw">crate</span>::web::GoatState;
 
-<span class="kw">static </span>SESSION_CSRFTOKEN_FIELD: <span class="kw-2">&amp;</span>str = <span class="string">&quot;api_token_csrf_token&quot;</span>;
+<span class="kw">static </span>SESSION_CSRFTOKEN_FIELD: <span class="kw-2">&amp;</span>str = <span class="string">"api_token_csrf_token"</span>;
 
 <span class="attr">#[derive(Template)]
-#[template(path = <span class="string">&quot;user_settings.html&quot;</span>)]
+#[template(path = <span class="string">"user_settings.html"</span>)]
 </span><span class="kw">struct </span>Settings {
     <span class="kw">pub </span>user_is_admin: bool,
 }
@@ -603,7 +604,7 @@
 }
 
 <span class="attr">#[derive(Template)]
-#[template(path = <span class="string">&quot;user_api_tokens.html&quot;</span>)]
+#[template(path = <span class="string">"user_api_tokens.html"</span>)]
 </span><span class="kw">struct </span>ApiTokensGetPage {
     csrftoken: String,
     tokens: Vec&lt;Arc&lt;UserAuthToken&gt;&gt;,
@@ -619,38 +620,38 @@
                 .remove_value(SESSION_CSRFTOKEN_FIELD)
                 .<span class="kw">await
                 </span>.map_err(|err| {
-                    <span class="macro">error!</span>(<span class="string">&quot;Failed to remove CSRF token from session: {err:?}&quot;</span>);
+                    <span class="macro">error!</span>(<span class="string">"Failed to remove CSRF token from session: {err:?}"</span>);
                     <span class="bool-val">false
                 </span>})
                 .unwrap();
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get session token from storage&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"Couldn't get session token from storage"</span>);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
         <span class="prelude-val">Some</span>(value) =&gt; value,
     };
 
-    <span class="kw">let </span><span class="kw-2">mut </span>split = session_token.split(<span class="string">&#39;|&#39;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>split = session_token.split(<span class="string">'|'</span>);
     <span class="kw">let </span>csrf_token = <span class="kw">match </span>split.next() {
         <span class="prelude-val">None </span>=&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Didn&#39;t get split token&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"Didn't get split token"</span>);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
         <span class="prelude-val">Some</span>(value) =&gt; value,
     };
 
     <span class="kw">if </span>user_input != csrf_token {
-        <span class="macro">log::debug!</span>(<span class="string">&quot;Session and form CSRF token failed to match! user={user_input} &lt;&gt; session={csrf_token}&quot;</span>);
+        <span class="macro">log::debug!</span>(<span class="string">"Session and form CSRF token failed to match! user={user_input} &lt;&gt; session={csrf_token}"</span>);
         <span class="kw">return </span><span class="bool-val">false</span>;
     }
 
     <span class="kw">let </span>expiry = <span class="kw">match </span>split.next() {
         <span class="prelude-val">None </span>=&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get timestamp from stored CSRF Token&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"Couldn't get timestamp from stored CSRF Token"</span>);
             session
                 .remove_value(SESSION_CSRFTOKEN_FIELD)
                 .<span class="kw">await
                 </span>.map_err(|err| {
-                    <span class="macro">error!</span>(<span class="string">&quot;Failed to remove CSRF token from session: {err:?}&quot;</span>);
+                    <span class="macro">error!</span>(<span class="string">"Failed to remove CSRF token from session: {err:?}"</span>);
                     <span class="bool-val">false
                 </span>})
                 .unwrap();
@@ -661,12 +662,12 @@
 
     <span class="kw">let </span>expiry: DateTime&lt;Utc&gt; = <span class="kw">match </span>DateTime::parse_from_rfc3339(expiry) {
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to parse {expiry:?} into datetime: {error:?}&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"Failed to parse {expiry:?} into datetime: {error:?}"</span>);
             session
                 .remove_value(SESSION_CSRFTOKEN_FIELD)
                 .<span class="kw">await
                 </span>.map_err(|err| {
-                    <span class="macro">error!</span>(<span class="string">&quot;Failed to remove CSRF token from session: {err:?}&quot;</span>);
+                    <span class="macro">error!</span>(<span class="string">"Failed to remove CSRF token from session: {err:?}"</span>);
                     <span class="bool-val">false
                 </span>})
                 .unwrap();
@@ -677,18 +678,18 @@
     <span class="kw">let </span>now = Utc::now();
 
     <span class="kw">if </span>expiry &lt; now {
-        <span class="macro">log::debug!</span>(<span class="string">&quot;Token has expired at {expiry:?}, time is now {now:?}&quot;</span>);
+        <span class="macro">log::debug!</span>(<span class="string">"Token has expired at {expiry:?}, time is now {now:?}"</span>);
         session
             .remove_value(SESSION_CSRFTOKEN_FIELD)
             .<span class="kw">await
             </span>.map_err(|err| {
-                <span class="macro">error!</span>(<span class="string">&quot;Failed to remove CSRF token from session: {err:?}&quot;</span>);
+                <span class="macro">error!</span>(<span class="string">"Failed to remove CSRF token from session: {err:?}"</span>);
                 <span class="bool-val">false
             </span>})
             .unwrap();
         <span class="kw">return </span><span class="bool-val">false</span>;
     }
-    <span class="macro">log::debug!</span>(<span class="string">&quot;CSRF Token was valid!&quot;</span>);
+    <span class="macro">log::debug!</span>(<span class="string">"CSRF Token was valid!"</span>);
     <span class="bool-val">true
 </span>}
 
@@ -705,12 +706,12 @@
     <span class="kw">let </span>csrf_expiry: DateTime&lt;Utc&gt; =
         Utc::now() + Duration::seconds(expiry_plus_seconds.unwrap_or(<span class="number">300</span>));
 
-    <span class="kw">let </span>stored_csrf = <span class="macro">format!</span>(<span class="string">&quot;{csrftoken}|{}&quot;</span>, csrf_expiry.to_rfc3339());
+    <span class="kw">let </span>stored_csrf = <span class="macro">format!</span>(<span class="string">"{csrftoken}|{}"</span>, csrf_expiry.to_rfc3339());
 
     <span class="comment">// store it in the session storage
     </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session.insert(SESSION_CSRFTOKEN_FIELD, stored_csrf).<span class="kw">await </span>{
         <span class="comment">// TODO: nice errors are nice but secure errors are better
-        </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;Failed to store CSRF Token for user: {error:?}&quot;</span>));
+        </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"Failed to store CSRF Token for user: {error:?}"</span>));
     };
     <span class="prelude-val">Ok</span>(csrftoken)
 }
@@ -726,20 +727,20 @@
     <span class="kw">let </span>csrftoken = <span class="kw">match </span>store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(value) =&gt; value,
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to store csrf token in DB: {error:?}&quot;</span>);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/&quot;</span>));
+            <span class="macro">log::error!</span>(<span class="string">"Failed to store csrf token in DB: {error:?}"</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">"/"</span>));
         }
     };
 
     <span class="comment">// pull token from the session store new_api_token
-    </span><span class="kw">let </span>token_value: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">&quot;new_api_token&quot;</span>).<span class="kw">await</span>.unwrap();
+    </span><span class="kw">let </span>token_value: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">"new_api_token"</span>).<span class="kw">await</span>.unwrap();
 
-    <span class="kw">let </span>tokenkey: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">&quot;new_api_tokenkey&quot;</span>).<span class="kw">await</span>.unwrap();
+    <span class="kw">let </span>tokenkey: <span class="prelude-ty">Option</span>&lt;String&gt; = session.remove(<span class="string">"new_api_tokenkey"</span>).<span class="kw">await</span>.unwrap();
 
     <span class="kw">let </span>tokens =
         <span class="kw">match </span>UserAuthToken::get_all_user(<span class="kw-2">&amp;</span>state.read().<span class="kw">await</span>.connpool, user.id.unwrap()).<span class="kw">await </span>{
             <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="macro">log::error!</span>(<span class="string">&quot;Failed to pull tokens for user {:#?}: {error:?}&quot;</span>, user.id);
+                <span class="macro">log::error!</span>(<span class="string">"Failed to pull tokens for user {:#?}: {error:?}"</span>, user.id);
                 <span class="macro">vec!</span>[]
             }
             <span class="prelude-val">Ok</span>(val) =&gt; val,
@@ -776,12 +777,12 @@
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>ApiTokenLifetime {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         f.write_str(<span class="kw">match </span><span class="self">self </span>{
-            ApiTokenLifetime::EightHours =&gt; <span class="string">&quot;Eight Hours (8h)&quot;</span>,
-            ApiTokenLifetime::TwentyFourHours =&gt; <span class="string">&quot;Twenty-Four Hours (24h)&quot;</span>,
-            ApiTokenLifetime::ThirtyDays =&gt; <span class="string">&quot;Thirty Days (30d)&quot;</span>,
-            ApiTokenLifetime::Forever =&gt; <span class="string">&quot;No Expiry&quot;</span>,
+            ApiTokenLifetime::EightHours =&gt; <span class="string">"Eight Hours (8h)"</span>,
+            ApiTokenLifetime::TwentyFourHours =&gt; <span class="string">"Twenty-Four Hours (24h)"</span>,
+            ApiTokenLifetime::ThirtyDays =&gt; <span class="string">"Thirty Days (30d)"</span>,
+            ApiTokenLifetime::Forever =&gt; <span class="string">"No Expiry"</span>,
         })
     }
 }
@@ -789,10 +790,10 @@
 <span class="kw">impl </span>ApiTokenLifetime {
     <span class="kw">fn </span>variant_str(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">match </span><span class="self">self </span>{
-            ApiTokenLifetime::EightHours =&gt; <span class="string">&quot;EightHours&quot;</span>.to_string(),
-            ApiTokenLifetime::TwentyFourHours =&gt; <span class="string">&quot;TwentyFourHours&quot;</span>.to_string(),
-            ApiTokenLifetime::ThirtyDays =&gt; <span class="string">&quot;ThirtyDays&quot;</span>.to_string(),
-            ApiTokenLifetime::Forever =&gt; <span class="string">&quot;Forever&quot;</span>.to_string(),
+            ApiTokenLifetime::EightHours =&gt; <span class="string">"EightHours"</span>.to_string(),
+            ApiTokenLifetime::TwentyFourHours =&gt; <span class="string">"TwentyFourHours"</span>.to_string(),
+            ApiTokenLifetime::ThirtyDays =&gt; <span class="string">"ThirtyDays"</span>.to_string(),
+            ApiTokenLifetime::Forever =&gt; <span class="string">"Forever"</span>.to_string(),
         }
     }
 }
@@ -807,12 +808,12 @@
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>ApiTokenCreatePageState {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
-            ApiTokenCreatePageState::Start =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;Start&quot;</span>)),
-            ApiTokenCreatePageState::Generating =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;Generating&quot;</span>)),
-            ApiTokenCreatePageState::Finished =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;Finished&quot;</span>)),
-            ApiTokenCreatePageState::Error =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">&quot;Error&quot;</span>)),
+            ApiTokenCreatePageState::Start =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"Start"</span>)),
+            ApiTokenCreatePageState::Generating =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"Generating"</span>)),
+            ApiTokenCreatePageState::Finished =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"Finished"</span>)),
+            ApiTokenCreatePageState::Error =&gt; f.write_fmt(<span class="macro">format_args!</span>(<span class="string">"Error"</span>)),
         }
     }
 }
@@ -836,7 +837,7 @@
 
 <span class="doccomment">/// Form handler for the api tokens post endpoint
 </span><span class="attr">#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Template, Default)]
-#[template(path = <span class="string">&quot;user_api_token_form.html&quot;</span>)]
+#[template(path = <span class="string">"user_api_token_form.html"</span>)]
 </span><span class="kw">pub struct </span>ApiTokenPage {
     <span class="kw">pub </span>token_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="kw">pub </span>tokenkey: <span class="prelude-ty">Option</span>&lt;String&gt;,
@@ -858,24 +859,24 @@
     State(state): State&lt;GoatState&gt;,
     Form(form): Form&lt;ApiTokenPage&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Html&lt;String&gt;, Redirect&gt; {
-    <span class="macro">eprintln!</span>(<span class="string">&quot;Got form: {form:?}&quot;</span>);
+    <span class="macro">eprintln!</span>(<span class="string">"Got form: {form:?}"</span>);
 
     <span class="kw">let </span>user = check_logged_in(<span class="kw-2">&amp;mut </span>session, Uri::from_static(URI_SETTINGS_API_TOKENS)).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="kw">if </span>!validate_csrf_expiry(<span class="kw-2">&amp;</span>form.csrftoken, <span class="kw-2">&amp;mut </span>session).<span class="kw">await </span>{
         <span class="comment">// TODO: redirect to the start
-        </span><span class="macro">log::debug!</span>(<span class="string">&quot;Failed to validate csrf expiry&quot;</span>);
-        <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings&quot;</span>));
+        </span><span class="macro">log::debug!</span>(<span class="string">"Failed to validate csrf expiry"</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">"/ui/settings"</span>));
     }
 
     <span class="kw">let </span>context = <span class="kw">match </span>form.state {
-        <span class="comment">// Present the &quot;select a lifetime&quot; page
+        <span class="comment">// Present the "select a lifetime" page
         </span>ApiTokenCreatePageState::Start =&gt; {
             <span class="comment">// present the user with the lifetime form
             </span><span class="kw">let </span>lifetimes: Vec&lt;(String, String)&gt; = enum_iterator::all::&lt;ApiTokenLifetime&gt;()
                 .map(|l| (l.to_string(), l.variant_str()))
                 .collect();
-            <span class="macro">eprintln!</span>(<span class="string">&quot;Lifetimes: {lifetimes:?}&quot;</span>);
+            <span class="macro">eprintln!</span>(<span class="string">"Lifetimes: {lifetimes:?}"</span>);
             ApiTokenPage {
                 csrftoken: store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap(),
                 state: ApiTokenCreatePageState::Start,
@@ -887,9 +888,9 @@
                 user_is_admin: user.admin,
             }
         }
-        <span class="comment">// The user has set a lifetime and we&#39;re generating a token
+        <span class="comment">// The user has set a lifetime and we're generating a token
         </span>ApiTokenCreatePageState::Generating =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;In the &#39;Generating&#39; state&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"In the 'Generating' state"</span>);
 
             <span class="comment">// generate the credential
 
@@ -897,11 +898,11 @@
             <span class="kw">let </span>api_cookie_secret = state_reader.config.api_cookie_secret();
             <span class="kw">let </span>lifetime: i32 = form.lifetime.unwrap().into();
             <span class="comment">// get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
-            </span><span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">&quot;user&quot;</span>).<span class="kw">await</span>.unwrap() {
+            </span><span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">"user"</span>).<span class="kw">await</span>.unwrap() {
                 <span class="prelude-val">Some</span>(val) =&gt; val,
                 <span class="prelude-val">None </span>=&gt; {
-                    <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get user from session store&quot;</span>);
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui&quot;</span>));
+                    <span class="macro">log::debug!</span>(<span class="string">"Couldn't get user from session store"</span>);
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">"/ui"</span>));
                 }
             };
             <span class="kw">let </span>userid: i64 = user.id.unwrap();
@@ -909,8 +910,8 @@
             <span class="kw">let </span>api_token = create_api_token(api_cookie_secret, lifetime, userid);
 
             <span class="comment">// store the token in the database
-            </span><span class="macro">log::trace!</span>(<span class="string">&quot;Starting to store token in the DB, grabbing writer...&quot;</span>);
-            <span class="macro">println!</span>(<span class="string">&quot;got writer...&quot;</span>);
+            </span><span class="macro">log::trace!</span>(<span class="string">"Starting to store token in the DB, grabbing writer..."</span>);
+            <span class="macro">println!</span>(<span class="string">"got writer..."</span>);
             <span class="kw">let </span>uat = UserAuthToken {
                 id: <span class="prelude-val">None</span>,
                 name: form.token_name.unwrap(),
@@ -920,68 +921,68 @@
                 tokenkey: api_token.token_key.to_owned(),
                 tokenhash: api_token.token_hash,
             };
-            <span class="macro">log::trace!</span>(<span class="string">&quot;Starting to store token in the DB, grabbing transaction...&quot;</span>);
+            <span class="macro">log::trace!</span>(<span class="string">"Starting to store token in the DB, grabbing transaction..."</span>);
 
             <span class="kw">let </span><span class="kw-2">mut </span>txn = <span class="kw">match </span>state_reader.connpool.begin().<span class="kw">await </span>{
                 <span class="prelude-val">Ok</span>(val) =&gt; val,
                 <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">todo!</span>(
-                    <span class="string">&quot;Need to handle failing to pick up a txn for api token storage: {error:?}&quot;
+                    <span class="string">"Need to handle failing to pick up a txn for api token storage: {error:?}"
                 </span>),
             };
 
-            <span class="macro">log::trace!</span>(<span class="string">&quot;Starting to store token in the DB, saving...&quot;</span>);
+            <span class="macro">log::trace!</span>(<span class="string">"Starting to store token in the DB, saving..."</span>);
             <span class="kw">match </span>uat.save_with_txn(<span class="kw-2">&amp;mut </span>txn).<span class="kw">await </span>{
-                <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">todo!</span>(<span class="string">&quot;Need to handle this! {error:?}&quot;</span>),
+                <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">todo!</span>(<span class="string">"Need to handle this! {error:?}"</span>),
                 <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {
                     <span class="comment">// store the api token in the session store
                     </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session
-                        .insert(<span class="string">&quot;new_api_token&quot;</span>, <span class="kw-2">&amp;</span>api_token.token_secret)
+                        .insert(<span class="string">"new_api_token"</span>, <span class="kw-2">&amp;</span>api_token.token_secret)
                         .<span class="kw">await
                     </span>{
                         <span class="macro">log::error!</span>(
-                            <span class="string">&quot;Failed to store new API token in the session, ruh roh? {error:?}&quot;
+                            <span class="string">"Failed to store new API token in the session, ruh roh? {error:?}"
                         </span>);
                         txn.rollback()
                             .<span class="kw">await
                             </span>.map_err(|e| {
-                                <span class="macro">log::error!</span>(<span class="string">&quot;Txn rollback fail: {e:?}&quot;</span>);
+                                <span class="macro">log::error!</span>(<span class="string">"Txn rollback fail: {e:?}"</span>);
                                 <span class="macro">todo!</span>()
                             })
                             .unwrap();
                         <span class="comment">// TODO: bail, which should roll back the txn
-                        </span><span class="macro">todo!</span>(<span class="string">&quot;Failed to store new API token in the session, ruh roh? {error:?}&quot;</span>);
+                        </span><span class="macro">todo!</span>(<span class="string">"Failed to store new API token in the session, ruh roh? {error:?}"</span>);
                     };
 
                     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = session
-                        .insert(<span class="string">&quot;new_api_tokenkey&quot;</span>, <span class="kw-2">&amp;</span>api_token.token_key)
+                        .insert(<span class="string">"new_api_tokenkey"</span>, <span class="kw-2">&amp;</span>api_token.token_key)
                         .<span class="kw">await
                     </span>{
                         <span class="macro">log::error!</span>(
-                            <span class="string">&quot;Failed to store new API tokenkey in the session, ruh roh? {error:?}&quot;
+                            <span class="string">"Failed to store new API tokenkey in the session, ruh roh? {error:?}"
                         </span>);
                         txn.rollback()
                             .<span class="kw">await
                             </span>.map_err(|e| {
-                                <span class="macro">log::error!</span>(<span class="string">&quot;Txn rollback fail: {e:?}&quot;</span>);
+                                <span class="macro">log::error!</span>(<span class="string">"Txn rollback fail: {e:?}"</span>);
                                 <span class="macro">todo!</span>()
                             })
                             .unwrap();
                         <span class="comment">// TODO: bail, which should roll back the txn
                         </span><span class="macro">todo!</span>(
-                            <span class="string">&quot;Failed to store new API tokenkey in the session, ruh roh? {error:?}&quot;
+                            <span class="string">"Failed to store new API tokenkey in the session, ruh roh? {error:?}"
                         </span>);
                     };
 
                     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = txn.commit().<span class="kw">await </span>{
-                        <span class="macro">log::error!</span>(<span class="string">&quot;Failed to save the API token to storage, oh no?&quot;</span>);
-                        <span class="macro">todo!</span>(<span class="string">&quot;Failed to save the API token to storage, oh no? {error:?}&quot;</span>);
+                        <span class="macro">log::error!</span>(<span class="string">"Failed to save the API token to storage, oh no?"</span>);
+                        <span class="macro">todo!</span>(<span class="string">"Failed to save the API token to storage, oh no? {error:?}"</span>);
                     };
                 }
             };
             <span class="comment">// redirect the user to the display page
             </span><span class="kw">let </span>csrftoken = store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">Some</span>(<span class="number">30</span>)).<span class="kw">await</span>.unwrap();
             <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                <span class="string">&quot;/ui/settings/api_tokens?state={csrftoken}?token_created=1&quot;
+                <span class="string">"/ui/settings/api_tokens?state={csrftoken}?token_created=1"
             </span>)));
         }
 
@@ -990,11 +991,11 @@
     };
     <span class="prelude-val">Ok</span>(Html::from(context.render().unwrap()))
 
-    <span class="comment">// Html::from(&quot;Welcome to the api tokens page&quot;.to_string())
+    <span class="comment">// Html::from("Welcome to the api tokens page".to_string())
 </span>}
 
 <span class="attr">#[derive(Deserialize, Serialize, Debug, Clone, Template)]
-#[template(path = <span class="string">&quot;user_api_token_delete.html&quot;</span>)]
+#[template(path = <span class="string">"user_api_token_delete.html"</span>)]
 </span><span class="kw">pub struct </span>ApiTokenDelete {
     <span class="kw">pub </span>id: i64,
     <span class="kw">pub </span>token_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
@@ -1002,7 +1003,7 @@
     <span class="kw">pub </span>user_is_admin: bool,
 }
 
-<span class="kw">const </span>URI_SETTINGS_API_TOKENS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/ui/settings/api_tokens&quot;</span>;
+<span class="kw">const </span>URI_SETTINGS_API_TOKENS: <span class="kw-2">&amp;</span>str = <span class="string">"/ui/settings/api_tokens"</span>;
 
 <span class="comment">// #[debug_handler]
 </span><span class="kw">pub async fn </span>api_tokens_delete_get(
@@ -1016,7 +1017,7 @@
     <span class="kw">let </span>csrftoken = <span class="kw">match </span>store_api_csrf_token(<span class="kw-2">&amp;mut </span>session, <span class="prelude-val">None</span>).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(val) =&gt; val,
         <span class="prelude-val">Err</span>(err) =&gt; {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to store CSRF token in the session store: {err:?}&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">"Failed to store CSRF token in the session store: {err:?}"</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(URI_SETTINGS_API_TOKENS));
         }
     };
@@ -1024,8 +1025,8 @@
     <span class="kw">let </span>id = <span class="kw">match </span>i64::from_str(<span class="kw-2">&amp;</span>id) {
         <span class="prelude-val">Ok</span>(val) =&gt; val,
         <span class="prelude-val">Err</span>(error) =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Got an invalid id parsing the URL: {error:?}&quot;</span>);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/&quot;</span>));
+            <span class="macro">log::debug!</span>(<span class="string">"Got an invalid id parsing the URL: {error:?}"</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">"/"</span>));
         }
     };
 
@@ -1033,13 +1034,13 @@
     <span class="kw">let </span>pool = state_reader.connpool.clone();
     <span class="kw">let </span>uat = <span class="kw">match </span>UserAuthToken::get(<span class="kw-2">&amp;</span>pool, id).<span class="kw">await </span>{
         <span class="prelude-val">Err</span>(err) =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Requested delete for token: {err:?}&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"Requested delete for token: {err:?}"</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(URI_SETTINGS_API_TOKENS));
         }
         <span class="prelude-val">Ok</span>(res) =&gt; {
             <span class="kw">if </span>res.userid != user.id.unwrap() {
                 <span class="macro">log::debug!</span>(
-                    <span class="string">&quot;You can&#39;t delete another user&#39;s tokens! uid={} token.userid={}&quot;</span>,
+                    <span class="string">"You can't delete another user's tokens! uid={} token.userid={}"</span>,
                     user.id.unwrap(),
                     res.userid
                 );
@@ -1070,28 +1071,28 @@
 
     <span class="kw">if </span>!validate_csrf_expiry(<span class="kw-2">&amp;</span>form.csrftoken, <span class="kw-2">&amp;mut </span>session).<span class="kw">await </span>{
         <span class="comment">// TODO: redirect to the start
-        </span><span class="macro">log::debug!</span>(<span class="string">&quot;Failed to validate csrf expiry&quot;</span>);
-        <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui/settings&quot;</span>));
+        </span><span class="macro">log::debug!</span>(<span class="string">"Failed to validate csrf expiry"</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">"/ui/settings"</span>));
     }
 
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Deleting token from Form: {form:?}&quot;</span>);
-    <span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">&quot;user&quot;</span>).<span class="kw">await</span>.unwrap() {
+    <span class="macro">log::debug!</span>(<span class="string">"Deleting token from Form: {form:?}"</span>);
+    <span class="kw">let </span>user: User = <span class="kw">match </span>session.get(<span class="string">"user"</span>).<span class="kw">await</span>.unwrap() {
         <span class="prelude-val">Some</span>(val) =&gt; val,
         <span class="prelude-val">None </span>=&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Couldn&#39;t get user from session store&quot;</span>);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">&quot;/ui&quot;</span>));
+            <span class="macro">log::debug!</span>(<span class="string">"Couldn't get user from session store"</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(<span class="string">"/ui"</span>));
         }
     };
     <span class="kw">let </span>pool = state.read().<span class="kw">await</span>.connpool.clone();
     <span class="kw">let </span>uat = <span class="kw">match </span>UserAuthToken::get(<span class="kw-2">&amp;</span>pool, form.id).<span class="kw">await </span>{
         <span class="prelude-val">Err</span>(err) =&gt; {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Requested delete for existing token: {err:?}&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"Requested delete for existing token: {err:?}"</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(Redirect::to(URI_SETTINGS_API_TOKENS));
         }
         <span class="prelude-val">Ok</span>(res) =&gt; {
             <span class="kw">if </span>res.userid != user.id.unwrap() {
                 <span class="macro">log::debug!</span>(
-                    <span class="string">&quot;You can&#39;t delete another user&#39;s tokens! uid={} token.userid={}&quot;</span>,
+                    <span class="string">"You can't delete another user's tokens! uid={} token.userid={}"</span>,
                     user.id.unwrap(),
                     res.userid
                 );
@@ -1103,11 +1104,11 @@
     };
 
     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = uat.delete(<span class="kw-2">&amp;</span>pool).<span class="kw">await </span>{
-        <span class="macro">log::debug!</span>(<span class="string">&quot;Failed to delete token {:?}: {error:?}&quot;</span>, uat.id);
+        <span class="macro">log::debug!</span>(<span class="string">"Failed to delete token {:?}: {error:?}"</span>, uat.id);
     };
 
     <span class="macro">log::info!</span>(
-        <span class="string">&quot;id={} action=api_token_delete token_id={}&quot;</span>,
+        <span class="string">"id={} action=api_token_delete token_id={}"</span>,
         uat.userid,
         uat.id.unwrap()
     );
@@ -1116,10 +1117,10 @@
 <span class="doccomment">/// Build the router for user settings
 </span><span class="kw">pub fn </span>router() -&gt; Router&lt;GoatState&gt; {
     Router::new()
-        .route(<span class="string">&quot;/&quot;</span>, get(settings))
-        .route(<span class="string">&quot;/api_tokens&quot;</span>, get(api_tokens_get))
-        .route(<span class="string">&quot;/api_tokens&quot;</span>, post(api_tokens_post))
-        .route(<span class="string">&quot;/api_tokens/delete/:id&quot;</span>, get(api_tokens_delete_get))
-        .route(<span class="string">&quot;/api_tokens/delete/:id&quot;</span>, post(api_tokens_delete_post))
+        .route(<span class="string">"/"</span>, get(settings))
+        .route(<span class="string">"/api_tokens"</span>, get(api_tokens_get))
+        .route(<span class="string">"/api_tokens"</span>, post(api_tokens_post))
+        .route(<span class="string">"/api_tokens/delete/:id"</span>, get(api_tokens_delete_get))
+        .route(<span class="string">"/api_tokens/delete/:id"</span>, post(api_tokens_delete_post))
 }
 </code></pre></div></section></main></body></html>

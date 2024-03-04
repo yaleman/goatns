@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config.rs`."><title>config.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0 (82e1608df 2023-12-21)" data-channel="1.75.0" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config.rs`."><title>config.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="goatns" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -559,14 +560,14 @@
     </span><span class="doccomment">/// IPs allowed to make AXFR requests
     </span><span class="comment">// pub axfr: Vec&lt;IpNet&gt;,
     // TODO: Change shutdown from IpAddr to ipnet
-    </span><span class="doccomment">/// A list of allowed IPs which can send a &quot;shutdown CH&quot; request
+    </span><span class="doccomment">/// A list of allowed IPs which can send a "shutdown CH" request
     </span><span class="kw">pub </span>shutdown: Vec&lt;IpAddr&gt;,
 }
 
 <span class="attr">#[derive(Debug, Deserialize, Eq, PartialEq, Clone, Serialize)]
-</span><span class="doccomment">/// The main config blob for GoatNS, write this as a JSON file and load it and it&#39;ll make things go.
+</span><span class="doccomment">/// The main config blob for GoatNS, write this as a JSON file and load it and it'll make things go.
 </span><span class="kw">pub struct </span>ConfigFile {
-    <span class="doccomment">/// The server&#39;s hostname when generating an SOA record, defaults to the results of gethostname()
+    <span class="doccomment">/// The server's hostname when generating an SOA record, defaults to the results of gethostname()
     </span><span class="kw">pub </span>hostname: String,
     <span class="doccomment">/// DNS listener address, default is 127.0.0.1
     </span><span class="kw">pub </span>address: String,
@@ -574,7 +575,7 @@
     </span><span class="kw">pub </span>port: u16,
     <span class="doccomment">/// If we should capture packets on request/response
     </span><span class="kw">pub </span>capture_packets: bool,
-    <span class="doccomment">/// Default is &quot;DEBUG&quot;
+    <span class="doccomment">/// Default is "DEBUG"
     </span><span class="kw">pub </span>log_level: String,
     <span class="doccomment">/// How long until we drop TCP client connections, defaults to 5 seconds.
     </span><span class="kw">pub </span>tcp_client_timeout: u64,
@@ -584,7 +585,7 @@
     </span><span class="kw">pub </span>sqlite_path: String,
     <span class="doccomment">/// Where the JSON zone file is
     </span><span class="kw">pub </span>zone_file: <span class="prelude-ty">Option</span>&lt;String&gt;,
-    <span class="doccomment">/// List of &quot;valid&quot; TLDs - if this is empty let anything be created
+    <span class="doccomment">/// List of "valid" TLDs - if this is empty let anything be created
     </span><span class="kw">pub </span>allowed_tlds: Vec&lt;String&gt;,
     <span class="doccomment">/// IP Allow lists
     </span><span class="attr">#[serde(flatten)]
@@ -599,8 +600,8 @@
     </span><span class="kw">pub </span>api_tls_key: PathBuf,
     <span class="doccomment">/// Static File Directory for api things
     </span><span class="kw">pub </span>api_static_dir: String,
-    <span class="doccomment">/// Secret for cookie storage - it&#39;ll randomly generate on startup by default
-    </span><span class="attr">#[serde(default = <span class="string">&quot;generate_cookie_secret&quot;</span>, skip_serializing)]
+    <span class="doccomment">/// Secret for cookie storage - it'll randomly generate on startup by default
+    </span><span class="attr">#[serde(default = <span class="string">"generate_cookie_secret"</span>, skip_serializing)]
     </span>api_cookie_secret: String,
     <span class="doccomment">/// OAuth2 Resource server name
     </span><span class="kw">pub </span>oauth2_client_id: String,
@@ -609,7 +610,7 @@
     <span class="attr">#[serde(skip_serializing)]
     </span><span class="doccomment">/// Oauth2 Secret
     </span><span class="kw">pub </span>oauth2_secret: String,
-    <span class="doccomment">/// OIDC Discovery URL, eg for Kanidm you&#39;d use `https://idm.example.com/oauth2/openid/:client_id:/.well-known/openid-configuration`
+    <span class="doccomment">/// OIDC Discovery URL, eg for Kanidm you'd use `https://idm.example.com/oauth2/openid/:client_id:/.well-known/openid-configuration`
     </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>oauth2_config_url: String,
     <span class="attr">#[serde(default)]
@@ -634,15 +635,15 @@
 <span class="kw">impl </span>ConfigFile {
     <span class="doccomment">/// JSONify the configfile in a pretty way using serde
     </span><span class="kw">pub fn </span>as_json_pretty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
-        serde_json::to_string_pretty(<span class="self">self</span>).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to serialize config: {e:?}&quot;</span>))
+        serde_json::to_string_pretty(<span class="self">self</span>).map_err(|e| <span class="macro">format!</span>(<span class="string">"Failed to serialize config: {e:?}"</span>))
     }
 
     <span class="doccomment">/// Get a bindable SocketAddr for use in the DNS listeners
     </span><span class="kw">pub fn </span>dns_listener_address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddr, <span class="prelude-ty">Option</span>&lt;String&gt;&gt; {
-        <span class="kw">let </span>listen_addr = <span class="macro">format!</span>(<span class="string">&quot;{}:{}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.address, <span class="kw-2">&amp;</span><span class="self">self</span>.port);
+        <span class="kw">let </span>listen_addr = <span class="macro">format!</span>(<span class="string">"{}:{}"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.address, <span class="kw-2">&amp;</span><span class="self">self</span>.port);
 
         listen_addr.parse::&lt;SocketAddr&gt;().map_err(|e| {
-            <span class="macro">log::error!</span>(<span class="string">&quot;Failed to parse address: {e:?}&quot;</span>);
+            <span class="macro">log::error!</span>(<span class="string">"Failed to parse address: {e:?}"</span>);
             <span class="prelude-val">None
         </span>})
     }
@@ -650,44 +651,44 @@
     <span class="doccomment">/// get a string version of the listener address
     </span><span class="kw">pub fn </span>api_listener_address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SocketAddr {
         SocketAddr::new(
-            <span class="self">self</span>.address.parse().expect(<span class="string">&quot;Failed to parse IP&quot;</span>),
+            <span class="self">self</span>.address.parse().expect(<span class="string">"Failed to parse IP"</span>),
             <span class="self">self</span>.api_port,
         )
     }
 
-    <span class="doccomment">/// It&#39;s a sekret!
+    <span class="doccomment">/// It's a sekret!
     </span><span class="kw">pub fn </span>api_cookie_secret(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="self">self</span>.api_cookie_secret.as_bytes()
     }
 
     <span class="kw">pub fn </span>status_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Url {
         Url::from_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-            <span class="string">&quot;https://{}:{}/status&quot;</span>,
+            <span class="string">"https://{}:{}/status"</span>,
             <span class="self">self</span>.hostname, <span class="self">self</span>.api_port
         ))
-        .expect(<span class="string">&quot;Failed to generate a status URL!&quot;</span>)
+        .expect(<span class="string">"Failed to generate a status URL!"</span>)
     }
 
     <span class="kw">pub async fn </span>get_tls_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;RustlsConfig, String&gt; {
         <span class="macro">log::trace!</span>(
-            <span class="string">&quot;tls config: cert={:?} key={:?}&quot;</span>,
+            <span class="string">"tls config: cert={:?} key={:?}"</span>,
             <span class="self">self</span>.api_tls_cert,
             <span class="self">self</span>.api_tls_key
         );
         RustlsConfig::from_pem_file(<span class="self">self</span>.api_tls_cert.clone(), <span class="self">self</span>.api_tls_key.clone())
             .<span class="kw">await
-            </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;Failed to load TLS config: {e:?}&quot;</span>))
+            </span>.map_err(|e| <span class="macro">format!</span>(<span class="string">"Failed to load TLS config: {e:?}"</span>))
     }
 
     <span class="kw">pub async fn </span>check_config(
-        <span class="kw-2">mut </span>config: CowCellWriteTxn&lt;<span class="lifetime">&#39;_</span>, ConfigFile&gt;,
+        <span class="kw-2">mut </span>config: CowCellWriteTxn&lt;<span class="lifetime">'_</span>, ConfigFile&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Vec&lt;String&gt;&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>errors: Vec&lt;String&gt; = <span class="macro">vec!</span>[];
 
-        <span class="kw">if </span>config.api_tls_cert.starts_with(<span class="string">&quot;~&quot;</span>) {
+        <span class="kw">if </span>config.api_tls_cert.starts_with(<span class="string">"~"</span>) {
             <span class="attr">#[cfg(test)]
             </span><span class="macro">eprintln!</span>(
-                <span class="string">&quot;updating tls cert from {:#?} to shellex&quot;</span>,
+                <span class="string">"updating tls cert from {:#?} to shellex"</span>,
                 config.api_tls_cert
             );
 
@@ -696,20 +697,20 @@
                     <span class="kw-2">&amp;</span>config
                         .api_tls_cert
                         .to_str()
-                        .expect(<span class="string">&quot;Failed to string-ify api_tls_cert&quot;</span>),
+                        .expect(<span class="string">"Failed to string-ify api_tls_cert"</span>),
                 )
                 .to_string(),
             );
         }
-        <span class="kw">if </span>config.api_tls_key.starts_with(<span class="string">&quot;~&quot;</span>) {
+        <span class="kw">if </span>config.api_tls_key.starts_with(<span class="string">"~"</span>) {
             <span class="attr">#[cfg(test)]
-            </span><span class="macro">eprintln!</span>(<span class="string">&quot;updating tls key from {:#?} to shellex&quot;</span>, config.api_tls_key);
+            </span><span class="macro">eprintln!</span>(<span class="string">"updating tls key from {:#?} to shellex"</span>, config.api_tls_key);
             config.api_tls_key = PathBuf::from(
                 shellexpand::tilde(
                     <span class="kw-2">&amp;</span>config
                         .api_tls_key
                         .to_str()
-                        .expect(<span class="string">&quot;Failed to expand api_tls_key path&quot;</span>),
+                        .expect(<span class="string">"Failed to expand api_tls_key path"</span>),
                 )
                 .to_string(),
             );
@@ -717,14 +718,14 @@
 
         <span class="kw">if </span>!config.api_tls_key.exists() {
             errors.push(<span class="macro">format!</span>(
-                <span class="string">&quot;Failed to find API TLS Key file: {:?}&quot;</span>,
+                <span class="string">"Failed to find API TLS Key file: {:?}"</span>,
                 config.api_tls_key
             ));
         };
 
         <span class="kw">if </span>!config.api_tls_cert.exists() {
             errors.push(<span class="macro">format!</span>(
-                <span class="string">&quot;Failed to find API TLS cert file: {:?}&quot;</span>,
+                <span class="string">"Failed to find API TLS cert file: {:?}"</span>,
                 config.api_tls_cert
             ));
         };
@@ -762,7 +763,7 @@
                 <span class="kw">let </span>filepath = std::path::Path::new(<span class="kw-2">&amp;</span>path);
                 <span class="kw">match </span>filepath.exists() {
                     <span class="bool-val">false </span>=&gt; {
-                        <span class="macro">eprintln!</span>(<span class="string">&quot;Config file {path} doesn&#39;t exist, skipping.&quot;</span>);
+                        <span class="macro">eprintln!</span>(<span class="string">"Config file {path} doesn't exist, skipping."</span>);
                         <span class="prelude-val">None
                     </span>}
                     <span class="bool-val">true </span>=&gt; <span class="prelude-val">Some</span>(path),
@@ -772,12 +773,12 @@
 
         <span class="kw">if </span>found_files.is_empty() {
             <span class="macro">eprintln!</span>(
-                <span class="string">&quot;No configuration files exist, giving up! Tried: {}&quot;</span>,
-                file_locations.join(<span class="string">&quot;, &quot;</span>)
+                <span class="string">"No configuration files exist, giving up! Tried: {}"</span>,
+                file_locations.join(<span class="string">", "</span>)
             );
             <span class="kw">return </span><span class="prelude-val">Err</span>(std::io::Error::new(
                 ErrorKind::NotFound,
-                <span class="string">&quot;No configuration files found&quot;</span>,
+                <span class="string">"No configuration files found"</span>,
             ));
         }
 
@@ -787,21 +788,21 @@
 
             <span class="kw">let </span>builder = Config::builder()
                 .add_source(File::new(<span class="kw-2">&amp;</span>config_filename, config::FileFormat::Json))
-                .add_source(config::Environment::with_prefix(<span class="string">&quot;goatns&quot;</span>));
+                .add_source(config::Environment::with_prefix(<span class="string">"goatns"</span>));
 
             <span class="kw">let </span>config = builder.build().map_err(|e| {
                 std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    <span class="macro">format!</span>(<span class="string">&quot;Couldn&#39;t load config from {config_filename}: {e:?}&quot;</span>),
+                    <span class="macro">format!</span>(<span class="string">"Couldn't load config from {config_filename}: {e:?}"</span>),
                 )
             });
 
             <span class="kw">match </span>config {
                 <span class="prelude-val">Ok</span>(config) =&gt; {
-                    <span class="macro">eprintln!</span>(<span class="string">&quot;Successfully loaded config from: {}&quot;</span>, config_filename);
+                    <span class="macro">eprintln!</span>(<span class="string">"Successfully loaded config from: {}"</span>, config_filename);
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(ConfigFile::from(config));
                 }
-                <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">eprintln!</span>(<span class="string">&quot;{err:?}&quot;</span>),
+                <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">eprintln!</span>(<span class="string">"{err:?}"</span>),
             }
         }
 
@@ -812,13 +813,13 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>ConfigFile {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>hostname = gethostname();
-        <span class="kw">let </span>hostname = hostname.into_string().unwrap_or(<span class="string">&quot;example.com&quot;</span>.to_string());
+        <span class="kw">let </span>hostname = hostname.into_string().unwrap_or(<span class="string">"example.com"</span>.to_string());
         <span class="self">Self </span>{
             hostname,
-            address: <span class="string">&quot;127.0.0.1&quot;</span>.to_string(),
+            address: <span class="string">"127.0.0.1"</span>.to_string(),
             port: <span class="number">15353</span>,
             capture_packets: <span class="bool-val">false</span>,
-            log_level: <span class="string">&quot;INFO&quot;</span>.to_string(),
+            log_level: <span class="string">"INFO"</span>.to_string(),
             tcp_client_timeout: <span class="number">5</span>,
             enable_hinfo: <span class="bool-val">false</span>,
             allowed_tlds: <span class="macro">vec!</span>[],
@@ -826,21 +827,21 @@
                 <span class="comment">// axfr: vec![],
                 </span>shutdown: <span class="macro">vec!</span>[],
             },
-            sqlite_path: String::from(<span class="string">&quot;~/.cache/goatns.sqlite&quot;</span>),
+            sqlite_path: String::from(<span class="string">"~/.cache/goatns.sqlite"</span>),
             zone_file: <span class="prelude-val">None</span>,
             enable_api: <span class="bool-val">false</span>,
             api_port: <span class="number">9000</span>,
-            api_tls_cert: PathBuf::from(<span class="string">&quot;./certificates/cert.pem&quot;</span>),
-            api_tls_key: PathBuf::from(<span class="string">&quot;./certificates/key.pem&quot;</span>),
-            api_static_dir: String::from(<span class="string">&quot;./static_files/&quot;</span>),
+            api_tls_cert: PathBuf::from(<span class="string">"./certificates/cert.pem"</span>),
+            api_tls_key: PathBuf::from(<span class="string">"./certificates/key.pem"</span>),
+            api_static_dir: String::from(<span class="string">"./static_files/"</span>),
             api_cookie_secret: generate_cookie_secret(),
-            oauth2_client_id: String::from(<span class="string">&quot;&quot;</span>),
+            oauth2_client_id: String::from(<span class="string">""</span>),
             <span class="comment">// TODO: this should be auto-generated from stuff
-            </span>oauth2_redirect_url: Url::from_str(<span class="string">&quot;https://example.com&quot;</span>)
-                .expect(<span class="string">&quot;Internal error parsing example.com into a URL&quot;</span>),
-            oauth2_secret: String::from(<span class="string">&quot;&quot;</span>),
-            oauth2_config_url: String::from(<span class="string">&quot;&quot;</span>),
-            oauth2_user_scopes: <span class="macro">vec!</span>[<span class="string">&quot;openid&quot;</span>.to_string(), <span class="string">&quot;email&quot;</span>.to_string()],
+            </span>oauth2_redirect_url: Url::from_str(<span class="string">"https://example.com"</span>)
+                .expect(<span class="string">"Internal error parsing example.com into a URL"</span>),
+            oauth2_secret: String::from(<span class="string">""</span>),
+            oauth2_config_url: String::from(<span class="string">""</span>),
+            oauth2_user_scopes: <span class="macro">vec!</span>[<span class="string">"openid"</span>.to_string(), <span class="string">"email"</span>.to_string()],
             sql_log_slow_duration: <span class="number">5</span>,
             sql_log_statements: <span class="bool-val">false</span>,
             sql_db_cleanup_seconds: <span class="number">3600</span>, <span class="comment">// one hour
@@ -851,12 +852,12 @@
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>ConfigFile {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">let </span>api_details = <span class="kw">match </span><span class="self">self</span>.enable_api {
-            <span class="bool-val">false </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;enable_api={}&quot;</span>, <span class="self">self</span>.enable_api),
+            <span class="bool-val">false </span>=&gt; <span class="macro">format!</span>(<span class="string">"enable_api={}"</span>, <span class="self">self</span>.enable_api),
             <span class="bool-val">true </span>=&gt; {
                 <span class="macro">format!</span>(
-                    <span class="string">&quot;enable_api={}  api_endpoint=\&quot;https://{}\&quot; tls_cert={:?} tls_key={:?}&quot;</span>,
+                    <span class="string">"enable_api={}  api_endpoint=\"https://{}\" tls_cert={:?} tls_key={:?}"</span>,
                     <span class="self">self</span>.enable_api,
                     <span class="self">self</span>.api_listener_address(),
                     <span class="self">self</span>.api_tls_cert,
@@ -865,7 +866,7 @@
             }
         };
         f.write_fmt(<span class="macro">format_args!</span>(
-            <span class="string">&quot;hostname=\&quot;{}\&quot; listening_address=\&quot;{}:{}\&quot; capturing_pcaps={} Log_level={}, admin_contact={:?} {api_details} oauth2_redirect_url={}&quot;</span>,
+            <span class="string">"hostname=\"{}\" listening_address=\"{}:{}\" capturing_pcaps={} Log_level={}, admin_contact={:?} {api_details} oauth2_redirect_url={}"</span>,
             <span class="self">self</span>.hostname, <span class="self">self</span>.address, <span class="self">self</span>.port, <span class="self">self</span>.capture_packets, <span class="self">self</span>.log_level, <span class="self">self</span>.admin_contact, <span class="self">self</span>.oauth2_redirect_url
         ))
     }
@@ -873,15 +874,15 @@
 
 <span class="kw">impl </span>From&lt;Config&gt; <span class="kw">for </span>ConfigFile {
     <span class="kw">fn </span>from(config: Config) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>hostname = config.get(<span class="string">&quot;hostname&quot;</span>).unwrap_or(<span class="self">Self</span>::default().hostname);
-        <span class="kw">let </span>api_port = config.get(<span class="string">&quot;api_port&quot;</span>).unwrap_or(<span class="self">Self</span>::default().api_port);
+        <span class="kw">let </span>hostname = config.get(<span class="string">"hostname"</span>).unwrap_or(<span class="self">Self</span>::default().hostname);
+        <span class="kw">let </span>api_port = config.get(<span class="string">"api_port"</span>).unwrap_or(<span class="self">Self</span>::default().api_port);
 
         <span class="comment">// The OAuth2 redirect URL is a magical pony.
 
         // TODO: test this with different values
-        </span><span class="kw">let </span>oauth2_redirect_url: <span class="prelude-ty">Option</span>&lt;Url&gt; = <span class="kw">match </span>config.get(<span class="string">&quot;oauth2_redirect_url&quot;</span>) {
+        </span><span class="kw">let </span>oauth2_redirect_url: <span class="prelude-ty">Option</span>&lt;Url&gt; = <span class="kw">match </span>config.get(<span class="string">"oauth2_redirect_url"</span>) {
             <span class="prelude-val">Ok</span>(value) =&gt; {
-                <span class="comment">// println!(&quot;Found url in config: {:?}&quot;, value);
+                <span class="comment">// println!("Found url in config: {:?}", value);
                 </span><span class="prelude-val">Some</span>(value)
             }
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
@@ -889,92 +890,92 @@
         <span class="kw">let </span>oauth2_redirect_url = <span class="kw">match </span>oauth2_redirect_url {
             <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>url) =&gt; {
                 <span class="comment">// update the URL with the final auth path
-                // eprintln!(&quot;OAuth2 Redirect URL: {url:?}&quot;);
-                </span><span class="kw">if </span>!url.path().ends_with(<span class="string">&quot;/auth/login&quot;</span>) {
-                    <span class="comment">// println!(&quot;Adding authlogin tail&quot;);
+                // eprintln!("OAuth2 Redirect URL: {url:?}");
+                </span><span class="kw">if </span>!url.path().ends_with(<span class="string">"/auth/login"</span>) {
+                    <span class="comment">// println!("Adding authlogin tail");
                     </span>url = url
-                        .join(<span class="string">&quot;/auth/login&quot;</span>)
-                        .expect(<span class="string">&quot;Failed to join URL path to create login URL&quot;</span>);
+                        .join(<span class="string">"/auth/login"</span>)
+                        .expect(<span class="string">"Failed to join URL path to create login URL"</span>);
                 }
-                <span class="comment">// eprintln!(&quot;OAuth2 Redirect URL after update: {url:?}&quot;);
+                <span class="comment">// eprintln!("OAuth2 Redirect URL after update: {url:?}");
                 </span>url
             }
             <span class="prelude-val">None </span>=&gt; {
-                <span class="comment">// if they haven&#39;t set it in config, build it automagically
+                <span class="comment">// if they haven't set it in config, build it automagically
                 </span><span class="kw">let </span>baseurl = <span class="kw">match </span>api_port {
-                    <span class="number">443 </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}&quot;</span>, hostname),
-                    <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;https://{}:{}&quot;</span>, hostname, api_port),
+                    <span class="number">443 </span>=&gt; <span class="macro">format!</span>(<span class="string">"https://{}"</span>, hostname),
+                    <span class="kw">_ </span>=&gt; <span class="macro">format!</span>(<span class="string">"https://{}:{}"</span>, hostname, api_port),
                 };
-                Url::parse(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}/auth/login&quot;</span>, baseurl))
-                    .expect(<span class="string">&quot;Failed to parse hostname/api_port into a valid URL&quot;</span>)
+                Url::parse(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}/auth/login"</span>, baseurl))
+                    .expect(<span class="string">"Failed to parse hostname/api_port into a valid URL"</span>)
             }
         };
 
         ConfigFile {
             hostname,
-            address: config.get(<span class="string">&quot;address&quot;</span>).unwrap_or(<span class="self">Self</span>::default().address),
-            port: config.get(<span class="string">&quot;port&quot;</span>).unwrap_or_default(),
-            capture_packets: config.get(<span class="string">&quot;capture_packets&quot;</span>).unwrap_or_default(),
-            log_level: config.get(<span class="string">&quot;log_level&quot;</span>).unwrap_or(<span class="self">Self</span>::default().log_level),
+            address: config.get(<span class="string">"address"</span>).unwrap_or(<span class="self">Self</span>::default().address),
+            port: config.get(<span class="string">"port"</span>).unwrap_or_default(),
+            capture_packets: config.get(<span class="string">"capture_packets"</span>).unwrap_or_default(),
+            log_level: config.get(<span class="string">"log_level"</span>).unwrap_or(<span class="self">Self</span>::default().log_level),
             enable_hinfo: config
-                .get(<span class="string">&quot;enable_hinfo&quot;</span>)
+                .get(<span class="string">"enable_hinfo"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().enable_hinfo),
             ip_allow_lists: config
-                .get(<span class="string">&quot;ip_allow_lists&quot;</span>)
+                .get(<span class="string">"ip_allow_lists"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().ip_allow_lists),
             tcp_client_timeout: config
-                .get(<span class="string">&quot;tcp_client_timeout&quot;</span>)
+                .get(<span class="string">"tcp_client_timeout"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().tcp_client_timeout),
             sqlite_path: config
-                .get(<span class="string">&quot;sqlite_path&quot;</span>)
+                .get(<span class="string">"sqlite_path"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().sqlite_path),
             allowed_tlds: config
-                .get(<span class="string">&quot;allowed_tlds&quot;</span>)
+                .get(<span class="string">"allowed_tlds"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().allowed_tlds),
-            zone_file: config.get(<span class="string">&quot;zone_file&quot;</span>).unwrap_or(<span class="self">Self</span>::default().zone_file),
+            zone_file: config.get(<span class="string">"zone_file"</span>).unwrap_or(<span class="self">Self</span>::default().zone_file),
             enable_api: config
-                .get(<span class="string">&quot;enable_api&quot;</span>)
+                .get(<span class="string">"enable_api"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().enable_api),
             api_port,
             api_tls_cert: config
-                .get(<span class="string">&quot;api_tls_cert&quot;</span>)
+                .get(<span class="string">"api_tls_cert"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().api_tls_cert),
             api_tls_key: config
-                .get(<span class="string">&quot;api_tls_key&quot;</span>)
+                .get(<span class="string">"api_tls_key"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().api_tls_key),
             api_static_dir: config
-                .get(<span class="string">&quot;api_static_dir&quot;</span>)
+                .get(<span class="string">"api_static_dir"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().api_static_dir),
             api_cookie_secret: config
-                .get(<span class="string">&quot;api_cookie_secret&quot;</span>)
+                .get(<span class="string">"api_cookie_secret"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().api_cookie_secret),
             oauth2_client_id: config
-                .get(<span class="string">&quot;oauth2_client_id&quot;</span>)
+                .get(<span class="string">"oauth2_client_id"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().oauth2_client_id),
             oauth2_redirect_url,
             oauth2_secret: config
-                .get(<span class="string">&quot;oauth2_secret&quot;</span>)
+                .get(<span class="string">"oauth2_secret"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().oauth2_secret),
             oauth2_config_url: config
-                .get(<span class="string">&quot;oauth2_config_url&quot;</span>)
+                .get(<span class="string">"oauth2_config_url"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().oauth2_config_url),
             oauth2_user_scopes: config
-                .get(<span class="string">&quot;oauth2_user_scopes&quot;</span>)
+                .get(<span class="string">"oauth2_user_scopes"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().oauth2_user_scopes),
             sql_log_slow_duration: config
-                .get(<span class="string">&quot;sql_log_slow_duration&quot;</span>)
+                .get(<span class="string">"sql_log_slow_duration"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().sql_log_slow_duration),
             sql_log_statements: config
-                .get(<span class="string">&quot;sql_log_statements&quot;</span>)
+                .get(<span class="string">"sql_log_statements"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().sql_log_statements),
             sql_db_cleanup_seconds: config
-                .get(<span class="string">&quot;sql_db_cleanup_seconds&quot;</span>)
+                .get(<span class="string">"sql_db_cleanup_seconds"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().sql_db_cleanup_seconds),
             admin_contact: config
-                .get(<span class="string">&quot;admin_contact&quot;</span>)
+                .get(<span class="string">"admin_contact"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().admin_contact),
             user_auto_provisioning: config
-                .get(<span class="string">&quot;user_auto_provisioning&quot;</span>)
+                .get(<span class="string">"user_auto_provisioning"</span>)
                 .unwrap_or(<span class="self">Self</span>::default().user_auto_provisioning),
         }
     }
@@ -991,7 +992,7 @@
         <span class="kw">let </span>res = Config::builder()
             .add_source(configfile)
             .build()
-            .map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;{e:?}&quot;</span>))<span class="question-mark">?</span>;
+            .map_err(|e| <span class="macro">format!</span>(<span class="string">"{e:?}"</span>))<span class="question-mark">?</span>;
 
         <span class="kw">let </span>res: ConfigFile = res.into();
         <span class="prelude-val">Ok</span>(res)
@@ -999,24 +1000,24 @@
 }
 
 <span class="macro">lazy_static! </span>{
-    <span class="kw">static </span><span class="kw-2">ref </span>CONFIG_LOCATIONS: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
-        [<span class="string">&quot;./goatns.json&quot;</span>, <span class="string">&quot;~/.config/goatns.json&quot;</span>,].to_vec();
+    <span class="kw">static </span><span class="kw-2">ref </span>CONFIG_LOCATIONS: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; =
+        [<span class="string">"./goatns.json"</span>, <span class="string">"~/.config/goatns.json"</span>,].to_vec();
 }
 
 <span class="kw">pub async fn </span>setup_logging(
     config: CowCellReadTxn&lt;ConfigFile&gt;,
     clap_results: <span class="kw-2">&amp;</span>ArgMatches,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;LoggerHandle, std::io::Error&gt; {
-    <span class="comment">// force the log level to info if we&#39;re testing config
-    </span><span class="kw">let </span>log_level = <span class="kw">match </span>clap_results.get_flag(<span class="string">&quot;configcheck&quot;</span>) {
-        <span class="bool-val">true </span>=&gt; <span class="string">&quot;info&quot;</span>.to_string(),
+    <span class="comment">// force the log level to info if we're testing config
+    </span><span class="kw">let </span>log_level = <span class="kw">match </span>clap_results.get_flag(<span class="string">"configcheck"</span>) {
+        <span class="bool-val">true </span>=&gt; <span class="string">"info"</span>.to_string(),
         <span class="bool-val">false </span>=&gt; config.log_level.to_ascii_lowercase(),
     };
 
     <span class="kw">let </span>logger = flexi_logger::Logger::try_with_str(log_level).map_err(|e| {
         std::io::Error::new(
             std::io::ErrorKind::Other,
-            <span class="macro">format!</span>(<span class="string">&quot;Failed to start logger! {e:?}&quot;</span>),
+            <span class="macro">format!</span>(<span class="string">"Failed to start logger! {e:?}"</span>),
         )
     })<span class="question-mark">?</span>;
 
@@ -1024,26 +1025,26 @@
         .write_mode(flexi_logger::WriteMode::Async)
         .filter(Box::new(LogFilter {
             filters: <span class="macro">vec!</span>[
-                <span class="string">&quot;h2&quot;</span>,
-                <span class="string">&quot;hyper::proto&quot;</span>,
-                <span class="string">&quot;rustls&quot;</span>,
-                <span class="string">&quot;h2::proto&quot;</span>,
-                <span class="comment">// &quot;tower_http::trace::make_span&quot;,
-                </span><span class="string">&quot;tokio_util::codec::framed_impl&quot;</span>,
+                <span class="string">"h2"</span>,
+                <span class="string">"hyper::proto"</span>,
+                <span class="string">"rustls"</span>,
+                <span class="string">"h2::proto"</span>,
+                <span class="comment">// "tower_http::trace::make_span",
+                </span><span class="string">"tokio_util::codec::framed_impl"</span>,
             ],
         }))
-        .set_palette(<span class="string">&quot;b1;3;2;6;5&quot;</span>.to_string())
+        .set_palette(<span class="string">"b1;3;2;6;5"</span>.to_string())
         .start()
         .map_err(|e| {
             std::io::Error::new(
                 std::io::ErrorKind::Other,
-                <span class="macro">format!</span>(<span class="string">&quot;Failed to start logger! {e:?}&quot;</span>),
+                <span class="macro">format!</span>(<span class="string">"Failed to start logger! {e:?}"</span>),
             )
         })
 }
 
 <span class="kw">pub struct </span>LogFilter {
-    filters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
+    filters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
 }
 
 <span class="kw">impl </span>LogLineFilter <span class="kw">for </span>LogFilter {
@@ -1056,7 +1057,7 @@
         <span class="kw">if </span><span class="self">self</span>.filters.iter().any(|r| {
             record
                 .module_path()
-                .expect(<span class="string">&quot;Failed to get record module path in logger&quot;</span>)
+                .expect(<span class="string">"Failed to get record module path in logger"</span>)
                 .contains(r)
         }) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
