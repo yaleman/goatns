@@ -341,9 +341,7 @@ pub async fn login(
                                             error!("Failed to flush session: {err:?}");
                                             (
                                                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                                                format!(
-                                                    "Failed to remove redirect value from session store!"
-                                                ),
+                                                "Failed to remove redirect value from session store!"
                                             )
                                         },
                                     ).unwrap();
@@ -365,7 +363,7 @@ pub async fn login(
                         error!("Failed to flush session: {err:?}");
                         (
                             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                            format!("Failed to flush session store!"),
+                            "Failed to flush session store!",
                         )
                     })
                     .unwrap();
@@ -404,7 +402,7 @@ pub async fn logout(session: Session) -> impl IntoResponse {
             error!("Failed to flush session: {err:?}");
             (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to flush session store!"),
+                "Failed to flush session store!",
             )
         })
         .unwrap();

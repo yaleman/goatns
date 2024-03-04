@@ -3,6 +3,8 @@ use crate::utils::{dms_to_u32, hexdump, name_as_bytes};
 use crate::zones::FileZoneRecord;
 use crate::HEADER_BYTES;
 use core::fmt::Debug;
+use goat_lib::constants::{DEFAULT_LOC_HORIZ_PRE, DEFAULT_LOC_SIZE, DEFAULT_LOC_VERT_PRE};
+use goat_lib::validators::{CAA_TAG_VALIDATOR, URI_RECORD};
 use num_traits::Num;
 use packed_struct::prelude::*;
 use regex::Regex;
@@ -10,17 +12,6 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::env::consts;
 use std::str::{from_utf8, FromStr};
 use std::string::FromUtf8Error;
-
-lazy_static! {
-    static ref CAA_TAG_VALIDATOR: Regex =
-        Regex::new(r"[a-zA-Z0-9]").expect("Failed to parse an internal regex!");
-    static ref URI_RECORD: Regex = Regex::new(r"^(?P<priority>\d+) (?P<weight>\d+) (?P<target>.*)")
-        .expect("Failed to parse an internal regex!");
-}
-
-const DEFAULT_LOC_HORIZ_PRE: u32 = 10000;
-const DEFAULT_LOC_VERT_PRE: u32 = 10;
-const DEFAULT_LOC_SIZE: u32 = 1;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct DomainName {
@@ -840,7 +831,7 @@ mod tests {
 
     use super::{DNSCharString, InternalResourceRecord};
     #[test]
-    fn test_eq_resourcerecord() {
+    fn eq_resourcerecord() {
         assert_eq!(
             InternalResourceRecord::A {
                 address: 12345,
@@ -860,7 +851,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resourcerecord_from_ipv6_string() {
+    fn resourcerecord_from_ipv6_string() {
         let fzr = FileZoneRecord {
             name: "test".to_string(),
             rrtype: "AAAA".to_string(),
@@ -889,7 +880,7 @@ mod tests {
         );
     }
     #[test]
-    fn test_dnscharstring() {
+    fn dnscharstring() {
         let test: DNSCharString = "hello world".into();
         let testbytes: Vec<u8> = test.into();
         assert_eq!(testbytes[0], 11);

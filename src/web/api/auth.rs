@@ -55,7 +55,7 @@ pub async fn login(
                 error!("Failed to flush session: {err:?}");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AuthResponse::from(format!("Failed to flush session!"))),
+                    Json(AuthResponse::from("Failed to flush session!".to_string())),
                 )
             })?;
             let resp = AuthResponse {
@@ -76,7 +76,7 @@ pub async fn login(
                     error!("Failed to flush session: {err:?}");
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(AuthResponse::from(format!("Failed to flush session!"))),
+                        Json(AuthResponse::from("Failed to flush session!".to_string())),
                     )
                 })?;
                 log::info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.tokenkey);
@@ -103,7 +103,7 @@ pub async fn login(
                 error!("Failed to flush session: {err:?}");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AuthResponse::from(format!("Failed to flush session!"))),
+                    Json(AuthResponse::from("Failed to flush session!".to_string())),
                 )
             })?;
             #[cfg(test)]
