@@ -9,6 +9,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 pub mod auth;
+pub(crate) mod docs;
 pub mod filezone;
 pub mod filezonerecord;
 use tower_sessions::Session;
@@ -104,7 +105,6 @@ pub async fn version_get() -> Json<GoatNSVersion> {
 
 pub fn new() -> Router<GoatState> {
     Router::new()
-        // just zone things
         .route("/zone", post(FileZone::api_create))
         .route("/zone", put(FileZone::api_update))
         .route("/zone/:id", get(FileZone::api_get))

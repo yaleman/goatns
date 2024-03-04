@@ -7,6 +7,7 @@
 // ^ this is because the datetime in the goatchildState is a jerk
 use crate::config::ConfigFile;
 use crate::datastore;
+use crate::web::api::docs::ApiDoc;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
 use axum::extract::FromRef;
@@ -30,6 +31,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
+use utoipa::OpenApi;
 // use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
@@ -193,6 +195,10 @@ pub async fn build(
         .route("/", get(generic::index))
         .nest("/ui", ui::new())
         .nest("/api", api::new())
+        .merge(
+            utoipa_swagger_ui::SwaggerUi::new("/api/docs")
+                .url("/api/openapi.json", ApiDoc::openapi()),
+        )
         .nest("/auth", auth::new())
         .nest("/dns-query", doh::new())
         .with_state(state)
