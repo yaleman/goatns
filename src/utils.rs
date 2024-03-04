@@ -328,7 +328,7 @@ pub fn start_channels() -> (
 /// let zone_name = "hello.example.goat";
 /// assert_eq!(check_valid_tld(&zone_name, &valid_tlds), false);
 /// ```
-pub fn check_valid_tld(zone_name: &str, allowed_tlds: &Vec<String>) -> bool {
+pub fn check_valid_tld(zone_name: &str, allowed_tlds: &[String]) -> bool {
     if allowed_tlds.is_empty() {
         return true;
     }

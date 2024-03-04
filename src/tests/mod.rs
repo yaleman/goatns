@@ -286,7 +286,7 @@ async fn test_cloudflare_soa_reply() {
 }
 
 #[tokio::test]
-async fn test_build_ackcdn_allzeros() {
+async fn build_ackcdn_allzeros() {
     use crate::reply::Reply;
     use crate::Header;
 

@@ -38,3 +38,27 @@ impl CustomClaimTypeThings for CustomClaimType {
         self.preferred_username().unwrap_or(&default).to_string()
     }
 }
+
+#[test]
+fn custom_claim_type_things() {
+    use url::Url;
+
+    use openidconnect::{
+        EmptyAdditionalClaims, EndUserEmail, IssuerUrl, StandardClaims, SubjectIdentifier,
+    };
+    let cct = CustomClaimType::new(
+        IssuerUrl::from_url(Url::parse("https://example.com").unwrap()),
+        vec![],
+        chrono::Utc::now(),
+        chrono::Utc::now(),
+        StandardClaims::new(SubjectIdentifier::new("example_identifier".to_string()))
+            .set_email(Some(EndUserEmail::new("billy@goat.net".to_string()))),
+        EmptyAdditionalClaims::default(),
+    );
+
+    assert_eq!(cct.get_displayname(), "Anonymous Kid".to_string());
+
+    assert_eq!("".to_string(), cct.get_username());
+
+    assert_eq!("billy@goat.net".to_string(), cct.get_email().unwrap());
+}

@@ -3,18 +3,19 @@ use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
 use tracing::error;
+use utoipa::ToSchema;
 
 use crate::db::User;
 use crate::web::utils::validate_api_token;
 use crate::web::GoatState;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, ToSchema)]
 pub struct AuthPayload {
     pub tokenkey: String,
     pub token: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
 pub struct AuthResponse {
     pub message: String,
 }
@@ -25,7 +26,18 @@ impl From<String> for AuthResponse {
     }
 }
 
-// #[debug_handler]
+#[utoipa::path(
+    post,
+    path = "/login",
+    operation_id = "login",
+    request_body = AuthPayload,
+    responses(
+        (status = 200, description = "Login Successful"),
+        (status = 403, description = "Auth failed"),
+        (status = 500, description = "Something broke!"),
+    ),
+    tag = "Authentication",
+)]
 pub async fn login(
     State(state): State<GoatState>,
     session: Session,
@@ -55,7 +67,7 @@ pub async fn login(
                 error!("Failed to flush session: {err:?}");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AuthResponse::from(format!("Failed to flush session!"))),
+                    Json(AuthResponse::from("Failed to flush session!".to_string())),
                 )
             })?;
             let resp = AuthResponse {
@@ -76,7 +88,7 @@ pub async fn login(
                     error!("Failed to flush session: {err:?}");
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(AuthResponse::from(format!("Failed to flush session!"))),
+                        Json(AuthResponse::from("Failed to flush session!".to_string())),
                     )
                 })?;
                 log::info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.tokenkey);
@@ -103,7 +115,7 @@ pub async fn login(
                 error!("Failed to flush session: {err:?}");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AuthResponse::from(format!("Failed to flush session!"))),
+                    Json(AuthResponse::from("Failed to flush session!".to_string())),
                 )
             })?;
             #[cfg(test)]

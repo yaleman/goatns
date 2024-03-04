@@ -4,7 +4,7 @@ use crate::enums::{RecordClass, RecordType};
 use crate::zones::{FileZone, FileZoneRecord};
 
 #[tokio::test]
-async fn test_create_user() -> Result<(), sqlx::Error> {
+async fn create_user() -> Result<(), sqlx::Error> {
     let pool = test_get_sqlite_memory().await;
 
     start_db(&pool).await?;

@@ -10,7 +10,9 @@ MARKDOWN_FORMAT_ARGS ?= --options-line-width=100
 
 .DEFAULT: help
 help:
-	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##/\n\t/'
+	@fgrep -h "##" $(MAKEFILE_LIST) | \
+		fgrep -v fgrep | \
+		sed -e 's/\\$$//' | sed -e 's/##/\n\t/'
 
 .PHONY: container
 container:	## Build the docker image locally
@@ -25,7 +27,7 @@ run_container: ## Run the container
 run_container:
 	@$(CONTAINER_TOOL) run $(CONTAINER_TOOL_ARGS) \
 	--rm -it \
-	-v "${HOME}/.config/goatns.json:/goatns.json" \
+	--mount  "type=bind,src=${HOME}/.config/goatns.json,target=/goatns.json" \
 	$(IMAGE_BASE)/server:$(IMAGE_VERSION)
 
 build: ## Build release binaries

@@ -21,7 +21,7 @@ default = []
 otel = []
 
 [workspace]
-members = [".", "goatns-macros"]
+members = [".", "goat-lib", "goatns-macros"]
 
 [lib]
 bench = false
@@ -54,6 +54,7 @@ flexi_logger = { version = "0.27", features = ["async", "default"] }
 futures = "0.3.30"
 futures-util = "0.3.30"
 gethostname = "0.4.3"
+goat-lib = { path = "goat-lib" }
 goatns-macros = { path = "./goatns-macros" }
 hex = "0.4.3"
 ipnet = { version = "2.9.0", features = ["json", "serde"] }
@@ -108,6 +109,8 @@ tower-sessions = { version = "^0.9.1", features = [
 ] }
 tracing = "^0.1.40"
 url = { version = "2.4.0", features = ["serde"] }
+utoipa = "4.2.0"
+utoipa-swagger-ui = { version = "6.0.0", features = ["axum"] }
 
 [workspace.dependencies]
 axum = "^0.7.4"
