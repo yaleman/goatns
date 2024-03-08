@@ -41,7 +41,7 @@ axum-server = { version = "^0.6.0", features = ["tls-rustls"] }
 axum-tracing-opentelemetry = { version = "0.11.0", features = [
   "tracing_subscriber_ext",
 ] }
-base64 = "0.21.7"
+base64 = "0.22.0"
 bit-vec = "0.6.3"
 bytes = "1.5.0"
 chrono = { version = "0.4.34", features = ["clock"] }
