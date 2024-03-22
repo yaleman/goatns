@@ -176,8 +176,7 @@ pub async fn build(
 
     // we set this to an hour ago so it forces update on startup
     #[allow(clippy::expect_used)]
-    let oidc_config_updated =
-        Utc::now() - TimeDelta::try_hours(1).expect("welp, how did this fail?");
+    let oidc_config_updated = Utc::now() - TimeDelta::try_hours(1).expect("how did this fail?");
     // let config_clone: ConfigFile = ConfigFile::from(&config);
     let state = Arc::new(RwLock::new(GoatChildState {
         tx,

@@ -72,7 +72,7 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
     println!("Creating UAT Objects");
     let tokenhash = "hello world".to_string();
     #[allow(clippy::expect_used)]
-    let expiry = Utc::now() - TimeDelta::try_hours(60).expect("welp, how did this fail?");
+    let expiry = Utc::now() - TimeDelta::try_hours(60).expect("how did this fail?");
     let uat = UserAuthToken {
         id: None,
         name: "Test Token".to_string(),
@@ -87,7 +87,7 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
     uat.save(&pool).await?;
     let tokenhash = "hello world this should exist".to_string();
     #[allow(clippy::expect_used)]
-    let expiry = Utc::now() + TimeDelta::try_hours(60).expect("welp, how did this fail?");
+    let expiry = Utc::now() + TimeDelta::try_hours(60).expect("how did this fail?");
     let uat = UserAuthToken {
         id: None,
         name: "Test Token".to_string(),
