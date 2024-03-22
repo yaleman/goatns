@@ -21,13 +21,6 @@ jobs:
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: 'latest'
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      # - uses: actions-rs/cargo@v1
-      #   with:
-      #     command: install
-      #     args: mdbook-template
       - name: Setup deno
         # Documentation: https://github.com/denoland/setup-deno
         uses: denoland/setup-deno@v1

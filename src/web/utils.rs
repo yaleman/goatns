@@ -3,7 +3,7 @@ use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use axum::debug_handler;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use rand::distributions::{Alphanumeric, DistString};
 use rand_core::OsRng;
 use sha2::{Digest, Sha256};
@@ -43,7 +43,9 @@ pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) ->
     let issued = Utc::now();
     let expiry = match lifetime {
         -1 => None,
-        _ => Some(issued + Duration::seconds(lifetime.into())),
+        _ => Some(
+            issued + TimeDelta::try_seconds(lifetime.into()).expect("Failed to calculate seconds!"),
+        ),
     };
     let api_token_to_hash = format!("{api_cookie_secret:?}-{userid:?}-{issued:?}-{lifetime:?}-");
 

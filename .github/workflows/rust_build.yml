@@ -21,10 +21,6 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
       - name: Install protoc
         run: sudo apt-get install -y protobuf-compiler
       - name: Build Release

@@ -19,7 +19,7 @@ use axum_csp::CspUrlMatcher;
 #[cfg(feature = "otel")]
 #[cfg(not(test))]
 use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, TimeDelta, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use log::error;
 use oauth2::{ClientId, ClientSecret};
@@ -175,7 +175,9 @@ pub async fn build(
     )];
 
     // we set this to an hour ago so it forces update on startup
-    let oidc_config_updated = Utc::now() - chrono::Duration::seconds(3600);
+    #[allow(clippy::expect_used)]
+    let oidc_config_updated =
+        Utc::now() - TimeDelta::try_hours(1).expect("welp, how did this fail?");
     // let config_clone: ConfigFile = ConfigFile::from(&config);
     let state = Arc::new(RwLock::new(GoatChildState {
         tx,
