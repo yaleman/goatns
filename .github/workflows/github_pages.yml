@@ -8,10 +8,11 @@ name: GitHub Pages
 #   group: ${{ github.workflow }}-${{ github.ref }}
 #   cancel-in-progress: true
 jobs:
-  deploy_book:
+  build_book:
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,10 +35,15 @@ jobs:
           make book/format
       - name: Make all the books
         run: make book
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/docs
-          cname: goatns.dotgoat.net
+  deploy_book:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'main' }}
+    needs:
+      - build_book
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
