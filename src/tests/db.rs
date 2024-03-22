@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{TimeDelta, Utc};
 
 use crate::db::test::test_get_sqlite_memory;
 use crate::db::{cron_db_cleanup, get_zones_with_txn, start_db, DBEntity, ZoneOwnership};
@@ -71,7 +71,8 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
 
     println!("Creating UAT Objects");
     let tokenhash = "hello world".to_string();
-    let expiry = Utc::now() - chrono::Duration::hours(60);
+    #[allow(clippy::expect_used)]
+    let expiry = Utc::now() - TimeDelta::try_hours(60).expect("how did this fail?");
     let uat = UserAuthToken {
         id: None,
         name: "Test Token".to_string(),
@@ -85,7 +86,8 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
 
     uat.save(&pool).await?;
     let tokenhash = "hello world this should exist".to_string();
-    let expiry = Utc::now() + chrono::Duration::hours(60);
+    #[allow(clippy::expect_used)]
+    let expiry = Utc::now() + TimeDelta::try_hours(60).expect("how did this fail?");
     let uat = UserAuthToken {
         id: None,
         name: "Test Token".to_string(),

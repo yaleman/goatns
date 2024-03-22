@@ -13,7 +13,7 @@ use axum::routing::post;
 use axum::{debug_handler, Form, Router};
 
 use axum::http::Uri;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use enum_iterator::Sequence;
 use oauth2::CsrfToken;
 use serde::{Deserialize, Serialize};
@@ -140,8 +140,11 @@ async fn store_api_csrf_token(
     let csrftoken = CsrfToken::new_random();
     let csrftoken = csrftoken.secret().to_string();
 
-    let csrf_expiry: DateTime<Utc> =
-        Utc::now() + Duration::seconds(expiry_plus_seconds.unwrap_or(300));
+    let delta_time = match TimeDelta::try_seconds(expiry_plus_seconds.unwrap_or(300)) {
+        Some(val) => val,
+        None => return Err("Failed to calculate CSRF expiry!".to_string()),
+    };
+    let csrf_expiry: DateTime<Utc> = Utc::now() + delta_time;
 
     let stored_csrf = format!("{csrftoken}|{}", csrf_expiry.to_rfc3339());
 
