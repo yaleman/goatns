@@ -22,7 +22,7 @@ async fn run() -> Result<(), io::Error> {
             )
         })?;
 
-    let logger = setup_logging(config.read().await, &clap_results)
+    let logger = setup_logging(config.read(), &clap_results)
         .await
         .map_err(|err| {
             io::Error::new(io::ErrorKind::Other, format!("Log setup failed! {:?}", err))
@@ -35,7 +35,6 @@ async fn run() -> Result<(), io::Error> {
             "{}",
             config
                 .read()
-                .await
                 .as_json_pretty()
                 .expect("Failed to serialize config!")
         );
@@ -62,12 +61,12 @@ async fn run() -> Result<(), io::Error> {
             .map_err(|_| io::Error::new(io::ErrorKind::Other, "Config check failed!"));
     };
 
-    log::info!("Configuration: {}", *config.read().await);
+    log::info!("Configuration: {}", *config.read());
 
     let (agent_tx, datastore_sender, datastore_receiver) = start_channels();
 
     // start up the DB
-    let connpool: SqlitePool = db::get_conn(config.read().await).await.map_err(|err| {
+    let connpool: SqlitePool = db::get_conn(config.read()).await.map_err(|err| {
         io::Error::new(io::ErrorKind::Other, format!("DB Setup failed: {:?}", err))
     })?;
 
@@ -80,37 +79,32 @@ async fn run() -> Result<(), io::Error> {
     let datastore_manager = tokio::spawn(datastore::manager(
         datastore_receiver,
         connpool.clone(),
-        Some(Duration::from_secs(
-            config.read().await.sql_db_cleanup_seconds,
-        )),
+        Some(Duration::from_secs(config.read().sql_db_cleanup_seconds)),
     ));
 
     match goatns::cli::cli_commands(
         datastore_sender.clone(),
         &clap_results,
-        &config.read().await.zone_file,
+        &config.read().zone_file,
     )
     .await
     {
         Ok(resp) => {
             if resp == SystemState::Server {
                 let udpserver = tokio::spawn(servers::udp_server(
-                    config.read().await,
+                    config.read(),
                     datastore_sender.clone(),
                     agent_tx.clone(),
                 ));
                 let tcpserver = tokio::spawn(servers::tcp_server(
-                    config.read().await,
+                    config.read(),
                     datastore_sender.clone(),
                     agent_tx.clone(),
                 ));
 
-                let apiserver = goatns::web::build(
-                    datastore_sender.clone(),
-                    config.read().await,
-                    connpool.clone(),
-                )
-                .await;
+                let apiserver =
+                    goatns::web::build(datastore_sender.clone(), config.read(), connpool.clone())
+                        .await;
 
                 let servers = servers::Servers::build(agent_tx)
                     .with_datastore(datastore_manager)

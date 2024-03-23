@@ -195,7 +195,7 @@ impl ConfigFile {
             ));
         };
 
-        config.commit().await;
+        config.commit();
         match errors.is_empty() {
             true => Ok(()),
             false => Err(errors),

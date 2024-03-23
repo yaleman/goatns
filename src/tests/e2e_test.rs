@@ -26,20 +26,20 @@ mod tests {
 
         println!("Config as loaded");
 
-        println!("{:?}", config.read().await);
+        println!("{:?}", config.read());
 
         println!("Starting channels");
         let (agent_sender, datastore_tx, datastore_rx) = crate::utils::start_channels();
 
         println!("Starting UDP server");
         let udpserver = tokio::spawn(udp_server(
-            config.read().await,
+            config.read(),
             datastore_tx.clone(),
             agent_sender.clone(),
         ));
 
         println!("Starting database connection pool");
-        let connpool = crate::db::get_conn(config.read().await).await.unwrap();
+        let connpool = crate::db::get_conn(config.read()).await.unwrap();
 
         println!("Starting datastore");
 
@@ -52,7 +52,7 @@ mod tests {
 
         println!("Starting API Server");
         let apiserver =
-            crate::web::build(datastore_tx.clone(), config.read().await, connpool.clone()).await;
+            crate::web::build(datastore_tx.clone(), config.read(), connpool.clone()).await;
 
         println!("Building server struct");
         let _ = crate::servers::Servers::build(agent_sender)
@@ -60,7 +60,7 @@ mod tests {
             .with_udpserver(udpserver)
             .with_apiserver(apiserver);
 
-        let status_url = config.read().await.status_url();
+        let status_url = config.read().status_url();
         wait_for_server(status_url).await;
 
         // Construct a new Resolver pointing at localhost
