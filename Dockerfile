@@ -1,4 +1,4 @@
-FROM ubuntu:latest AS builder
+FROM debian:latest AS builder
 
 ARG GITHUB_SHA="${GITHUB_SHA}"
 
