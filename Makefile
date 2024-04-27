@@ -18,7 +18,7 @@ help:
 container:	## Build the docker image locally
 container:
 	$(eval GITHUB_SHA:=$(shell  git rev-parse HEAD))
-	@$(CONTAINER_TOOL) build $(CONTAINER_TOOL_ARGS) \
+	@$(CONTAINER_TOOL) buildx build $(CONTAINER_TOOL_ARGS) \
 	--build-arg GITHUB_SHA="${GITHUB_SHA}" \
 	-t $(IMAGE_BASE)/server:$(IMAGE_VERSION) $(CONTAINER_BUILD_ARGS) .
 
@@ -27,7 +27,7 @@ run_container: ## Run the container
 run_container:
 	@$(CONTAINER_TOOL) run $(CONTAINER_TOOL_ARGS) \
 	--rm -it \
-	--mount  "type=bind,src=${HOME}/.config/goatns.json,target=/goatns.json" \
+	--mount "type=bind,src=${HOME}/.config/goatns.json,target=/goatns.json" \
 	$(IMAGE_BASE)/server:$(IMAGE_VERSION)
 
 build: ## Build release binaries
