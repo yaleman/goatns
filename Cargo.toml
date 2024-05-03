@@ -49,7 +49,7 @@ clap = { version = "4.5.4", features = ["cargo"] }
 concread = "0.5.0"
 config = { version = "0.14", features = ["json"] }
 dialoguer = "0.11.0"
-enum-iterator = "2.0.1"
+enum-iterator = "2.1.0"
 flexi_logger = { version = "0.28", features = ["async", "default"] }
 futures = "0.3.30"
 futures-util = "0.3.30"
