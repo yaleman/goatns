@@ -89,7 +89,7 @@ sqlx = { version = "0.7.4", features = [
   "time",
   "uuid",
 ], default-features = false }
-thiserror = "1.0.59"
+thiserror = "1.0.61"
 time = "0.3.36"
 tokio = { version = "1.37.0", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.10.2"
