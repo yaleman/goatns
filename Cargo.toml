@@ -109,7 +109,7 @@ tower-sessions = { version = "^0.9.1", features = [
 ] }
 tracing = "^0.1.40"
 url = { version = "2.4.0", features = ["serde"] }
-utoipa = "4.2.0"
+utoipa = "4.2.3"
 utoipa-swagger-ui = { version = "7.0.1", features = ["axum"] }
 
 [workspace.dependencies]
