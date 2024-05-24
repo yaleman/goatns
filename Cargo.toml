@@ -64,7 +64,7 @@ log = "0.4.20"
 num-traits = "0.2.19"
 oauth2 = "4.4.2"
 openidconnect = "3.4.0"
-opentelemetry-otlp = { version = "0.15.0", features = ["http-proto"] }
+opentelemetry-otlp = { version = "0.16.0", features = ["http-proto"] }
 packed_struct = { version = "0.10.1", features = ["byte_types_256"] }
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
