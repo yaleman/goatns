@@ -63,6 +63,7 @@ type CustomClaimType = IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>;
 
 #[derive(Template)]
 #[template(path = "auth_login.html.j2")]
+#[allow(dead_code)]
 struct AuthLoginTemplate {
     errors: Vec<String>,
     redirect_url: String,
@@ -83,6 +84,7 @@ struct AuthNewUserTemplate {
 
 #[derive(Template)]
 #[template(path = "auth_logout.html")]
+#[allow(dead_code)]
 struct AuthLogoutTemplate {
     pub user_is_admin: bool,
 }
