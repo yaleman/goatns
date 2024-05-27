@@ -160,7 +160,7 @@ pub fn name_as_bytes(
         if name.ends_with(ct) {
             trace!("the name ends with the target! woo!");
             // Ok, we've gotten this far. We need to slice off the "front" of the string and return that.
-            result = name.clone();
+            result.clone_from(&name);
             result.truncate(name.len() - ct.len());
             trace!("The result is trimmed and now {:?}", from_utf8(&result));
 
