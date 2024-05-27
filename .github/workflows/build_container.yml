@@ -11,6 +11,9 @@ name: Build Container
 #   cancel-in-progress: true
 jobs:
   build_container:
+    permissions:
+      contents: read
+      packages: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
