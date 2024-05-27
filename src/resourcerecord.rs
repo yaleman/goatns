@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::env::consts;
 use std::str::{from_utf8, FromStr};
 use std::string::FromUtf8Error;
+use tracing::error;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct DomainName {
@@ -635,7 +636,10 @@ impl InternalResourceRecord {
 
                 result
             }
-            InternalResourceRecord::NAPTR { .. } => todo!(),
+            InternalResourceRecord::NAPTR { .. } => {
+                error!("Asked for an NAPTR as_bytes, returning null");
+                Vec::new()
+            }
         }
     }
 
@@ -813,7 +817,10 @@ impl SetTTL for InternalResourceRecord {
                 ttl,
             },
             //  Self::InvalidType => &0,
-            _ => todo!(),
+            _ => {
+                log::error!("Tried to set TTL on an invalid type! {:?}", self);
+                self
+            }
         }
     }
 }

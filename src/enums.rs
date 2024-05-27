@@ -304,21 +304,6 @@ impl<'de> de::Deserialize<'de> for RecordClass {
     {
         let s: String = de::Deserialize::deserialize(deserializer)?;
         Ok(RecordClass::from(s.as_str()))
-        // log::trace!("deser input='{}' result='{:?}'", s, res);
-        // match res {
-        //     Ok(val) => Ok(val),
-        //     Err(err) => match err {
-        //         crate::enums::ContactDetailsDeserializerError::InputLengthWrong { msg, len } => {
-        //             Err(de::Error::invalid_length(len, &msg))
-        //         }
-        //         crate::enums::ContactDetailsDeserializerError::InputFormatWrong { unexp, exp } => {
-        //             Err(de::Error::invalid_value(de::Unexpected::Str(&unexp), &exp))
-        //         }
-        //         crate::enums::ContactDetailsDeserializerError::WrongContactType(_msg) => {
-        //             todo!()
-        //         }
-        //     },
-        // }
     }
 }
 impl From<&str> for RecordClass {
@@ -383,19 +368,22 @@ impl Default for ContactDetails {
     }
 }
 
-impl ToString for ContactDetails {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for ContactDetails {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ContactDetails::Mastodon { server, contact } => {
-                format!(r#"<a href="https://{server}/@{contact}">{contact}</a>"#)
-            }
-            ContactDetails::Email { contact } => {
-                format!(r#"<a href="mailto:{contact}">{contact}</a>"#)
-            }
-            ContactDetails::Twitter { contact } => {
-                format!(r#"<a href="https://twitter.com/{contact}">{contact}</a>"#)
-            }
-            ContactDetails::None => "".to_string(),
+            ContactDetails::Mastodon { server, contact } => f.write_fmt(format_args!(
+                r#"<a href="https://{}/@{}">{}</a>"#,
+                server, contact, contact
+            )),
+            ContactDetails::Email { contact } => f.write_fmt(format_args!(
+                r#"<a href="mailto:{}">{}</a>"#,
+                contact, contact
+            )),
+            ContactDetails::Twitter { contact } => f.write_fmt(format_args!(
+                r#"<a href="https://twitter.com/{}">{}</a>"#,
+                contact, contact
+            )),
+            ContactDetails::None => f.write_str(""),
         }
     }
 }

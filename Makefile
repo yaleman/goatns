@@ -10,9 +10,7 @@ MARKDOWN_FORMAT_ARGS ?= --options-line-width=100
 
 .DEFAULT: help
 help:
-	@fgrep -h "##" $(MAKEFILE_LIST) | \
-		fgrep -v fgrep | \
-		sed -e 's/\\$$//' | sed -e 's/##/\n\t/'
+	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##/\n\t/'
 
 .PHONY: container
 container:	## Build the docker image locally

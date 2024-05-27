@@ -1,4 +1,5 @@
 use serde::{de, Serializer};
+use tracing::error;
 
 use std::net::{IpAddr, Ipv6Addr};
 
@@ -42,8 +43,12 @@ impl<'de> de::Deserialize<'de> for ContactDetails {
                 crate::enums::ContactDetailsDeserializerError::InputFormatWrong { unexp, exp } => {
                     Err(de::Error::invalid_value(de::Unexpected::Str(&unexp), &exp))
                 }
-                crate::enums::ContactDetailsDeserializerError::WrongContactType(_msg) => {
-                    todo!()
+                crate::enums::ContactDetailsDeserializerError::WrongContactType(msg) => {
+                    error!("WrongContactType: '{}'", msg);
+                    Err(de::Error::invalid_value(
+                        de::Unexpected::Str(&msg),
+                        &"Mastodon, Email, Twitter or None",
+                    ))
                 }
             },
         }

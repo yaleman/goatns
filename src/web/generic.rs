@@ -22,7 +22,7 @@ pub async fn index(
         _ => {
             format!(
                 "- instance cared for by {}",
-                state.read().await.config.admin_contact.to_string()
+                state.read().await.config.admin_contact
             )
         }
     };
