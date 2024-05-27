@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      -  # https://github.com/docker/login-action/#github-container-registry
+      - # https://github.com/docker/login-action/#github-container-registry
         name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -62,7 +62,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           context: .
           tags: ghcr.io/yaleman/goatns:latest
-          push:  ${{ github.ref == 'refs/heads/main' }}
+          push: ${{ github.ref == 'refs/heads/main' }}
           cache-from: type=gha
           build-args: GITHUB_SHA=${GITHUB_SHA}
-        if: github.event.pull_request.merged == true
