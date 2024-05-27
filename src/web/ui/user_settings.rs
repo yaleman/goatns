@@ -457,11 +457,17 @@ pub async fn api_tokens_post(
 
 #[derive(Deserialize, Serialize, Debug, Clone, Template)]
 #[template(path = "user_api_token_delete.html")]
-pub struct ApiTokenDelete {
+pub struct ApiTokenDeleteTemplate {
     pub id: i64,
     pub token_name: Option<String>,
     pub csrftoken: String,
     pub user_is_admin: bool,
+}
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ApiTokenDeleteForm {
+    pub id: i64,
+    pub token_name: Option<String>,
+    pub csrftoken: String,
 }
 
 const URI_SETTINGS_API_TOKENS: &str = "/ui/settings/api_tokens";
@@ -512,7 +518,7 @@ pub async fn api_tokens_delete_get(
         }
     };
 
-    let context = ApiTokenDelete {
+    let context = ApiTokenDeleteTemplate {
         id,
         token_name: Some(uat.name.clone()),
         csrftoken,
@@ -526,7 +532,7 @@ pub async fn api_tokens_delete_get(
 pub async fn api_tokens_delete_post(
     State(state): State<GoatState>,
     mut session: Session,
-    Form(form): Form<ApiTokenDelete>,
+    Form(form): Form<ApiTokenDeleteForm>,
 ) -> Result<Html<String>, Redirect> {
     check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
 
