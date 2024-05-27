@@ -18,7 +18,7 @@ use enum_iterator::Sequence;
 use oauth2::CsrfToken;
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
-use tracing::error;
+use tracing::{error, info};
 
 use crate::db::UserAuthToken;
 use crate::web::GoatState;
@@ -276,6 +276,18 @@ impl ApiTokenCreatePageState {
 }
 
 /// Form handler for the api tokens post endpoint
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Default)]
+pub struct ApiTokenForm {
+    pub token_name: Option<String>,
+    pub tokenkey: Option<String>,
+    /// For when we want show the token
+    pub token_value: Option<String>,
+    pub csrftoken: String,
+    pub state: ApiTokenCreatePageState,
+    /// When the user selects the lifetime in the creation form
+    pub lifetime: Option<ApiTokenLifetime>,
+}
+/// Form handler for the api tokens post endpoint
 #[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Template, Default)]
 #[template(path = "user_api_token_form.html")]
 pub struct ApiTokenPage {
@@ -297,7 +309,7 @@ pub struct ApiTokenPage {
 pub async fn api_tokens_post(
     mut session: Session,
     State(state): State<GoatState>,
-    Form(form): Form<ApiTokenPage>,
+    Form(form): Form<ApiTokenForm>,
 ) -> Result<Html<String>, Redirect> {
     eprintln!("Got form: {form:?}");
 
@@ -365,14 +377,18 @@ pub async fn api_tokens_post(
 
             let mut txn = match state_reader.connpool.begin().await {
                 Ok(val) => val,
-                Err(error) => todo!(
-                    "Need to handle failing to pick up a txn for api token storage: {error:?}"
-                ),
+                Err(error) => {
+                    error!("Failed to pick up a txn for api token storage: {error:?}");
+                    return Err(Redirect::to("/ui/settings/api_tokens"));
+                }
             };
 
             log::trace!("Starting to store token in the DB, saving...");
             match uat.save_with_txn(&mut txn).await {
-                Err(error) => todo!("Need to handle this! {error:?}"),
+                Err(error) => {
+                    error!("Failed to save api_token for user {:?}", error);
+                    return Err(Redirect::to("/ui/settings/api_tokens"));
+                }
                 Ok(_) => {
                     // store the api token in the session store
                     if let Err(error) = session
@@ -382,15 +398,13 @@ pub async fn api_tokens_post(
                         log::error!(
                             "Failed to store new API token in the session, ruh roh? {error:?}"
                         );
-                        txn.rollback()
-                            .await
-                            .map_err(|e| {
-                                log::error!("Txn rollback fail: {e:?}");
-                                todo!()
-                            })
-                            .unwrap();
-                        // TODO: bail, which should roll back the txn
-                        todo!("Failed to store new API token in the session, ruh roh? {error:?}");
+                        txn.rollback().await.map_err(|e| {
+                            log::error!(
+                                "Txn rollback fail after failing to store the token: {e:?}"
+                            );
+                            Redirect::to("/ui/settings/api_tokens")
+                        })?;
+                        return Err(Redirect::to("/ui/settings/api_tokens"));
                     };
 
                     if let Err(error) = session
@@ -400,22 +414,23 @@ pub async fn api_tokens_post(
                         log::error!(
                             "Failed to store new API tokenkey in the session, ruh roh? {error:?}"
                         );
-                        txn.rollback()
-                            .await
-                            .map_err(|e| {
-                                log::error!("Txn rollback fail: {e:?}");
-                                todo!()
-                            })
-                            .unwrap();
+                        txn.rollback().await.map_err(|e| {
+                            log::error!("Txn rollback fail: {e:?}");
+                            Redirect::to("/ui/settings/api_tokens")
+                        })?;
                         // TODO: bail, which should roll back the txn
-                        todo!(
+                        error!(
                             "Failed to store new API tokenkey in the session, ruh roh? {error:?}"
                         );
+                        return Err(Redirect::to("/ui/settings/api_tokens"));
                     };
 
                     if let Err(error) = txn.commit().await {
-                        log::error!("Failed to save the API token to storage, oh no?");
-                        todo!("Failed to save the API token to storage, oh no? {error:?}");
+                        log::error!(
+                            "Failed to save the API token to storage, oh no? {:?}",
+                            error
+                        );
+                        return Err(Redirect::to("/ui/settings/api_tokens"));
                     };
                 }
             };
@@ -426,8 +441,14 @@ pub async fn api_tokens_post(
             )));
         }
 
-        ApiTokenCreatePageState::Finished => todo!(),
-        ApiTokenCreatePageState::Error => todo!(),
+        ApiTokenCreatePageState::Finished => {
+            info!("Created token, redirecting to the homepage");
+            return Err(Redirect::to("/ui/settings/api_tokens"));
+        }
+        ApiTokenCreatePageState::Error => {
+            error!("Got an error state in the form, redirecting to the start");
+            return Err(Redirect::to("/ui/settings/api_tokens"));
+        }
     };
     Ok(Html::from(context.render().unwrap()))
 
