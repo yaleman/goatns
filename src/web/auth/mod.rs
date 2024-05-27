@@ -386,7 +386,7 @@ pub async fn login(
             ParserError::Redirect { content } => content.into_response(),
             ParserError::ErrorMessage { content } => {
                 log::debug!("Failed to parse state: {content}");
-                todo!();
+                redirect_to_home().into_response()
             }
             ParserError::ClaimsVerificationError { content } => {
                 log::error!("Failed to verify claim token: {content:?}");
@@ -474,8 +474,8 @@ pub async fn signup(
         Err(error) => match error {
             ParserError::Redirect { content } => Ok(content.into_response()),
             ParserError::ErrorMessage { content } => {
-                log::debug!("{content}");
-                todo!();
+                log::error!("Failed to parse claim: {}", content);
+                Ok(redirect_to_home().into_response())
             }
             ParserError::ClaimsVerificationError { content } => {
                 log::error!("Failed to verify claim token: {content:?}");

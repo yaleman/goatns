@@ -304,21 +304,6 @@ impl<'de> de::Deserialize<'de> for RecordClass {
     {
         let s: String = de::Deserialize::deserialize(deserializer)?;
         Ok(RecordClass::from(s.as_str()))
-        // log::trace!("deser input='{}' result='{:?}'", s, res);
-        // match res {
-        //     Ok(val) => Ok(val),
-        //     Err(err) => match err {
-        //         crate::enums::ContactDetailsDeserializerError::InputLengthWrong { msg, len } => {
-        //             Err(de::Error::invalid_length(len, &msg))
-        //         }
-        //         crate::enums::ContactDetailsDeserializerError::InputFormatWrong { unexp, exp } => {
-        //             Err(de::Error::invalid_value(de::Unexpected::Str(&unexp), &exp))
-        //         }
-        //         crate::enums::ContactDetailsDeserializerError::WrongContactType(_msg) => {
-        //             todo!()
-        //         }
-        //     },
-        // }
     }
 }
 impl From<&str> for RecordClass {

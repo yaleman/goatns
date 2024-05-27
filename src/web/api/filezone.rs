@@ -334,7 +334,13 @@ impl APIEntity for FileZone {
         log::debug!("Searching for zone id {id:?}");
         let zone = match FileZone::get(&state.connpool().await, id).await {
             Ok(val) => val,
-            Err(err) => todo!("{err:?}"),
+            Err(err) => {
+                error!("Couldn't get zone id {}: error: {:?}", id, err);
+                return error_result_json!(
+                    format!("Couldn't get zone id {}", id).as_ref(),
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
         };
 
         Ok(Json::from(zone))

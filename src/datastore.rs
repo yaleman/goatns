@@ -9,6 +9,7 @@ use log::debug;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
+use tracing::error;
 
 type Responder<T> = oneshot::Sender<T>;
 
@@ -280,9 +281,15 @@ pub async fn manager(
                     log::error!("{e:?}")
                 };
             }
-            Command::PostZone => todo!(),
-            Command::DeleteZone => todo!(),
-            Command::PatchZone => todo!(),
+            Command::PostZone => {
+                error!("Unimplemented: Command::PostZone")
+            }
+            Command::DeleteZone => {
+                error!("Unimplemented: Command::DeleteZone")
+            }
+            Command::PatchZone => {
+                error!("Unimplemented: Command::PatchZone")
+            }
             Command::CreateUser {
                 username,
                 authref,
@@ -309,11 +316,11 @@ pub async fn manager(
                     log::error!("Failed to send message back to caller: {error:?}");
                 }
             }
-            Command::DeleteUser => todo!(),
-            Command::GetUser { .. } => todo!(),
-            Command::PostUser => todo!(),
-            Command::PatchUser => todo!(),
-            Command::DeleteOwnership { .. } => todo!(),
+            Command::DeleteUser => error!("Unimplemented: Command::DeleteUser"),
+            Command::GetUser { .. } => error!("Unimplemented: Command::GetUser"),
+            Command::PostUser => error!("Unimplemented: Command::PostUser"),
+            Command::PatchUser => error!("Unimplemented: Command::PatchUser"),
+            Command::DeleteOwnership { .. } => error!("Unimplemented: Command::DeleteOwnership"),
             Command::GetOwnership {
                 zoneid: _,
                 userid,
@@ -323,16 +330,20 @@ pub async fn manager(
                     match ZoneOwnership::get_all_user(&connpool, userid).await {
                         Ok(zone) => {
                             if let Err(err) = resp.send(zone) {
-                                log::error!("Failed to send zone_ownership response: {err:?}")
+                                error!("Failed to send zone_ownership response: {err:?}")
                             };
                         }
-                        Err(_) => todo!(),
+                        Err(err) => {
+                            error!("Failed to get all zone_ownership for user {userid}: {err:?}")
+                        }
                     }
                 } else {
-                    log::error!("Unmatched arm in getownership")
+                    error!("Unmatched arm in getownership")
                 }
             }
-            Command::PostOwnership { .. } => todo!(),
+            Command::PostOwnership { .. } => {
+                error!("Unimplemented command: Command::PostOwnership")
+            }
         }
     }
     #[cfg(test)]

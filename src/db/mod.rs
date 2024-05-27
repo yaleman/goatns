@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
 use sqlx::{Arguments, ConnectOptions, FromRow, Pool, Row, Sqlite, SqliteConnection, SqlitePool};
 use tokio::time;
-use tracing::instrument;
+use tracing::{error, instrument};
 
 #[cfg(test)]
 pub mod test;
@@ -266,7 +266,8 @@ impl ZoneOwnership {
     pub async fn delete_for_user(self, pool: &SqlitePool) -> Result<User, sqlx::Error> {
         // TODO: test user delete
         // TODO: delete all ownership records
-        todo!();
+        error!("Unimplemented: ZoneOwnership::delete_for_user");
+        Err(sqlx::Error::RowNotFound)
     }
 
     // get the thing by the other thing
@@ -670,7 +671,7 @@ impl DBEntity for FileZone {
         _pool: &Pool<Sqlite>,
         _userid: i64,
     ) -> Result<Vec<Arc<Self>>, sqlx::Error> {
-        todo!()
+        unimplemented!()
     }
 
     /// save the entity to the database
@@ -798,7 +799,8 @@ impl DBEntity for FileZone {
         &self,
         _txn: &mut SqliteConnection,
     ) -> Result<Box<Self>, sqlx::Error> {
-        todo!();
+        error!("Unimplemented: FileZone::create_with_txn");
+        Err(sqlx::Error::RowNotFound)
     }
     /// create from scratch
     async fn update_with_txn<'t>(
@@ -926,8 +928,8 @@ impl DBEntity for FileZoneRecord {
 
     /// Get by id
     async fn get(_pool: &Pool<Sqlite>, _id: i64) -> Result<Box<Self>, sqlx::Error> {
-        todo!();
-        // get_records(conn, name, rrtype, rclass)
+        error!("Unimplemented: FileZoneRecord::get");
+        Err(sqlx::Error::RowNotFound)
     }
 
     async fn get_with_txn<'t>(
@@ -976,7 +978,8 @@ impl DBEntity for FileZoneRecord {
         _pool: &Pool<Sqlite>,
         _userid: i64,
     ) -> Result<Vec<Arc<Self>>, sqlx::Error> {
-        todo!()
+        error!("Unimplemented: FileZoneRecord::get_all_user");
+        Err(sqlx::Error::RowNotFound)
     }
 
     async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
@@ -1087,14 +1090,16 @@ impl DBEntity for FileZoneRecord {
         &self,
         _txn: &mut SqliteConnection,
     ) -> Result<Box<Self>, sqlx::Error> {
-        todo!();
+        error!("Unimplemented: FileZoneRecord::create_with_txn");
+        Err(sqlx::Error::RowNotFound)
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         _txn: &mut SqliteConnection,
     ) -> Result<Box<Self>, sqlx::Error> {
-        todo!();
+        error!("Unimplemented: FileZoneRecord::update_with_txn");
+        Err(sqlx::Error::RowNotFound)
     }
     async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         let mut txn = pool.begin().await?;
@@ -1177,7 +1182,8 @@ impl DBEntity for ZoneOwnership {
         _txn: &mut SqliteConnection,
         _id: &i64,
     ) -> Result<Box<Self>, sqlx::Error> {
-        todo!()
+        error!("Unimplemented: ZoneOwnership::get_with_txn");
+        Err(sqlx::Error::RowNotFound)
     }
 
     async fn get_by_name<'t>(

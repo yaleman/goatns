@@ -118,9 +118,21 @@ pub async fn zone_view(
         return redirect_to_zones_list().into_response();
     };
 
-    let zone = match os_rx.await.expect("Failed to get response: {res:?}") {
-        Some(value) => value,
-        None => todo!("Send a not found"),
+    let zone = match os_rx.await {
+        Ok(zone) => match zone {
+            Some(value) => value,
+            None => {
+                return (
+                    axum::http::StatusCode::NOT_FOUND,
+                    format!("Zone '{}' not found", name_or_id),
+                )
+                    .into_response()
+            }
+        },
+        Err(err) => {
+            log::error!("failed to get response from datastore: {err:?}");
+            return redirect_to_zones_list().into_response();
+        }
     };
 
     log::trace!("Returning zone: {zone:?}");
