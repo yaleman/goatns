@@ -108,7 +108,7 @@ tower-sessions = { version = "^0.9.1", features = [
   "axum-core",
 ] }
 tracing = "^0.1.40"
-url = { version = "2.4.0", features = ["serde"] }
+url = { version = "2.5.1", features = ["serde"] }
 utoipa = "4.2.3"
 utoipa-swagger-ui = { version = "7.1.0", features = ["axum"] }
 
