@@ -39,7 +39,7 @@ jobs:
           cargo vendor > .cargo/config.toml
       - name: Build and export to Docker
         id: build_and_export
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           # platforms: linux/amd64,linux/arm64
           context: .
@@ -60,7 +60,7 @@ jobs:
             goatns:test \
             --configcheck --config goatns.json
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
           context: .
