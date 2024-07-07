@@ -64,10 +64,10 @@ mod tests {
         wait_for_server(status_url).await;
 
         // Construct a new Resolver pointing at localhost
-        let localhost: std::net::IpAddr = "127.0.0.1".parse().unwrap();
+        // let localhost: std::net::IpAddr = "127.0.0.1".parse().unwrap();
         let mut resolver_config = ResolverConfig::new();
         resolver_config.add_name_server(NameServerConfig::new(
-            SocketAddr::new(localhost, 15353),
+            SocketAddr::new(config.read().address.parse().unwrap(), config.read().port),
             Protocol::Udp,
         ));
         let resolver = AsyncResolver::tokio(resolver_config, ResolverOpts::default());

@@ -37,6 +37,15 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
 
     let mut config_tx = config.write().await;
     config_tx.api_port = port;
+
+    loop {
+        if is_free_port(port).await {
+            break;
+        }
+        port = rng.gen_range(2000..=65000);
+    }
+    config_tx.port = port;
+
     config_tx.commit();
 
     // println!("Starting channels");
@@ -87,7 +96,10 @@ pub async fn insert_test_user(pool: &SqlitePool) -> Box<User> {
 }
 
 /// Shoves an API token into the DB for a user
-async fn insert_test_user_api_token(pool: &SqlitePool, userid: i64) -> Result<ApiToken, ()> {
+pub(crate) async fn insert_test_user_api_token(
+    pool: &SqlitePool,
+    userid: i64,
+) -> Result<ApiToken, ()> {
     println!("creating test token for user {userid:?}");
     let token = create_api_token("lols".as_bytes(), 900, userid);
 

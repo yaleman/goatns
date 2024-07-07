@@ -58,6 +58,7 @@ async fn userauthtoken_saves() -> Result<(), sqlx::Error> {
 
     Ok(())
 }
+
 #[tokio::test]
 async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
     use crate::db::UserAuthToken;
