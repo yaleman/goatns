@@ -430,7 +430,7 @@ pub async fn get_records(
                 .collect()
         }
         false => {
-            #[cfg(tesT)]
+            #[cfg(test)]
             println!("not normalizing ttls...");
             results
         }
