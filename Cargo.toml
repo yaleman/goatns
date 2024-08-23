@@ -115,7 +115,7 @@ utoipa-swagger-ui = { version = "7.1.0", features = ["axum"] }
 [workspace.dependencies]
 axum = "^0.7.5"
 proc-macro2 = "1.0.86"
-syn = "2.0.72"
+syn = "2.0.75"
 
 [dev-dependencies]
 console-subscriber = "0.3.0"
