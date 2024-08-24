@@ -173,7 +173,7 @@ pub fn name_as_bytes(
                 let pointer_bytes: u16 = 0b1100000000000000 | target;
                 result.extend(pointer_bytes.to_be_bytes());
             } else {
-                #[cfg(debug)]
+                #[cfg(debug_assertions)]
                 panic!("No compression target and we totally could have compressed this.")
             }
 

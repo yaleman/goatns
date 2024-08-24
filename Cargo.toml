@@ -59,7 +59,7 @@ goatns-macros = { path = "./goatns-macros" }
 hex = "0.4.3"
 ipnet = { version = "2.9.0", features = ["json", "serde"] }
 json5 = "0.4.1"
-lazy_static = "1.5.0"
+lazy_static = { workspace = true }
 log = "0.4.22"
 num-traits = "0.2.19"
 oauth2 = "4.4.2"
@@ -68,7 +68,7 @@ opentelemetry-otlp = { version = "0.16.0", features = ["http-proto"] }
 packed_struct = { version = "0.10.1", features = ["byte_types_256"] }
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
-regex = "1.10.6"
+regex = { workspace = true }
 reqwest = { version = "0.12.7", features = [
   "blocking",
   "cookies",
@@ -95,7 +95,7 @@ tokio = { version = "1.39.3", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.11.0"
 tokio-stream = { version = "0.1.15", features = ["net"] }
 tokio-util = { version = "0.7.11", features = ["full"] }
-tower = "^0.4.13"
+tower = "^0.5.0"
 tower-http = { version = "^0.5.2", features = [
   "fs",
   "trace",
@@ -115,7 +115,9 @@ utoipa-swagger-ui = { version = "7.1.0", features = ["axum"] }
 [workspace.dependencies]
 axum = "^0.7.5"
 proc-macro2 = "1.0.86"
+regex = "1.10.6"
 syn = "2.0.75"
+lazy_static = "1.5.0"
 
 [dev-dependencies]
 console-subscriber = "0.3.0"
