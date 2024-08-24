@@ -95,7 +95,7 @@ tokio = { version = "1.39.3", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.11.0"
 tokio-stream = { version = "0.1.15", features = ["net"] }
 tokio-util = { version = "0.7.11", features = ["full"] }
-tower = "^0.4.13"
+tower = "^0.5.0"
 tower-http = { version = "^0.5.2", features = [
   "fs",
   "trace",
