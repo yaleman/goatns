@@ -1,16 +1,21 @@
+---
 version: 2
 updates:
-- package-ecosystem: cargo
-  directory: /
-  schedule:
-    interval: weekly
-    day: saturday
-    time: "02:00"
-    timezone: "Australia/Brisbane"
-- package-ecosystem: github-actions
-  directory: /
-  schedule:
-    interval: weekly
-    day: saturday
-    time: "02:00"
-    timezone: "Australia/Brisbane"
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: saturday
+      time: "02:00"
+      timezone: "Australia/Brisbane"
+    groups:
+      all:
+        patterns:
+          - "*"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: saturday
+      time: "02:00"
+      timezone: "Australia/Brisbane"
