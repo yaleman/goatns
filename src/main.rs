@@ -91,6 +91,7 @@ async fn run() -> Result<(), io::Error> {
     {
         Ok(resp) => {
             if resp == SystemState::Server {
+                let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
                 let udpserver = tokio::spawn(servers::udp_server(
                     config.read(),
                     datastore_sender.clone(),
