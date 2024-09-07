@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   clippy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Restore our cache
         uses: actions/cache@v4
