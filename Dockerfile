@@ -1,8 +1,8 @@
 FROM debian:latest AS builder
 
-ARG GITHUB_SHA="${GITHUB_SHA}"
+ARG GITHUB_SHA="$(git rev-parse HEAD)"
 
-LABEL com.goatns.git-commit="${GITHUB_SHA}"
+LABEL com.goatns.git-commit="$(git rev-parse HEAD)"
 
 # fixing the issue with getting OOMKilled in BuildKit
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
