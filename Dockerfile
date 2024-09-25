@@ -17,11 +17,12 @@ RUN apt-get update && apt-get install -y \
     git \
     build-essential \
     pkg-config \
-    libssl-dev
+    mold
 # install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN mv /root/.cargo/bin/* /usr/local/bin/
 # do the build bits
+ENV CC="/usr/bin/clang"
 RUN cargo build --release --bin goatns
 RUN chmod +x /goatns/target/release/goatns
 

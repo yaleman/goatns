@@ -33,28 +33,39 @@ jobs:
         run: |
           mkdir .cargo
           cargo vendor > .cargo/config.toml
-      - name: Build and export to Docker
-        id: build_and_export
-        uses: docker/build-push-action@v6
-        with:
-          # platforms: linux/amd64,linux/arm64
-          context: .
-          load: true
-          tags: goatns:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: GITHUB_SHA=${GITHUB_SHA}
-      - name: Test
-        id: test
+      - name: Install zig build
         run: |
-          touch fullchain.pem
-          touch privkey.pem
-          docker run --rm \
-            --mount type=bind,source=$(pwd)/fullchain.pem,target=/fullchain.pem \
-            --mount type=bind,source=$(pwd)/privkey.pem,target=/privkey.pem \
-            --mount type=bind,source=$(pwd)/goatns.example.json,target=/goatns.json \
-            goatns:test \
-            --configcheck --config goatns.json
+          pip install cargo-zigbuild --break-system-packages.
+          rustup target add x86_64-unknown-linux-gnu
+          rustup target add aarch64-unknown-linux-gnu
+          apt-get -y install mold protobuf-compiler pkg-config build-eseential
+      - name: Buildem the binaries
+        run: |
+          cargo zigbuild --release --target x86_64-unknown-linux-gnu
+          cargo zigbuild --release --target aarch64-unknown-linux-gnu
+
+      # - name: Build and export to Docker
+      #   id: build_and_export
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     # platforms: linux/amd64,linux/arm64
+      #     context: .
+      #     load: true
+      #     tags: goatns:test
+      #     cache-from: type=gha
+      #     cache-to: type=gha,mode=max
+      #     build-args: GITHUB_SHA=${GITHUB_SHA}
+      # - name: Test
+      #   id: test
+      #   run: |
+      #     touch fullchain.pem
+      #     touch privkey.pem
+      #     docker run --rm \
+      #       --mount type=bind,source=$(pwd)/fullchain.pem,target=/fullchain.pem \
+      #       --mount type=bind,source=$(pwd)/privkey.pem,target=/privkey.pem \
+      #       --mount type=bind,source=$(pwd)/goatns.example.json,target=/goatns.json \
+      #       goatns:test \
+      #       --configcheck --config goatns.json
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
