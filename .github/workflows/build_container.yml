@@ -38,7 +38,7 @@ jobs:
           pip3 install cargo-zigbuild
           rustup target add x86_64-unknown-linux-gnu
           rustup target add aarch64-unknown-linux-gnu
-          sudo apt-get -y install mold protobuf-compiler pkg-config build-eseential
+          sudo apt-get -y install mold protobuf-compiler pkg-config build-essential
       - name: Buildem the binaries
         run: |
           cargo zigbuild --release --target x86_64-unknown-linux-gnu
