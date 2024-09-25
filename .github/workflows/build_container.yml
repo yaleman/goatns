@@ -42,7 +42,7 @@ jobs:
       - name: Buildem the binaries
         run: |
           cargo zigbuild --release --target x86_64-unknown-linux-gnu
-          NO_ASM=1 cargo zigbuild --release --target aarch64-unknown-linux-gnu
+          AWS_LC_SYS_NO_ASM=1  cargo zigbuild --release --target aarch64-unknown-linux-gnu
 
       # - name: Build and export to Docker
       #   id: build_and_export
