@@ -35,7 +35,7 @@ jobs:
           cargo vendor > .cargo/config.toml
       - name: Install zig build
         run: |
-          pip3 install cargo-zigbuild --break-system-packages
+          pip3 install cargo-zigbuild
           rustup target add x86_64-unknown-linux-gnu
           rustup target add aarch64-unknown-linux-gnu
           apt-get -y install mold protobuf-compiler pkg-config build-eseential
