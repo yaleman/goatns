@@ -31,8 +31,8 @@ jobs:
           install: true
       - name: vendor the things
         run: |
-          mkdir .cargo
-          cargo vendor > .cargo/config.toml
+          mkdir -p .cargo
+          cargo vendor >> .cargo/config.toml
       - name: Build and export to Docker
         id: build_and_export
         uses: docker/build-push-action@v6
