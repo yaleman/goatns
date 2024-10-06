@@ -20,6 +20,7 @@ use axum_csp::CspUrlMatcher;
 use axum_tracing_opentelemetry::middleware::OtelAxumLayer;
 use chrono::{DateTime, NaiveDateTime, TimeDelta, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
+use init_tracing_opentelemetry::tracing_subscriber_ext;
 use log::error;
 use oauth2::{ClientId, ClientSecret};
 use openidconnect::Nonce;
@@ -30,13 +31,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
-use utoipa::OpenApi;
-// use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
+use tracing_subscriber::layer::SubscriberExt;
 use utils::handler_404;
+use utoipa::OpenApi;
 
 use self::auth::CustomProviderMetadata;
 
@@ -154,6 +155,38 @@ fn check_static_dir_exists(static_dir: &PathBuf, config: &ConfigFile) -> bool {
     false
 }
 
+pub fn build_loglevel_filter_layer() -> tracing_subscriber::filter::EnvFilter {
+    // filter what is output on log (fmt)
+    // std::env::set_var("RUST_LOG", "warn,otel::tracing=info,otel=debug");
+    std::env::set_var(
+        "RUST_LOG",
+        format!(
+            // `otel::tracing` should be a level info to emit opentelemetry trace & span
+            // `otel::setup` set to debug to log detected resources, configuration read and inferred
+            "{},otel::tracing=trace,otel=debug,h2=error,hyper_util=error,tower=error,tonic=error",
+            std::env::var("RUST_LOG")
+                .or_else(|_| std::env::var("OTEL_LOG_LEVEL"))
+                .unwrap_or_else(|_| "info".to_string())
+        ),
+    );
+    tracing_subscriber::EnvFilter::from_default_env()
+}
+
+fn init_otel_subscribers() -> Result<(), String> {
+    //setup a temporary subscriber to log output during setup
+    let subscriber = tracing_subscriber::registry()
+        .with(build_loglevel_filter_layer())
+        .with(tracing_subscriber_ext::build_logger_text());
+    let _guard = tracing::subscriber::set_default(subscriber);
+
+    let subscriber = tracing_subscriber::registry()
+        .with(tracing_subscriber_ext::build_otel_layer().map_err(|err| err.to_string())?)
+        .with(build_loglevel_filter_layer())
+        .with(tracing_subscriber_ext::build_logger_text());
+    tracing::subscriber::set_global_default(subscriber).map_err(|err| err.to_string())?;
+    Ok(())
+}
+
 pub async fn build(
     tx: Sender<datastore::Command>,
     config: CowCellReadTxn<ConfigFile>,
@@ -163,8 +196,8 @@ pub async fn build(
         .to_string()
         .into();
 
-    if let Err(error) = init_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers() {
-        eprintln!("Failed to initialize OpenTelemetry tracing: {error:?}");
+    if let Err(error) = init_otel_subscribers() {
+        eprintln!("Failed to initialize OpenTelemetry tracing: {error}");
     };
 
     let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await;

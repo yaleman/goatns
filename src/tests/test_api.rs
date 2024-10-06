@@ -114,7 +114,7 @@ pub struct AuthStruct {
     pub token: String,
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_zone_create() -> Result<(), sqlx::Error> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
@@ -185,7 +185,7 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-#[tokio::test] //(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
@@ -261,7 +261,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-#[tokio::test] //(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
@@ -342,7 +342,7 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_record_create() -> Result<(), sqlx::Error> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
@@ -426,7 +426,8 @@ async fn api_record_create() -> Result<(), sqlx::Error> {
     drop(pool);
     Ok(())
 }
-#[tokio::test]
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_record_delete() -> Result<(), sqlx::Error> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
