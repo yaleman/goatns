@@ -134,12 +134,14 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(1))
         .build()
         .unwrap();
 
     println!("Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(1))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),
@@ -203,12 +205,14 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(1))
         .build()
         .unwrap();
 
     println!("Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(1))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),
@@ -277,12 +281,14 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(1))
         .build()
         .unwrap();
 
     println!("Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(1))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),
@@ -351,12 +357,14 @@ async fn api_record_create() -> Result<(), sqlx::Error> {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(1))
         .build()
         .unwrap();
 
     println!("Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(1))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),
@@ -434,12 +442,15 @@ async fn api_record_delete() -> Result<(), sqlx::Error> {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(1))
         .build()
         .unwrap();
 
     println!("Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(1))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),

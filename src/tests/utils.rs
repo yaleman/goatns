@@ -10,10 +10,17 @@ use std::time::Duration;
 pub async fn wait_for_server(status_url: Url) {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
+        .read_timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(1))
         .build()
         .unwrap();
     for i in 0..10 {
-        match client.get(status_url.clone()).send().await {
+        match client
+            .get(status_url.clone())
+            .timeout(std::time::Duration::from_secs(1))
+            .send()
+            .await
+        {
             Ok(value) => {
                 eprintln!("OK: {value:?}");
                 if let Ok(text) = value.text().await {

@@ -7,7 +7,7 @@ use axum::debug_handler;
 use axum::extract::{OriginalUri, Path, State};
 use axum::http::{Response, Uri};
 use axum::response::{IntoResponse, Redirect};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use tower_sessions::Session;
 
@@ -15,6 +15,7 @@ use super::GoatState;
 
 mod admin_ui;
 mod user_settings;
+mod zones;
 
 #[derive(Template)]
 #[template(path = "view_zones.html")]
@@ -28,14 +29,6 @@ struct TemplateViewZones {
 struct TemplateViewZone {
     zone: FileZone,
     pub user_is_admin: bool,
-}
-
-macro_rules! check_logged_in {
-    ( $state:tt, $session:tt, $path:tt ) => {
-        if let Err(e) = check_logged_in(&mut $session, $path).await {
-            return e.into_response();
-        }
-    };
 }
 
 // #[debug_handler]
@@ -200,6 +193,7 @@ pub fn new() -> Router<GoatState> {
         .route("/", get(dashboard))
         .route("/zones/:id", get(zone_view))
         .route("/zones/list", get(zones_list))
+        .route("/zones/new", post(zones::zones_new_post))
         .nest("/settings", user_settings::router())
         .nest("/admin", admin_ui::router())
 }

@@ -411,8 +411,8 @@ fn test_loc_as_bytes() {
     let expected_bytes: [u8; 16] = [
         0x00, // Version: 0
         0x13, // size 19 (10m)
-        0x13, // hor pres 19 (10m)
-        0x13, // ver pres 19 (10m)
+        0x13, // hor 19 (10m)
+        0x13, // ver 19 (10m)
         0x80, 0x38, 0xce, 0xf8, // Latitude: 2151206648 (1 deg 2 min 3.000 sec N)
         0x80, 0x38, 0xce, 0xf8, // Longitude: 2151206648 (1 deg 2 min 3.000 sec E)
         0x00, 0x98, 0x9a, 0x68, // Altitude: 10001000 (10 m)

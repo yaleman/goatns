@@ -14,3 +14,11 @@
 //             .build()
 //     };
 // }
+
+macro_rules! check_logged_in {
+    ( $state:tt, $session:tt, $path:tt ) => {
+        if let Err(e) = crate::web::ui::check_logged_in(&mut $session, $path).await {
+            return e.into_response();
+        }
+    };
+}

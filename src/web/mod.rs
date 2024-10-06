@@ -16,9 +16,8 @@ use axum::middleware::from_fn_with_state;
 use axum::routing::get;
 use axum::Router;
 use axum_csp::CspUrlMatcher;
-#[cfg(feature = "otel")]
 #[cfg(not(test))]
-use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
+use axum_tracing_opentelemetry::middleware::OtelAxumLayer;
 use chrono::{DateTime, NaiveDateTime, TimeDelta, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use log::error;
@@ -163,8 +162,8 @@ pub async fn build(
     let static_dir: PathBuf = shellexpand::tilde(&config.api_static_dir)
         .to_string()
         .into();
-    #[cfg(feature = "otel")]
-    if let Err(error) = axum_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers() {
+
+    if let Err(error) = init_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers() {
         eprintln!("Failed to initialize OpenTelemetry tracing: {error:?}");
     };
 
@@ -206,9 +205,8 @@ pub async fn build(
         .layer(service_layer);
 
     // here we add the tracing layer
-    #[cfg(feature = "otel")]
     #[cfg(not(test))]
-    let router = router.layer(opentelemetry_tracing_layer());
+    let router = router.layer(OtelAxumLayer::default());
 
     let router = router.route("/status", get(generic::status));
 
@@ -230,14 +228,15 @@ pub async fn build(
         axum_server::bind_rustls(config.api_listener_address(), tls_config)
             .serve(router.into_make_service()),
     ));
+    let startup_message = format!(
+        "Started Web server on https://{} / http://{}:{}",
+        config.api_listener_address(),
+        config.hostname,
+        config.api_port
+    );
+
     #[cfg(test)]
-    println!(
-        "Started Web server on https://{}",
-        config.api_listener_address()
-    );
-    log::info!(
-        "Started Web server on https://{}",
-        config.api_listener_address()
-    );
+    println!("{}", startup_message);
+    log::info!("{}", startup_message);
     res
 }
