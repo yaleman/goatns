@@ -4,16 +4,18 @@ use crate::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zo
 use crate::zones::FileZone;
 use askama::Template;
 use axum::debug_handler;
-use axum::extract::{OriginalUri, Path, State};
+use axum::extract::{OriginalUri, Path, Query, State};
 use axum::http::{Response, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
 use axum::Router;
+use serde::Deserialize;
 use tower_sessions::Session;
 
 use super::GoatState;
 
 mod admin_ui;
+mod profile;
 mod user_settings;
 mod zones;
 
@@ -22,6 +24,8 @@ mod zones;
 struct TemplateViewZones {
     zones: Vec<FileZone>,
     pub user_is_admin: bool,
+    message: Option<String>,
+    error: Option<String>,
 }
 
 #[derive(Template)]
@@ -31,11 +35,18 @@ struct TemplateViewZone {
     pub user_is_admin: bool,
 }
 
+#[derive(Deserialize)]
+pub struct ViewZonesQueryString {
+    message: Option<String>,
+    error: Option<String>,
+}
+
 // #[debug_handler]
 pub async fn zones_list(
     State(state): State<GoatState>,
     mut session: Session,
     OriginalUri(path): OriginalUri,
+    Query(query): Query<ViewZonesQueryString>,
 ) -> impl IntoResponse {
     // if let Err(e) = check_logged_in(&state, &mut session, path).await {
     //     return e.into_response();
@@ -78,6 +89,8 @@ pub async fn zones_list(
     let context = TemplateViewZones {
         zones,
         user_is_admin: user.admin,
+        message: query.message,
+        error: query.error,
     };
     Response::builder()
         .status(200)
@@ -93,10 +106,10 @@ pub async fn zone_view(
     State(state): State<GoatState>,
     mut session: Session,
 ) -> impl IntoResponse {
-    let user = check_logged_in(&mut session, path)
-        .await
-        .map_err(|err| err.into_response())
-        .unwrap();
+    let user = match check_logged_in(&mut session, path).await {
+        Ok(val) => val,
+        Err(err) => return err.into_response(),
+    };
 
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let cmd = Command::GetZone {
@@ -194,6 +207,7 @@ pub fn new() -> Router<GoatState> {
         .route("/zones/:id", get(zone_view))
         .route("/zones/list", get(zones_list))
         .route("/zones/new", post(zones::zones_new_post))
+        .route("/profile", get(profile::user_profile_get))
         .nest("/settings", user_settings::router())
         .nest("/admin", admin_ui::router())
 }

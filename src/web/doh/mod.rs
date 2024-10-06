@@ -13,7 +13,7 @@ use crate::db::get_all_fzr_by_name;
 use crate::enums::{Rcode, RecordClass, RecordType};
 use crate::reply::Reply;
 use crate::resourcerecord::InternalResourceRecord;
-use crate::servers::parse_query;
+use crate::servers::{parse_query, QueryProtocol};
 use crate::web::GoatState;
 use crate::{Header, Question, HEADER_BYTES};
 
@@ -343,6 +343,7 @@ pub async fn handle_post(
         body.len(),
         &body,
         state_reader.config.capture_packets,
+        QueryProtocol::DoH,
     )
     .await;
 

@@ -2,6 +2,18 @@
 {% block content %}
 <h1>Zones!</h1>
 
+{% if let Some(error) = error %}
+<div class="alert alert-danger" role="alert">
+    {{error}}
+</div>
+{% endif %}
+
+{% if let Some(message) = message %}
+<div class="alert alert-success" role="alert">
+    {{message}}
+</div>
+{% endif %}
+
 <form method="POST" action="/ui/zones/new">
     <div class="row">
         <div class="col">

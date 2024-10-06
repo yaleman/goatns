@@ -9,6 +9,7 @@ use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
+use tracing::{field, instrument};
 
 use crate::config::ConfigFile;
 use crate::datastore::Command;
@@ -125,6 +126,7 @@ pub async fn udp_server(
                 len,
                 &udp_buffer,
                 config.capture_packets,
+                QueryProtocol::Udp,
             ),
         )
         .await
@@ -175,6 +177,7 @@ pub async fn udp_server(
     }
 }
 
+#[instrument(level = "info", skip_all)]
 pub async fn tcp_conn_handler(
     stream: &mut TcpStream,
     addr: SocketAddr,
@@ -220,7 +223,13 @@ pub async fn tcp_conn_handler(
     let buf = &buf[0..msg_length];
     let result = match timeout(
         Duration::from_millis(REPLY_TIMEOUT_MS),
-        parse_query(datastore_sender.clone(), msg_length, buf, capture_packets),
+        parse_query(
+            datastore_sender.clone(),
+            msg_length,
+            buf,
+            capture_packets,
+            QueryProtocol::Tcp,
+        ),
     )
     .await
     {
@@ -366,12 +375,30 @@ pub async fn tcp_server(
     }
 }
 
+pub(crate) enum QueryProtocol {
+    Udp,
+    Tcp,
+    DoH,
+}
+
+impl std::fmt::Display for QueryProtocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            QueryProtocol::Udp => write!(f, "UDP"),
+            QueryProtocol::Tcp => write!(f, "TCP"),
+            QueryProtocol::DoH => write!(f, "DoH"),
+        }
+    }
+}
+
 /// Parses the rest of the packets once we have stripped the header off.
+#[instrument(level = "info", skip_all, fields(protocol=protocol.to_string()))]
 pub async fn parse_query(
     datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
     len: usize,
     buf: &[u8],
     capture_packets: bool,
+    protocol: QueryProtocol,
 ) -> Result<Reply, String> {
     if capture_packets {
         crate::packet_dumper::dump_bytes(
@@ -410,6 +437,7 @@ lazy_static! {
 }
 
 /// The generic handler for the packets once they've been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y'know?
+#[instrument(level="info", skip_all, fields(qname=field::Empty, qtype=field::Empty))]
 async fn get_result(
     header: Header,
     len: usize,
@@ -426,6 +454,7 @@ async fn get_result(
     let question = match Question::from_packets(&buf[HEADER_BYTES..len]) {
         Ok(value) => {
             log::trace!("Parsed question: {:?}", value);
+
             value
         }
         Err(error) => {
@@ -433,6 +462,14 @@ async fn get_result(
             return reply_builder(header.id, Rcode::ServFail);
         }
     };
+
+    // record the details of the query
+    let span = tracing::Span::current();
+    if !span.is_disabled() {
+        let qname_string = from_utf8(&question.qname).unwrap_or("<unable to parse>");
+        span.record("qname", qname_string);
+        span.record("qtype", question.qtype.to_string());
+    }
 
     // yeet them when we get a request we can't handle
     if !question.qtype.supported() {

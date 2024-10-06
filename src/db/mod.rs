@@ -1406,13 +1406,25 @@ impl DBEntity for User {
     ) -> Result<Box<Self>, sqlx::Error> {
         todo!();
     }
-    /// create from scratch
+
     async fn update_with_txn<'t>(
         &self,
-        _txn: &mut SqliteConnection,
+        txn: &mut SqliteConnection,
     ) -> Result<Box<Self>, sqlx::Error> {
-        todo!();
+        let query = format!("UPDATE {} set displayname = ?, username = ?, email = ?, disabled = ?, authref = ?, admin = ? WHERE id = ?", Self::TABLE);
+        sqlx::query(&query)
+            .bind(&self.displayname)
+            .bind(&self.username)
+            .bind(&self.email)
+            .bind(self.disabled)
+            .bind(&self.authref)
+            .bind(self.admin)
+            .bind(self.id)
+            .execute(txn)
+            .await?;
+        Ok(Box::new(self.to_owned()))
     }
+
     /// delete the entity from the database
     async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         todo!()

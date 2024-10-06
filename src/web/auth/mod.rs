@@ -234,14 +234,12 @@ pub async fn parse_state_code(
         .cloned()
 }
 
-// #[debug_handler]
 pub async fn login(
     Query(query): Query<QueryForLogin>,
     session: Session,
     axum::extract::State(mut state): axum::extract::State<GoatState>,
 ) -> impl IntoResponse {
     // check if we've got an existing, valid session
-
     if let Some(signed_in) = session.get("signed_in").await.unwrap() {
         if signed_in {
             return Redirect::to("/ui").into_response();
@@ -280,7 +278,8 @@ pub async fn login(
 
             let email = claims.get_email().unwrap();
 
-            let dbuser = match User::get_by_subject(&state.connpool().await, claims.subject()).await
+            let mut dbuser = match User::get_by_subject(&state.connpool().await, claims.subject())
+                .await
             {
                 Ok(user) => user,
                 Err(error) => {
@@ -371,6 +370,36 @@ pub async fn login(
                     .unwrap();
                 log::info!("Disabled user attempted to log in: {dbuser:?}");
                 return redirect_to_home().into_response();
+            }
+
+            if let Some(claims_email) = claims.email() {
+                let claims_email = claims_email.to_string();
+                if claims_email != dbuser.email {
+                    log::debug!(
+                        "Email doesn't match on login: {} != {}",
+                        claims_email,
+                        dbuser.email
+                    );
+
+                    dbuser.email = claims_email;
+                    let mut db_txn = match state.connpool().await.begin().await {
+                        Ok(val) => val,
+                        Err(err) => {
+                            log::error!("Failed to start transaction to store user: {err:?}");
+                            return redirect_to_home().into_response();
+                            // TODO: this probably... should be handled as a better error?
+                        }
+                    };
+                    if let Err(err) = dbuser.update_with_txn(&mut db_txn).await {
+                        log::error!("Failed to update user email: {err:?}");
+                        return redirect_to_home().into_response();
+                        // TODO: this probably... should be handled as a better error?
+                    }
+                    if let Err(err) = db_txn.commit().await {
+                        log::error!("Failed to commit user email update: {err:?}");
+                        return redirect_to_home().into_response();
+                    };
+                }
             }
 
             session

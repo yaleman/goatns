@@ -123,13 +123,13 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
     // let apiserver = servers.apiserver.unwrap();
 
     let user = insert_test_user(&pool).await;
-    println!("Created user... {user:?}");
+    println!("api_zone_create Created user... {user:?}");
 
-    println!("Creating token for user");
+    println!("api_zone_create Creating token for user");
     let token = insert_test_user_api_token(&pool, user.id.unwrap())
         .await
         .unwrap();
-    println!("Created token... {token:?}");
+    println!("api_zone_create Created token... {token:?}");
 
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
@@ -138,7 +138,7 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
         .build()
         .unwrap();
 
-    println!("Logging in with the token...");
+    println!("api_zone_create Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(1))
@@ -151,7 +151,7 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
         .unwrap();
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
-    println!("=> Token login success!");
+    println!("api_zone_create => Token login success!");
 
     let newzone = FileZone {
         id: Some(1234),
@@ -163,7 +163,7 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
         ..Default::default()
     };
 
-    println!("Sending zone create");
+    println!("api_zone_create Sending zone create");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/zone"))
         .header("Authorization", format!("Bearer {}", token.token_secret))
@@ -181,7 +181,7 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
     assert_eq!(response_zone.name, "example.goat");
     assert_eq!(response_zone.serial, 12345);
     assert_ne!(response_zone.serial, 123456);
-    // apiserver.abort();
+    drop(pool);
     Ok(())
 }
 
@@ -257,7 +257,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     let res_content = res.bytes().await;
     println!("content from delete: {res_content:?}");
 
-    // apiserver.abort();
+    drop(pool);
     Ok(())
 }
 
@@ -338,6 +338,7 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     let res_content = res.bytes().await;
     println!("content from patch: {res_content:?}");
 
+    drop(pool);
     Ok(())
 }
 
@@ -421,9 +422,8 @@ async fn api_record_create() -> Result<(), sqlx::Error> {
         Err(err) => panic!("Failed to get response content: {err:?}"),
         Ok(val) => val,
     };
-
     assert_eq!(response_record.name, "doggo");
-    // apiserver.abort();
+    drop(pool);
     Ok(())
 }
 #[tokio::test]
@@ -511,6 +511,6 @@ async fn api_record_delete() -> Result<(), sqlx::Error> {
 
     assert_eq!(status, 200);
 
-    // apiserver.abort();
+    drop(pool);
     Ok(())
 }

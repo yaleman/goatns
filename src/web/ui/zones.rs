@@ -12,6 +12,7 @@ use crate::datastore::Command;
 use crate::db::User;
 use crate::web::utils::redirect_to_login;
 use crate::web::GoatState;
+use crate::zones::FileZone;
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct NewZoneForm {
@@ -28,7 +29,7 @@ pub(crate) async fn zones_new_post(
 
     debug!("Received new zone form: name={:?}", form.name);
 
-    let _user: User = match session.get("user").await.unwrap() {
+    let user: User = match session.get("user").await.unwrap() {
         Some(val) => {
             log::info!("current user: {val:?}");
             val
@@ -74,5 +75,45 @@ pub(crate) async fn zones_new_post(
         }
     };
 
-    unimplemented!("haven't finished this yet!")
+    if user.email.is_empty() {
+        return Redirect::to("/ui/zones?error=No email address associated with user!")
+            .into_response();
+    }
+
+    let zone = FileZone {
+        id: None,
+        name: form.name.clone(),
+        records: vec![],
+        rname: user.email.replace("@", "."),
+        serial: 0,
+        refresh: Default::default(),
+        retry: Default::default(),
+        expire: Default::default(),
+        minimum: Default::default(),
+    };
+
+    let (os_tx, os_rx) = tokio::sync::oneshot::channel();
+    let msg = Command::CreateZone { zone, resp: os_tx };
+
+    if let Err(err) = state.read().await.tx.send(msg).await {
+        log::error!("Error sending message to datastore: {:?}", err);
+        return Redirect::to("/ui/zones?error=Error creating zone!").into_response();
+    };
+
+    match os_rx.await {
+        Ok(zone) => {
+            log::info!("Zone {} created successfully", form.name);
+            if let Some(id) = zone.id {
+                log::info!("Redirecting to /ui/zones/{}", id);
+                Redirect::to(&format!("/ui/zones/{}", id)).into_response()
+            } else {
+                log::error!("Redirecting to /ui/zones because zone didn't have an ID?");
+                Redirect::to("/ui/zones").into_response()
+            }
+        }
+        Err(err) => {
+            log::error!("Error creating zone {}: {:?}", form.name, err);
+            Redirect::to("/ui/zones?error=Error creating zone!").into_response()
+        }
+    }
 }
