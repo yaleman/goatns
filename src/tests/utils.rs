@@ -66,8 +66,8 @@ pub fn test_find_tail_match() {
 pub fn test_name_bytes_simple_compress() {
     let expected_result: Vec<u8> = vec![192, 12];
 
-    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), Some(12), None)
-        .expect("Failed to parse name");
+    let test_result =
+        name_as_bytes("example.com".as_bytes(), Some(12), None).expect("Failed to parse name");
     assert_eq!(expected_result, test_result);
 }
 #[test]
@@ -75,14 +75,14 @@ pub fn test_name_bytes_no_compress() {
     let expected_result: Vec<u8> = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
 
     let test_result =
-        name_as_bytes("example.com".as_bytes().to_vec(), None, None).expect("Failed to parse name");
+        name_as_bytes("example.com".as_bytes(), None, None).expect("Failed to parse name");
     assert_eq!(expected_result, test_result);
 }
 
 #[test]
 pub fn test_name_bytes_with_compression() {
     let example_com = "example.com".as_bytes().to_vec();
-    let test_input = "lol.example.com".as_bytes().to_vec();
+    let test_input = "lol.example.com".as_bytes();
 
     let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 12];
 
@@ -98,7 +98,7 @@ pub fn test_name_bytes_with_compression() {
 #[test]
 pub fn test_name_bytes_with_tail_compression() {
     let example_com = "ns1.example.com".as_bytes().to_vec();
-    let test_input = "lol.example.com".as_bytes().to_vec();
+    let test_input = "lol.example.com".as_bytes();
 
     let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 16];
 

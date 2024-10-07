@@ -105,15 +105,16 @@ struct AuthProvisioningDisabledTemplate {
 
 pub enum ParserError {
     Redirect { content: Redirect },
-    ErrorMessage { content: &'static str },
+    ErrorMessage { content: String },
     ClaimsVerificationError { content: ClaimsVerificationError },
 }
 
 /// Pull the OIDC Discovery details
 pub async fn oauth_get_discover(state: &mut GoatState) -> Result<CustomProviderMetadata, String> {
     log::debug!("Getting discovery data");
-    let issuer_url = IssuerUrl::new(state.read().await.config.oauth2_config_url.clone());
-    match CoreProviderMetadata::discover_async(issuer_url.unwrap(), async_http_client).await {
+    let issuer_url = IssuerUrl::new(state.read().await.config.oauth2_config_url.clone())
+        .map_err(|err| format!("Failed to parse issuer URL: {:?}", err))?;
+    match CoreProviderMetadata::discover_async(issuer_url, async_http_client).await {
         Err(e) => Err(format!("{e:?}")),
         Ok(val) => {
             state.oidc_update(val.clone()).await;
@@ -127,12 +128,14 @@ pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, String> {
     let now: DateTime<Utc> = Utc::now();
 
     let delta = now - last_updated;
+    let discovery = oauth_get_discover(state).await?;
+
     let provider_metadata: CustomProviderMetadata = match delta.num_minutes() > 5 {
-        true => oauth_get_discover(state).await.unwrap(),
+        true => discovery,
         false => {
-            log::debug!("using cached OIDC discovery data");
+            log::debug!("Using cached OIDC discovery data");
             let config = state.read().await.oidc_config.clone();
-            let meta = config.unwrap_or(oauth_get_discover(state).await.unwrap());
+            let meta = config.unwrap_or(discovery);
             state.oidc_update(meta.clone()).await;
             meta
         }
@@ -185,8 +188,8 @@ pub async fn parse_state_code(
         Some(value) => value,
         None => {
             return Err(ParserError::ErrorMessage {
-                content: "Failed to pull provider metadata!",
-            })
+                content: "Failed to pull provider metadata!".to_string(),
+            });
         }
     };
 
@@ -207,15 +210,16 @@ pub async fn parse_state_code(
         .set_pkce_verifier(pkce_verifier)
         .request_async(async_http_client)
         .await
-        .map_err(|e| format!("{e:?}"))
-        .unwrap();
+        .map_err(|e| ParserError::ErrorMessage {
+            content: format!("{e:?}"),
+        })?;
 
     // Extract the ID token claims after verifying its authenticity and nonce.
     let id_token = match token_response.id_token() {
         Some(token) => token,
         None => {
             return Err(ParserError::ErrorMessage {
-                content: "couldn't parse token",
+                content: "couldn't parse token".to_string(),
             })
         }
     };
@@ -242,21 +246,27 @@ pub async fn login(
     axum::extract::State(mut state): axum::extract::State<GoatState>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     // check if we've got an existing, valid session
-    if let Some(signed_in) = session.get("signed_in").await.unwrap() {
+    if let Some(signed_in) = session.get("signed_in").await.unwrap_or(Some(false)) {
         if signed_in {
             return Err(Urls::Dashboard.redirect().into_response());
         }
     }
 
-    if query.state.is_none() || query.code.is_none() {
-        let auth_url = &oauth_start(&mut state).await.unwrap().to_string();
-        return Err(Redirect::to(auth_url).into_response());
-    }
+    let (query_state, query_code) = match (query.state, query.code) {
+        (Some(state), Some(code)) => (state, code),
+        _ => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "Missing state or code in query parameters",
+            )
+                .into_response())
+        }
+    };
 
     // if we get the state and code back then we can go back to the server for a token
     // ref <https://github.com/kanidm/kanidm/blob/master/kanidmd/testkit/tests/oauth2_test.rs#L276>
 
-    let verifier = state.pop_verifier(query.state.clone().unwrap()).await;
+    let verifier = state.pop_verifier(query_state.clone()).await;
 
     let (pkce_verifier_secret, nonce) = match verifier {
         Some((p, n)) => (p, n),
@@ -269,7 +279,7 @@ pub async fn login(
 
     let claims = parse_state_code(
         &state,
-        query.code.clone().unwrap(),
+        query_code.clone(),
         PkceCodeVerifier::new(pkce_verifier_secret),
         nonce.clone(),
     )
@@ -278,71 +288,55 @@ pub async fn login(
         Ok(claims) => {
             // check if they're in the database
 
-            let email = claims.get_email().unwrap();
+            let email = claims.get_email().map_err(|err| err.into_response())?;
 
             let mut dbuser = match User::get_by_subject(&state.connpool().await, claims.subject())
                 .await
             {
-                Ok(user) => user,
-                Err(error) => {
-                    match error {
-                        sqlx::Error::RowNotFound => {
-                            if !state.read().await.config.user_auto_provisioning {
-                                // TODO: show a "sorry" page when auto-provisioning's not enabled
-                                // log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
-                                let (admin_contact_name, admin_contact_url) =
-                                    state.read().await.config.admin_contact.to_html_parts();
+                Ok(Some(user)) => user,
+                Ok(None) => {
+                    if !state.read().await.config.user_auto_provisioning {
+                        // TODO: show a "sorry" page when auto-provisioning's not enabled
+                        // log::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
+                        let (admin_contact_name, admin_contact_url) =
+                            state.read().await.config.admin_contact.to_html_parts();
 
-                                return Ok(AuthProvisioningDisabledTemplate {
-                                    username: claims.get_username(),
-                                    authref: claims.subject().to_string(),
-                                    admin_contact_name,
-                                    admin_contact_url,
-                                    user_is_admin: false, // TODO: ... probably not an admin but we can check
-                                }
-                                .into_response());
-                            }
-                            // push it back into the stack for signup
-                            state
-                                .push_verifier(
-                                    query.state.clone().unwrap(),
-                                    (verifier_copy.secret().to_owned(), nonce),
-                                )
-                                .await;
-                            return Ok(AuthNewUserTemplate {
-                                state: query.state.clone().unwrap(),
-                                code: query.code.clone().unwrap(),
-                                email,
-                                displayname: claims.get_displayname(),
-                                redirect_url: "".to_string(),
-                                errors: vec![],
-                                user_is_admin: false, // TODO: ... probably not an admin but we can check
-                            }
-                            .into_response());
+                        return Ok(AuthProvisioningDisabledTemplate {
+                            username: claims.get_username(),
+                            authref: claims.subject().to_string(),
+                            admin_contact_name,
+                            admin_contact_url,
+                            user_is_admin: false, // TODO: ... probably not an admin but we can check
                         }
-                        _ => {
-                            log::error!(
-                                "Database error finding user {:?}: {error:?}",
-                                email.clone()
-                            );
-                            let redirect: Option<String> = session.get("redirect").await.unwrap();
-                            return match redirect {
-                                Some(destination) => {
-                                    session.remove_value("redirect").await.map_err(
-                                        |err| {
-                                            error!("Failed to flush session: {err:?}");
-                                            (
-                                                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                                                "Failed to remove redirect value from session store!"
-                                            )
-                                        },
-                                    ).unwrap();
-                                    Err(Redirect::to(&destination).into_response())
-                                }
-                                None => Err(Urls::Home.redirect().into_response()),
-                            };
-                        }
+                        .into_response());
                     }
+                    // push it back into the stack for signup
+
+                    state
+                        .push_verifier(
+                            query_state.clone(),
+                            (verifier_copy.secret().to_owned(), nonce),
+                        )
+                        .await;
+
+                    return Ok(AuthNewUserTemplate {
+                        state: query_state,
+                        code: query_code,
+                        email,
+                        displayname: claims.get_displayname(),
+                        redirect_url: "".to_string(),
+                        errors: vec![],
+                        user_is_admin: false, // TODO: ... probably not an admin but we can check
+                    }
+                    .into_response());
+                }
+                Err(error) => {
+                    log::error!("Database error finding user {:?}: {error:?}", email.clone());
+                    let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
+                    return match redirect {
+                        Some(destination) => Err(Redirect::to(&destination).into_response()),
+                        None => Err(Urls::Home.redirect().into_response()),
+                    };
                 }
             };
             log::debug!("Found user in database: {dbuser:?}");
@@ -449,7 +443,9 @@ pub async fn build_auth_stores(
 ) -> Result<SessionManagerLayer<SqliteStore>, GoatNsError> {
     let session_store = SqliteStore::new(connpool)
         .with_table_name("sessions")
-        .expect("Failed to start session store!");
+        .map_err(|err| {
+            GoatNsError::StartupError(format!("Failed to initialize session store: {}", err))
+        })?;
 
     session_store.migrate().await?;
 
@@ -478,7 +474,7 @@ pub struct SignupForm {
 pub async fn signup(
     State(mut state): State<GoatState>,
     Form(form): Form<SignupForm>,
-) -> Result<Response, ()> {
+) -> Result<Response, Redirect> {
     log::debug!("Dumping form: {form:?}");
 
     let query_state = form.state;
@@ -513,12 +509,11 @@ pub async fn signup(
         },
         Ok(claims) => {
             log::debug!("Verified claims in signup form: {claims:?}");
-            let email = claims.get_email().unwrap();
             let user = User {
                 id: None,
                 displayname: claims.get_displayname(),
                 username: claims.get_username(),
-                email,
+                email: claims.get_email()?,
                 disabled: false,
                 authref: Some(claims.subject().to_string()),
                 admin: false,

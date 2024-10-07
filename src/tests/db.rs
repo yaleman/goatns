@@ -2,6 +2,7 @@ use chrono::{TimeDelta, Utc};
 
 use crate::db::test::test_get_sqlite_memory;
 use crate::db::{cron_db_cleanup, get_zones_with_txn, start_db, DBEntity, ZoneOwnership};
+use crate::error::GoatNsError;
 use crate::tests::test_harness;
 
 #[test]
@@ -20,7 +21,7 @@ fn zoneownership_serde() {
     assert_eq!(res, test_str);
 }
 #[tokio::test]
-async fn userauthtoken_saves() -> Result<(), sqlx::Error> {
+async fn userauthtoken_saves() -> Result<(), GoatNsError> {
     use crate::db::UserAuthToken;
 
     let pool = test_get_sqlite_memory().await;
@@ -59,7 +60,7 @@ async fn userauthtoken_saves() -> Result<(), sqlx::Error> {
     Ok(())
 }
 #[tokio::test]
-async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
+async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
     use crate::db::UserAuthToken;
 
     let pool = test_get_sqlite_memory().await;
@@ -118,7 +119,7 @@ async fn userauthtoken_expiry() -> Result<(), sqlx::Error> {
 }
 
 #[tokio::test]
-async fn test_cron_db_cleanup() -> Result<(), sqlx::Error> {
+async fn test_cron_db_cleanup() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
 
     println!("Starting DB");
@@ -133,7 +134,7 @@ async fn test_cron_db_cleanup() -> Result<(), sqlx::Error> {
 }
 
 #[tokio::test]
-async fn testget_zones_with_txn() -> Result<(), sqlx::Error> {
+async fn testget_zones_with_txn() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
 
     println!("Starting DB");

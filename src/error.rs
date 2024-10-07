@@ -1,3 +1,5 @@
+use std::str::Utf8Error;
+
 use packed_struct::PackingError;
 
 /// When things go awry
@@ -15,6 +17,8 @@ pub enum GoatNsError {
     EmptyFile,
     /// Failed to send something across a tokio channel
     SendError(String),
+    Utf8Error(Utf8Error),
+    DateParseError(String),
 }
 
 impl From<std::io::Error> for GoatNsError {
@@ -38,6 +42,18 @@ impl From<reqwest::Error> for GoatNsError {
 impl From<PackingError> for GoatNsError {
     fn from(error: PackingError) -> Self {
         GoatNsError::BytePackingError(error.to_string())
+    }
+}
+
+impl From<Utf8Error> for GoatNsError {
+    fn from(error: Utf8Error) -> Self {
+        GoatNsError::Utf8Error(error)
+    }
+}
+
+impl From<chrono::format::ParseError> for GoatNsError {
+    fn from(error: chrono::format::ParseError) -> Self {
+        GoatNsError::DateParseError(error.to_string())
     }
 }
 

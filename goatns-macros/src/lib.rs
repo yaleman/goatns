@@ -14,6 +14,7 @@ pub fn check_api_auth(_item: TokenStream) -> TokenStream {
             return error_result_json!("", StatusCode::FORBIDDEN);
         }
     };
+    
     "#
     .parse()
     .expect("Failed to parse code")

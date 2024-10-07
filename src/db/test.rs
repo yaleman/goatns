@@ -5,7 +5,7 @@ use crate::error::GoatNsError;
 use crate::zones::{FileZone, FileZoneRecord};
 
 #[tokio::test]
-async fn create_user() -> Result<(), sqlx::Error> {
+async fn create_user() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
 
     start_db(&pool).await?;
@@ -35,7 +35,7 @@ pub async fn test_create_example_com_records(
     pool: &SqlitePool,
     zoneid: i64,
     num_records: usize,
-) -> Result<(), sqlx::Error> {
+) -> Result<(), GoatNsError> {
     use rand::distributions::{Alphanumeric, DistString};
 
     let mut name: String;
@@ -61,19 +61,22 @@ pub async fn test_create_example_com_records(
 }
 
 #[tokio::test]
-async fn test_get_zone_records() -> Result<(), sqlx::Error> {
+async fn test_get_zone_records() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
     start_db(&pool).await?;
     test_create_example_com_zone(&pool).await?;
     let testzone = test_example_com_zone();
 
     let mut txn = pool.begin().await?;
-    let zone = FileZone::get_by_name(&mut txn, &testzone.name).await?;
+    let zone = FileZone::get_by_name(&mut txn, &testzone.name)
+        .await?
+        .expect("Couldn't get zone");
 
     test_create_example_com_records(&pool, zone.id.unwrap(), 1000).await?;
 
     let zone = FileZone::get_by_name(&mut txn, &testzone.name)
         .await?
+        .expect("Failed to get zone")
         .with_zone_records(&mut txn)
         .await;
 
@@ -83,7 +86,7 @@ async fn test_get_zone_records() -> Result<(), sqlx::Error> {
 
 /// Checks that the table create process works and is idempotent
 #[tokio::test]
-async fn test_db_create_table_zones() -> Result<(), sqlx::Error> {
+async fn test_db_create_table_zones() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
     FileZone::create_table(&pool).await?;
     FileZone::create_table(&pool).await?;
@@ -92,7 +95,7 @@ async fn test_db_create_table_zones() -> Result<(), sqlx::Error> {
 
 /// Checks that the table create process works and is idempotent
 #[tokio::test]
-async fn test_db_create_table_records() -> Result<(), sqlx::Error> {
+async fn test_db_create_table_records() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
     println!("Creating Records Table");
     FileZoneRecord::create_table(&pool).await?;
@@ -117,7 +120,7 @@ pub async fn test_get_sqlite_memory() -> SqlitePool {
 
 /// A whole lotta tests
 #[tokio::test]
-async fn test_db_create_records() -> Result<(), sqlx::Error> {
+async fn test_db_create_records() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
 
     start_db(&pool).await?;
@@ -164,7 +167,7 @@ async fn test_db_create_records() -> Result<(), sqlx::Error> {
 
 /// test all the things
 #[tokio::test]
-async fn test_all_db_things() -> Result<(), sqlx::Error> {
+async fn test_all_db_things() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
 
     println!("Creating Zones Table");
@@ -179,11 +182,15 @@ async fn test_all_db_things() -> Result<(), sqlx::Error> {
     zone.clone().save(&pool).await?;
     println!("Getting a zone!");
     let mut txn = pool.begin().await?;
-    let zone_data = FileZone::get_by_name(&mut txn, "example.com").await?;
+    let zone_data = FileZone::get_by_name(&mut txn, "example.com")
+        .await?
+        .expect("Failed to get zone");
     println!("Zone: {:?}", zone_data);
 
     assert_eq!(*zone_data, zone);
-    let zone_data = FileZone::get_by_name(&mut txn, "example.com").await?;
+    let zone_data = FileZone::get_by_name(&mut txn, "example.com")
+        .await?
+        .expect("Failed to get zone");
     println!("{:?}", zone_data);
     assert_eq!(*zone_data, zone);
 
@@ -223,7 +230,7 @@ async fn test_all_db_things() -> Result<(), sqlx::Error> {
 }
 
 #[tokio::test]
-async fn test_load_zone() -> Result<(), sqlx::Error> {
+async fn test_load_zone() -> Result<(), GoatNsError> {
     let mut zone = FileZone {
         name: "example.com".to_string(),
         rname: "billy.example.com".to_string(),
@@ -236,12 +243,16 @@ async fn test_load_zone() -> Result<(), sqlx::Error> {
     // first time
     zone.save(&pool).await?;
 
-    let zone_first = FileZone::get_by_name(&mut *pool.begin().await?, &zone.name).await?;
+    let zone_first = FileZone::get_by_name(&mut *pool.begin().await?, &zone.name)
+        .await?
+        .expect("Couldn't find zone!");
 
     zone.rname = "foo.example.com".to_string();
     zone.save(&pool).await?;
 
-    let zone_second = FileZone::get_by_name(&mut *pool.begin().await?, &zone.name).await?;
+    let zone_second = FileZone::get_by_name(&mut *pool.begin().await?, &zone.name)
+        .await?
+        .expect("Couldn't find zone!");
 
     assert_ne!(zone_first, zone_second);
 
@@ -259,13 +270,13 @@ async fn test_load_zone() -> Result<(), sqlx::Error> {
 
 #[cfg(test)]
 /// create a zone example.com
-async fn test_create_example_com_zone(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+async fn test_create_example_com_zone(pool: &SqlitePool) -> Result<(), GoatNsError> {
     test_example_com_zone().save(&pool).await?;
     Ok(())
 }
 
 #[tokio::test]
-async fn test_export_zone() -> Result<(), sqlx::Error> {
+async fn test_export_zone() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
     eprintln!("Setting up DB");
     start_db(&pool).await?;
@@ -274,7 +285,9 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
     let testzone = test_example_com_zone();
 
     eprintln!("Getting example zone");
-    let zone = FileZone::get_by_name(&mut *pool.begin().await?, &testzone.name).await?;
+    let zone = FileZone::get_by_name(&mut *pool.begin().await?, &testzone.name)
+        .await?
+        .expect("Failed to get zone");
 
     let records_to_create = 100usize;
     eprintln!("Creating records");

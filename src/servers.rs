@@ -9,35 +9,40 @@ use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
-use tracing::{field, instrument};
+use tracing::{error, field, instrument};
 
 use crate::config::ConfigFile;
 use crate::datastore::Command;
 use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
+use crate::error::GoatNsError;
 use crate::reply::{reply_any, reply_builder, reply_nxdomain, Reply};
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::zones::ZoneRecord;
 use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
 lazy_static! {
+    #[allow(clippy::expect_used)]
     static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").expect("Failed to parse localhost IP address");
     // static ref VERSION_STRINGS: Vec<String> =
         // vec![String::from("version"), String::from("version.bind"),];
 }
 
+pub(crate) enum ChaosResult {
+    Refused(Reply),
+    Shutdown(Reply),
+}
+
 /// this handles a shutdown CHAOS request
-async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<Reply, Option<Reply>> {
+async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<ChaosResult, GoatNsError> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
     if let Some(q) = &r.question {
         if q.qclass == RecordClass::Chaos {
-            let qname = from_utf8(&q.qname)
-                .map_err(|e| {
-                    log::error!(
-                        "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
-                        q.qname
-                    );
-                })
-                .unwrap();
+            let qname = from_utf8(&q.qname).inspect_err(|e| {
+                log::error!(
+                    "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
+                    q.qname
+                );
+            })?;
             // Just don't do this on UDP, because we can't really tell who it's coming from.
             if qname == "shutdown" {
                 // when we get a request, we update the response to say if we're going to do it or not
@@ -46,7 +51,7 @@ async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<Reply, 
                         log::info!("Got CHAOS shutdown, shutting down");
                         let mut chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_OK.clone());
-                        return Ok(chaos_reply);
+                        return Ok(ChaosResult::Shutdown(chaos_reply));
                     }
                     false => {
                         // get lost!  🤣
@@ -54,13 +59,17 @@ async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<Reply, 
                         let mut chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_NO.clone());
                         chaos_reply.header.rcode = Rcode::Refused;
-                        return Err(Some(chaos_reply));
+                        return Ok(ChaosResult::Refused(chaos_reply));
                     }
                 };
             }
         }
     };
-    Err(None)
+
+    let mut chaos_reply = r.clone();
+    chaos_reply.answers.push(CHAOS_NO.clone());
+    chaos_reply.header.rcode = Rcode::Refused;
+    return Ok(ChaosResult::Refused(chaos_reply));
 }
 
 /// this handles a version CHAOS request
@@ -203,8 +212,10 @@ pub async fn tcp_conn_handler(
             log::debug!("Read {:?} bytes from TCP stream", len);
         }
     }
-
-    crate::utils::hexdump(buf.clone());
+    // TODO: why are we hexdumping this?
+    if let Err(err) = crate::utils::hexdump(&buf) {
+        log::error!("Failed to hexdump buffer: {:?}", err);
+    };
     // the first two bytes of a tcp query is the message length
     // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
 
@@ -247,21 +258,24 @@ pub async fn tcp_conn_handler(
             // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
             let r = match check_for_shutdown(&r, allowed_shutdown).await {
                 // no change here
-                Err(reply) => match reply {
-                    None => r,
-                    Some(response) => response,
-                },
-                Ok(reply) => {
-                    if let Err(error) = agent_tx.send(AgentState::Stopped {
-                        agent: Agent::TCPServer,
-                    }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-                    };
-                    if let Err(error) = datastore_sender.send(Command::Shutdown).await {
-                        eprintln!("Failed to send shutdown command to datastore.. {error:?}");
-                    };
-                    reply
+                Err(err) => {
+                    log::error!("Failed to check for shutdown: {:?}", err);
+                    return Ok(());
                 }
+                Ok(reply) => match reply {
+                    ChaosResult::Refused(response) => response,
+                    ChaosResult::Shutdown(response) => {
+                        if let Err(error) = agent_tx.send(AgentState::Stopped {
+                            agent: Agent::TCPServer,
+                        }) {
+                            eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                        };
+                        if let Err(error) = datastore_sender.send(Command::Shutdown).await {
+                            eprintln!("Failed to send shutdown command to datastore.. {error:?}");
+                        };
+                        response
+                    }
+                },
             };
 
             let reply_bytes: Vec<u8> = match r.as_bytes().await {
@@ -339,7 +353,10 @@ pub async fn tcp_server(
     loop {
         let (mut stream, addr) = match tcpserver.accept().await {
             Ok(value) => value,
-            Err(error) => panic!("Couldn't get data from TcpStream: {:?}", error),
+            Err(err) => {
+                error!("Couldn't get data from TcpStream: {:?}", err);
+                continue;
+            }
         };
 
         let allowed_shutdown = shutdown_ip_address_list.contains(&addr.ip());
@@ -498,7 +515,7 @@ async fn get_result(
 
     if let RecordType::ANY {} = question.qtype {
         // TODO this should check to see if we have a zone record, but that requires walking down the qname record recursively, which is its own thing. We just YOLO a HINFO back for any request now.
-        return reply_any(header.id, question);
+        return reply_any(header.id, &question);
     };
 
     // build the request to the datastore to make the query

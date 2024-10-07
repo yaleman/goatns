@@ -265,7 +265,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn api_zone_create_update() -> Result<(), sqlx::Error> {
+async fn api_zone_create_update() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
 
@@ -431,7 +431,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn api_record_delete() -> Result<(), sqlx::Error> {
+async fn api_record_delete() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
     let api_port = config.read().api_port;

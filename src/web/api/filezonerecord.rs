@@ -41,7 +41,12 @@ impl APIEntity for FileZoneRecord {
             }
         };
 
-        let mut txn = state.connpool().await.begin().await.unwrap();
+        let mut txn = state.connpool().await.begin().await.map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?;
         debug!("looking for ZO for user: {} zoneid: {}", user_id, zone_id);
         if let Err(err) = ZoneOwnership::get_ownership_by_userid(&mut txn, &user_id, &zone_id).await
         {
@@ -83,7 +88,12 @@ impl APIEntity for FileZoneRecord {
                 return error_result_json!("Failed to parse object", StatusCode::BAD_REQUEST);
             }
         };
-        let mut txn = state.connpool().await.begin().await.unwrap();
+        let mut txn = state.connpool().await.begin().await.map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?;
 
         let res = match record.update_with_txn(&mut txn).await {
             Ok(val) => val,
@@ -116,7 +126,15 @@ impl APIEntity for FileZoneRecord {
             return error_result_json!("", StatusCode::UNAUTHORIZED);
         };
 
-        Ok(Json(serde_json::to_string(&res).unwrap()))
+        let res = match serde_json::to_string(&res) {
+            Ok(val) => val,
+            Err(err) => {
+                eprintln!("Failed to parse object: {err:?}");
+                return error_result_json!("Failed to parse object", StatusCode::BAD_REQUEST);
+            }
+        };
+
+        Ok(Json(res))
     }
     async fn api_get(
         State(state): State<GoatState>,
@@ -146,7 +164,12 @@ impl APIEntity for FileZoneRecord {
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();
 
-        let mut txn = state.connpool().await.begin().await.unwrap();
+        let mut txn = state.connpool().await.begin().await.map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?;
 
         let record = match FileZoneRecord::get_with_txn(&mut txn, &id).await {
             Ok(val) => val,

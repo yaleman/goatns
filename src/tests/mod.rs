@@ -35,7 +35,7 @@ fn test_ip_in_ipnet() {
 
 #[test]
 fn test_resourcerecord_name_to_bytes() {
-    let rdata: Vec<u8> = "cheese.world".as_bytes().to_vec();
+    let rdata = "cheese.world".as_bytes();
     assert_eq!(
         name_as_bytes(rdata, None, None).expect("Failed to parse name"),
         [6, 99, 104, 101, 101, 115, 101, 5, 119, 111, 114, 108, 100, 0]
@@ -43,7 +43,7 @@ fn test_resourcerecord_name_to_bytes() {
 }
 #[test]
 fn test_resourcerecord_short_name_to_bytes() {
-    let rdata = "cheese".as_bytes().to_vec();
+    let rdata = "cheese".as_bytes();
     assert_eq!(
         name_as_bytes(rdata, None, None).expect("Failed to parse name"),
         [6, 99, 104, 101, 101, 115, 101, 0]
@@ -51,7 +51,7 @@ fn test_resourcerecord_short_name_to_bytes() {
 }
 #[test]
 fn test_name_as_bytes() {
-    let rdata = "cheese.hello.world".as_bytes().to_vec();
+    let rdata = "cheese.hello.world".as_bytes();
     let compress_ref = "zing.hello.world".as_bytes().to_vec();
     assert_eq!(
         name_as_bytes(rdata, Some(12u16), Some(&compress_ref)).expect("Failed to parse"),

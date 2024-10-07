@@ -177,8 +177,7 @@ impl TryFrom<&ResourceRecord> for Vec<u8> {
 
         trace!("{:?}", record);
 
-        let record_name_bytes =
-            name_as_bytes(record.name.to_vec(), Some(HEADER_BYTES as u16), None)?;
+        let record_name_bytes = name_as_bytes(&record.name, Some(HEADER_BYTES as u16), None)?;
         retval.extend(record_name_bytes);
         // type
         retval.extend((record.record_type as u16).to_be_bytes());
@@ -348,7 +347,7 @@ impl Question {
     fn try_to_bytes(&self) -> Result<Vec<u8>, GoatNsError> {
         let mut retval: Vec<u8> = vec![];
 
-        let name_bytes = name_as_bytes(self.qname.clone(), None, None)?;
+        let name_bytes = name_as_bytes(&self.qname, None, None)?;
         retval.extend(name_bytes);
         retval.extend((self.qtype as u16).to_be_bytes());
         retval.extend((self.qclass as u16).to_be_bytes());

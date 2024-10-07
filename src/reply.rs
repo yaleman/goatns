@@ -128,7 +128,7 @@ pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
 }
 
 /// Reply to an ANY request with a HINFO "RFC8482" "" response
-pub fn reply_any(id: u16, question: Question) -> Result<Reply, String> {
+pub fn reply_any(id: u16, question: &Question) -> Result<Reply, String> {
     Ok(Reply {
         header: Header {
             id,

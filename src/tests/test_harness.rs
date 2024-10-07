@@ -2,6 +2,7 @@ use sqlx::{Pool, Sqlite};
 
 use crate::datastore::handle_import_file;
 use crate::db::{DBEntity, User};
+use crate::error::GoatNsError;
 
 pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), String> {
     println!("#####################################################################");
@@ -20,7 +21,7 @@ pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), String> {
     Ok(())
 }
 
-pub async fn create_test_user(pool: &Pool<Sqlite>) -> Result<Box<User>, sqlx::Error> {
+pub async fn create_test_user(pool: &Pool<Sqlite>) -> Result<Box<User>, GoatNsError> {
     println!("Creating User");
     Ok(User {
         id: None,

@@ -149,7 +149,7 @@ fn get_response_type_from_headers(headers: &HeaderMap) -> ResponseType {
     }
 }
 
-fn response_406() -> Response {
+pub(crate) fn response_406() -> Response {
     (
         StatusCode::NOT_ACCEPTABLE,
         [(axum::http::header::CACHE_CONTROL, "max-age=3600")],
@@ -157,7 +157,7 @@ fn response_406() -> Response {
     )
         .into_response()
 }
-fn response_500() -> Response {
+pub(crate) fn response_500() -> Response {
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         [(axum::http::header::CACHE_CONTROL, "max-age=1")],

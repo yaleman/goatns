@@ -28,7 +28,7 @@ impl DomainName {
         compress_reference: Option<&Vec<u8>>,
     ) -> Result<Vec<u8>, GoatNsError> {
         name_as_bytes(
-            self.name.to_owned().into_bytes(),
+            &self.name.to_owned().into_bytes(),
             compress_target,
             compress_reference,
         )
@@ -66,7 +66,7 @@ impl TryFrom<&Vec<u8>> for DomainName {
 impl TryFrom<&DomainName> for Vec<u8> {
     type Error = GoatNsError;
     fn try_from(dn: &DomainName) -> Result<Self, Self::Error> {
-        name_as_bytes(dn.name.as_bytes().to_vec(), None, None)
+        name_as_bytes(&dn.name.as_bytes(), None, None)
     }
 }
 
@@ -643,11 +643,14 @@ impl InternalResourceRecord {
     }
 
     pub fn hexdump(self) {
-        hexdump(
-            self.as_bytes(&vec![])
+        if let Err(err) = hexdump(
+            &self
+                .as_bytes(&vec![])
                 .inspect_err(|err| error!("Failed to convert to bytes: {:?}", err))
                 .unwrap_or_default(),
-        );
+        ) {
+            error!("Failed to decode bytes: {:?}", err);
+        };
     }
 
     pub fn ttl(&self) -> &u32 {
