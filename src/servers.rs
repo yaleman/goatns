@@ -592,8 +592,11 @@ impl Servers {
             ..Default::default()
         }
     }
-    pub fn with_apiserver(self, apiserver: Option<JoinHandle<Result<(), Error>>>) -> Self {
-        Self { apiserver, ..self }
+    pub fn with_apiserver(self, apiserver: JoinHandle<Result<(), Error>>) -> Self {
+        Self {
+            apiserver: Some(apiserver),
+            ..self
+        }
     }
     pub fn with_datastore(self, datastore: JoinHandle<Result<(), String>>) -> Self {
         Self {

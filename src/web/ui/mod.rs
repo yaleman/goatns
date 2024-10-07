@@ -1,16 +1,18 @@
+use std::collections::HashMap;
+
 use crate::datastore::Command;
 use crate::db::User;
-use crate::web::utils::{redirect_to_dashboard, redirect_to_login, redirect_to_zones_list};
+use crate::web::utils::Urls;
 use crate::zones::FileZone;
 use askama::Template;
-use axum::debug_handler;
 use axum::extract::{OriginalUri, Path, Query, State};
-use axum::http::{Response, Uri};
+use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
 use axum::Router;
 use serde::Deserialize;
 use tower_sessions::Session;
+use tracing::error;
 
 use super::GoatState;
 
@@ -21,7 +23,7 @@ mod zones;
 
 #[derive(Template)]
 #[template(path = "view_zones.html")]
-struct TemplateViewZones {
+pub(crate) struct TemplateViewZones {
     zones: Vec<FileZone>,
     pub user_is_admin: bool,
     message: Option<String>,
@@ -30,40 +32,30 @@ struct TemplateViewZones {
 
 #[derive(Template)]
 #[template(path = "view_zone.html")]
-struct TemplateViewZone {
+pub(crate) struct TemplateViewZone {
     zone: FileZone,
     pub user_is_admin: bool,
 }
 
 #[derive(Deserialize)]
-pub struct ViewZonesQueryString {
+pub(crate) struct ViewZonesQueryString {
     message: Option<String>,
     error: Option<String>,
 }
 
-// #[debug_handler]
-pub async fn zones_list(
+pub(crate) async fn zones_list(
     State(state): State<GoatState>,
     mut session: Session,
     OriginalUri(path): OriginalUri,
     Query(query): Query<ViewZonesQueryString>,
-) -> impl IntoResponse {
-    // if let Err(e) = check_logged_in(&state, &mut session, path).await {
-    //     return e.into_response();
-    // }
-    check_logged_in!(state, session, path);
+) -> Result<TemplateViewZones, impl IntoResponse> {
+    let user = check_logged_in(&mut session, path)
+        .await
+        .map_err(|err| err.into_response())?;
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
 
     let offset = 0;
     let limit = 20;
-
-    let user: User = match session.get("user").await.unwrap() {
-        Some(val) => {
-            log::info!("current user: {val:?}");
-            val
-        }
-        None => return redirect_to_login().into_response(),
-    };
 
     log::trace!("Sending request for zones");
     if let Err(err) = state
@@ -80,36 +72,35 @@ pub async fn zones_list(
     {
         eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
         log::error!("failed to send GetZoneNames command to datastore: {err:?}");
-        return redirect_to_dashboard().into_response();
+        return Err(Urls::Dashboard.redirect().into_response());
     };
 
-    let zones = os_rx.await.expect("Failed to get response: {res:?}");
+    let zones = os_rx.await.map_err(|err| {
+        error!("Failed to get zones for user={:?} error={:?}", user.id, err);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error getting zones: {err:?}"),
+        )
+            .into_response()
+    })?;
 
-    log::debug!("about to return zone list... found {} zones", zones.len());
-    let context = TemplateViewZones {
+    Ok(TemplateViewZones {
         zones,
         user_is_admin: user.admin,
         message: query.message,
         error: query.error,
-    };
-    Response::builder()
-        .status(200)
-        .body(context.render().unwrap())
-        .unwrap()
-        .into_response()
+    })
 }
 
-#[debug_handler]
-pub async fn zone_view(
+pub(crate) async fn zone_view(
     OriginalUri(path): OriginalUri,
     Path(name_or_id): Path<i64>,
     State(state): State<GoatState>,
     mut session: Session,
-) -> impl IntoResponse {
-    let user = match check_logged_in(&mut session, path).await {
-        Ok(val) => val,
-        Err(err) => return err.into_response(),
-    };
+) -> Result<TemplateViewZone, impl IntoResponse> {
+    let user = check_logged_in(&mut session, path)
+        .await
+        .map_err(|err| err.into_response())?;
 
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let cmd = Command::GetZone {
@@ -121,55 +112,66 @@ pub async fn zone_view(
     if let Err(err) = state.read().await.tx.send(cmd).await {
         eprintln!("failed to send GetZone command to datastore: {err:?}");
         log::error!("failed to send GetZone command to datastore: {err:?}");
-        return redirect_to_zones_list().into_response();
+        return Err(Urls::ZonesList.redirect().into_response());
     };
 
     let zone = match os_rx.await {
         Ok(zone) => match zone {
             Some(value) => value,
             None => {
-                return (
+                return Err((
                     axum::http::StatusCode::NOT_FOUND,
                     format!("Zone '{}' not found", name_or_id),
                 )
-                    .into_response()
+                    .into_response())
             }
         },
         Err(err) => {
             log::error!("failed to get response from datastore: {err:?}");
-            return redirect_to_zones_list().into_response();
+            return Err(Urls::ZonesList.redirect().into_response());
         }
     };
 
     log::trace!("Returning zone: {zone:?}");
-    let context = TemplateViewZone {
+    Ok(TemplateViewZone {
         zone,
         user_is_admin: user.admin,
-    };
-    Response::new(context.render().unwrap()).into_response()
+    })
 }
 
 pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, Redirect> {
-    let authref = session.get::<String>("authref").await.unwrap();
+    let authref: Option<String> = session
+        .get("authref")
+        .await
+        .map_err(|_e| Urls::Login.redirect())?;
 
-    let redirect_path = Some(path.path_and_query().unwrap().to_string());
+    let redirect_path = Some(
+        path.path_and_query()
+            .map(|v| v.to_string())
+            .unwrap_or("/".to_string()),
+    );
     if authref.is_none() {
         session.clear().await;
 
         session
             .insert("redirect", redirect_path)
             .await
-            .map_err(|e| log::debug!("Couldn't store redirect for user: {e:?}"))
-            .unwrap();
+            .map_err(|e| {
+                log::debug!("Couldn't store redirect for user: {e:?}");
+                Urls::Home.redirect_with_query(HashMap::from([(
+                    "error",
+                    "An error storing your session occurred!",
+                )]))
+            })?;
         log::warn!("Not-logged-in-user tried to log in, how rude!");
         // TODO: this should redirect to the current page
-        return Err(redirect_to_login());
+        return Err(Urls::Login.redirect());
     }
     log::debug!("session ok!");
 
-    let user = match session.get("user").await.unwrap() {
+    let user = match session.get("user").await.unwrap_or(None) {
         Some(val) => val,
-        None => return Err(redirect_to_login()),
+        None => return Err(Urls::Login.redirect()),
     };
 
     // TODO: check the database to make sure they're actually legit and not disabled and blah
@@ -178,27 +180,20 @@ pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, R
 
 #[derive(Template)]
 #[template(path = "dashboard.html")]
-struct DashboardTemplate /*<'a>*/ {
+pub(crate) struct DashboardTemplate /*<'a>*/ {
     // name: &'a str,
     pub user_is_admin: bool,
 }
 
-// #[debug_handler]
-pub async fn dashboard(mut session: Session, OriginalUri(path): OriginalUri) -> impl IntoResponse {
-    let user = match check_logged_in(&mut session, path).await {
-        Ok(val) => val,
-        Err(err) => return err.into_response(),
-    };
+pub(crate) async fn dashboard(
+    mut session: Session,
+    OriginalUri(path): OriginalUri,
+) -> Result<DashboardTemplate, Redirect> {
+    let user = check_logged_in(&mut session, path).await?;
 
-    let context = DashboardTemplate {
+    Ok(DashboardTemplate {
         user_is_admin: user.admin,
-    };
-    // Html::from()).into_response()
-    Response::builder()
-        .status(200)
-        .body(context.render().unwrap())
-        .unwrap()
-        .into_response()
+    })
 }
 
 pub fn new() -> Router<GoatState> {

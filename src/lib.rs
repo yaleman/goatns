@@ -1,10 +1,20 @@
 //! Goats are cool, but they make for poor DNS record stores. So here's an authoritative DNS server INSPIRED by goats.
 
-// #![warn(clippy::complexity)]
-// #![warn(clippy::cargo)]
-#![warn(clippy::perf)]
-#![deny(unsafe_code)]
 #![allow(clippy::multiple_crate_versions)]
+#![deny(clippy::all)]
+#![deny(clippy::await_holding_lock)]
+#![deny(clippy::complexity)]
+#![deny(clippy::correctness)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::needless_pass_by_value)]
+#![deny(clippy::panic)]
+#![deny(clippy::perf)]
+#![deny(clippy::trivially_copy_pass_by_ref)]
+#![deny(clippy::unreachable)]
+#![deny(clippy::unwrap_used)]
+#![deny(warnings)]
+#![forbid(unsafe_code)]
+// #![warn(missing_docs)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -15,6 +25,7 @@ extern crate lazy_static;
 
 use crate::enums::*;
 use crate::utils::*;
+use error::GoatNsError;
 use log::trace;
 use packed_struct::prelude::*;
 use std::fmt::{Debug, Display};
@@ -27,6 +38,8 @@ pub mod config;
 pub mod datastore;
 pub mod db;
 pub mod enums;
+pub mod error;
+pub(crate) mod logging;
 pub mod packet_dumper;
 pub mod reply;
 pub mod resourcerecord;
@@ -150,20 +163,22 @@ pub struct ResourceRecord {
 }
 impl ResourceRecord {}
 
-impl From<ResourceRecord> for Vec<u8> {
-    fn from(record: ResourceRecord) -> Self {
-        Vec::<u8>::from(&record)
+impl TryFrom<ResourceRecord> for Vec<u8> {
+    type Error = GoatNsError;
+    fn try_from(record: ResourceRecord) -> Result<Self, Self::Error> {
+        Vec::<u8>::try_from(&record)
     }
 }
 
-impl From<&ResourceRecord> for Vec<u8> {
-    fn from(record: &ResourceRecord) -> Self {
+impl TryFrom<&ResourceRecord> for Vec<u8> {
+    type Error = GoatNsError;
+    fn try_from(record: &ResourceRecord) -> Result<Self, Self::Error> {
         let mut retval: Vec<u8> = vec![];
 
         trace!("{:?}", record);
 
         let record_name_bytes =
-            name_as_bytes(record.name.to_vec(), Some(HEADER_BYTES as u16), None);
+            name_as_bytes(record.name.to_vec(), Some(HEADER_BYTES as u16), None)?;
         retval.extend(record_name_bytes);
         // type
         retval.extend((record.record_type as u16).to_be_bytes());
@@ -179,7 +194,7 @@ impl From<&ResourceRecord> for Vec<u8> {
         // rdata
         retval.extend(record.rdata.clone());
 
-        retval
+        Ok(retval)
     }
 }
 
@@ -330,13 +345,20 @@ impl Question {
     }
 
     /// turn a question into a vec of bytes to send back to the user
-    fn to_bytes(&self) -> Vec<u8> {
+    fn try_to_bytes(&self) -> Result<Vec<u8>, GoatNsError> {
         let mut retval: Vec<u8> = vec![];
 
-        let name_bytes = name_as_bytes(self.qname.clone(), None, None);
+        let name_bytes = name_as_bytes(self.qname.clone(), None, None)?;
         retval.extend(name_bytes);
         retval.extend((self.qtype as u16).to_be_bytes());
         retval.extend((self.qclass as u16).to_be_bytes());
-        retval
+        Ok(retval)
+    }
+}
+
+impl TryFrom<Question> for Vec<u8> {
+    type Error = GoatNsError;
+    fn try_from(question: Question) -> Result<Self, Self::Error> {
+        question.try_to_bytes()
     }
 }

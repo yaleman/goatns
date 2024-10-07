@@ -37,7 +37,7 @@ fn test_ip_in_ipnet() {
 fn test_resourcerecord_name_to_bytes() {
     let rdata: Vec<u8> = "cheese.world".as_bytes().to_vec();
     assert_eq!(
-        name_as_bytes(rdata, None, None),
+        name_as_bytes(rdata, None, None).expect("Failed to parse name"),
         [6, 99, 104, 101, 101, 115, 101, 5, 119, 111, 114, 108, 100, 0]
     );
 }
@@ -45,7 +45,7 @@ fn test_resourcerecord_name_to_bytes() {
 fn test_resourcerecord_short_name_to_bytes() {
     let rdata = "cheese".as_bytes().to_vec();
     assert_eq!(
-        name_as_bytes(rdata, None, None),
+        name_as_bytes(rdata, None, None).expect("Failed to parse name"),
         [6, 99, 104, 101, 101, 115, 101, 0]
     );
 }
@@ -54,7 +54,7 @@ fn test_name_as_bytes() {
     let rdata = "cheese.hello.world".as_bytes().to_vec();
     let compress_ref = "zing.hello.world".as_bytes().to_vec();
     assert_eq!(
-        name_as_bytes(rdata, Some(12u16), Some(&compress_ref)),
+        name_as_bytes(rdata, Some(12u16), Some(&compress_ref)).expect("Failed to parse"),
         [6, 99, 104, 101, 101, 115, 101, 192, 17]
     );
 }
@@ -88,7 +88,10 @@ async fn test_build_iana_org_a_reply() {
         qtype: crate::RecordType::A,
         qclass: crate::RecordClass::Internet,
     };
-    let question_length = question.to_bytes().len();
+    let question_length = question
+        .try_to_bytes()
+        .expect("Failed to convert question to bytes")
+        .len();
     debug!("question byte length: {}", question_length);
     let address = std::net::Ipv4Addr::from_str("192.0.43.8").unwrap();
     let answers = vec![InternalResourceRecord::A {
@@ -103,7 +106,10 @@ async fn test_build_iana_org_a_reply() {
         authorities: vec![],
         additional: vec![],
     };
-    let reply_bytes: Vec<u8> = reply.as_bytes().await.unwrap();
+    let reply_bytes: Vec<u8> = reply
+        .as_bytes()
+        .await
+        .expect("Failed to convert reply to bytes");
     debug!("{:?}", reply_bytes);
     let expected_bytes = [
         /* header - 12 bytes */
@@ -123,20 +129,16 @@ async fn test_build_iana_org_a_reply() {
         } else {
             current_block = "Answer   ";
         }
-        match expected_bytes.get(index) {
-            Some(expected_byte) => debug!(
-                "{} \t {} us: {} ex: {} {}",
-                current_block,
-                index,
-                byte,
-                expected_byte,
-                (byte == expected_byte)
-            ),
-            None => {
-                panic!("Our reply is longer!");
-                // break;
-            }
-        }
+
+        let expected_byte = expected_bytes.get(index).expect("Our reply is longer!");
+        debug!(
+            "{} \t {} us: {} ex: {} {}",
+            current_block,
+            index,
+            byte,
+            expected_byte,
+            (byte == expected_byte)
+        );
         assert_eq!(byte, &expected_bytes[index]);
     }
     assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
@@ -206,7 +208,10 @@ async fn test_cloudflare_soa_reply() {
         qtype: crate::RecordType::SOA,
         qclass: crate::RecordClass::Internet,
     };
-    let question_length = question.to_bytes().len();
+    let question_length = question
+        .try_to_bytes()
+        .expect("Failed to convert question to bytes")
+        .len();
     debug!("question byte length: {}", question_length);
 
     // YOLO the  string conversions because it's a test
@@ -313,7 +318,10 @@ async fn build_ackcdn_allzeros() {
         qtype: crate::RecordType::A,
         qclass: crate::RecordClass::Internet,
     };
-    let question_length = question.to_bytes().len();
+    let question_length = question
+        .try_to_bytes()
+        .expect("Failed to convert question to bytes")
+        .len();
     debug!("question byte length: {}", question_length);
 
     // let rdata = IpAddr::try_from("0.0.0.0");
@@ -569,7 +577,6 @@ fn test_all_record_type_conversions() {
             assert_eq!(record_type, RecordType::from(&12345u16));
         }
     }
-    // panic!();
 }
 #[test]
 fn test_all_record_class_conversions() {
@@ -592,7 +599,6 @@ fn test_all_record_class_conversions() {
             assert_eq!(record_class, RecordClass::from(&12345u16));
         }
     }
-    // panic!();
 }
 
 #[test]
@@ -640,9 +646,7 @@ async fn test_question_from_bytes() {
     ];
 
     for buf in input_bufs {
-        if Question::from_packets(&buf).is_ok() {
-            panic!("This should bail!");
-        }
+        assert!(Question::from_packets(&buf).is_err());
     }
 }
 

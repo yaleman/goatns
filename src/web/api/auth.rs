@@ -123,7 +123,7 @@ pub async fn login(
             log::error!(
         "action=api_login username={} userid={} tokenkey=\"{:?}\" result=failure reason=\"failed to match token: {err:?}\"",
         token.user.username,
-        token.user.id.unwrap(),
+        token.user.id.map(|id| id.to_string()).unwrap_or("<unknown user id>".to_string()),
         payload.tokenkey,
         );
             Err((

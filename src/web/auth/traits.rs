@@ -1,7 +1,7 @@
 use axum::response::Redirect;
 use openidconnect::EndUserUsername;
 
-use crate::web::utils::redirect_to_home;
+use crate::web::utils::Urls;
 
 use super::CustomClaimType;
 
@@ -20,7 +20,7 @@ impl CustomClaimTypeThings for CustomClaimType {
             email = user_email.to_string();
         } else {
             log::error!("Couldn't extract email address from claim: {self:?}");
-            return Err(redirect_to_home());
+            return Err(Urls::Home.redirect());
         }
         Ok(email)
     }

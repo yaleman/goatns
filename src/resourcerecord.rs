@@ -1,4 +1,5 @@
 use crate::enums::{RecordClass, RecordType};
+use crate::error::GoatNsError;
 use crate::utils::{dms_to_u32, hexdump, name_as_bytes};
 use crate::zones::FileZoneRecord;
 use crate::HEADER_BYTES;
@@ -25,7 +26,7 @@ impl DomainName {
         &self,
         compress_target: Option<u16>,
         compress_reference: Option<&Vec<u8>>,
-    ) -> Vec<u8> {
+    ) -> Result<Vec<u8>, GoatNsError> {
         name_as_bytes(
             self.name.to_owned().into_bytes(),
             compress_target,
@@ -62,8 +63,9 @@ impl TryFrom<&Vec<u8>> for DomainName {
 }
 
 /// Turn this into the domain-name value
-impl From<&DomainName> for Vec<u8> {
-    fn from(dn: &DomainName) -> Self {
+impl TryFrom<&DomainName> for Vec<u8> {
+    type Error = GoatNsError;
+    fn try_from(dn: &DomainName) -> Result<Self, Self::Error> {
         name_as_bytes(dn.name.as_bytes().to_vec(), None, None)
     }
 }
@@ -508,10 +510,13 @@ impl PartialEq<RecordType> for InternalResourceRecord {
 }
 
 impl InternalResourceRecord {
-    pub fn as_bytes(self: &InternalResourceRecord, question: &Vec<u8>) -> Vec<u8> {
+    pub fn as_bytes(
+        self: &InternalResourceRecord,
+        question: &Vec<u8>,
+    ) -> Result<Vec<u8>, GoatNsError> {
         match self {
-            InternalResourceRecord::A { address, .. } => address.to_be_bytes().to_vec(),
-            InternalResourceRecord::AAAA { address, .. } => address.to_be_bytes().to_vec(),
+            InternalResourceRecord::A { address, .. } => Ok(address.to_be_bytes().to_vec()),
+            InternalResourceRecord::AAAA { address, .. } => Ok(address.to_be_bytes().to_vec()),
 
             InternalResourceRecord::CNAME { cname, .. } => {
                 log::trace!("turning CNAME {cname:?} into bytes");
@@ -529,7 +534,7 @@ impl InternalResourceRecord {
                 ..
             } => {
                 log::error!("LOC {:?} - TTL={ttl}", from_utf8(question));
-                let record = LocRecord {
+                Ok(LocRecord {
                     version: *version,
                     size: *size,
                     horiz_pre: *horiz_pre,
@@ -538,14 +543,7 @@ impl InternalResourceRecord {
                     longitude: *longitude,
                     altitude: *altitude,
                 }
-                .pack_to_vec();
-                match record {
-                    Ok(value) => value,
-                    Err(error) => {
-                        log::error!("Failed to pack this: {self:?} {error:?}");
-                        vec![]
-                    }
-                }
+                .pack_to_vec()?)
             }
             InternalResourceRecord::NS { nsdname, .. } => {
                 nsdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
@@ -566,16 +564,16 @@ impl InternalResourceRecord {
             } => {
                 let zone_as_bytes = zone.name.as_bytes().to_vec();
                 let mut res: Vec<u8> =
-                    mname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes));
-                res.extend(rname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes)));
+                    mname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?;
+                res.extend(rname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?);
                 res.extend(serial.to_be_bytes());
                 res.extend(refresh.to_be_bytes());
                 res.extend(retry.to_be_bytes());
                 res.extend(expire.to_be_bytes());
                 res.extend(minimum.to_be_bytes());
-                res
+                Ok(res)
             }
-            InternalResourceRecord::TXT { txtdata, .. } => txtdata.as_bytes(),
+            InternalResourceRecord::TXT { txtdata, .. } => Ok(txtdata.as_bytes()),
             InternalResourceRecord::URI {
                 priority,
                 weight,
@@ -586,7 +584,7 @@ impl InternalResourceRecord {
                 res.extend(priority.to_be_bytes());
                 res.extend(weight.to_be_bytes());
                 res.extend(&target.data);
-                res
+                Ok(res)
             }
             InternalResourceRecord::HINFO { cpu, os, .. } => {
                 let mut hinfo_bytes: Vec<u8> = vec![];
@@ -609,7 +607,7 @@ impl InternalResourceRecord {
                         hinfo_bytes.extend(consts::OS.as_bytes());
                     }
                 };
-                hinfo_bytes
+                Ok(hinfo_bytes)
             }
             // InternalResourceRecord::MINFO { ttl, .. } => ttl(),
             InternalResourceRecord::MX {
@@ -618,12 +616,13 @@ impl InternalResourceRecord {
                 ..
             } => {
                 let mut mx_bytes: Vec<u8> = preference.to_be_bytes().into();
-                mx_bytes.extend(exchange.as_bytes(Some(HEADER_BYTES as u16), Some(question)));
-                mx_bytes
+                mx_bytes.extend(exchange.as_bytes(Some(HEADER_BYTES as u16), Some(question))?);
+                Ok(mx_bytes)
             }
             InternalResourceRecord::AXFR { .. } => unimplemented!(), // TODO: handle axfr records
             InternalResourceRecord::InvalidType => {
-                panic!("Somehow people are requesting InvalidType records as bytes!")
+                error!("Somehow people are requesting InvalidType records as bytes!");
+                Ok(vec![])
             }
             InternalResourceRecord::CAA {
                 flag, tag, value, ..
@@ -634,17 +633,21 @@ impl InternalResourceRecord {
                 // add the value
                 result.extend(value);
 
-                result
+                Ok(result)
             }
             InternalResourceRecord::NAPTR { .. } => {
                 error!("Asked for an NAPTR as_bytes, returning null");
-                Vec::new()
+                Ok(Vec::new())
             }
         }
     }
 
     pub fn hexdump(self) {
-        hexdump(self.as_bytes(&vec![]));
+        hexdump(
+            self.as_bytes(&vec![])
+                .inspect_err(|err| error!("Failed to convert to bytes: {:?}", err))
+                .unwrap_or_default(),
+        );
     }
 
     pub fn ttl(&self) -> &u32 {
@@ -882,7 +885,7 @@ mod tests {
         debug!("fzr->rr = {rr:?}");
         assert_eq!(rr, RecordType::AAAA);
         assert_eq!(
-            rr.as_bytes(&vec![]),
+            rr.as_bytes(&vec![]).expect("failed to convert to bytes"),
             [18, 52, 86, 120, 202, 254, 190, 239, 202, 117, 0, 0, 4, 185, 233, 77].to_vec()
         );
     }
@@ -909,6 +912,7 @@ mod tests {
 
 lazy_static! {
     // Thanks to the folks from #regex on Liberachat
+    #[allow(clippy::expect_used)]
     static ref LOC_REGEX: Regex = Regex::new(
         r"^(?P<d1>\d+)(?:[ ](?P<m1>\d+)(?:[ ](?P<s1>\d+(?:[.]\d+)?))?)?[ ](?P<lat_dir>[NS])[ ](?P<d2>\d+)(?:[ ](?P<m2>\d+)(?:[ ](?P<s2>\d+(?:[.]\d+)?))?)?[ ](?P<lon_dir>[EW])[ ](?P<alt>-?\d+(?:[.]\d+)?)m(?:[ ](?P<size>\d+(?:[.]\d+)?)m(?:[ ](?P<hp>\d+(?:[.]\d+)?)m(?:[ ](?P<vp>\d+(?:[.]\d+)?)m)?)?)?",
     ).expect("Faled to parse LOC regex!");

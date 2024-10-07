@@ -1,0 +1,57 @@
+use packed_struct::PackingError;
+
+/// When things go awry
+#[derive(Debug)]
+pub enum GoatNsError {
+    Csrf(String),
+    BytePackingError(String),
+    InvalidName,
+    IoError(std::io::Error),
+    /// Something failed in the start up of the platform
+    StartupError(String),
+    SqlxError(sqlx::Error),
+    ReqwestError(reqwest::Error),
+    FileError(String),
+    EmptyFile,
+    /// Failed to send something across a tokio channel
+    SendError(String),
+}
+
+impl From<std::io::Error> for GoatNsError {
+    fn from(error: std::io::Error) -> Self {
+        GoatNsError::IoError(error)
+    }
+}
+
+impl From<sqlx::Error> for GoatNsError {
+    fn from(error: sqlx::Error) -> Self {
+        GoatNsError::SqlxError(error)
+    }
+}
+
+impl From<reqwest::Error> for GoatNsError {
+    fn from(error: reqwest::Error) -> Self {
+        GoatNsError::ReqwestError(error)
+    }
+}
+
+impl From<PackingError> for GoatNsError {
+    fn from(error: PackingError) -> Self {
+        GoatNsError::BytePackingError(error.to_string())
+    }
+}
+
+impl From<GoatNsError> for std::io::Error {
+    fn from(error: GoatNsError) -> Self {
+        match error {
+            GoatNsError::IoError(err) => err,
+            GoatNsError::StartupError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
+            GoatNsError::SqlxError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
+            GoatNsError::ReqwestError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
+            GoatNsError::FileError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
+            GoatNsError::EmptyFile => std::io::Error::new(std::io::ErrorKind::Other, "Empty file"),
+            GoatNsError::SendError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
+            _ => std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", error)),
+        }
+    }
+}

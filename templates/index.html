@@ -6,9 +6,31 @@
     <div class="container">
       <div class="px-4 py-5 my-5 text-center">
         <h1 class="display-5 fw-bold">Welcome to GoatNS!</h1>
-        <div class="col-lg-6 mx-auto">
-          <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <a href="/auth/login"><button type="button" class="btn btn-primary btn-lg px-4 gap-3" >Log In</button></a>
+        {% if let Some(error) = error %}
+        <div class="row">
+          <div class="col-lg-6 mx-auto">
+            <div class="alert alert-danger">
+              <h1> An error occurred!</h1>
+              <p>{{error}}</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% if let Some(message) = message %}
+        <div class="row">
+          <div class="col-lg-6 mx-auto">
+            <div class="alert alert-info">
+              <p>{{message}}</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="row">
+          <div class="col-lg-6 mx-auto">
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+              <a href="/auth/login"><button type="button"
+                  class="btn btn-primary btn-lg px-4 gap-3">Log In</button></a>
+            </div>
           </div>
         </div>
       </div>
@@ -21,4 +43,3 @@
   </footer>
 </body>
 {% endblock body %}
-

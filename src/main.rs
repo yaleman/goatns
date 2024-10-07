@@ -1,4 +1,5 @@
 use goatns::enums::SystemState;
+use goatns::error::GoatNsError;
 use goatns::utils::start_channels;
 use sqlx::SqlitePool;
 use std::io;
@@ -11,22 +12,15 @@ use goatns::db;
 use goatns::servers;
 use tokio::time::sleep;
 
-async fn run() -> Result<(), io::Error> {
+async fn run() -> Result<(), GoatNsError> {
     let clap_results = clap_parser();
 
-    let config =
-        ConfigFile::try_as_cowcell(clap_results.get_one::<String>("config")).map_err(|err| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("Config loading failed! {:?}", err),
-            )
-        })?;
+    let config = ConfigFile::try_as_cowcell(clap_results.get_one::<String>("config"))
+        .map_err(|err| GoatNsError::StartupError(format!("Config loading failed! {:?}", err)))?;
 
     let logger = setup_logging(config.read(), &clap_results)
         .await
-        .map_err(|err| {
-            io::Error::new(io::ErrorKind::Other, format!("Log setup failed! {:?}", err))
-        })?;
+        .map_err(|err| GoatNsError::StartupError(format!("Log setup failed! {:?}", err)))?;
 
     let config_result = ConfigFile::check_config(config.write().await).await;
 
@@ -51,14 +45,17 @@ async fn run() -> Result<(), io::Error> {
         }
         log::error!("Shutting down due to error!");
         logger.shutdown();
-        return Err(io::Error::new(io::ErrorKind::Other, "Config check failed!"));
+        return Err(GoatNsError::StartupError(
+            "Config check failed!".to_string(),
+        ));
     };
 
     if clap_results.get_flag("configcheck") {
         log::info!("Shutting down after config check.");
         logger.shutdown();
-        return config_result
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Config check failed!"));
+        return config_result.map_err(|err| {
+            GoatNsError::StartupError(format!("Config check failed! Errors: {}", err.join(" ")))
+        });
     };
 
     log::info!("Configuration: {}", *config.read());
@@ -66,14 +63,11 @@ async fn run() -> Result<(), io::Error> {
     let (agent_tx, datastore_sender, datastore_receiver) = start_channels();
 
     // start up the DB
-    let connpool: SqlitePool = db::get_conn(config.read()).await.map_err(|err| {
-        io::Error::new(io::ErrorKind::Other, format!("DB Setup failed: {:?}", err))
-    })?;
+    let connpool: SqlitePool = db::get_conn(config.read())
+        .await
+        .map_err(|err| GoatNsError::StartupError(format!("DB Setup failed: {:?}", err)))?;
 
-    if let Err(err) = db::start_db(&connpool).await {
-        log::error!("{err}");
-        return Ok(());
-    };
+    db::start_db(&connpool).await?;
 
     // start all the things!
     let datastore_manager = tokio::spawn(datastore::manager(
@@ -105,7 +99,7 @@ async fn run() -> Result<(), io::Error> {
 
                 let apiserver =
                     goatns::web::build(datastore_sender.clone(), config.read(), connpool.clone())
-                        .await;
+                        .await?;
 
                 let servers = servers::Servers::build(agent_tx)
                     .with_datastore(datastore_manager)
@@ -137,4 +131,8 @@ fn main() -> Result<(), io::Error> {
         .build()
         .expect("Failed to start main thread!")
         .block_on(async { run().await })
+        .map_err(|err| {
+            log::error!("{err:?}");
+            err.into()
+        })
 }

@@ -10,6 +10,9 @@ lazy_static! {
 }
 
 pub fn dns_name(name: &str) -> bool {
+    if !name.contains('.') {
+        return false;
+    }
     if name.len() > 253 {
         return false;
     }

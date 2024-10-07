@@ -1,7 +1,8 @@
 use super::*;
 use crate::enums::ContactDetails;
 use askama::Template;
-use axum::response::Html;
+use axum::extract::Query;
+use serde::Deserialize;
 
 pub async fn status() -> String {
     STATUS_OK.to_string()
@@ -9,14 +10,23 @@ pub async fn status() -> String {
 
 #[derive(Template)]
 #[template(path = "index.html")]
-struct IndexTemplate {
+pub(crate) struct IndexTemplate {
     admin_contact: String,
+    error: Option<String>,
+    message: Option<String>,
 }
 
-// #[debug_handler]
-pub async fn index(
+#[derive(Debug, Deserialize)]
+/// If you want to be able to catch error or messages from the query string
+pub(crate) struct QueryErrorOrMessage {
+    pub(crate) error: Option<String>,
+    pub(crate) message: Option<String>,
+}
+
+pub(crate) async fn index(
     axum::extract::State(state): axum::extract::State<GoatState>,
-) -> Result<Html<String>, ()> {
+    Query(query): Query<QueryErrorOrMessage>,
+) -> Result<IndexTemplate, ()> {
     let admin_contact = match state.read().await.config.admin_contact {
         ContactDetails::None => "".to_string(),
         _ => {
@@ -26,6 +36,9 @@ pub async fn index(
             )
         }
     };
-    let context = IndexTemplate { admin_contact };
-    Ok(Html::from(context.render().unwrap()))
+    Ok(IndexTemplate {
+        admin_contact,
+        error: query.error,
+        message: query.message,
+    })
 }

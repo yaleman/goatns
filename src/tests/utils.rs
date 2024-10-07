@@ -7,6 +7,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 /// Test function to keep checking the server for startup
+#[cfg(test)]
 pub async fn wait_for_server(status_url: Url) {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
@@ -34,9 +35,7 @@ pub async fn wait_for_server(status_url: Url) {
             Err(err) => eprintln!("ERR: {err:?}"),
         }
         sleep(Duration::from_secs(1));
-        if i == 9 {
-            panic!("Couldn't connect to test server after 10 seconds!");
-        }
+        assert!(i < 10, "Couldn't connect to test server after 10 seconds!");
     }
 }
 
@@ -67,14 +66,16 @@ pub fn test_find_tail_match() {
 pub fn test_name_bytes_simple_compress() {
     let expected_result: Vec<u8> = vec![192, 12];
 
-    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), Some(12), None);
+    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), Some(12), None)
+        .expect("Failed to parse name");
     assert_eq!(expected_result, test_result);
 }
 #[test]
 pub fn test_name_bytes_no_compress() {
     let expected_result: Vec<u8> = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
 
-    let test_result = name_as_bytes("example.com".as_bytes().to_vec(), None, None);
+    let test_result =
+        name_as_bytes("example.com".as_bytes().to_vec(), None, None).expect("Failed to parse name");
     assert_eq!(expected_result, test_result);
 }
 
@@ -88,7 +89,8 @@ pub fn test_name_bytes_with_compression() {
     println!("{:?}", from_utf8(&example_com));
     println!("{:?}", from_utf8(&test_input));
 
-    let result = name_as_bytes(test_input, Some(12), Some(&example_com));
+    let result =
+        name_as_bytes(test_input, Some(12), Some(&example_com)).expect("Failed to parse name");
 
     assert_eq!(result, expected_result);
 }
@@ -103,7 +105,8 @@ pub fn test_name_bytes_with_tail_compression() {
     println!("{:?}", from_utf8(&example_com));
     println!("{:?}", from_utf8(&test_input));
 
-    let result = name_as_bytes(test_input, Some(12), Some(&example_com));
+    let result =
+        name_as_bytes(test_input, Some(12), Some(&example_com)).expect("Failed to parse name");
 
     assert_eq!(result, expected_result);
 }

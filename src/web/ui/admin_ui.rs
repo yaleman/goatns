@@ -1,25 +1,25 @@
+use crate::web::utils::Urls;
 use crate::web::GoatState;
 use askama::Template;
-use axum::http::{Response, Uri};
-use axum::response::IntoResponse;
+use axum::http::Uri;
+use axum::response::Redirect;
 use axum::routing::get;
 use axum::Router;
 use sqlx::Row;
-use std::str::FromStr;
 use tower_sessions::Session;
 
 use super::check_logged_in;
 
 #[derive(Template)]
 #[template(path = "admin_ui.html")]
-struct AdminUITemplate /*<'a>*/ {
+pub(crate) struct AdminUITemplate /*<'a>*/ {
     // name: &'a str,
     pub user_is_admin: bool,
 }
 
 #[derive(Template)]
 #[template(path = "admin_report_unowned_records.html")]
-struct AdminReportUnownedRecords /*<'a>*/ {
+pub(crate) struct AdminReportUnownedRecords /*<'a>*/ {
     // name: &'a str,
     pub user_is_admin: bool,
     pub records: Vec<ZoneRecord>,
@@ -27,40 +27,30 @@ struct AdminReportUnownedRecords /*<'a>*/ {
 
 #[allow(dead_code)] // because this is only used in a template
 /// Template struct for showing a zone record
-struct ZoneRecord {
+pub(crate) struct ZoneRecord {
     id: u32,
     name: String,
     zoneid: u32,
 }
 
-pub async fn dashboard(mut session: Session) -> impl IntoResponse {
-    let user = match check_logged_in(&mut session, Uri::from_str("/").unwrap()).await {
-        Ok(val) => val,
-        Err(err) => return err.into_response(),
-    };
+pub(crate) async fn dashboard(mut session: Session) -> Result<AdminUITemplate, Redirect> {
+    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 
-    let context = AdminUITemplate {
+    Ok(AdminUITemplate {
         user_is_admin: user.admin,
-    };
-    // Html::from()).into_response()
-    Response::builder()
-        .status(200)
-        .body(context.render().unwrap())
-        .unwrap()
-        .into_response()
+    })
 }
 
-#[axum::debug_handler]
-pub async fn report_unowned_records(
+pub(crate) async fn report_unowned_records(
     mut session: Session,
     axum::extract::State(state): axum::extract::State<GoatState>,
-) -> impl IntoResponse {
-    let user = match check_logged_in(&mut session, Uri::from_str("/").unwrap()).await {
-        Ok(val) => val,
-        Err(err) => return err.into_response(),
-    };
+) -> Result<AdminReportUnownedRecords, Redirect> {
+    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 
-    let mut pool = state.read().await.connpool.acquire().await.unwrap();
+    let mut pool = state.read().await.connpool.acquire().await.map_err(|err| {
+        log::error!("Failed to get DB connection: {err:?}");
+        Redirect::to(Urls::Dashboard.as_ref())
+    })?;
 
     let rows = match sqlx::query(
         "select records_merged.record_id as id, records_merged.* from records_merged
@@ -92,15 +82,10 @@ pub async fn report_unowned_records(
         })
         .collect();
 
-    let context = AdminReportUnownedRecords {
+    Ok(AdminReportUnownedRecords {
         user_is_admin: user.admin,
         records,
-    };
-    Response::builder()
-        .status(200)
-        .body(context.render().unwrap())
-        .unwrap()
-        .into_response()
+    })
 }
 
 /// Build the router for user settings

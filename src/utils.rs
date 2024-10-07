@@ -1,5 +1,6 @@
 use crate::datastore::Command;
 use crate::enums::AgentState;
+use crate::error::GoatNsError;
 use crate::HEADER_BYTES;
 use log::{debug, trace};
 use std::str::from_utf8;
@@ -111,7 +112,7 @@ pub fn name_as_bytes(
     name: Vec<u8>,
     compress_target: Option<u16>,
     compress_reference: Option<&Vec<u8>>,
-) -> Vec<u8> {
+) -> Result<Vec<u8>, GoatNsError> {
     trace!("################################");
     match from_utf8(&name) {
         Ok(nstr) => trace!("name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
@@ -125,7 +126,7 @@ pub fn name_as_bytes(
         // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
         let result: Vec<u8> = (0b1100000000000000 | target).to_be_bytes().into();
         trace!("result of name_as_bytes {result:?}");
-        return result;
+        return Ok(result);
     };
 
     let mut result: Vec<u8> = vec![];
@@ -134,14 +135,14 @@ pub fn name_as_bytes(
         result.push(name.len() as u8);
         result.extend(&name);
         result.push(0); // null pad the name
-        return result;
+        return Ok(result);
     }
     result = seven_dot_three_conversion(&name);
 
     if compress_target.is_none() {
         trace!("no compression target, adding the trailing null and returning!");
         result.push(0);
-        return result;
+        return Ok(result);
     };
 
     if let Some(ct) = compress_reference {
@@ -152,9 +153,9 @@ pub fn name_as_bytes(
             // return a pointer to the target_byte (probably the name in the header)
             if let Some(target) = compress_target {
                 let result: u16 = 0b1100000000000000 | target;
-                return result.to_be_bytes().to_vec();
+                return Ok(result.to_be_bytes().to_vec());
             } else {
-                panic!("you didn't give us a target, dude!")
+                return Err(GoatNsError::InvalidName);
             }
         }
         if name.ends_with(ct) {
@@ -202,7 +203,7 @@ pub fn name_as_bytes(
         }
     }
     trace!("Final result {result:?}");
-    result
+    Ok(result)
 }
 
 // lazy_static!{

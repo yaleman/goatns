@@ -11,7 +11,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
 fn bench_resourcerecord_short_name_to_bytes(rdata: Vec<u8>) {
     assert_eq!(
-        name_as_bytes(rdata, None, None),
+        name_as_bytes(rdata, None, None).expect("failed to convert to bytes"),
         [6, 99, 104, 101, 101, 115, 101, 0]
     );
 }

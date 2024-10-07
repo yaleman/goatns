@@ -1,6 +1,7 @@
 use super::*;
 
 use crate::enums::{RecordClass, RecordType};
+use crate::error::GoatNsError;
 use crate::zones::{FileZone, FileZoneRecord};
 
 #[tokio::test]
@@ -307,7 +308,7 @@ async fn test_export_zone() -> Result<(), sqlx::Error> {
 }
 
 #[tokio::test]
-async fn load_then_export() -> Result<(), sqlx::Error> {
+async fn load_then_export() -> Result<(), GoatNsError> {
     use tokio::io::AsyncReadExt;
     // set up the DB
     let pool = test_get_sqlite_memory().await;
@@ -317,10 +318,8 @@ async fn load_then_export() -> Result<(), sqlx::Error> {
     let example_zone_file = std::path::Path::new(&"./examples/test_config/single-zone.json");
 
     eprintln!("load_zone_from_file from {:?}", example_zone_file);
-    let example_zone = match crate::zones::load_zone_from_file(example_zone_file) {
-        Ok(value) => value,
-        Err(error) => panic!("Failed to load zone file! {:?}", error),
-    };
+    let example_zone = crate::zones::load_zone_from_file(example_zone_file)
+        .inspect_err(|err| println!("Failed to load zone file! {:?}", err))?;
 
     eprint!("importing zone into db...");
     example_zone.save(&pool).await?;

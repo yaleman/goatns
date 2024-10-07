@@ -2,6 +2,7 @@ use crate::config::ConfigFile;
 use crate::db::test::test_get_sqlite_memory;
 use crate::db::{start_db, DBEntity, User, UserAuthToken, ZoneOwnership};
 use crate::enums::RecordType;
+use crate::error::GoatNsError;
 use crate::servers::{self, Servers};
 use crate::web::utils::{create_api_token, ApiToken};
 use crate::zones::{FileZone, FileZoneRecord};
@@ -58,7 +59,9 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
         tokio::spawn(crate::datastore::manager(datastore_rx, pool.clone(), None));
 
     println!("Starting API Server on port {port}");
-    let apiserver = crate::web::build(datastore_tx.clone(), config.read(), pool.clone()).await;
+    let apiserver = crate::web::build(datastore_tx.clone(), config.read(), pool.clone())
+        .await
+        .expect("Failed to start API server");
 
     println!("Building server struct");
     (
@@ -115,7 +118,7 @@ pub struct AuthStruct {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn api_zone_create() -> Result<(), sqlx::Error> {
+async fn api_zone_create() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
 
@@ -126,7 +129,7 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
     println!("api_zone_create Created user... {user:?}");
 
     println!("api_zone_create Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
     println!("api_zone_create Created token... {token:?}");
@@ -173,10 +176,10 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
         .unwrap();
     assert_eq!(res.status(), 200);
 
-    let response_zone: FileZone = match res.json().await {
-        Err(err) => panic!("Failed to parse response content: {err:?}"),
-        Ok(val) => val,
-    };
+    let response_zone: FileZone = res
+        .json()
+        .await
+        .inspect_err(|err| println!("Failed to parse response content: {err:?}"))?;
 
     assert_eq!(response_zone.name, "example.goat");
     assert_eq!(response_zone.serial, 12345);
@@ -197,7 +200,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     println!("Created user... {user:?}");
 
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
     println!("Created token... {token:?}");
@@ -273,7 +276,7 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     println!("Created user... {user:?}");
 
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
     println!("Created token... {token:?}");
@@ -314,8 +317,8 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     println!("Saving zone ownership");
     ZoneOwnership {
         id: None,
-        userid: user.id.unwrap(),
-        zoneid: newzone.id.unwrap(),
+        userid: user.id.expect("No user id"),
+        zoneid: newzone.id.expect("No zone id"),
     }
     .save(&pool)
     .await?;
@@ -343,14 +346,14 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn api_record_create() -> Result<(), sqlx::Error> {
+async fn api_record_create() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
     let api_port = config.read().api_port;
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
     println!("Created token... {token:?}");
@@ -392,7 +395,7 @@ async fn api_record_create() -> Result<(), sqlx::Error> {
 
     let zo = ZoneOwnership {
         id: None,
-        userid: user.id.unwrap(),
+        userid: user.id.expect("no user id found"),
         zoneid: zone.id.unwrap(),
     };
     println!("ZO: {zo:?}");
@@ -418,10 +421,10 @@ async fn api_record_create() -> Result<(), sqlx::Error> {
         .unwrap();
 
     assert_eq!(res.status(), 200);
-    let response_record: FileZoneRecord = match res.json().await {
-        Err(err) => panic!("Failed to get response content: {err:?}"),
-        Ok(val) => val,
-    };
+    let response_record: FileZoneRecord = res
+        .json()
+        .await
+        .inspect_err(|err| eprintln!("Failed to get response content: {err:?}"))?;
     assert_eq!(response_record.name, "doggo");
     drop(pool);
     Ok(())
@@ -435,7 +438,7 @@ async fn api_record_delete() -> Result<(), sqlx::Error> {
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
     println!("Created token... {token:?}");
@@ -478,7 +481,7 @@ async fn api_record_delete() -> Result<(), sqlx::Error> {
 
     let zo = ZoneOwnership {
         id: None,
-        userid: user.id.unwrap(),
+        userid: user.id.expect("no user id found"),
         zoneid: zone.id.unwrap(),
     };
     println!("ZO: {zo:?}");

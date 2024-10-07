@@ -97,10 +97,32 @@ impl APIEntity for FileZone {
 
         let zone = FileZone::get_by_name(&mut txn, &zone.name).await.unwrap();
 
+        let userid = match user.id {
+            Some(val) => val,
+            None => {
+                log::debug!("User id not found in session, something went wrong");
+                return error_result_json!(
+                    "Server error creating zone, contact the admins!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
+
+        let zoneid = match zone.id {
+            Some(val) => val,
+            None => {
+                log::debug!("Zone id not found in session, something went wrong");
+                return error_result_json!(
+                    "Server error creating zone, contact the admins!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
+
         let ownership = ZoneOwnership {
             id: None,
-            userid: user.id.unwrap(),
-            zoneid: zone.id.unwrap(),
+            userid,
+            zoneid,
         };
 
         if let Err(err) = ownership.save_with_txn(&mut txn).await {
@@ -123,7 +145,7 @@ impl APIEntity for FileZone {
                 StatusCode::INTERNAL_SERVER_ERROR
             );
         }
-        log::debug!("Zone created by user={} zone={zone:?}", user.id.unwrap());
+        log::debug!("Zone created by user={:?} zone={:?}", user.id, zone);
 
         return Ok(Json(zone));
     }
@@ -250,12 +272,23 @@ impl APIEntity for FileZone {
             }
         };
         // get the zoneownership
-        match ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &id).await {
+        let userid = match user.id {
+            Some(val) => val,
+            None => {
+                log::error!("User id not found in session, something went wrong");
+                return error_result_json!(
+                    "Internal server error",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
+
+        match ZoneOwnership::get_ownership_by_userid(&mut txn, &userid, &id).await {
             Ok(val) => val,
             Err(err) => {
                 log::error!(
                     "Failed to get ZoneOwnership userid={} zoneid={} error=\"{err:?}\"",
-                    user.id.unwrap(),
+                    userid,
                     id
                 );
                 match err {
@@ -319,15 +352,22 @@ impl APIEntity for FileZone {
 
         let mut txn = state.connpool().await.begin().await.unwrap();
 
-        if ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &id)
+        let user_id = match user.id {
+            Some(val) => val,
+            None => {
+                log::error!("User id not found in session, something went wrong");
+                return error_result_json!(
+                    "Internal server error",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
+
+        if ZoneOwnership::get_ownership_by_userid(&mut txn, &user_id, &id)
             .await
             .is_err()
         {
-            log::error!(
-                "User {} not authorized for zoneid={}",
-                &user.id.unwrap(),
-                id
-            );
+            log::error!("User {:?} not authorized for zoneid={}", &user_id, id);
             return error_result_json!("", StatusCode::UNAUTHORIZED);
         };
 

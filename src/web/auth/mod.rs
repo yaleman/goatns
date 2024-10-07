@@ -1,11 +1,13 @@
-use super::utils::{redirect_to_dashboard, redirect_to_home};
 use super::GoatState;
 use crate::config::ConfigFile;
 use crate::db::{DBEntity, User};
+use crate::error::GoatNsError;
+use crate::web::utils::Urls;
 use crate::web::GoatStateTrait;
 use crate::COOKIE_NAME;
 use askama::Template;
 use axum::extract::{Query, State};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Form, Router};
@@ -238,17 +240,17 @@ pub async fn login(
     Query(query): Query<QueryForLogin>,
     session: Session,
     axum::extract::State(mut state): axum::extract::State<GoatState>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, impl IntoResponse> {
     // check if we've got an existing, valid session
     if let Some(signed_in) = session.get("signed_in").await.unwrap() {
         if signed_in {
-            return Redirect::to("/ui").into_response();
+            return Err(Urls::Dashboard.redirect().into_response());
         }
     }
 
     if query.state.is_none() || query.code.is_none() {
         let auth_url = &oauth_start(&mut state).await.unwrap().to_string();
-        return Redirect::to(auth_url).into_response();
+        return Err(Redirect::to(auth_url).into_response());
     }
 
     // if we get the state and code back then we can go back to the server for a token
@@ -260,7 +262,7 @@ pub async fn login(
         Some((p, n)) => (p, n),
         None => {
             log::error!("Couldn't find a session, redirecting...");
-            return Redirect::to("/auth/login").into_response();
+            return Err(Urls::Login.redirect().into_response());
         }
     };
     let verifier_copy = PkceCodeVerifier::new(pkce_verifier_secret.clone());
@@ -291,30 +293,15 @@ pub async fn login(
                                 let (admin_contact_name, admin_contact_url) =
                                     state.read().await.config.admin_contact.to_html_parts();
 
-                                let context = AuthProvisioningDisabledTemplate {
+                                return Ok(AuthProvisioningDisabledTemplate {
                                     username: claims.get_username(),
                                     authref: claims.subject().to_string(),
                                     admin_contact_name,
                                     admin_contact_url,
                                     user_is_admin: false, // TODO: ... probably not an admin but we can check
-                                };
-                                return Response::builder()
-                                    .status(200)
-                                    .body(context.render().unwrap())
-                                    .unwrap()
-                                    .into_response();
+                                }
+                                .into_response());
                             }
-
-                            let new_user_page = AuthNewUserTemplate {
-                                state: query.state.clone().unwrap(),
-                                code: query.code.clone().unwrap(),
-                                email,
-                                displayname: claims.get_displayname(),
-                                redirect_url: "".to_string(),
-                                errors: vec![],
-                                user_is_admin: false, // TODO: ... probably not an admin but we can check
-                            };
-                            let pagebody = new_user_page.render().unwrap();
                             // push it back into the stack for signup
                             state
                                 .push_verifier(
@@ -322,12 +309,16 @@ pub async fn login(
                                     (verifier_copy.secret().to_owned(), nonce),
                                 )
                                 .await;
-
-                            return Response::builder()
-                                .status(200)
-                                .body(pagebody)
-                                .unwrap()
-                                .into_response();
+                            return Ok(AuthNewUserTemplate {
+                                state: query.state.clone().unwrap(),
+                                code: query.code.clone().unwrap(),
+                                email,
+                                displayname: claims.get_displayname(),
+                                redirect_url: "".to_string(),
+                                errors: vec![],
+                                user_is_admin: false, // TODO: ... probably not an admin but we can check
+                            }
+                            .into_response());
                         }
                         _ => {
                             log::error!(
@@ -346,9 +337,9 @@ pub async fn login(
                                             )
                                         },
                                     ).unwrap();
-                                    Redirect::to(&destination).into_response()
+                                    Err(Redirect::to(&destination).into_response())
                                 }
-                                None => redirect_to_home().into_response(),
+                                None => Err(Urls::Home.redirect().into_response()),
                             };
                         }
                     }
@@ -357,19 +348,16 @@ pub async fn login(
             log::debug!("Found user in database: {dbuser:?}");
 
             if dbuser.disabled {
-                session
-                    .flush()
-                    .await
-                    .map_err(|err| {
-                        error!("Failed to flush session: {err:?}");
-                        (
-                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                            "Failed to flush session store!",
-                        )
-                    })
-                    .unwrap();
+                session.flush().await.map_err(|err| {
+                    error!("Failed to flush session: {err:?}");
+                    (
+                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to flush session store!",
+                    )
+                        .into_response()
+                })?;
                 log::info!("Disabled user attempted to log in: {dbuser:?}");
-                return redirect_to_home().into_response();
+                return Err(Urls::Home.redirect().into_response());
             }
 
             if let Some(claims_email) = claims.email() {
@@ -386,72 +374,84 @@ pub async fn login(
                         Ok(val) => val,
                         Err(err) => {
                             log::error!("Failed to start transaction to store user: {err:?}");
-                            return redirect_to_home().into_response();
+                            return Err(Urls::Home.redirect().into_response());
                             // TODO: this probably... should be handled as a better error?
                         }
                     };
                     if let Err(err) = dbuser.update_with_txn(&mut db_txn).await {
                         log::error!("Failed to update user email: {err:?}");
-                        return redirect_to_home().into_response();
+                        return Err(Urls::Home.redirect().into_response());
                         // TODO: this probably... should be handled as a better error?
                     }
                     if let Err(err) = db_txn.commit().await {
                         log::error!("Failed to commit user email update: {err:?}");
-                        return redirect_to_home().into_response();
+                        return Err(Urls::Home.redirect().into_response());
                     };
                 }
             }
 
-            session
+            if session
                 .insert("authref", claims.subject().to_string())
                 .await
-                .unwrap();
-            session.insert("user", dbuser).await.unwrap();
-            session.insert("signed_in", true).await.unwrap();
+                .is_err()
+            {
+                return Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to store sesssion details",
+                )
+                    .into_response());
+            };
+            if session.insert("user", dbuser).await.is_err() {
+                return Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to store sesssion details",
+                )
+                    .into_response());
+            };
+            if session.insert("signed_in", true).await.is_err() {
+                return Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to store sesssion details",
+                )
+                    .into_response());
+            };
 
-            redirect_to_dashboard().into_response()
+            Ok(Urls::Dashboard.redirect().into_response())
         }
         Err(error) => match error {
-            ParserError::Redirect { content } => content.into_response(),
+            ParserError::Redirect { content } => Ok(content.into_response()),
             ParserError::ErrorMessage { content } => {
                 log::debug!("Failed to parse state: {content}");
-                redirect_to_home().into_response()
+                Err(Urls::Home.redirect().into_response())
             }
             ParserError::ClaimsVerificationError { content } => {
                 log::error!("Failed to verify claim token: {content:?}");
-                redirect_to_home().into_response()
+                Err(Urls::Home.redirect().into_response())
             }
         },
     }
 }
 
-pub async fn logout(session: Session) -> impl IntoResponse {
-    session
-        .flush()
-        .await
-        .map_err(|err| {
-            error!("Failed to flush session: {err:?}");
-            (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to flush session store!",
-            )
-        })
-        .unwrap();
-    Redirect::to("/")
+pub async fn logout(session: Session) -> Result<Redirect, (axum::http::StatusCode, &'static str)> {
+    session.flush().await.map_err(|err| {
+        error!("Failed to flush session: {err:?}");
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to flush session store!",
+        )
+    })?;
+    Ok(Urls::Home.redirect())
 }
 
 pub async fn build_auth_stores(
     config: CowCellReadTxn<ConfigFile>,
     connpool: SqlitePool,
-) -> SessionManagerLayer<SqliteStore> {
+) -> Result<SessionManagerLayer<SqliteStore>, GoatNsError> {
     let session_store = SqliteStore::new(connpool)
         .with_table_name("sessions")
         .expect("Failed to start session store!");
 
-    session_store
-        .migrate()
-        .await
-        .expect("Could not migrate session store database on startup!");
+    session_store.migrate().await?;
 
     let _deletion_task = tokio::task::spawn(
         session_store
@@ -459,12 +459,12 @@ pub async fn build_auth_stores(
             .continuously_delete_expired(tokio::time::Duration::from_secs(60)),
     );
 
-    SessionManagerLayer::new(session_store)
+    Ok(SessionManagerLayer::new(session_store)
         .with_expiry(Expiry::OnInactivity(Duration::minutes(5)))
         .with_name(COOKIE_NAME)
         .with_secure(true)
         // If the cookies start being weird it's because they were appending a "." on the start...
-        .with_domain(config.hostname.clone())
+        .with_domain(config.hostname.clone()))
 }
 
 #[derive(Deserialize, Debug)]
@@ -489,7 +489,7 @@ pub async fn signup(
         Some((p, n)) => (p, n),
         None => {
             log::error!("Couldn't find a signup session, redirecting user...");
-            return Ok(Redirect::to("/auth/login").into_response());
+            return Ok(Urls::Login.redirect().into_response());
         }
     };
     let claims = parse_state_code(
@@ -504,11 +504,11 @@ pub async fn signup(
             ParserError::Redirect { content } => Ok(content.into_response()),
             ParserError::ErrorMessage { content } => {
                 log::error!("Failed to parse claim: {}", content);
-                Ok(redirect_to_home().into_response())
+                Ok(Urls::Home.redirect().into_response())
             }
             ParserError::ClaimsVerificationError { content } => {
                 log::error!("Failed to verify claim token: {content:?}");
-                Ok(redirect_to_home().into_response())
+                Ok(Urls::Home.redirect().into_response())
             }
         },
         Ok(claims) => {
@@ -524,11 +524,11 @@ pub async fn signup(
                 admin: false,
             };
             match user.save(&state.connpool().await).await {
-                Ok(_) => Ok(redirect_to_dashboard().into_response()),
+                Ok(_) => Ok(Urls::Dashboard.redirect().into_response()),
                 Err(error) => {
                     log::debug!("Failed to save new user signup... oh no! {error:?}");
                     // TODO: throw an error page on this one
-                    Ok(redirect_to_home().into_response())
+                    Ok(Urls::Home.redirect().into_response())
                 }
             }
         }

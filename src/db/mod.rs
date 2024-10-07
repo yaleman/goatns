@@ -73,15 +73,21 @@ pub async fn start_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
+/// DB Representation of a user
 pub struct User {
+    /// the user's ID
     pub id: Option<i64>,
+    /// the user's display name
     pub displayname: String,
+    /// the user's username
     pub username: String,
+    /// the user's email address
     pub email: String,
-    // #[serde(default)]
-    // pub owned_zones: Vec<i64>,
+    /// is the user disabled?
     pub disabled: bool,
+    /// the user's authref from OIDC
     pub authref: Option<String>,
+    /// is the user an admin?
     pub admin: bool,
 }
 
@@ -476,15 +482,9 @@ impl FileZone {
         .await?;
 
         if res.is_empty() {
-            log::trace!("No results returned for zoneid={}", self.id.unwrap());
+            log::trace!("No results returned for zoneid={:?}", self.id);
         }
 
-        // let mut results: Vec<FileZoneRecord> = vec![];
-        // for row in res {
-        //     if let Ok(irr) = FileZoneRecord::try_from(row) {
-        //         results.push(irr);
-        //     }
-        // }
         let results: Vec<FileZoneRecord> = res
             .iter()
             .filter_map(|r| FileZoneRecord::try_from(r).ok())
@@ -572,7 +572,7 @@ impl DBEntity for FileZone {
     const TABLE: &'static str = "zones";
 
     async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        let mut tx = pool.begin().await.unwrap();
+        let mut tx = pool.begin().await?;
 
         log::debug!("Ensuring DB Zones table exists");
         sqlx::query(
@@ -629,13 +629,17 @@ impl DBEntity for FileZone {
         let mut zone: FileZone = res.into();
         log::debug!("got a zone: {zone:?}");
 
+        if zone.id.is_none() {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
         let records = sqlx::query(
             "SELECT
             id, zoneid, name, ttl, rrtype, rclass, rdata
             FROM records
             WHERE zoneid = ?",
         )
-        .bind(zone.id.unwrap())
+        .bind(zone.id)
         .fetch_all(txn)
         .await?;
 
@@ -733,31 +737,33 @@ impl DBEntity for FileZone {
                 log::debug!("Insert statement succeeded");
                 #[cfg(test)]
                 eprintln!("Done creating zone");
-                get_zone_with_txn(txn, None, Some(self.name.clone()))
-                    .await?
-                    .unwrap()
+                match get_zone_with_txn(txn, None, Some(self.name.clone())).await? {
+                    Some(val) => val,
+                    None => {
+                        return Err(sqlx::Error::RowNotFound);
+                    }
+                }
             }
             Some(ez) => {
                 if !self.matching_data(&ez) {
                     // update it if it's wrong
 
-                    #[cfg(test)]
-                    eprintln!("Updating zone");
                     log::debug!("Updating zone");
                     let mut new_zone = self.clone();
                     new_zone.id = ez.id;
 
                     let updated = new_zone.update_with_txn(txn).await?;
-                    #[cfg(test)]
-                    eprintln!("Updated: {:?} record", updated);
+
                     log::debug!("Updated: {:?} record", updated);
                 } else {
                     log::debug!("Zone data is fine")
                 }
-                get_zone_with_txn(txn, None, Some(self.name.clone()))
-                    .await
-                    .unwrap()
-                    .unwrap()
+                match get_zone_with_txn(txn, None, Some(self.name.clone())).await? {
+                    Some(val) => val,
+                    None => {
+                        return Err(sqlx::Error::RowNotFound);
+                    }
+                }
             }
         };
         #[cfg(test)]
@@ -1609,15 +1615,15 @@ impl DBEntity for UserAuthToken {
                 Self::TABLE
             ),
             Err(err) => match err {
-                sqlx::Error::Database(zzz) => {
+                sqlx::Error::Database(ref zzz) => {
                     if zzz.message() != "no such index: ind_user_tokens_fields" {
                         log::error!("Database Error: {:?}", zzz);
-                        panic!();
+                        return Err(err);
                     }
                 }
                 _ => {
                     log::error!("{err:?}");
-                    panic!();
+                    return Err(err);
                 }
             },
         };

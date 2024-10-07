@@ -13,7 +13,7 @@ include = [
 keywords = ["dns", "server", "tokio", "api", "oauth2", "oidc"]
 license = "MIT"
 repository = "https://github.com/yaleman/goatns.git"
-rust-version = "1.70"
+rust-version = "1.80"
 description = "Yet another authoritative DNS name server. But with goat references."
 
 [features]

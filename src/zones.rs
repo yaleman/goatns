@@ -1,4 +1,5 @@
 use crate::enums::RecordClass;
+use crate::error::GoatNsError;
 use crate::resourcerecord::InternalResourceRecord;
 use log::*;
 
@@ -18,7 +19,7 @@ pub struct FileZone {
     /// MNAME The `domain-name` of the name server that was the original or primary source of data for this zone.
     // #[serde(rename(serialize = "MNAME"))]
     pub name: String,
-    // RNAME A `domain-name` which specifies the mailbox of the person responsible for this zone.
+    /// RNAME A `domain-name` which specifies the mailbox of the person responsible for this zone.
     // #[serde(rename(serialize = "RNAME"), default = "rname_default")]
     #[serde(default = "rname_default")]
     pub rname: String,
@@ -37,6 +38,7 @@ pub struct FileZone {
     /// MINIMUM - The unsigned 32 bit minimum TTL field that should be exported with any RR from this zone.
     #[serde(default)]
     pub minimum: u32,
+    /// The records associated with this zone
     pub records: Vec<FileZoneRecord>,
 }
 
@@ -66,11 +68,16 @@ pub struct FileZoneRecord {
     #[serde(default)]
     pub id: Option<i64>,
     #[serde(default = "default_record_name")]
+    /// The name of the record
     pub name: String,
+    /// The type of record
     pub rrtype: String,
     #[serde(default = "default_record_class")]
+    /// The class of the record
     pub class: RecordClass,
+    /// The actual data for the record
     pub rdata: String,
+    /// Time to live
     pub ttl: u32,
 }
 /// If you don't specify a name, it's the root.
@@ -96,7 +103,7 @@ impl Display for FileZoneRecord {
 pub struct ZoneRecord {
     /// the full name including the zone
     pub name: Vec<u8>,
-
+    /// the records associated with this name
     pub typerecords: Vec<InternalResourceRecord>,
 }
 
@@ -111,39 +118,47 @@ impl Display for ZoneRecord {
     }
 }
 
-pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, String> {
+/// Loads a zone file
+pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, GoatNsError> {
     let mut file = match File::open(filename) {
         Ok(value) => value,
         Err(error) => {
-            return Err(format!("Failed to open zone file: {:?}", error));
+            return Err(GoatNsError::FileError(format!(
+                "Failed to open zone file: {:?}",
+                error
+            )));
         }
     };
     let mut buf: String = String::new();
     file.read_to_string(&mut buf)
-        .map_err(|err| format!("Failed to read {}: {:?}", &filename.display(), err))?;
+        .inspect_err(|err| error!("Failed to read {}: {:?}", &filename.display(), err))?;
     let jsonstruct: FileZone = match json5::from_str(&buf) {
         Ok(value) => value,
         Err(error) => {
             let emsg = format!("Failed to read JSON file: {:?}", error);
             error!("{}", emsg);
-            return Err(emsg);
+            return Err(GoatNsError::FileError(emsg));
         }
     };
     Ok(jsonstruct)
 }
 
-pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, String> {
+/// Loads a zone file
+pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, GoatNsError> {
     let mut file = match File::open(filename) {
         Ok(value) => value,
         Err(error) => {
-            return Err(format!("Failed to open zone file: {:?}", error));
+            return Err(GoatNsError::FileError(format!(
+                "Failed to open zone file: {:?}",
+                error
+            )));
         }
     };
 
     let mut buf: String = String::new();
     file.read_to_string(&mut buf)
-        .map_err(|err| format!("Failed to read {}: {:?}", filename, err))?;
-    let jsonstruct: Result<Vec<FileZone>, String> =
-        json5::from_str(&buf).map_err(|e| format!("Failed to read JSON file: {e:?}"));
+        .inspect_err(|err| error!("Failed to read {}: {:?}", filename, err))?;
+    let jsonstruct: Result<Vec<FileZone>, GoatNsError> = json5::from_str(&buf)
+        .map_err(|e| GoatNsError::FileError(format!("Failed to read JSON file: {e:?}")));
     jsonstruct
 }

@@ -51,8 +51,9 @@ mod tests {
         ));
 
         println!("Starting API Server");
-        let apiserver =
-            crate::web::build(datastore_tx.clone(), config.read(), connpool.clone()).await;
+        let apiserver = crate::web::build(datastore_tx.clone(), config.read(), connpool.clone())
+            .await
+            .expect("Failed to build API server");
 
         println!("Building server struct");
         let _ = crate::servers::Servers::build(agent_sender)
