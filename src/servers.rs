@@ -2,7 +2,7 @@ use concread::cowcell::asynch::CowCellReadTxn;
 use packed_struct::prelude::*;
 use std::io::Error;
 use std::net::SocketAddr;
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
 use tokio::net::{TcpListener, TcpStream, UdpSocket};
@@ -19,13 +19,6 @@ use crate::reply::{reply_any, reply_builder, reply_nxdomain, Reply};
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::zones::ZoneRecord;
 use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
-
-lazy_static! {
-    #[allow(clippy::expect_used)]
-    static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").expect("Failed to parse localhost IP address");
-    // static ref VERSION_STRINGS: Vec<String> =
-        // vec![String::from("version"), String::from("version.bind"),];
-}
 
 pub(crate) enum ChaosResult {
     Refused(Reply),
@@ -69,7 +62,7 @@ async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<ChaosRe
     let mut chaos_reply = r.clone();
     chaos_reply.answers.push(CHAOS_NO.clone());
     chaos_reply.header.rcode = Rcode::Refused;
-    return Ok(ChaosResult::Refused(chaos_reply));
+    Ok(ChaosResult::Refused(chaos_reply))
 }
 
 /// this handles a version CHAOS request
@@ -97,11 +90,9 @@ pub async fn udp_server(
     datastore_sender: mpsc::Sender<crate::datastore::Command>,
     _agent_tx: broadcast::Sender<AgentState>,
 ) -> io::Result<()> {
-    let udp_sock = match UdpSocket::bind(
-        config
-            .dns_listener_address()
-            .expect("Failed to get DNS listener address on startup!"),
-    )
+    let udp_sock = match UdpSocket::bind(config.dns_listener_address().map_err(|_err| {
+        GoatNsError::StartupError("Failed to get DNS listener address on startup!".to_string())
+    })?)
     .await
     {
         Ok(value) => {
@@ -325,11 +316,9 @@ pub async fn tcp_server(
     // mut agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
     let mut agent_rx = agent_tx.subscribe();
-    let tcpserver = match TcpListener::bind(
-        config
-            .dns_listener_address()
-            .expect("Failed to get DNS listener address on startup!"),
-    )
+    let tcpserver = match TcpListener::bind(config.dns_listener_address().map_err(|_err| {
+        GoatNsError::StartupError("Failed to get DNS listener address on startup!".to_string())
+    })?)
     .await
     {
         Ok(value) => {
@@ -337,7 +326,9 @@ pub async fn tcp_server(
                 "Started TCP listener on {}",
                 config
                     .dns_listener_address()
-                    .expect("Failed to get DNS listener address on startup!")
+                    .map_err(|_err| GoatNsError::StartupError(
+                        "Failed to get DNS listener address on startup!".to_string()
+                    ))?
             );
             value
         }

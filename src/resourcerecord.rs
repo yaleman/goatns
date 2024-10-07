@@ -66,7 +66,7 @@ impl TryFrom<&Vec<u8>> for DomainName {
 impl TryFrom<&DomainName> for Vec<u8> {
     type Error = GoatNsError;
     fn try_from(dn: &DomainName) -> Result<Self, Self::Error> {
-        name_as_bytes(&dn.name.as_bytes(), None, None)
+        name_as_bytes(dn.name.as_bytes(), None, None)
     }
 }
 
@@ -104,6 +104,7 @@ impl Serialize for DNSCharString {
     where
         S: Serializer,
     {
+        #[allow(clippy::expect_used)]
         let res = from_utf8(&self.data).expect("This shouldn't ever fail");
         serializer.serialize_str(res)
     }
@@ -282,16 +283,16 @@ pub enum InternalResourceRecord {
 }
 
 impl TryFrom<FileZoneRecord> for InternalResourceRecord {
-    type Error = String;
+    type Error = GoatNsError;
     /// This is where we convert from the JSON blob in the file to an internal representation of the data.
-    fn try_from(record: FileZoneRecord) -> Result<Self, String> {
+    fn try_from(record: FileZoneRecord) -> Result<Self, Self::Error> {
         if check_long_labels(&record.name) {
-            return Err(format!("At least one label is of length over 63 in name {}! I'm refusing to serve this record.", record.name));
+            return Err(GoatNsError::Generic(format!("At least one label is of length over 63 in name {}! I'm refusing to serve this record.", record.name)));
         };
 
         if record.name.len() > 255 {
-            return Err(format!("The length of name ({}) is over 255 octets! ({}) I'm refusing to serve this record.", record.name,
-            record.name.len()));
+            return Err(GoatNsError::Generic(format!("The length of name ({}) is over 255 octets! ({}) I'm refusing to serve this record.", record.name,
+            record.name.len())));
         };
 
         match record.rrtype.as_str() {
@@ -321,10 +322,10 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                         res
                     }
                     Err(error) => {
-                        return Err(format!(
+                        return Err(GoatNsError::Generic(format!(
                             "Failed to parse {:?} into an IPv6 address: {:?}",
                             record.rdata, error
-                        ));
+                        )));
                     }
                 };
 
@@ -354,18 +355,18 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
             "MX" => {
                 let split_bit: Vec<&str> = record.rdata.split(' ').collect();
                 if split_bit.len() != 2 {
-                    return Err(format!(
+                    return Err(GoatNsError::Generic(format!(
                         "While trying to parse MX record, got '{:?}' which is wrong.",
                         split_bit
-                    ));
+                    )));
                 };
                 let pref = match u16::from_str(split_bit[0]) {
                     Ok(value) => value,
                     Err(error) => {
-                        return Err(format!(
+                        return Err(GoatNsError::Generic(format!(
                             "Failed to parse {} into number: {:?}",
                             split_bit[0], error
-                        ))
+                        )))
                     }
                 };
                 log::trace!("got pref {}, now {pref}", split_bit[0]);
@@ -384,27 +385,27 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
             "CAA" => {
                 let split_bit: Vec<&str> = record.rdata.split(' ').collect();
                 if split_bit.len() < 3 {
-                    return Err(format!(
+                    return Err(GoatNsError::Generic(format!(
                         "While trying to parse CAA record, got '{:?}' which is wrong.",
                         split_bit
-                    ));
+                    )));
                 };
                 let flag = match u8::from_str(split_bit[0]) {
                     Ok(value) => value,
                     Err(error) => {
-                        return Err(format!(
+                        return Err(GoatNsError::Generic(format!(
                             "Failed to parse {} into number: {:?}",
                             split_bit[0], error
-                        ))
+                        )))
                     }
                 };
                 let tag = DNSCharString::from(split_bit[1]);
                 // validate that the tag is valid.
                 if !CAA_TAG_VALIDATOR.is_match(split_bit[1]) {
-                    return Err(format!(
+                    return Err(GoatNsError::Generic(format!(
                         "Invalid tag value {:?} for {}",
                         split_bit[1], record.name
-                    ));
+                    )));
                 };
                 // take the rest of the data as the thing.
                 let value = split_bit[2..].to_vec().join(" ").as_bytes().to_vec();
@@ -418,10 +419,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
             }
             "LOC" => {
                 // we do this here because the conversion process is *so* big.
-                let res: FileLocRecord = match FileLocRecord::try_from(record.rdata.as_str()) {
-                    Ok(value) => value,
-                    Err(err) => return Err(err),
-                };
+                let res: FileLocRecord = FileLocRecord::try_from(record.rdata.as_str())?;
 
                 Ok(InternalResourceRecord::LOC {
                     ttl: record.ttl,
@@ -439,30 +437,50 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
             "URI" => {
                 let matches = match URI_RECORD.captures(&record.rdata) {
                     Some(value) => value,
-                    None => return Err("Failed to parse URL record!".to_string()),
+                    None => {
+                        return Err(GoatNsError::Generic(
+                            "Failed to parse URL record!".to_string(),
+                        ))
+                    }
                 };
 
                 let priority = match matches.name("priority") {
                     Some(value) => match value.as_str().parse::<u16>() {
                         Ok(value) => value,
                         Err(err) => {
-                            return Err(format!("Failed to parse priority into u16: {err:?}"))
+                            return Err(GoatNsError::Generic(format!(
+                                "Failed to parse priority into u16: {err:?}"
+                            )))
                         }
                     },
-                    None => return Err("No target found in record?".to_string()),
+                    None => {
+                        return Err(GoatNsError::Generic(
+                            "No target found in record?".to_string(),
+                        ))
+                    }
                 };
                 let weight = match matches.name("weight") {
                     Some(value) => match value.as_str().parse::<u16>() {
                         Ok(value) => value,
                         Err(err) => {
-                            return Err(format!("Failed to parse weight into u16: {err:?}"))
+                            return Err(GoatNsError::Generic(format!(
+                                "Failed to parse weight into u16: {err:?}"
+                            )))
                         }
                     },
-                    None => return Err("No target found in record?".to_string()),
+                    None => {
+                        return Err(GoatNsError::Generic(
+                            "No target found in record?".to_string(),
+                        ))
+                    }
                 };
                 let target = match matches.name("target") {
                     Some(value) => DNSCharString::from(value.as_str()),
-                    None => return Err("No target found in record?".to_string()),
+                    None => {
+                        return Err(GoatNsError::Generic(
+                            "No target found in record?".to_string(),
+                        ))
+                    }
                 };
 
                 Ok(InternalResourceRecord::URI {
@@ -473,7 +491,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                     rclass: record.class,
                 })
             }
-            _ => Err("Invalid type specified!".to_string()),
+            _ => Err(GoatNsError::Generic("Invalid type specified!".to_string())),
         }
     }
 }
@@ -913,15 +931,6 @@ mod tests {
     }
 }
 
-lazy_static! {
-    // Thanks to the folks from #regex on Liberachat
-    #[allow(clippy::expect_used)]
-    static ref LOC_REGEX: Regex = Regex::new(
-        r"^(?P<d1>\d+)(?:[ ](?P<m1>\d+)(?:[ ](?P<s1>\d+(?:[.]\d+)?))?)?[ ](?P<lat_dir>[NS])[ ](?P<d2>\d+)(?:[ ](?P<m2>\d+)(?:[ ](?P<s2>\d+(?:[.]\d+)?))?)?[ ](?P<lon_dir>[EW])[ ](?P<alt>-?\d+(?:[.]\d+)?)m(?:[ ](?P<size>\d+(?:[.]\d+)?)m(?:[ ](?P<hp>\d+(?:[.]\d+)?)m(?:[ ](?P<vp>\d+(?:[.]\d+)?)m)?)?)?",
-    ).expect("Faled to parse LOC regex!");
-
-}
-
 #[derive(PartialEq)]
 /// This represents a LOC record in a zone file
 pub struct FileLocRecord {
@@ -978,13 +987,20 @@ impl Debug for FileLocRecord {
 }
 
 impl TryFrom<&str> for FileLocRecord {
-    type Error = String;
+    type Error = GoatNsError;
 
-    fn try_from(input_string: &str) -> Result<FileLocRecord, String> {
-        let result = match LOC_REGEX.captures(input_string) {
+    fn try_from(input_string: &str) -> Result<FileLocRecord, Self::Error> {
+        // Thanks to the folks from #regex on Liberachat
+        let loc_regex = Regex::new(
+            r"^(?P<d1>\d+)(?:[ ](?P<m1>\d+)(?:[ ](?P<s1>\d+(?:[.]\d+)?))?)?[ ](?P<lat_dir>[NS])[ ](?P<d2>\d+)(?:[ ](?P<m2>\d+)(?:[ ](?P<s2>\d+(?:[.]\d+)?))?)?[ ](?P<lon_dir>[EW])[ ](?P<alt>-?\d+(?:[.]\d+)?)m(?:[ ](?P<size>\d+(?:[.]\d+)?)m(?:[ ](?P<hp>\d+(?:[.]\d+)?)m(?:[ ](?P<vp>\d+(?:[.]\d+)?)m)?)?)?",
+        )?;
+
+        let result = match loc_regex.captures(input_string) {
             Some(value) => value,
             None => {
-                return Err("Failed to match input to expected format!".to_string());
+                return Err(GoatNsError::Generic(
+                    "Failed to match input to expected format!".to_string(),
+                ));
             }
         };
         log::trace!("{result:?}");
@@ -1056,23 +1072,31 @@ impl TryFrom<&str> for FileLocRecord {
         let lat_dir: String = match result.name("lat_dir") {
             Some(value) => value.as_str().into(),
             None => {
-                return Err("Couldn't match lat_dir in this string!".to_string());
+                return Err(GoatNsError::Generic(
+                    "Couldn't match lat_dir in this string!".to_string(),
+                ));
             }
         };
 
         let lon_dir: String = match result.name("lon_dir") {
             Some(value) => value.as_str().into(),
             None => {
-                return Err("Couldn't match lon_dir in this string!".to_string());
+                return Err(GoatNsError::Generic(
+                    "Couldn't match lon_dir in this string!".to_string(),
+                ));
             }
         };
 
         let alt: i32 = match result.name("alt") {
             Some(value) => match value.as_str().parse::<i32>() {
                 Ok(value) => value,
-                Err(err) => return Err(format!("Error parsing altitude: {err:?}")),
+                Err(err) => {
+                    return Err(GoatNsError::Generic(format!(
+                        "Error parsing altitude: {err:?}"
+                    )))
+                }
             },
-            None => return Err("Error finding altitude!".to_string()),
+            None => return Err(GoatNsError::Generic("Error finding altitude!".to_string())),
         };
         // here we work out the final value for the altitude
         // let altfrac = alt_num % 100;
@@ -1085,7 +1109,11 @@ impl TryFrom<&str> for FileLocRecord {
                     log::trace!("Parsed size as {value} from string");
                     value
                 }
-                Err(err) => return Err(format!("Failed to parse size: {value:?}, {err:?}")),
+                Err(err) => {
+                    return Err(GoatNsError::Generic(format!(
+                        "Failed to parse size: {value:?}, {err:?}"
+                    )))
+                }
             },
             None => {
                 log::trace!("defaulting to size of 1");

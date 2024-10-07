@@ -130,6 +130,7 @@ impl ConfigFile {
     }
 
     /// Return the URL for the status endpoint
+    #[cfg(test)]
     pub fn status_url(&self) -> Url {
         Url::from_str(&format!(
             "https://{}:{}/status",

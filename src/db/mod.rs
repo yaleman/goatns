@@ -352,8 +352,8 @@ pub async fn get_zone_with_txn(
 }
 
 impl TryFrom<SqliteRow> for InternalResourceRecord {
-    type Error = String;
-    fn try_from(row: SqliteRow) -> Result<InternalResourceRecord, String> {
+    type Error = GoatNsError;
+    fn try_from(row: SqliteRow) -> Result<InternalResourceRecord, Self::Error> {
         let record_id: i64 = row.get(0);
         let record_class: u16 = row.get(3);
         let record_type: u16 = row.get(4);
@@ -883,7 +883,7 @@ impl DBEntity for FileZoneRecord {
     async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
         log::debug!("Ensuring DB Records table exists");
 
-        let mut tx = pool.begin().await.unwrap();
+        let mut tx = pool.begin().await?;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS
@@ -945,7 +945,7 @@ impl DBEntity for FileZoneRecord {
             .fetch_one(txn)
             .await?;
 
-        let res: Self = res.try_into().unwrap();
+        let res = Self::try_from(res)?;
 
         Ok(Box::new(res))
     }
@@ -970,9 +970,12 @@ impl DBEntity for FileZoneRecord {
         .await?;
         let res = res
             .iter()
-            .map(|r| {
-                let conf: FileZoneRecord = r.try_into().unwrap();
-                Box::from(conf)
+            .filter_map(|r| match FileZoneRecord::try_from(r) {
+                Ok(val) => Some(Box::from(val)),
+                Err(err) => {
+                    error!("Failed to turn sql row into FileZoneRecord: {:?}", err);
+                    None
+                }
             })
             .collect();
         Ok(res)
@@ -1131,7 +1134,7 @@ impl DBEntity for ZoneOwnership {
     const TABLE: &'static str = "ownership";
 
     async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
-        let mut tx = pool.begin().await.unwrap();
+        let mut tx = pool.begin().await?;
 
         #[cfg(test)]
         eprintln!("Ensuring DB {} table exists", Self::TABLE);
@@ -1843,15 +1846,15 @@ pub async fn get_zones_with_txn(
 }
 
 impl TryFrom<&SqliteRow> for FileZoneRecord {
-    type Error = String;
-    fn try_from(row: &SqliteRow) -> Result<Self, String> {
+    type Error = GoatNsError;
+    fn try_from(row: &SqliteRow) -> Result<Self, Self::Error> {
         row.to_owned().try_into()
     }
 }
 
 impl TryFrom<SqliteRow> for FileZoneRecord {
-    type Error = String;
-    fn try_from(row: SqliteRow) -> Result<Self, String> {
+    type Error = GoatNsError;
+    fn try_from(row: SqliteRow) -> Result<Self, Self::Error> {
         let name: String = row.get("name");
         let rrtype: i32 = row.get("rrtype");
         let rrtype = RecordType::from(&(rrtype as u16));
@@ -1860,7 +1863,7 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
         let ttl: u32 = row.get("ttl");
 
         if let RecordType::ANY = rrtype {
-            return Err("Cannot serve ANY records".to_string());
+            return Err(GoatNsError::RFC8482);
         }
 
         Ok(FileZoneRecord {

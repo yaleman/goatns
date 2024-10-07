@@ -19,8 +19,17 @@ pub enum GoatNsError {
     SendError(String),
     Utf8Error(Utf8Error),
     DateParseError(String),
+    /// No ANY records for you!
+    RFC8482,
+    Generic(String),
+    Regex(String),
 }
 
+impl From<regex::Error> for GoatNsError {
+    fn from(error: regex::Error) -> Self {
+        GoatNsError::Regex(error.to_string())
+    }
+}
 impl From<std::io::Error> for GoatNsError {
     fn from(error: std::io::Error) -> Self {
         GoatNsError::IoError(error)
