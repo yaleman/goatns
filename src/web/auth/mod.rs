@@ -391,21 +391,21 @@ pub async fn login(
             {
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to store sesssion details",
+                    "Failed to store session details",
                 )
                     .into_response());
             };
             if session.insert("user", dbuser).await.is_err() {
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to store sesssion details",
+                    "Failed to store session details",
                 )
                     .into_response());
             };
             if session.insert("signed_in", true).await.is_err() {
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to store sesssion details",
+                    "Failed to store session details",
                 )
                     .into_response());
             };
