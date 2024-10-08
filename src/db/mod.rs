@@ -19,6 +19,7 @@ use sqlx::{Arguments, ConnectOptions, FromRow, Pool, Row, Sqlite, SqliteConnecti
 use tokio::time;
 use tracing::{error, instrument};
 
+pub(crate) mod entities;
 #[cfg(test)]
 pub mod test;
 
