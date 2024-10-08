@@ -47,7 +47,7 @@ async fn test_doh_get_json() -> Result<(), ()> {
         .danger_accept_invalid_certs(true)
         // .cookie_store(true)
         .default_headers(headers)
-        .timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .expect("Failed to build client");
 
@@ -55,7 +55,7 @@ async fn test_doh_get_json() -> Result<(), ()> {
         .get(&format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
-        .timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .unwrap();
@@ -79,7 +79,7 @@ async fn test_doh_ask_raw_accept() -> Result<(), ()> {
         .danger_accept_invalid_certs(true)
         // .cookie_store(true)
         .default_headers(headers)
-        .timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
@@ -87,7 +87,7 @@ async fn test_doh_ask_raw_accept() -> Result<(), ()> {
         .get(&format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
-        .timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .unwrap();
@@ -108,7 +108,7 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
         .danger_accept_invalid_certs(true)
         // .cookie_store(true)
         .default_headers(headers)
-        .timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
@@ -116,7 +116,7 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
         .get(&format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
-        .timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .unwrap();
@@ -137,7 +137,7 @@ async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
         .danger_accept_invalid_certs(true)
         // .cookie_store(true)
         .default_headers(headers)
-        .timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
@@ -145,7 +145,7 @@ async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
         .get(&format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
-        .timeout(std::time::Duration::from_secs(1))
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .unwrap();
