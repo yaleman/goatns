@@ -487,6 +487,7 @@ pub async fn setup_logging(
             filters: vec![
                 "h2",
                 "hyper::proto",
+                "hyper::client",
                 "rustls",
                 "h2::proto",
                 // "tower_http::trace::make_span",

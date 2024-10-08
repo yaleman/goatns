@@ -451,7 +451,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
         .unwrap();
 
     println!("Logging in with the token...");
-    let res = client
+    let res = match client
         .post(&format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(1))
         .timeout(std::time::Duration::from_secs(1))
@@ -461,7 +461,15 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
         })
         .send()
         .await
-        .unwrap();
+    {
+        Ok(value) => value,
+        Err(err) => {
+            eprintln!("Failed to send login request: {err:?}");
+            return Err(GoatNsError::StartupError(
+                "Failed to send login request".to_string(),
+            ));
+        }
+    };
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
