@@ -248,18 +248,15 @@ pub async fn login(
     // check if we've got an existing, valid session
     if let Some(signed_in) = session.get("signed_in").await.unwrap_or(Some(false)) {
         if signed_in {
-            return Err(Urls::Dashboard.redirect().into_response());
+            return Ok(Urls::Dashboard.redirect().into_response());
         }
     }
 
     let (query_state, query_code) = match (query.state, query.code) {
         (Some(state), Some(code)) => (state, code),
         _ => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                "Missing state or code in query parameters",
-            )
-                .into_response())
+            let auth_url = &oauth_start(&mut state).await.unwrap().to_string();
+            return Ok(Redirect::to(auth_url).into_response());
         }
     };
 
