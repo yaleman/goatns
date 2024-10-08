@@ -12,6 +12,7 @@ pub enum GoatNsError {
     /// Something failed in the start up of the platform
     StartupError(String),
     SqlxError(sqlx::Error),
+    Oidc(String),
     ReqwestError(reqwest::Error),
     FileError(String),
     EmptyFile,
