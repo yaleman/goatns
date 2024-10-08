@@ -31,8 +31,8 @@ jobs:
           install: true
       - name: vendor the things
         run: |
-          mkdir .cargo
-          cargo vendor > .cargo/config.toml
+          mkdir -p .cargo
+          cargo vendor >> .cargo/config.toml
       - name: Build and export to Docker
         id: build_and_export
         uses: docker/build-push-action@v6
@@ -55,12 +55,3 @@ jobs:
             --mount type=bind,source=$(pwd)/goatns.example.json,target=/goatns.json \
             goatns:test \
             --configcheck --config goatns.json
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          platforms: linux/amd64,linux/arm64
-          context: .
-          tags: ghcr.io/yaleman/goatns:latest
-          push: ${{ github.ref == 'refs/heads/main' }}
-          cache-from: type=gha
-          build-args: GITHUB_SHA=${GITHUB_SHA}

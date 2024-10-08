@@ -1,5 +1,6 @@
 use crate::datastore::Command;
 use crate::enums::AgentState;
+use crate::error::GoatNsError;
 use crate::HEADER_BYTES;
 use log::{debug, trace};
 use std::str::from_utf8;
@@ -108,12 +109,12 @@ name_as_bytes(
 )
 */
 pub fn name_as_bytes(
-    name: Vec<u8>,
+    name: &[u8],
     compress_target: Option<u16>,
     compress_reference: Option<&Vec<u8>>,
-) -> Vec<u8> {
+) -> Result<Vec<u8>, GoatNsError> {
     trace!("################################");
-    match from_utf8(&name) {
+    match from_utf8(name) {
         Ok(nstr) => trace!("name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
         Err(_) =>  trace!("failed to utf-8 name name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
     };
@@ -125,42 +126,42 @@ pub fn name_as_bytes(
         // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
         let result: Vec<u8> = (0b1100000000000000 | target).to_be_bytes().into();
         trace!("result of name_as_bytes {result:?}");
-        return result;
+        return Ok(result);
     };
 
     let mut result: Vec<u8> = vec![];
     // if somehow it's a weird bare domain then we don't have to do much it
     if !name.contains(&46) {
         result.push(name.len() as u8);
-        result.extend(&name);
+        result.extend(name);
         result.push(0); // null pad the name
-        return result;
+        return Ok(result);
     }
-    result = seven_dot_three_conversion(&name);
+    result = seven_dot_three_conversion(name);
 
     if compress_target.is_none() {
         trace!("no compression target, adding the trailing null and returning!");
         result.push(0);
-        return result;
+        return Ok(result);
     };
 
     if let Some(ct) = compress_reference {
         trace!("you gave me {ct:?} as a compression reference");
 
-        if &name == ct {
+        if name == ct {
             trace!("The thing we're converting is the same as the compression reference!");
             // return a pointer to the target_byte (probably the name in the header)
             if let Some(target) = compress_target {
                 let result: u16 = 0b1100000000000000 | target;
-                return result.to_be_bytes().to_vec();
+                return Ok(result.to_be_bytes().to_vec());
             } else {
-                panic!("you didn't give us a target, dude!")
+                return Err(GoatNsError::InvalidName);
             }
         }
         if name.ends_with(ct) {
             trace!("the name ends with the target! woo!");
             // Ok, we've gotten this far. We need to slice off the "front" of the string and return that.
-            result.clone_from(&name);
+            result.clone_from(&name.to_vec());
             result.truncate(name.len() - ct.len());
             trace!("The result is trimmed and now {:?}", from_utf8(&result));
 
@@ -173,8 +174,9 @@ pub fn name_as_bytes(
                 let pointer_bytes: u16 = 0b1100000000000000 | target;
                 result.extend(pointer_bytes.to_be_bytes());
             } else {
-                #[cfg(debug_assertions)]
-                panic!("No compression target and we totally could have compressed this.")
+                return Err(GoatNsError::BytePackingError(
+                    "No compression target and we totally could have compressed this.".to_string(),
+                ));
             }
 
             trace!("The result is trimmed and now {:?}", result);
@@ -182,7 +184,7 @@ pub fn name_as_bytes(
             // dropped into tail-finding mode where we're looking for a sub-string of the parent to target a compression pointer
             trace!("trying to find a sub-part of {ct:?} in {name:?}");
 
-            let tail_index = find_tail_match(&name, ct);
+            let tail_index = find_tail_match(name, ct);
             trace!("tail_index: {tail_index}");
             // if we get to here and the tail_index is 0 then we haven't set it - because we'd have caught the whole thing in the ends_with matcher earlier.
             if tail_index != 0 {
@@ -202,7 +204,7 @@ pub fn name_as_bytes(
         }
     }
     trace!("Final result {result:?}");
-    result
+    Ok(result)
 }
 
 // lazy_static!{
@@ -228,16 +230,16 @@ pub fn name_as_bytes(
 // }
 
 /// dumps the bytes out as if you were using some kind of fancy packet-dumper
-pub fn hexdump(bytes: Vec<u8>) {
+pub fn hexdump(bytes: &[u8]) -> Result<(), GoatNsError> {
     for byte in bytes.chunks(2) {
         let byte0_alpha = match byte[0].is_ascii_alphanumeric() {
-            true => from_utf8(byte[0..1].into()).expect("Failed to decode bytes"),
+            true => from_utf8(byte[0..1].into())?,
             false => " ",
         };
         match byte.len() {
             2 => {
                 let byte1_alpha = match byte[1].is_ascii_alphanumeric() {
-                    true => from_utf8(byte[1..2].into()).expect("Failed to decode bytes"),
+                    true => from_utf8(byte[1..2].into())?,
                     false => " ",
                 };
 
@@ -254,6 +256,7 @@ pub fn hexdump(bytes: Vec<u8>) {
             }
         }
     }
+    Ok(())
 }
 
 /// turn a degrees/minutes/seconds format into unsigned 32-bit integer matching the format

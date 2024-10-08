@@ -4,85 +4,125 @@ use std::time::Duration;
 
 use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
+use crate::error::GoatNsError;
 use crate::zones::{FileZone, ZoneRecord};
 use log::debug;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
-use tracing::error;
+use tracing::{error, instrument};
 
 type Responder<T> = oneshot::Sender<T>;
 
 #[derive(Debug)]
+/// Commands that can be sent to the datastore
 pub enum Command {
+    /// Query a record from the database
     GetRecord {
         /// Reversed vec of the name
         name: Vec<u8>,
+        /// The type of record to get
         rrtype: RecordType,
+        /// The class of record to get
         rclass: RecordClass,
+        /// The response channel
         resp: Responder<Option<ZoneRecord>>,
     },
+    /// Query a zone from the database
     GetZone {
+        /// If you know the ID supply it
         id: Option<i64>,
+        /// If you know the name supply it
         name: Option<String>,
+        /// The response channel
         resp: Responder<Option<FileZone>>,
     },
+    /// Query a list of zones from the database
     GetZoneNames {
+        /// Filter by user
         user: User,
+        /// The offset to start at
         offset: i64,
+        /// The number of records to return
         limit: i64,
+        /// The response channel
         resp: Responder<Vec<FileZone>>,
     },
+    /// Import a file directly into the database
     ImportFile {
+        /// Filename to load
         filename: String,
+        /// If you only want to import a single zone, specify the name
         zone_name: Option<String>,
+        /// The response channel
         resp: Responder<()>,
     },
+    /// Shutdown the datastore
     Shutdown,
-
-    PostZone,
+    /// Create a new zone
+    CreateZone {
+        /// Zone data
+        zone: FileZone,
+        /// The response channel
+        resp: Responder<FileZone>,
+    },
+    /// Delete a zone
     DeleteZone,
-    PatchZone,
-
+    /// update a zone
+    UpdateZone,
+    /// Delete user
     DeleteUser,
+    /// Create a new user
     CreateUser {
+        /// Username
         username: String,
+        /// Reference from OIDC
         authref: String,
+        /// Is this user an admin?
         admin: bool,
+        /// Is this user disabled?
         disabled: bool,
+        /// The response channel
         resp: Responder<bool>,
     },
+    /// Get a user
     GetUser {
+        /// Database ID if you have it
         id: Option<i64>,
+        /// username if you have it
         username: Option<String>,
+        /// The response channel
         resp: Responder<()>,
     },
-    PostUser,
-    PatchUser,
-
+    /// Update a user
+    UpdateUser,
+    /// Remove zone ownership (optionally include a user)
     DeleteOwnership {
-        zoneid: Option<i64>,
+        /// Zone ID
+        zoneid: i64,
+        /// User ID (db ID)
         userid: Option<i64>,
+        /// The response channel
         resp: Responder<()>,
     },
+    /// Get ownership of a zone, or zones for a user
     GetOwnership {
+        /// Zone ID
         zoneid: Option<i64>,
+        /// User ID
         userid: Option<i64>,
+        /// The response channel
         resp: Responder<Vec<Arc<ZoneOwnership>>>,
     },
+    /// Create ownership of a zone
     PostOwnership {
+        /// Zone ID
         zoneid: i64,
+        /// User ID
         userid: i64,
+        /// The response channel
         resp: Responder<ZoneOwnership>,
     },
-    // TODO: create a setter when we're ready to accept updates
-    // Set {
-    //     name: Vec<u8>,
-    //     rrtype: RecordType,
-    // }
-    // CreateZone {
-    //     zone: FileZone,
-    // }
 }
 
 async fn handle_get_command(
@@ -143,11 +183,8 @@ pub async fn handle_import_file(
     pool: &Pool<Sqlite>,
     filename: String,
     zone_name: Option<String>,
-) -> Result<(), String> {
-    let mut txn = pool
-        .begin()
-        .await
-        .map_err(|e| format!("Failed to start transaction: {e:?}"))?;
+) -> Result<(), GoatNsError> {
+    let mut txn = pool.begin().await?;
 
     let zones: Vec<FileZone> = crate::zones::load_zones(&filename)?;
 
@@ -158,24 +195,19 @@ pub async fn handle_import_file(
 
     if zones.is_empty() {
         log::warn!("No zones to import!");
-        return Err("No zones to import!".to_string());
+        return Err(GoatNsError::EmptyFile);
     }
 
     for zone in zones {
-        let _saved_zone = match zone.save_with_txn(&mut txn).await {
-            Err(err) => {
-                let errmsg = format!("Failed to save zone {}: {err:?}", zone.name);
-                log::error!("{errmsg}");
-                return Err(errmsg);
-            }
-            Ok(val) => val,
-        };
+        let _saved_zone = zone
+            .save_with_txn(&mut txn)
+            .await
+            .inspect_err(|err| error!("Failed to save zone {}: {err:?}", zone.name))?;
         log::info!("Imported {}", zone.name);
     }
-    txn.commit().await.map_err(|e| {
-        log::error!("Failed to commit transaction!");
-        format!("Failed to commit transaction: {e:?}")
-    })?;
+    txn.commit()
+        .await
+        .inspect_err(|err| log::error!("Failed to commit transaction! {:?}", err))?;
     log::info!("Completed import process");
     Ok(())
 }
@@ -185,14 +217,14 @@ async fn handle_get_zone(
     pool: &Pool<Sqlite>,
     id: Option<i64>,
     name: Option<String>,
-) -> Result<(), String> {
-    let mut txn = pool.begin().await.map_err(|e| format!("{e:?}"))?;
+) -> Result<(), GoatNsError> {
+    let mut txn = pool.begin().await?;
 
-    let zone = crate::db::get_zone_with_txn(&mut txn, id, name)
-        .await
-        .map_err(|e| format!("{e:?}"))?;
+    let zone = crate::db::get_zone_with_txn(&mut txn, id, name).await?;
 
-    tx.send(zone).map_err(|e| format!("{e:?}"))
+    tx.send(zone).map_err(|e| {
+        GoatNsError::SendError(format!("Failed to send response on tokio channel: {:?}", e))
+    })
 }
 
 async fn handle_get_zone_names(
@@ -201,17 +233,146 @@ async fn handle_get_zone_names(
     pool: &Pool<Sqlite>,
     offset: i64,
     limit: i64,
-) -> Result<(), String> {
-    let mut txn = pool.begin().await.map_err(|e| format!("{e:?}"))?;
+) -> Result<(), GoatNsError> {
+    let mut txn = pool.begin().await?;
 
     log::debug!("handle_get_zone_names: user={user:?}");
-    let zones = user
-        .get_zones_for_user(&mut txn, offset, limit)
-        .await
-        .map_err(|e| format!("{e:?}"))?;
+    let zones = user.get_zones_for_user(&mut txn, offset, limit).await?;
 
     log::debug!("handle_get_zone_names: {zones:?}");
-    tx.send(zones).map_err(|e| format!("{e:?}"))
+    tx.send(zones).map_err(|e| {
+        GoatNsError::SendError(format!("Failed to send response on tokio channel: {:?}", e))
+    })
+}
+
+#[instrument(level = "info", skip(connpool))]
+pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Result<(), String> {
+    match cmd {
+        Command::GetZone { id, name, resp } => {
+            let res = handle_get_zone(resp, connpool, id, name).await;
+            if let Err(e) = res {
+                log::error!("{e:?}")
+            };
+        }
+        Command::GetZoneNames {
+            resp,
+            user,
+            offset,
+            limit,
+        } => {
+            let res = handle_get_zone_names(user, resp, connpool, offset, limit).await;
+            if let Err(e) = res {
+                log::error!("{e:?}")
+            };
+        }
+        Command::Shutdown => {
+            #[cfg(test)]
+            println!("### Datastore was sent shutdown message, shutting down.");
+            log::info!("Datastore was sent shutdown message, shutting down.");
+            return Err("Datastore was sent shutdown message, shutting down.".to_string());
+        }
+        Command::ImportFile {
+            filename,
+            resp,
+            zone_name,
+        } => {
+            handle_import_file(connpool, filename, zone_name)
+                .await
+                .map_err(|e| format!("{e:?}"))?;
+            match resp.send(()) {
+                Ok(_) => log::info!("DS Sent Success"),
+                Err(err) => {
+                    let res = format!("Failed to send response: {err:?}");
+                    log::info!("{res}");
+                }
+            }
+        }
+        Command::GetRecord {
+            name,
+            rrtype,
+            rclass,
+            resp,
+        } => {
+            let res = handle_get_command(connpool, name, rrtype, rclass, resp).await;
+            if let Err(e) = res {
+                log::error!("{e:?}")
+            };
+        }
+        Command::CreateZone { zone, resp } => {
+            match zone.save(connpool).await {
+                Ok(zone) => {
+                    if let Err(err) = resp.send(*zone.clone()) {
+                        log::error!("Failed to send message back to caller after creating zone {zone:?}: {err:?}");
+                    } else {
+                        log::info!("Created zone: {:?}", zone);
+                    }
+                }
+                Err(err) => {
+                    log::error!("Failed to create zone: {zone:?} {err:?}");
+                }
+            };
+        }
+        Command::DeleteZone => {
+            error!("Unimplemented: Command::DeleteZone")
+        }
+        Command::UpdateZone => {
+            error!("Unimplemented: Command::PatchZone")
+        }
+        Command::CreateUser {
+            username,
+            authref,
+            admin,
+            disabled,
+            resp,
+        } => {
+            let new_user = User {
+                username: username.clone(),
+                authref: Some(authref.clone()),
+                admin,
+                disabled,
+                ..Default::default()
+            };
+            log::debug!("Creating: {new_user:?}");
+            let res = match new_user.save(connpool).await {
+                Ok(_) => true,
+                Err(error) => {
+                    log::error!("Failed to create {username}: {error:?}");
+                    false
+                }
+            };
+            if let Err(error) = resp.send(res) {
+                log::error!("Failed to send message back to caller: {error:?}");
+            }
+        }
+        Command::DeleteUser => error!("Unimplemented: Command::DeleteUser"),
+        Command::GetUser { .. } => error!("Unimplemented: Command::GetUser"),
+        Command::UpdateUser => error!("Unimplemented: Command::PatchUser"),
+        Command::DeleteOwnership { .. } => error!("Unimplemented: Command::DeleteOwnership"),
+        Command::GetOwnership {
+            zoneid: _,
+            userid,
+            resp,
+        } => {
+            if let Some(userid) = userid {
+                match ZoneOwnership::get_all_user(connpool, userid).await {
+                    Ok(zone) => {
+                        if let Err(err) = resp.send(zone) {
+                            error!("Failed to send zone_ownership response: {err:?}")
+                        };
+                    }
+                    Err(err) => {
+                        error!("Failed to get all zone_ownership for user {userid}: {err:?}")
+                    }
+                }
+            } else {
+                error!("Unmatched arm in getownership")
+            }
+        }
+        Command::PostOwnership { .. } => {
+            error!("Unimplemented command: Command::PostOwnership")
+        }
+    }
+    Ok(())
 }
 
 /// Manages the datastore, waits for signals from the server instances and responds with data
@@ -226,125 +387,9 @@ pub async fn manager(
     }
 
     while let Some(cmd) = rx.recv().await {
-        match cmd {
-            Command::GetZone { id, name, resp } => {
-                let res = handle_get_zone(resp, &connpool, id, name).await;
-                if let Err(e) = res {
-                    log::error!("{e:?}")
-                };
-            }
-            Command::GetZoneNames {
-                resp,
-                user,
-                offset,
-                limit,
-            } => {
-                let res = handle_get_zone_names(user, resp, &connpool, offset, limit).await;
-                if let Err(e) = res {
-                    log::error!("{e:?}")
-                };
-            }
-            Command::Shutdown => {
-                #[cfg(test)]
-                println!("### Datastore was sent shutdown message, shutting down.");
-                log::info!("Datastore was sent shutdown message, shutting down.");
-                break;
-            }
-            Command::ImportFile {
-                filename,
-                resp,
-                zone_name,
-            } => {
-                handle_import_file(&connpool, filename, zone_name)
-                    .await
-                    .map_err(|e| format!("{e:?}"))?;
-                match resp.send(()) {
-                    Ok(_) => log::info!("DS Sent Success"),
-                    Err(err) => {
-                        let res = format!("Failed to send response: {err:?}");
-                        log::info!("{res}");
-                    }
-                }
-            }
-            Command::GetRecord {
-                name,
-                rrtype,
-                rclass,
-                resp,
-            } => {
-                let res = handle_get_command(
-                    &connpool, // zones.get(name.to_ascii_lowercase()),
-                    name, rrtype, rclass, resp,
-                )
-                .await;
-                if let Err(e) = res {
-                    log::error!("{e:?}")
-                };
-            }
-            Command::PostZone => {
-                error!("Unimplemented: Command::PostZone")
-            }
-            Command::DeleteZone => {
-                error!("Unimplemented: Command::DeleteZone")
-            }
-            Command::PatchZone => {
-                error!("Unimplemented: Command::PatchZone")
-            }
-            Command::CreateUser {
-                username,
-                authref,
-                admin,
-                disabled,
-                resp,
-            } => {
-                let new_user = User {
-                    username: username.clone(),
-                    authref: Some(authref.clone()),
-                    admin,
-                    disabled,
-                    ..Default::default()
-                };
-                log::debug!("Creating: {new_user:?}");
-                let res = match new_user.save(&connpool).await {
-                    Ok(_) => true,
-                    Err(error) => {
-                        log::error!("Failed to create {username}: {error:?}");
-                        false
-                    }
-                };
-                if let Err(error) = resp.send(res) {
-                    log::error!("Failed to send message back to caller: {error:?}");
-                }
-            }
-            Command::DeleteUser => error!("Unimplemented: Command::DeleteUser"),
-            Command::GetUser { .. } => error!("Unimplemented: Command::GetUser"),
-            Command::PostUser => error!("Unimplemented: Command::PostUser"),
-            Command::PatchUser => error!("Unimplemented: Command::PatchUser"),
-            Command::DeleteOwnership { .. } => error!("Unimplemented: Command::DeleteOwnership"),
-            Command::GetOwnership {
-                zoneid: _,
-                userid,
-                resp,
-            } => {
-                if let Some(userid) = userid {
-                    match ZoneOwnership::get_all_user(&connpool, userid).await {
-                        Ok(zone) => {
-                            if let Err(err) = resp.send(zone) {
-                                error!("Failed to send zone_ownership response: {err:?}")
-                            };
-                        }
-                        Err(err) => {
-                            error!("Failed to get all zone_ownership for user {userid}: {err:?}")
-                        }
-                    }
-                } else {
-                    error!("Unmatched arm in getownership")
-                }
-            }
-            Command::PostOwnership { .. } => {
-                error!("Unimplemented command: Command::PostOwnership")
-            }
-        }
+        if handle_message(cmd, &connpool).await.is_err() {
+            break;
+        };
     }
     #[cfg(test)]
     println!("### manager is done!");

@@ -2,6 +2,30 @@
 {% block content %}
 <h1>Zones!</h1>
 
+{% if let Some(error) = error %}
+<div class="alert alert-danger" role="alert">
+    {{error}}
+</div>
+{% endif %}
+
+{% if let Some(message) = message %}
+<div class="alert alert-success" role="alert">
+    {{message}}
+</div>
+{% endif %}
+
+<form method="POST" action="/ui/zones/new">
+    <div class="row">
+        <div class="col">
+        <input type="text" class="form-control" id="name" name="name"
+            placeholder="New Zone" required>
+        </div>
+        <div class="col">
+            <button type="submit" class="btn btn-primary mb-2">Create</button>
+        </div>
+    </div>
+</form>
+
 <table class="table">
     <thead>
         <th scope="col">Name</th>
@@ -9,7 +33,8 @@
     </thead>
     {% for zone in zones %}
     <tr>
-        <td class="text-truncate"><a href="/ui/zones/{{zone.id.unwrap()}}">{{zone.name}}</a></td>
+        <td class="text-truncate"><a
+                href="/ui/zones/{{zone.id.unwrap()}}">{{zone.name}}</a></td>
         <td>{{zone.rname}}</td>
     </tr>
     {% endfor %}

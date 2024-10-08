@@ -13,3 +13,4 @@ certificates/*
 # certificates!
 *.pem
 results.xml
+.envrc

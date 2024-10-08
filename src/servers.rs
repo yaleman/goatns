@@ -2,41 +2,40 @@ use concread::cowcell::asynch::CowCellReadTxn;
 use packed_struct::prelude::*;
 use std::io::Error;
 use std::net::SocketAddr;
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
 use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
+use tracing::{error, field, instrument};
 
 use crate::config::ConfigFile;
 use crate::datastore::Command;
 use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
+use crate::error::GoatNsError;
 use crate::reply::{reply_any, reply_builder, reply_nxdomain, Reply};
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::zones::ZoneRecord;
 use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
-lazy_static! {
-    static ref LOCALHOST: std::net::IpAddr = std::net::IpAddr::from_str("127.0.0.1").expect("Failed to parse localhost IP address");
-    // static ref VERSION_STRINGS: Vec<String> =
-        // vec![String::from("version"), String::from("version.bind"),];
+pub(crate) enum ChaosResult {
+    Refused(Reply),
+    Shutdown(Reply),
 }
 
 /// this handles a shutdown CHAOS request
-async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<Reply, Option<Reply>> {
+async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<ChaosResult, GoatNsError> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
     if let Some(q) = &r.question {
         if q.qclass == RecordClass::Chaos {
-            let qname = from_utf8(&q.qname)
-                .map_err(|e| {
-                    log::error!(
-                        "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
-                        q.qname
-                    );
-                })
-                .unwrap();
+            let qname = from_utf8(&q.qname).inspect_err(|e| {
+                log::error!(
+                    "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
+                    q.qname
+                );
+            })?;
             // Just don't do this on UDP, because we can't really tell who it's coming from.
             if qname == "shutdown" {
                 // when we get a request, we update the response to say if we're going to do it or not
@@ -45,7 +44,7 @@ async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<Reply, 
                         log::info!("Got CHAOS shutdown, shutting down");
                         let mut chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_OK.clone());
-                        return Ok(chaos_reply);
+                        return Ok(ChaosResult::Shutdown(chaos_reply));
                     }
                     false => {
                         // get lost!  🤣
@@ -53,13 +52,17 @@ async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<Reply, 
                         let mut chaos_reply = r.clone();
                         chaos_reply.answers.push(CHAOS_NO.clone());
                         chaos_reply.header.rcode = Rcode::Refused;
-                        return Err(Some(chaos_reply));
+                        return Ok(ChaosResult::Refused(chaos_reply));
                     }
                 };
             }
         }
     };
-    Err(None)
+
+    let mut chaos_reply = r.clone();
+    chaos_reply.answers.push(CHAOS_NO.clone());
+    chaos_reply.header.rcode = Rcode::Refused;
+    Ok(ChaosResult::Refused(chaos_reply))
 }
 
 /// this handles a version CHAOS request
@@ -87,11 +90,9 @@ pub async fn udp_server(
     datastore_sender: mpsc::Sender<crate::datastore::Command>,
     _agent_tx: broadcast::Sender<AgentState>,
 ) -> io::Result<()> {
-    let udp_sock = match UdpSocket::bind(
-        config
-            .dns_listener_address()
-            .expect("Failed to get DNS listener address on startup!"),
-    )
+    let udp_sock = match UdpSocket::bind(config.dns_listener_address().map_err(|_err| {
+        GoatNsError::StartupError("Failed to get DNS listener address on startup!".to_string())
+    })?)
     .await
     {
         Ok(value) => {
@@ -125,6 +126,7 @@ pub async fn udp_server(
                 len,
                 &udp_buffer,
                 config.capture_packets,
+                QueryProtocol::Udp,
             ),
         )
         .await
@@ -175,6 +177,7 @@ pub async fn udp_server(
     }
 }
 
+#[instrument(level = "info", skip_all)]
 pub async fn tcp_conn_handler(
     stream: &mut TcpStream,
     addr: SocketAddr,
@@ -200,8 +203,10 @@ pub async fn tcp_conn_handler(
             log::debug!("Read {:?} bytes from TCP stream", len);
         }
     }
-
-    crate::utils::hexdump(buf.clone());
+    // TODO: why are we hexdumping this?
+    if let Err(err) = crate::utils::hexdump(&buf) {
+        log::error!("Failed to hexdump buffer: {:?}", err);
+    };
     // the first two bytes of a tcp query is the message length
     // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
 
@@ -220,7 +225,13 @@ pub async fn tcp_conn_handler(
     let buf = &buf[0..msg_length];
     let result = match timeout(
         Duration::from_millis(REPLY_TIMEOUT_MS),
-        parse_query(datastore_sender.clone(), msg_length, buf, capture_packets),
+        parse_query(
+            datastore_sender.clone(),
+            msg_length,
+            buf,
+            capture_packets,
+            QueryProtocol::Tcp,
+        ),
     )
     .await
     {
@@ -238,21 +249,24 @@ pub async fn tcp_conn_handler(
             // when you get a CHAOS from the allow-list with "shutdown" it's quitting time
             let r = match check_for_shutdown(&r, allowed_shutdown).await {
                 // no change here
-                Err(reply) => match reply {
-                    None => r,
-                    Some(response) => response,
-                },
-                Ok(reply) => {
-                    if let Err(error) = agent_tx.send(AgentState::Stopped {
-                        agent: Agent::TCPServer,
-                    }) {
-                        eprintln!("Failed to send UDPServer shutdown message: {error:?}");
-                    };
-                    if let Err(error) = datastore_sender.send(Command::Shutdown).await {
-                        eprintln!("Failed to send shutdown command to datastore.. {error:?}");
-                    };
-                    reply
+                Err(err) => {
+                    log::error!("Failed to check for shutdown: {:?}", err);
+                    return Ok(());
                 }
+                Ok(reply) => match reply {
+                    ChaosResult::Refused(response) => response,
+                    ChaosResult::Shutdown(response) => {
+                        if let Err(error) = agent_tx.send(AgentState::Stopped {
+                            agent: Agent::TCPServer,
+                        }) {
+                            eprintln!("Failed to send UDPServer shutdown message: {error:?}");
+                        };
+                        if let Err(error) = datastore_sender.send(Command::Shutdown).await {
+                            eprintln!("Failed to send shutdown command to datastore.. {error:?}");
+                        };
+                        response
+                    }
+                },
             };
 
             let reply_bytes: Vec<u8> = match r.as_bytes().await {
@@ -302,11 +316,9 @@ pub async fn tcp_server(
     // mut agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
     let mut agent_rx = agent_tx.subscribe();
-    let tcpserver = match TcpListener::bind(
-        config
-            .dns_listener_address()
-            .expect("Failed to get DNS listener address on startup!"),
-    )
+    let tcpserver = match TcpListener::bind(config.dns_listener_address().map_err(|_err| {
+        GoatNsError::StartupError("Failed to get DNS listener address on startup!".to_string())
+    })?)
     .await
     {
         Ok(value) => {
@@ -314,7 +326,9 @@ pub async fn tcp_server(
                 "Started TCP listener on {}",
                 config
                     .dns_listener_address()
-                    .expect("Failed to get DNS listener address on startup!")
+                    .map_err(|_err| GoatNsError::StartupError(
+                        "Failed to get DNS listener address on startup!".to_string()
+                    ))?
             );
             value
         }
@@ -330,7 +344,10 @@ pub async fn tcp_server(
     loop {
         let (mut stream, addr) = match tcpserver.accept().await {
             Ok(value) => value,
-            Err(error) => panic!("Couldn't get data from TcpStream: {:?}", error),
+            Err(err) => {
+                error!("Couldn't get data from TcpStream: {:?}", err);
+                continue;
+            }
         };
 
         let allowed_shutdown = shutdown_ip_address_list.contains(&addr.ip());
@@ -366,12 +383,30 @@ pub async fn tcp_server(
     }
 }
 
+pub(crate) enum QueryProtocol {
+    Udp,
+    Tcp,
+    DoH,
+}
+
+impl std::fmt::Display for QueryProtocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            QueryProtocol::Udp => write!(f, "UDP"),
+            QueryProtocol::Tcp => write!(f, "TCP"),
+            QueryProtocol::DoH => write!(f, "DoH"),
+        }
+    }
+}
+
 /// Parses the rest of the packets once we have stripped the header off.
+#[instrument(level = "info", skip_all, fields(protocol=protocol.to_string()))]
 pub async fn parse_query(
     datastore: tokio::sync::mpsc::Sender<crate::datastore::Command>,
     len: usize,
     buf: &[u8],
     capture_packets: bool,
+    protocol: QueryProtocol,
 ) -> Result<Reply, String> {
     if capture_packets {
         crate::packet_dumper::dump_bytes(
@@ -410,6 +445,7 @@ lazy_static! {
 }
 
 /// The generic handler for the packets once they've been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y'know?
+#[instrument(level="info", skip_all, fields(qname=field::Empty, qtype=field::Empty))]
 async fn get_result(
     header: Header,
     len: usize,
@@ -426,6 +462,7 @@ async fn get_result(
     let question = match Question::from_packets(&buf[HEADER_BYTES..len]) {
         Ok(value) => {
             log::trace!("Parsed question: {:?}", value);
+
             value
         }
         Err(error) => {
@@ -433,6 +470,14 @@ async fn get_result(
             return reply_builder(header.id, Rcode::ServFail);
         }
     };
+
+    // record the details of the query
+    let span = tracing::Span::current();
+    if !span.is_disabled() {
+        let qname_string = from_utf8(&question.qname).unwrap_or("<unable to parse>");
+        span.record("qname", qname_string);
+        span.record("qtype", question.qtype.to_string());
+    }
 
     // yeet them when we get a request we can't handle
     if !question.qtype.supported() {
@@ -461,7 +506,7 @@ async fn get_result(
 
     if let RecordType::ANY {} = question.qtype {
         // TODO this should check to see if we have a zone record, but that requires walking down the qname record recursively, which is its own thing. We just YOLO a HINFO back for any request now.
-        return reply_any(header.id, question);
+        return reply_any(header.id, &question);
     };
 
     // build the request to the datastore to make the query
@@ -555,8 +600,11 @@ impl Servers {
             ..Default::default()
         }
     }
-    pub fn with_apiserver(self, apiserver: Option<JoinHandle<Result<(), Error>>>) -> Self {
-        Self { apiserver, ..self }
+    pub fn with_apiserver(self, apiserver: JoinHandle<Result<(), Error>>) -> Self {
+        Self {
+            apiserver: Some(apiserver),
+            ..self
+        }
     }
     pub fn with_datastore(self, datastore: JoinHandle<Result<(), String>>) -> Self {
         Self {

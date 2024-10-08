@@ -1,3 +1,4 @@
+use askama_axum::IntoResponse;
 use axum::body::{Body, Bytes};
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -13,7 +14,7 @@ use crate::db::get_all_fzr_by_name;
 use crate::enums::{Rcode, RecordClass, RecordType};
 use crate::reply::Reply;
 use crate::resourcerecord::InternalResourceRecord;
-use crate::servers::parse_query;
+use crate::servers::{parse_query, QueryProtocol};
 use crate::web::GoatState;
 use crate::{Header, Question, HEADER_BYTES};
 
@@ -116,8 +117,6 @@ async fn parse_raw_http(bytes: Vec<u8>) -> Result<GetQueryString, String> {
             return Err(format!("Failed to parse header: {:?}", error));
         }
     };
-    // log::trace!("Buffer length: {}", len);
-    log::trace!("Parsed header: {:?}", header);
 
     let question = Question::from_packets(&bytes[HEADER_BYTES..])?;
     log::debug!("Question: {question:?}");
@@ -139,7 +138,7 @@ async fn parse_raw_http(bytes: Vec<u8>) -> Result<GetQueryString, String> {
     })
 }
 
-fn get_response_type_from_headers(headers: HeaderMap) -> ResponseType {
+fn get_response_type_from_headers(headers: &HeaderMap) -> ResponseType {
     match headers.get("accept") {
         Some(value) => match value.to_str().unwrap_or("") {
             "application/dns-json" => ResponseType::Json,
@@ -150,36 +149,36 @@ fn get_response_type_from_headers(headers: HeaderMap) -> ResponseType {
     }
 }
 
-fn response_406() -> Response {
-    axum::response::Response::builder()
-        .status(StatusCode::from_u16(406).unwrap())
-        // .header("Content-type", "application/dns-json")
-        .header("Cache-Control", "max-age=3600")
-        .body(Body::empty())
-        .unwrap()
+pub(crate) fn response_406() -> Response {
+    (
+        StatusCode::NOT_ACCEPTABLE,
+        [(axum::http::header::CACHE_CONTROL, "max-age=3600")],
+        "",
+    )
+        .into_response()
 }
-fn response_500() -> Response<Body> {
-    axum::response::Response::builder()
-        .status(StatusCode::from_u16(500).unwrap())
-        // .header("Content-type", "application/dns-json")
-        .header("Cache-Control", "max-age=1")
-        .body(Body::empty())
-        .unwrap()
+pub(crate) fn response_500() -> Response {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        [(axum::http::header::CACHE_CONTROL, "max-age=1")],
+        "",
+    )
+        .into_response()
 }
 
 pub async fn handle_get(
     State(state): State<GoatState>,
     headers: HeaderMap,
     Query(query): Query<GetQueryString>,
-) -> Response {
+) -> Result<Response, Response> {
     // TODO: accept header filtering probably should be a middleware since it applies to the whole /doh route but those things are annoying as heck
-    let response_type: ResponseType = get_response_type_from_headers(headers);
+    let response_type: ResponseType = get_response_type_from_headers(&headers);
     if let ResponseType::Invalid = response_type {
-        return response_406();
+        return Err(response_406());
     }
 
-    let mut qname: String = "".to_string();
-    let mut rrtype: String = "A".to_string();
+    let mut qname: String = query.name.unwrap_or(String::new());
+    let mut rrtype: String = query.rrtype.unwrap_or("A".to_string());
     let mut id: u16 = 0;
 
     if let Some(dns) = query.dns {
@@ -187,30 +186,37 @@ pub async fn handle_get(
             Ok(val) => val,
             Err(err) => {
                 log::debug!("Failed to parse DoH GET RAW: {err:?}");
-                return response_500(); // TODO: this could probably be a SERVFAIL?
+                return Err(response_500()); // TODO: this could probably be a SERVFAIL?
             }
         };
 
-        let query = parse_raw_http(bytes.clone()).await.unwrap();
-        qname = query.name.unwrap();
-        rrtype = query.rrtype.unwrap();
-        id = query.id;
-    } else if query.name.is_some() {
-        qname = query.name.unwrap();
+        let query = parse_raw_http(bytes).await.map_err(|err| {
+            log::error!("Failed to parse DoH GET RAW: {err:?}");
+            response_500() // TODO: should this be a SERVFAIL?
+        })?;
+        if let Some(name) = query.name {
+            qname = name;
+        }
         rrtype = query.rrtype.unwrap_or("A".to_string());
+        id = query.id;
     }
 
+    let mut read_txn = state.read().await.connpool.begin().await.map_err(|err| {
+        log::error!("Failed to get DB connection: {err:?}");
+        response_500()
+    })?;
+
     let records = match get_all_fzr_by_name(
-        &mut state.read().await.connpool.begin().await.unwrap(),
-        &qname.clone(),
-        RecordType::from(rrtype.clone()) as u16,
+        &mut read_txn,
+        &qname,
+        RecordType::from(rrtype.as_str()) as u16,
     )
     .await
     {
         Ok(value) => value,
         Err(error) => {
             log::error!("Failed to query {qname}/{}: {error:?}", rrtype);
-            return response_500(); // TODO: This should probably be a SERVFAIL
+            return Err(response_500()); // TODO: This should probably be a SERVFAIL
         }
     };
 
@@ -228,7 +234,7 @@ pub async fn handle_get(
     log::trace!("Returned records: {records:?}");
 
     match response_type {
-        ResponseType::Invalid => response_500(),
+        ResponseType::Invalid => Err(response_500()),
         ResponseType::Json => {
             let answer = records
                 .iter()
@@ -255,14 +261,20 @@ pub async fn handle_get(
                 ..Default::default()
             };
 
-            let response = serde_json::to_string(&reply).unwrap();
+            let response = serde_json::to_string(&reply).map_err(|err| {
+                log::error!("Failed to parse DoH GET request into JSON: {err:?}");
+                response_500()
+            })?;
 
             let response_builder = axum::response::Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-type", "application/dns-json")
                 .header("Cache-Control", format!("max-age={ttl}"));
             // TODO: add handler for DNSSEC responses
-            response_builder.body(Body::from(response)).unwrap()
+            response_builder.body(Body::from(response)).map_err(|err| {
+                log::error!("Failed to turn DoH GET request into JSON: {err:?}");
+                response_500()
+            })
         }
         ResponseType::Raw => {
             let answers: Vec<InternalResourceRecord> = records
@@ -310,10 +322,13 @@ pub async fn handle_get(
                     .header("Content-type", "application/dns-message")
                     .header("Cache-Control", format!("max-age={ttl}"))
                     .body(Body::from(value))
-                    .unwrap(),
+                    .map_err(|err| {
+                        log::error!("Failed to turn DoH GET request into bytes: {err:?}");
+                        response_500()
+                    }),
                 Err(err) => {
                     log::error!("Failed to turn DoH GET request into bytes: {err:?}");
-                    response_500()
+                    Err(response_500())
                 }
             }
         }
@@ -324,15 +339,15 @@ pub async fn handle_post(
     State(state): State<GoatState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Response {
+) -> Result<Response, Response> {
     // TODO: accept header filtering probably should be a middleware since it applies to the whole /doh route but those things are annoying as heck
-    let response_type: ResponseType = get_response_type_from_headers(headers);
+    let response_type: ResponseType = get_response_type_from_headers(&headers);
     if let ResponseType::Invalid = response_type {
-        return response_406();
+        return Err(response_406());
     };
     if let ResponseType::Json = response_type {
         // TODO: maybe support JSON responses to DoH POST requests
-        return response_406();
+        return Err(response_406());
     };
 
     let state_reader = state.read().await;
@@ -343,6 +358,7 @@ pub async fn handle_post(
         body.len(),
         &body,
         state_reader.config.capture_packets,
+        QueryProtocol::DoH,
     )
     .await;
 
@@ -353,7 +369,10 @@ pub async fn handle_post(
                     // we need to truncate the response
                     if value.len() > 65535 {
                         reply.header.truncated = true;
-                        let mut bytes: Vec<u8> = reply.as_bytes().await.unwrap();
+                        let mut bytes: Vec<u8> = reply.as_bytes().await.map_err(|err| {
+                            log::error!("Failed to turn DoH POST response into bytes: {err:?}");
+                            response_500()
+                        })?;
                         bytes.resize(65535, 0);
                         bytes
                     } else {
@@ -362,7 +381,7 @@ pub async fn handle_post(
                 }
                 Err(error) => {
                     log::error!("Failed to turn DoH POST response into bytes! {error:?}");
-                    return response_500();
+                    return Err(response_500());
                 }
             };
 
@@ -377,11 +396,14 @@ pub async fn handle_post(
                 .header("Content-type", "application/dns-message")
                 .header("Cache-Control", format!("max-age={ttl}"))
                 .body(Body::from(bytes))
-                .unwrap()
+                .map_err(|err| {
+                    log::error!("Failed to turn DoH POST response into bytes: {err:?}");
+                    response_500()
+                })
         }
         Err(err) => {
             log::error!("Failed to parse DoH POST query: {err:?}");
-            response_500()
+            Err(response_500())
         }
     }
 }

@@ -1,16 +1,18 @@
 use crate::db::{DBEntity, User};
+use crate::error::GoatNsError;
 use crate::web::ui::check_logged_in;
-use crate::web::utils::create_api_token;
+use crate::web::utils::{create_api_token, Urls};
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use askama::Template;
-use axum::extract::{Path, State};
-use axum::response::{Html, Redirect};
+use axum::extract::{OriginalUri, Path, State};
+use axum::response::{Html, IntoResponse, Redirect};
 use axum::routing::get;
 use axum::routing::post;
-use axum::{debug_handler, Form, Router};
+use axum::{Form, Router};
 
 use axum::http::Uri;
 use chrono::{DateTime, TimeDelta, Utc};
@@ -27,22 +29,20 @@ static SESSION_CSRFTOKEN_FIELD: &str = "api_token_csrf_token";
 
 #[derive(Template)]
 #[template(path = "user_settings.html")]
-struct Settings {
+pub(crate) struct Settings {
     pub user_is_admin: bool,
 }
 
 /// The user settings page at /ui/settings
-pub async fn settings(State(_state): State<GoatState>) -> Html<String> {
-    let context = Settings {
+pub(crate) async fn settings(State(_state): State<GoatState>) -> Settings {
+    Settings {
         user_is_admin: true,
-    };
-
-    Html::from(context.render().unwrap())
+    }
 }
 
 #[derive(Template)]
 #[template(path = "user_api_tokens.html")]
-struct ApiTokensGetPage {
+pub(crate) struct ApiTokensGetPage {
     csrftoken: String,
     tokens: Vec<Arc<UserAuthToken>>,
     tokenkey: Option<String>,
@@ -51,16 +51,14 @@ struct ApiTokensGetPage {
 }
 
 pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bool {
-    let session_token: String = match session.get(SESSION_CSRFTOKEN_FIELD).await.unwrap() {
+    let session_token: String = match session.get(SESSION_CSRFTOKEN_FIELD).await.unwrap_or(None) {
         None => {
-            session
+            let _ = session
                 .remove_value(SESSION_CSRFTOKEN_FIELD)
                 .await
-                .map_err(|err| {
+                .inspect_err(|err| {
                     error!("Failed to remove CSRF token from session: {err:?}");
-                    false
-                })
-                .unwrap();
+                });
             log::debug!("Couldn't get session token from storage");
             return false;
         }
@@ -84,14 +82,12 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
     let expiry = match split.next() {
         None => {
             log::debug!("Couldn't get timestamp from stored CSRF Token");
-            session
+            let _ = session
                 .remove_value(SESSION_CSRFTOKEN_FIELD)
                 .await
-                .map_err(|err| {
+                .inspect_err(|err| {
                     error!("Failed to remove CSRF token from session: {err:?}");
-                    false
-                })
-                .unwrap();
+                });
             return false;
         }
         Some(value) => value,
@@ -100,14 +96,12 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
     let expiry: DateTime<Utc> = match DateTime::parse_from_rfc3339(expiry) {
         Err(error) => {
             log::debug!("Failed to parse {expiry:?} into datetime: {error:?}");
-            session
+            let _ = session
                 .remove_value(SESSION_CSRFTOKEN_FIELD)
                 .await
-                .map_err(|err| {
+                .inspect_err(|err| {
                     error!("Failed to remove CSRF token from session: {err:?}");
-                    false
-                })
-                .unwrap();
+                });
             return false;
         }
         Ok(value) => value.into(),
@@ -116,14 +110,12 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
 
     if expiry < now {
         log::debug!("Token has expired at {expiry:?}, time is now {now:?}");
-        session
+        let _ = session
             .remove_value(SESSION_CSRFTOKEN_FIELD)
             .await
-            .map_err(|err| {
+            .inspect_err(|err| {
                 error!("Failed to remove CSRF token from session: {err:?}");
-                false
-            })
-            .unwrap();
+            });
         return false;
     }
     log::debug!("CSRF Token was valid!");
@@ -136,65 +128,91 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
 async fn store_api_csrf_token(
     session: &mut Session,
     expiry_plus_seconds: Option<i64>,
-) -> Result<String, String> {
+) -> Result<String, GoatNsError> {
     let csrftoken = CsrfToken::new_random();
     let csrftoken = csrftoken.secret().to_string();
 
     let delta_time = match TimeDelta::try_seconds(expiry_plus_seconds.unwrap_or(300)) {
         Some(val) => val,
-        None => return Err("Failed to calculate CSRF expiry!".to_string()),
+        None => {
+            return Err(GoatNsError::Csrf(
+                "Failed to calculate CSRF expiry!".to_string(),
+            ))
+        }
     };
     let csrf_expiry: DateTime<Utc> = Utc::now() + delta_time;
 
     let stored_csrf = format!("{csrftoken}|{}", csrf_expiry.to_rfc3339());
 
     // store it in the session storage
-    if let Err(error) = session.insert(SESSION_CSRFTOKEN_FIELD, stored_csrf).await {
-        // TODO: nice errors are nice but secure errors are better
-        return Err(format!("Failed to store CSRF Token for user: {error:?}"));
-    };
+    session
+        .insert(SESSION_CSRFTOKEN_FIELD, stored_csrf)
+        .await
+        .map_err(|err| {
+            // TODO: nice errors are nice but secure errors are better
+            GoatNsError::Csrf(format!("Failed to store CSRF Token for user: {err:?}"))
+        })?;
     Ok(csrftoken)
 }
 
 /// The user settings page at /ui/settings/api_tokens
-#[debug_handler]
 pub async fn api_tokens_get(
     State(state): State<GoatState>,
     mut session: Session,
-) -> Result<Html<String>, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
+) -> Result<ApiTokensGetPage, Redirect> {
+    let user = check_logged_in(
+        &mut session,
+        Uri::from_static(Urls::SettingsApiTokens.as_ref()),
+    )
+    .await?;
 
     let csrftoken = match store_api_csrf_token(&mut session, None).await {
         Ok(value) => value,
         Err(error) => {
             log::error!("Failed to store csrf token in DB: {error:?}");
-            return Err(Redirect::to("/"));
+            return Err(Urls::Home.redirect());
         }
     };
 
     // pull token from the session store new_api_token
-    let token_value: Option<String> = session.remove("new_api_token").await.unwrap();
+    let token_value: Option<String> = match session.remove("new_api_token").await {
+        Ok(val) => val,
+        Err(err) => {
+            log::error!("Failed to get new_api_token from session store: {err:?}");
+            return Err(Urls::Dashboard.redirect());
+        }
+    };
+    let tokenkey: Option<String> = match session.remove("new_api_tokenkey").await {
+        Ok(val) => val,
+        Err(err) => {
+            log::error!("Failed to get new_api_tokenkey from session store: {err:?}");
+            return Err(Urls::Dashboard.redirect());
+        }
+    };
 
-    let tokenkey: Option<String> = session.remove("new_api_tokenkey").await.unwrap();
+    let user_id = match user.id {
+        Some(val) => val,
+        None => {
+            log::debug!("Couldn't get user id from session store");
+            return Err(Urls::Dashboard.redirect());
+        }
+    };
 
-    let tokens =
-        match UserAuthToken::get_all_user(&state.read().await.connpool, user.id.unwrap()).await {
-            Err(error) => {
-                log::error!("Failed to pull tokens for user {:#?}: {error:?}", user.id);
-                vec![]
-            }
-            Ok(val) => val,
-        };
+    let tokens = match UserAuthToken::get_all_user(&state.read().await.connpool, user_id).await {
+        Err(error) => {
+            log::error!("Failed to pull tokens for user {:#?}: {error:?}", user_id);
+            vec![]
+        }
+        Ok(val) => val,
+    };
 
-    let context = ApiTokensGetPage {
+    Ok(ApiTokensGetPage {
         csrftoken,
         tokens,
         tokenkey,
         token_value,
         user_is_admin: user.admin,
-    };
-
-    Ok(Html::from(context.render().unwrap()))
+    })
 }
 
 #[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Sequence)]
@@ -310,15 +328,19 @@ pub async fn api_tokens_post(
     mut session: Session,
     State(state): State<GoatState>,
     Form(form): Form<ApiTokenForm>,
-) -> Result<Html<String>, Redirect> {
+) -> Result<impl IntoResponse, Redirect> {
     eprintln!("Got form: {form:?}");
 
-    let user = check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
+    let user = check_logged_in(
+        &mut session,
+        Uri::from_static(Urls::SettingsApiTokens.as_ref()),
+    )
+    .await?;
 
     if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
         // TODO: redirect to the start
         log::debug!("Failed to validate csrf expiry");
-        return Err(Redirect::to("/ui/settings"));
+        return Err(Urls::Settings.redirect());
     }
 
     let context = match form.state {
@@ -329,8 +351,17 @@ pub async fn api_tokens_post(
                 .map(|l| (l.to_string(), l.variant_str()))
                 .collect();
             eprintln!("Lifetimes: {lifetimes:?}");
+
+            let csrftoken = match store_api_csrf_token(&mut session, None).await {
+                Ok(val) => val,
+                Err(err) => {
+                    log::error!("Failed to store CSRF token in the session store: {err:?}");
+                    return Err(Urls::SettingsApiTokens.redirect());
+                }
+            };
+
             ApiTokenPage {
-                csrftoken: store_api_csrf_token(&mut session, None).await.unwrap(),
+                csrftoken,
                 state: ApiTokenCreatePageState::Start,
                 token_name: None,
                 lifetimes: Some(lifetimes),
@@ -339,6 +370,7 @@ pub async fn api_tokens_post(
                 token_value: None,
                 user_is_admin: user.admin,
             }
+            .into_response()
         }
         // The user has set a lifetime and we're generating a token
         ApiTokenCreatePageState::Generating => {
@@ -348,25 +380,32 @@ pub async fn api_tokens_post(
 
             let state_reader = state.read().await;
             let api_cookie_secret = state_reader.config.api_cookie_secret();
-            let lifetime: i32 = form.lifetime.unwrap().into();
+            let lifetime: i32 = form.lifetime.unwrap_or(ApiTokenLifetime::EightHours).into();
             // get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
-            let user: User = match session.get("user").await.unwrap() {
+
+            let userid: i64 = match user.id {
                 Some(val) => val,
                 None => {
-                    log::debug!("Couldn't get user from session store");
-                    return Err(Redirect::to("/ui"));
+                    log::error!("Failed to get user id from session store");
+                    return Err(Urls::SettingsApiTokens.redirect());
                 }
             };
-            let userid: i64 = user.id.unwrap();
 
             let api_token = create_api_token(api_cookie_secret, lifetime, userid);
 
-            // store the token in the database
-            log::trace!("Starting to store token in the DB, grabbing writer...");
-            println!("got writer...");
+            let name = match form.token_name {
+                Some(val) => val,
+                None => {
+                    log::error!("Failed to get token name from form");
+                    return Err(Urls::SettingsApiTokens.redirect_with_query(HashMap::from([(
+                        "error",
+                        "Token name needs to be set!",
+                    )])));
+                }
+            };
             let uat = UserAuthToken {
                 id: None,
-                name: form.token_name.unwrap(),
+                name,
                 issued: api_token.issued,
                 expiry: api_token.expiry,
                 userid,
@@ -379,7 +418,7 @@ pub async fn api_tokens_post(
                 Ok(val) => val,
                 Err(error) => {
                     error!("Failed to pick up a txn for api token storage: {error:?}");
-                    return Err(Redirect::to("/ui/settings/api_tokens"));
+                    return Err(Urls::SettingsApiTokens.redirect());
                 }
             };
 
@@ -387,7 +426,7 @@ pub async fn api_tokens_post(
             match uat.save_with_txn(&mut txn).await {
                 Err(error) => {
                     error!("Failed to save api_token for user {:?}", error);
-                    return Err(Redirect::to("/ui/settings/api_tokens"));
+                    return Err(Urls::SettingsApiTokens.redirect());
                 }
                 Ok(_) => {
                     // store the api token in the session store
@@ -402,9 +441,9 @@ pub async fn api_tokens_post(
                             log::error!(
                                 "Txn rollback fail after failing to store the token: {e:?}"
                             );
-                            Redirect::to("/ui/settings/api_tokens")
+                            Urls::SettingsApiTokens.redirect()
                         })?;
-                        return Err(Redirect::to("/ui/settings/api_tokens"));
+                        return Err(Urls::SettingsApiTokens.redirect());
                     };
 
                     if let Err(error) = session
@@ -416,13 +455,13 @@ pub async fn api_tokens_post(
                         );
                         txn.rollback().await.map_err(|e| {
                             log::error!("Txn rollback fail: {e:?}");
-                            Redirect::to("/ui/settings/api_tokens")
+                            Urls::SettingsApiTokens.redirect()
                         })?;
                         // TODO: bail, which should roll back the txn
                         error!(
                             "Failed to store new API tokenkey in the session, ruh roh? {error:?}"
                         );
-                        return Err(Redirect::to("/ui/settings/api_tokens"));
+                        return Err(Urls::SettingsApiTokens.redirect());
                     };
 
                     if let Err(error) = txn.commit().await {
@@ -430,27 +469,34 @@ pub async fn api_tokens_post(
                             "Failed to save the API token to storage, oh no? {:?}",
                             error
                         );
-                        return Err(Redirect::to("/ui/settings/api_tokens"));
+                        return Err(Urls::SettingsApiTokens.redirect());
                     };
                 }
             };
             // redirect the user to the display page
-            let csrftoken = store_api_csrf_token(&mut session, Some(30)).await.unwrap();
-            return Err(Redirect::to(&format!(
-                "/ui/settings/api_tokens?state={csrftoken}?token_created=1"
-            )));
+            let csrftoken = store_api_csrf_token(&mut session, Some(30))
+                .await
+                .map_err(|err| {
+                    error!("{:?}", err);
+                    Urls::SettingsApiTokens.redirect()
+                })?;
+
+            return Err(Urls::SettingsApiTokens.redirect_with_query(HashMap::from([
+                ("state".to_string(), csrftoken),
+                ("token_created".to_string(), "1".to_string()),
+            ])));
         }
 
         ApiTokenCreatePageState::Finished => {
             info!("Created token, redirecting to the homepage");
-            return Err(Redirect::to("/ui/settings/api_tokens"));
+            return Err(Urls::SettingsApiTokens.redirect());
         }
         ApiTokenCreatePageState::Error => {
             error!("Got an error state in the form, redirecting to the start");
-            return Err(Redirect::to("/ui/settings/api_tokens"));
+            return Err(Urls::SettingsApiTokens.redirect());
         }
     };
-    Ok(Html::from(context.render().unwrap()))
+    Ok(context)
 
     // Html::from("Welcome to the api tokens page".to_string())
 }
@@ -470,22 +516,23 @@ pub struct ApiTokenDeleteForm {
     pub csrftoken: String,
 }
 
-const URI_SETTINGS_API_TOKENS: &str = "/ui/settings/api_tokens";
-
-// #[debug_handler]
 pub async fn api_tokens_delete_get(
     axum::extract::State(state): axum::extract::State<GoatState>,
     // Form(form): Form<ApiTokenPage>,
     Path(id): Path<String>,
     mut session: Session,
-) -> Result<Html<String>, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
+) -> Result<ApiTokenDeleteTemplate, Redirect> {
+    let user = check_logged_in(
+        &mut session,
+        Uri::from_static(Urls::SettingsApiTokens.as_ref()),
+    )
+    .await?;
 
     let csrftoken = match store_api_csrf_token(&mut session, None).await {
         Ok(val) => val,
         Err(err) => {
             log::error!("Failed to store CSRF token in the session store: {err:?}");
-            return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
+            return Err(Urls::SettingsApiTokens.redirect());
         }
     };
 
@@ -493,7 +540,7 @@ pub async fn api_tokens_delete_get(
         Ok(val) => val,
         Err(error) => {
             log::debug!("Got an invalid id parsing the URL: {error:?}");
-            return Err(Redirect::to("/"));
+            return Err(Urls::Home.redirect());
         }
     };
 
@@ -502,68 +549,77 @@ pub async fn api_tokens_delete_get(
     let uat = match UserAuthToken::get(&pool, id).await {
         Err(err) => {
             log::debug!("Requested delete for token: {err:?}");
-            return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
+            return Err(Urls::SettingsApiTokens.redirect());
         }
         Ok(res) => {
-            if res.userid != user.id.unwrap() {
+            let user_id = match user.id {
+                Some(val) => val,
+                None => {
+                    log::debug!("Couldn't get user id from session store");
+                    return Err(Urls::Dashboard.redirect());
+                }
+            };
+
+            if res.userid != user_id {
                 log::debug!(
                     "You can't delete another user's tokens! uid={} token.userid={}",
-                    user.id.unwrap(),
+                    user_id,
                     res.userid
                 );
-                return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
+                return Err(Urls::SettingsApiTokens.redirect());
             };
 
             res
         }
     };
 
-    let context = ApiTokenDeleteTemplate {
+    Ok(ApiTokenDeleteTemplate {
         id,
         token_name: Some(uat.name.clone()),
         csrftoken,
         user_is_admin: user.admin,
-    };
-
-    Ok(Html::from(context.render().unwrap()))
+    })
 }
 
-// #[debug_handler]
 pub async fn api_tokens_delete_post(
     State(state): State<GoatState>,
     mut session: Session,
+    OriginalUri(path): OriginalUri,
     Form(form): Form<ApiTokenDeleteForm>,
 ) -> Result<Html<String>, Redirect> {
-    check_logged_in(&mut session, Uri::from_static(URI_SETTINGS_API_TOKENS)).await?;
+    let user: User = check_logged_in(&mut session, path).await?;
 
     if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
         // TODO: redirect to the start
-        log::debug!("Failed to validate csrf expiry");
-        return Err(Redirect::to("/ui/settings"));
+        log::debug!("Failed to validate CSRF expiry");
+        return Err(Urls::SettingsApiTokens.redirect());
     }
 
     log::debug!("Deleting token from Form: {form:?}");
-    let user: User = match session.get("user").await.unwrap() {
+
+    let pool = state.read().await.connpool.clone();
+
+    let user_id = match user.id {
         Some(val) => val,
         None => {
-            log::debug!("Couldn't get user from session store");
-            return Err(Redirect::to("/ui"));
+            log::debug!("Couldn't get user id from session store");
+            return Err(Urls::Dashboard.redirect());
         }
     };
-    let pool = state.read().await.connpool.clone();
+
     let uat = match UserAuthToken::get(&pool, form.id).await {
         Err(err) => {
             log::debug!("Requested delete for existing token: {err:?}");
-            return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
+            return Err(Urls::SettingsApiTokens.redirect());
         }
         Ok(res) => {
-            if res.userid != user.id.unwrap() {
+            if res.userid != user_id {
                 log::debug!(
                     "You can't delete another user's tokens! uid={} token.userid={}",
-                    user.id.unwrap(),
+                    user_id,
                     res.userid
                 );
-                return Err(Redirect::to(URI_SETTINGS_API_TOKENS));
+                return Err(Urls::SettingsApiTokens.redirect());
             };
 
             res
@@ -577,9 +633,9 @@ pub async fn api_tokens_delete_post(
     log::info!(
         "id={} action=api_token_delete token_id={}",
         uat.userid,
-        uat.id.unwrap()
+        uat.id.unwrap_or(-1)
     );
-    Err(Redirect::to(URI_SETTINGS_API_TOKENS))
+    Err(Urls::SettingsApiTokens.redirect())
 }
 /// Build the router for user settings
 pub fn router() -> Router<GoatState> {

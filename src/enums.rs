@@ -445,9 +445,10 @@ impl TryFrom<String> for ContactDetails {
 
                         else {
                             let mut contact_split = contact_value.split('@');
-
+                            #[allow(clippy::expect_used)]
                             Ok( Self::Mastodon {
-                                contact: contact_split.next().expect("THe length was checked and then we couldn't get it!").to_string(),
+                                contact: contact_split.next().expect("THe length was checked and then we couldn't get 
+                                it!").to_string(),
                                 server: contact_split.next().expect("THe length was checked and then we couldn't get it!").to_string(),
                             })
                         }

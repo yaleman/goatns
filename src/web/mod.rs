@@ -7,6 +7,10 @@
 // ^ this is because the datetime in the goatchildState is a jerk
 use crate::config::ConfigFile;
 use crate::datastore;
+use crate::error::GoatNsError;
+
+#[cfg(not(test))]
+use crate::logging::init_otel_subscribers;
 use crate::web::api::docs::ApiDoc;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
@@ -16,9 +20,8 @@ use axum::middleware::from_fn_with_state;
 use axum::routing::get;
 use axum::Router;
 use axum_csp::CspUrlMatcher;
-#[cfg(feature = "otel")]
 #[cfg(not(test))]
-use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
+use axum_tracing_opentelemetry::middleware::OtelAxumLayer;
 use chrono::{DateTime, NaiveDateTime, TimeDelta, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use log::error;
@@ -31,13 +34,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
-use utoipa::OpenApi;
-// use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
-use utils::handler_404;
+use utils::{handler_404, Urls};
+use utoipa::OpenApi;
 
 use self::auth::CustomProviderMetadata;
 
@@ -159,19 +161,22 @@ pub async fn build(
     tx: Sender<datastore::Command>,
     config: CowCellReadTxn<ConfigFile>,
     connpool: SqlitePool,
-) -> Option<JoinHandle<Result<(), std::io::Error>>> {
+) -> Result<JoinHandle<Result<(), std::io::Error>>, GoatNsError> {
     let static_dir: PathBuf = shellexpand::tilde(&config.api_static_dir)
         .to_string()
         .into();
-    #[cfg(feature = "otel")]
-    if let Err(error) = axum_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers() {
-        eprintln!("Failed to initialize OpenTelemetry tracing: {error:?}");
-    };
 
-    let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await;
+    #[cfg(not(test))]
+    init_otel_subscribers().map_err(|err| {
+        GoatNsError::StartupError(format!("Failed to initialize OpenTelemetry tracing: {err}"))
+    })?;
+
+    let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await?;
 
     let csp_matchers = vec![CspUrlMatcher::default_self(
-        RegexSet::new([r"^(/|/ui)"]).unwrap(),
+        RegexSet::new([r"^(/|/ui)"]).map_err(|err| {
+            GoatNsError::StartupError(format!("Failed to generate CSP matchers regex: {err}"))
+        })?,
     )];
 
     // we set this to an hour ago so it forces update on startup
@@ -193,7 +198,7 @@ pub async fn build(
         .layer(from_fn_with_state(state.clone(), csp::cspheaders));
 
     let router = Router::new()
-        .route("/", get(generic::index))
+        .route(Urls::Home.as_ref(), get(generic::index))
         .nest("/ui", ui::new())
         .nest("/api", api::new())
         .merge(
@@ -206,9 +211,8 @@ pub async fn build(
         .layer(service_layer);
 
     // here we add the tracing layer
-    #[cfg(feature = "otel")]
     #[cfg(not(test))]
-    let router = router.layer(opentelemetry_tracing_layer());
+    let router = router.layer(OtelAxumLayer::default());
 
     let router = router.route("/status", get(generic::status));
 
@@ -218,26 +222,24 @@ pub async fn build(
     };
     let router = router.layer(CompressionLayer::new()).fallback(handler_404);
 
-    let tls_config = match config.get_tls_config().await {
-        Ok(val) => val,
-        Err(err) => {
-            error!("{}", err);
-            return None;
-        }
-    };
+    let tls_config = config
+        .get_tls_config()
+        .await
+        .map_err(GoatNsError::StartupError)?;
 
-    let res: Option<JoinHandle<Result<(), std::io::Error>>> = Some(tokio::spawn(
-        axum_server::bind_rustls(config.api_listener_address(), tls_config)
+    let res: JoinHandle<Result<(), std::io::Error>> = tokio::spawn(
+        axum_server::bind_rustls(config.api_listener_address()?, tls_config)
             .serve(router.into_make_service()),
-    ));
+    );
+    let startup_message = format!(
+        "Started Web server on https://{} / https://{}:{}",
+        config.api_listener_address()?,
+        config.hostname,
+        config.api_port
+    );
+
     #[cfg(test)]
-    println!(
-        "Started Web server on https://{}",
-        config.api_listener_address()
-    );
-    log::info!(
-        "Started Web server on https://{}",
-        config.api_listener_address()
-    );
-    res
+    println!("{}", startup_message);
+    log::info!("{}", startup_message);
+    Ok(res)
 }

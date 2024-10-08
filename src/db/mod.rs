@@ -1,5 +1,5 @@
+use crate::error::GoatNsError;
 use crate::resourcerecord::SetTTL;
-use std::io::ErrorKind;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -27,20 +27,13 @@ const SQL_VIEW_RECORDS: &str = "records_merged";
 /// Setup the database connection and pool
 pub async fn get_conn(
     config_reader: CowCellReadTxn<ConfigFile>,
-) -> Result<SqlitePool, std::io::Error> {
-    let db_path: &str = &shellexpand::full(&config_reader.sqlite_path).unwrap();
+) -> Result<SqlitePool, GoatNsError> {
+    let db_path: &str = &shellexpand::full(&config_reader.sqlite_path)
+        .map_err(|err| GoatNsError::StartupError(err.to_string()))?;
     let db_url = format!("sqlite://{db_path}?mode=rwc");
     log::debug!("Opening Database: {db_url}");
 
-    let options = match SqliteConnectOptions::from_str(&db_url) {
-        Ok(value) => value,
-        Err(error) => {
-            return Err(std::io::Error::new(
-                ErrorKind::Other,
-                format!("connection failed: {error:?}"),
-            ))
-        }
-    };
+    let options = SqliteConnectOptions::from_str(&db_url)?;
     let options = if config_reader.sql_log_statements {
         options.log_statements(log::LevelFilter::Trace)
     } else {
@@ -52,17 +45,14 @@ pub async fn get_conn(
         Duration::from_secs(config_reader.sql_log_slow_duration),
     );
 
-    match SqlitePool::connect_with(options).await {
-        Ok(value) => Ok(value),
-        Err(err) => Err(std::io::Error::new(
-            ErrorKind::Other,
-            format!("Error opening SQLite DB ({db_url:?}): {err:?}"),
-        )),
-    }
+    SqlitePool::connect_with(options).await.map_err(|err| {
+        error!("Error opening SQLite DB ({db_url:?}): {err:?}");
+        err.into()
+    })
 }
 
 /// Do the basic setup and checks (if we write any)
-pub async fn start_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+pub async fn start_db(pool: &SqlitePool) -> Result<(), GoatNsError> {
     FileZone::create_table(pool).await?;
     User::create_table(pool).await?;
     UserAuthToken::create_table(pool).await?;
@@ -73,15 +63,21 @@ pub async fn start_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
+/// DB Representation of a user
 pub struct User {
+    /// the user's ID
     pub id: Option<i64>,
+    /// the user's display name
     pub displayname: String,
+    /// the user's username
     pub username: String,
+    /// the user's email address
     pub email: String,
-    // #[serde(default)]
-    // pub owned_zones: Vec<i64>,
+    /// is the user disabled?
     pub disabled: bool,
+    /// the user's authref from OIDC
     pub authref: Option<String>,
+    /// is the user an admin?
     pub admin: bool,
 }
 
@@ -101,7 +97,7 @@ impl Default for User {
 
 impl User {
     // Query the DB looking for a user
-    // pub async fn get_by_email(pool: &SqlitePool, email: String) -> Result<Self, sqlx::Error> {
+    // pub async fn get_by_email(pool: &SqlitePool, email: String) -> Result<Self, GoatNsError> {
     //     let res = sqlx::query(
     //         "
     //         select * from users
@@ -119,8 +115,8 @@ impl User {
     pub async fn get_by_subject(
         pool: &SqlitePool,
         subject: &SubjectIdentifier,
-    ) -> Result<Self, sqlx::Error> {
-        let res = sqlx::query(
+    ) -> Result<Option<Self>, GoatNsError> {
+        match sqlx::query(
             "
             select * from users
             where authref = ?
@@ -128,9 +124,12 @@ impl User {
         )
         .bind(subject.to_string())
         .fetch_one(pool)
-        .await?;
-
-        Ok(User::from(res))
+        .await
+        {
+            Ok(val) => Ok(Some(val.into())),
+            Err(sqlx::Error::RowNotFound) => Ok(None),
+            Err(err) => Err(err.into()),
+        }
     }
 
     #[instrument(skip(txn))]
@@ -139,7 +138,7 @@ impl User {
         txn: &mut SqliteConnection,
         offset: i64,
         limit: i64,
-    ) -> Result<Vec<FileZone>, sqlx::Error> {
+    ) -> Result<Vec<FileZone>, GoatNsError> {
         let query_string = match self.admin {
             true => {
                 "SELECT *
@@ -180,7 +179,7 @@ impl User {
     pub async fn get_token(
         pool: &mut Pool<Sqlite>,
         tokenkey: &str,
-    ) -> Result<TokenSearchRow, sqlx::Error> {
+    ) -> Result<TokenSearchRow, GoatNsError> {
         let mut txn = pool.begin().await?;
         let res: TokenSearchRow = sqlx::query_as(
             "SELECT users.id as userid, users.displayname,  users.username, users.authref, users.email, users.disabled, users.authref, users.admin, tokenhash, tokenkey
@@ -253,7 +252,7 @@ pub struct ZoneOwnership {
 
 impl ZoneOwnership {
     #[allow(dead_code, unused_variables)]
-    pub async fn delete(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    pub async fn delete(&self, pool: &SqlitePool) -> Result<(), GoatNsError> {
         // TODO: test ownership delete
         let res = sqlx::query("DELETE FROM ownership WHERE zoneid = ? AND userid = ?")
             .bind(self.zoneid)
@@ -263,11 +262,11 @@ impl ZoneOwnership {
         Ok(())
     }
     #[allow(dead_code, unused_variables)]
-    pub async fn delete_for_user(self, pool: &SqlitePool) -> Result<User, sqlx::Error> {
+    pub async fn delete_for_user(self, pool: &SqlitePool) -> Result<User, GoatNsError> {
         // TODO: test user delete
         // TODO: delete all ownership records
         error!("Unimplemented: ZoneOwnership::delete_for_user");
-        Err(sqlx::Error::RowNotFound)
+        Err(sqlx::Error::RowNotFound.into())
     }
 
     // get the thing by the other thing
@@ -275,8 +274,8 @@ impl ZoneOwnership {
         txn: &mut SqliteConnection,
         userid: &i64,
         zoneid: &i64,
-    ) -> Result<ZoneOwnership, sqlx::Error> {
-        let res = sqlx::query(
+    ) -> Result<Option<ZoneOwnership>, GoatNsError> {
+        match sqlx::query(
             "select users.username, zones.name, zones.id as zoneid, ownership.id as id, userid
         from users, ownership, zones
         where ownership.userid = ? AND ownership.zoneid = ? AND (ownership.userid = users.id AND
@@ -288,9 +287,12 @@ impl ZoneOwnership {
         .bind(userid)
         .bind(zoneid)
         .fetch_one(txn)
-        .await?;
-
-        Ok(res.into())
+        .await
+        {
+            Ok(val) => Ok(Some(val.into())),
+            Err(sqlx::Error::RowNotFound) => Ok(None),
+            Err(err) => Err(err.into()),
+        }
     }
 }
 
@@ -299,7 +301,7 @@ pub async fn get_zone_with_txn(
     txn: &mut SqliteConnection,
     id: Option<i64>,
     name: Option<String>,
-) -> Result<Option<FileZone>, sqlx::Error> {
+) -> Result<Option<FileZone>, GoatNsError> {
     let result = sqlx::query(
         "SELECT
         id, name, rname, serial, refresh, retry, expire, minimum
@@ -329,13 +331,20 @@ pub async fn get_zone_with_txn(
         }
     };
 
+    let zone_id = match zone.id {
+        Some(val) => val,
+        None => {
+            return Err(GoatNsError::InvalidValue("Zone ID is None".to_string()));
+        }
+    };
+
     let result = sqlx::query(
         "SELECT
         id, zoneid, name, ttl, rrtype, rclass, rdata
         FROM records
         WHERE zoneid = ?",
     )
-    .bind(zone.id.unwrap())
+    .bind(zone_id)
     .fetch_all(&mut *txn)
     .await?;
 
@@ -350,8 +359,8 @@ pub async fn get_zone_with_txn(
 }
 
 impl TryFrom<SqliteRow> for InternalResourceRecord {
-    type Error = String;
-    fn try_from(row: SqliteRow) -> Result<InternalResourceRecord, String> {
+    type Error = GoatNsError;
+    fn try_from(row: SqliteRow) -> Result<InternalResourceRecord, Self::Error> {
         let record_id: i64 = row.get(0);
         let record_class: u16 = row.get(3);
         let record_type: u16 = row.get(4);
@@ -379,7 +388,7 @@ pub async fn get_records(
     rrtype: RecordType,
     rclass: RecordClass,
     normalize_ttls: bool,
-) -> Result<Vec<InternalResourceRecord>, sqlx::Error> {
+) -> Result<Vec<InternalResourceRecord>, GoatNsError> {
     let query = format!(
         "SELECT
         record_id, zoneid, name, rclass, rrtype, rdata, ttl
@@ -464,37 +473,36 @@ impl FileZone {
     pub async fn get_zone_records(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Vec<FileZoneRecord>, sqlx::Error> {
-        let res = sqlx::query(
-            "SELECT
-            id, zoneid, name, ttl, rrtype, rclass, rdata
-            FROM records
-            WHERE zoneid = ?",
-        )
-        .bind(self.id.unwrap())
-        .fetch_all(&mut *txn)
-        .await?;
+    ) -> Result<Vec<FileZoneRecord>, GoatNsError> {
+        match self.id {
+            Some(id) => {
+                let res = sqlx::query(
+                    "SELECT
+                    id, zoneid, name, ttl, rrtype, rclass, rdata
+                    FROM records
+                    WHERE zoneid = ?",
+                )
+                .bind(id)
+                .fetch_all(&mut *txn)
+                .await?;
 
-        if res.is_empty() {
-            log::trace!("No results returned for zoneid={}", self.id.unwrap());
+                if res.is_empty() {
+                    log::trace!("No results returned for zoneid={:?}", id);
+                }
+
+                let results: Vec<FileZoneRecord> = res
+                    .iter()
+                    .filter_map(|r| FileZoneRecord::try_from(r).ok())
+                    .collect();
+
+                log::trace!("results: {results:?}");
+                Ok(results)
+            }
+            None => Err(GoatNsError::InvalidValue("Zone ID is None".to_string())),
         }
-
-        // let mut results: Vec<FileZoneRecord> = vec![];
-        // for row in res {
-        //     if let Ok(irr) = FileZoneRecord::try_from(row) {
-        //         results.push(irr);
-        //     }
-        // }
-        let results: Vec<FileZoneRecord> = res
-            .iter()
-            .filter_map(|r| FileZoneRecord::try_from(r).ok())
-            .collect();
-
-        log::trace!("results: {results:?}");
-        Ok(results)
     }
 
-    pub async fn get_orphans(pool: &SqlitePool) -> Result<Vec<FileZone>, sqlx::Error> {
+    pub async fn get_orphans(pool: &SqlitePool) -> Result<Vec<FileZone>, GoatNsError> {
         let res = sqlx::query(
             "
             SELECT name, userid from zones
@@ -519,45 +527,45 @@ pub async fn export_zone_json(pool: &SqlitePool, id: i64) -> Result<String, Stri
 pub trait DBEntity: Send {
     const TABLE: &'static str;
 
-    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error>;
+    async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError>;
 
     /// Get the entity
-    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, sqlx::Error>;
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, GoatNsError>;
     async fn get_with_txn<'t>(
         _txn: &mut SqliteConnection,
         _id: &i64,
-    ) -> Result<Box<Self>, sqlx::Error>;
+    ) -> Result<Box<Self>, GoatNsError>;
     async fn get_by_name<'t>(
         txn: &mut SqliteConnection,
         name: &str,
-    ) -> Result<Box<Self>, sqlx::Error>;
+    ) -> Result<Option<Box<Self>>, GoatNsError>;
     async fn get_all_by_name<'t>(
         txn: &mut SqliteConnection,
         name: &str,
-    ) -> Result<Vec<Box<Self>>, sqlx::Error>;
-    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error>;
+    ) -> Result<Vec<Box<Self>>, GoatNsError>;
+    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, GoatNsError>;
     /// save the entity to the database
 
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error>;
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, GoatNsError>;
     /// save the entity to the database, but you're in a transaction
 
     async fn save_with_txn<'t>(&self, txn: &mut SqliteConnection)
-        -> Result<Box<Self>, sqlx::Error>;
+        -> Result<Box<Self>, GoatNsError>;
     /// create from scratch
     async fn create_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error>;
+    ) -> Result<Box<Self>, GoatNsError>;
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error>;
+    ) -> Result<Box<Self>, GoatNsError>;
 
     /// delete the entity from the database
-    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error>;
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), GoatNsError>;
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), sqlx::Error>;
+    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), GoatNsError>;
 
     fn json(&self) -> Result<String, String>
     where
@@ -571,8 +579,8 @@ pub trait DBEntity: Send {
 impl DBEntity for FileZone {
     const TABLE: &'static str = "zones";
 
-    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        let mut tx = pool.begin().await.unwrap();
+    async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
+        let mut tx = pool.begin().await?;
 
         log::debug!("Ensuring DB Zones table exists");
         sqlx::query(
@@ -608,7 +616,7 @@ impl DBEntity for FileZone {
     }
 
     /// Get by id
-    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, sqlx::Error> {
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, GoatNsError> {
         let mut txn = pool.begin().await?;
         Self::get_with_txn(&mut txn, &id).await
     }
@@ -616,7 +624,7 @@ impl DBEntity for FileZone {
     async fn get_with_txn<'t>(
         txn: &mut SqliteConnection,
         id: &i64,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         let res = sqlx::query(
             "SELECT
             *
@@ -629,13 +637,17 @@ impl DBEntity for FileZone {
         let mut zone: FileZone = res.into();
         log::debug!("got a zone: {zone:?}");
 
+        if zone.id.is_none() {
+            return Err(sqlx::Error::RowNotFound.into());
+        }
+
         let records = sqlx::query(
             "SELECT
             id, zoneid, name, ttl, rrtype, rclass, rdata
             FROM records
             WHERE zoneid = ?",
         )
-        .bind(zone.id.unwrap())
+        .bind(zone.id)
         .fetch_all(txn)
         .await?;
 
@@ -652,30 +664,32 @@ impl DBEntity for FileZone {
     async fn get_by_name<'t>(
         txn: &mut SqliteConnection,
         name: &str,
-    ) -> Result<Box<Self>, sqlx::Error> {
-        let res = sqlx::query(&format!("SELECT * from {} where name=?", Self::TABLE))
+    ) -> Result<Option<Box<Self>>, GoatNsError> {
+        match sqlx::query(&format!("SELECT * from {} where name=?", Self::TABLE))
             .bind(name)
             .fetch_one(&mut *txn)
-            .await?;
-
-        let res: FileZone = res.into();
-        Ok(Box::new(res))
+            .await
+        {
+            Ok(val) => Ok(Some(Box::new(val.into()))),
+            Err(sqlx::Error::RowNotFound) => Ok(None),
+            Err(err) => Err(err.into()),
+        }
     }
     async fn get_all_by_name<'t>(
         _txn: &mut SqliteConnection,
         _name: &str,
-    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+    ) -> Result<Vec<Box<Self>>, GoatNsError> {
         unimplemented!()
     }
     async fn get_all_user(
         _pool: &Pool<Sqlite>,
         _userid: i64,
-    ) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+    ) -> Result<Vec<Arc<Self>>, GoatNsError> {
         unimplemented!()
     }
 
     /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, GoatNsError> {
         let mut txn = pool.begin().await?;
         let res = self.save_with_txn(&mut txn).await?;
         txn.commit().await?;
@@ -687,7 +701,7 @@ impl DBEntity for FileZone {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         // check the zone exists
         let find_zone = match get_zone_with_txn(txn, None, Some(self.name.clone())).await {
             Ok(val) => {
@@ -733,31 +747,33 @@ impl DBEntity for FileZone {
                 log::debug!("Insert statement succeeded");
                 #[cfg(test)]
                 eprintln!("Done creating zone");
-                get_zone_with_txn(txn, None, Some(self.name.clone()))
-                    .await?
-                    .unwrap()
+                match get_zone_with_txn(txn, None, Some(self.name.clone())).await? {
+                    Some(val) => val,
+                    None => {
+                        return Err(sqlx::Error::RowNotFound.into());
+                    }
+                }
             }
             Some(ez) => {
                 if !self.matching_data(&ez) {
                     // update it if it's wrong
 
-                    #[cfg(test)]
-                    eprintln!("Updating zone");
                     log::debug!("Updating zone");
                     let mut new_zone = self.clone();
                     new_zone.id = ez.id;
 
                     let updated = new_zone.update_with_txn(txn).await?;
-                    #[cfg(test)]
-                    eprintln!("Updated: {:?} record", updated);
+
                     log::debug!("Updated: {:?} record", updated);
                 } else {
                     log::debug!("Zone data is fine")
                 }
-                get_zone_with_txn(txn, None, Some(self.name.clone()))
-                    .await
-                    .unwrap()
-                    .unwrap()
+                match get_zone_with_txn(txn, None, Some(self.name.clone())).await? {
+                    Some(val) => val,
+                    None => {
+                        return Err(sqlx::Error::RowNotFound.into());
+                    }
+                }
             }
         };
         #[cfg(test)]
@@ -798,15 +814,15 @@ impl DBEntity for FileZone {
     async fn create_with_txn<'t>(
         &self,
         _txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         error!("Unimplemented: FileZone::create_with_txn");
-        Err(sqlx::Error::RowNotFound)
+        Err(sqlx::Error::RowNotFound.into())
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         let _res = sqlx::query(
             "UPDATE zones
             set rname = ?, serial = ?, refresh = ?, retry = ?, expire = ?, minimum =?
@@ -824,7 +840,7 @@ impl DBEntity for FileZone {
         Ok(Box::new(self.to_owned()))
     }
     /// delete the entity from the database
-    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
         let mut txn = pool.begin().await?;
         self.delete_with_txn(&mut txn).await?;
         txn.commit().await?;
@@ -835,7 +851,7 @@ impl DBEntity for FileZone {
     /// This one happens in the order ownership -> records -> zone because at the very least,
     /// if it fails after the ownership thing, then non-admin users can't see the zone
     /// and admins will just have to clean it up manually
-    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
         // delete all the ownership records
         sqlx::query("DELETE FROM ownership where zoneid = ?")
             .bind(self.id)
@@ -876,10 +892,10 @@ impl From<SqliteRow> for FileZone {
 impl DBEntity for FileZoneRecord {
     const TABLE: &'static str = "records";
 
-    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
         log::debug!("Ensuring DB Records table exists");
 
-        let mut tx = pool.begin().await.unwrap();
+        let mut tx = pool.begin().await?;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS
@@ -927,21 +943,21 @@ impl DBEntity for FileZoneRecord {
     }
 
     /// Get by id
-    async fn get(_pool: &Pool<Sqlite>, _id: i64) -> Result<Box<Self>, sqlx::Error> {
+    async fn get(_pool: &Pool<Sqlite>, _id: i64) -> Result<Box<Self>, GoatNsError> {
         error!("Unimplemented: FileZoneRecord::get");
-        Err(sqlx::Error::RowNotFound)
+        Err(sqlx::Error::RowNotFound.into())
     }
 
     async fn get_with_txn<'t>(
         txn: &mut SqliteConnection,
         id: &i64,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         let res = sqlx::query("select * from records where id = ?")
             .bind(id)
             .fetch_one(txn)
             .await?;
 
-        let res: Self = res.try_into().unwrap();
+        let res = Self::try_from(res)?;
 
         Ok(Box::new(res))
     }
@@ -949,14 +965,14 @@ impl DBEntity for FileZoneRecord {
     async fn get_by_name<'t>(
         _txn: &mut SqliteConnection,
         _name: &str,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Option<Box<Self>>, GoatNsError> {
         unimplemented!();
     }
 
     async fn get_all_by_name<'t>(
         txn: &mut SqliteConnection,
         name: &str,
-    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+    ) -> Result<Vec<Box<Self>>, GoatNsError> {
         let res = sqlx::query(&format!(
             "select * from {} where name = ?",
             SQL_VIEW_RECORDS
@@ -966,9 +982,12 @@ impl DBEntity for FileZoneRecord {
         .await?;
         let res = res
             .iter()
-            .map(|r| {
-                let conf: FileZoneRecord = r.try_into().unwrap();
-                Box::from(conf)
+            .filter_map(|r| match FileZoneRecord::try_from(r) {
+                Ok(val) => Some(Box::from(val)),
+                Err(err) => {
+                    error!("Failed to turn sql row into FileZoneRecord: {:?}", err);
+                    None
+                }
             })
             .collect();
         Ok(res)
@@ -977,12 +996,12 @@ impl DBEntity for FileZoneRecord {
     async fn get_all_user(
         _pool: &Pool<Sqlite>,
         _userid: i64,
-    ) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+    ) -> Result<Vec<Arc<Self>>, GoatNsError> {
         error!("Unimplemented: FileZoneRecord::get_all_user");
-        Err(sqlx::Error::RowNotFound)
+        Err(sqlx::Error::RowNotFound.into())
     }
 
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, GoatNsError> {
         #[cfg(test)]
         eprintln!("Starting save");
         let mut txn = pool.begin().await?;
@@ -990,7 +1009,7 @@ impl DBEntity for FileZoneRecord {
         match txn.commit().await {
             Err(err) => {
                 eprintln!("Failed to commit transaction: {err:?}");
-                return Err(err);
+                return Err(err.into());
             }
             Ok(_) => eprintln!("Successfully saved {self:?} to the db"),
         };
@@ -1000,7 +1019,7 @@ impl DBEntity for FileZoneRecord {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         #[cfg(test)]
         eprintln!("Starting save_with_txn for {self:?}");
         log::trace!("Starting save_with_txn for {self:?}");
@@ -1089,24 +1108,24 @@ impl DBEntity for FileZoneRecord {
     async fn create_with_txn<'t>(
         &self,
         _txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         error!("Unimplemented: FileZoneRecord::create_with_txn");
-        Err(sqlx::Error::RowNotFound)
+        Err(sqlx::Error::RowNotFound.into())
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         _txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         error!("Unimplemented: FileZoneRecord::update_with_txn");
-        Err(sqlx::Error::RowNotFound)
+        Err(sqlx::Error::RowNotFound.into())
     }
-    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
         let mut txn = pool.begin().await?;
         self.delete_with_txn(&mut txn).await
     }
 
-    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
         sqlx::query(format!("DELETE FROM {} WHERE id = ?", Self::TABLE).as_str())
             .bind(self.id)
             .execute(&mut *txn)
@@ -1126,8 +1145,8 @@ impl DBEntity for FileZoneRecord {
 impl DBEntity for ZoneOwnership {
     const TABLE: &'static str = "ownership";
 
-    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        let mut tx = pool.begin().await.unwrap();
+    async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
+        let mut tx = pool.begin().await?;
 
         #[cfg(test)]
         eprintln!("Ensuring DB {} table exists", Self::TABLE);
@@ -1161,11 +1180,11 @@ impl DBEntity for ZoneOwnership {
         .execute(&mut *tx)
         .await?;
 
-        tx.commit().await
+        tx.commit().await.map_err(|e| e.into())
     }
 
     /// Get an ownership record by its id
-    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, sqlx::Error> {
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, GoatNsError> {
         let mut conn = pool.acquire().await?;
 
         let res: ZoneOwnership =
@@ -1181,26 +1200,26 @@ impl DBEntity for ZoneOwnership {
     async fn get_with_txn<'t>(
         _txn: &mut SqliteConnection,
         _id: &i64,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         error!("Unimplemented: ZoneOwnership::get_with_txn");
-        Err(sqlx::Error::RowNotFound)
+        Err(sqlx::Error::RowNotFound.into())
     }
 
     async fn get_by_name<'t>(
         _txn: &mut SqliteConnection,
         _name: &str,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Option<Box<Self>>, GoatNsError> {
         // TODO implement ZoneOwnership get_by_name which gets by zone name
         unimplemented!("Not applicable for this!");
     }
     async fn get_all_by_name<'t>(
         _txn: &mut SqliteConnection,
         _name: &str,
-    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+    ) -> Result<Vec<Box<Self>>, GoatNsError> {
         unimplemented!()
     }
     /// Get an ownership record by its id
-    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, GoatNsError> {
         let mut conn = pool.acquire().await?;
 
         let res = sqlx::query("SELECT * from ownership where id = ?")
@@ -1212,7 +1231,7 @@ impl DBEntity for ZoneOwnership {
     }
 
     /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, GoatNsError> {
         let mut txn = pool.begin().await?;
         let res = self.save_with_txn(&mut txn).await?;
         txn.commit().await?;
@@ -1223,7 +1242,7 @@ impl DBEntity for ZoneOwnership {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         let res = sqlx::query(&format!(
             "INSERT INTO {} (zoneid, userid) values ( ?, ? )",
             Self::TABLE
@@ -1245,23 +1264,23 @@ impl DBEntity for ZoneOwnership {
     async fn create_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         self.save_with_txn(txn).await
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         _txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         unimplemented!("this should never be updated");
     }
     /// delete the entity from the database
-    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
+    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
         todo!()
     }
 
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(&self, _txn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    async fn delete_with_txn(&self, _txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
         todo!();
     }
 
@@ -1290,7 +1309,7 @@ impl From<SqliteRow> for ZoneOwnership {
 impl DBEntity for User {
     const TABLE: &'static str = "users";
 
-    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
         log::debug!("Ensuring DB Users table exists");
         sqlx::query(&format!(
             r#"CREATE TABLE IF NOT EXISTS
@@ -1319,7 +1338,7 @@ impl DBEntity for User {
         Ok(())
     }
     /// Get an ownership record by its id
-    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, sqlx::Error> {
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, GoatNsError> {
         let mut conn = pool.acquire().await?;
 
         let res: User = sqlx::query(&format!(
@@ -1335,23 +1354,23 @@ impl DBEntity for User {
     async fn get_with_txn<'t>(
         _txn: &mut SqliteConnection,
         _id: &i64,
-    ) -> Result<Box<Self>, sqlx::Error> {
-        todo!()
+    ) -> Result<Box<Self>, GoatNsError> {
+        unimplemented!()
     }
     async fn get_by_name<'t>(
         _txn: &mut SqliteConnection,
         _name: &str,
-    ) -> Result<Box<Self>, sqlx::Error> {
-        todo!()
+    ) -> Result<Option<Box<Self>>, GoatNsError> {
+        unimplemented!()
     }
     async fn get_all_by_name<'t>(
         _txn: &mut SqliteConnection,
         _name: &str,
-    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+    ) -> Result<Vec<Box<Self>>, GoatNsError> {
         unimplemented!()
     }
     /// Get an ownership record by its id, which is slightly ironic in this case
-    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, GoatNsError> {
         let mut conn = pool.acquire().await?;
 
         let res = sqlx::query(&format!(
@@ -1366,7 +1385,7 @@ impl DBEntity for User {
     }
 
     /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, GoatNsError> {
         let mut txn = pool.begin().await?;
         let res = self.save_with_txn(&mut txn).await?;
         txn.commit().await?;
@@ -1377,7 +1396,7 @@ impl DBEntity for User {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         let res = sqlx::query(
             "INSERT INTO users
             (id, displayname, username, email, disabled, authref, admin)
@@ -1403,23 +1422,35 @@ impl DBEntity for User {
     async fn create_with_txn<'t>(
         &self,
         _txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         todo!();
     }
-    /// create from scratch
+
     async fn update_with_txn<'t>(
         &self,
-        _txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
-        todo!();
+        txn: &mut SqliteConnection,
+    ) -> Result<Box<Self>, GoatNsError> {
+        let query = format!("UPDATE {} set displayname = ?, username = ?, email = ?, disabled = ?, authref = ?, admin = ? WHERE id = ?", Self::TABLE);
+        sqlx::query(&query)
+            .bind(&self.displayname)
+            .bind(&self.username)
+            .bind(&self.email)
+            .bind(self.disabled)
+            .bind(&self.authref)
+            .bind(self.admin)
+            .bind(self.id)
+            .execute(txn)
+            .await?;
+        Ok(Box::new(self.to_owned()))
     }
+
     /// delete the entity from the database
-    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
+    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
         todo!()
     }
 
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(&self, _txn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    async fn delete_with_txn(&self, _txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
         todo!();
     }
 
@@ -1446,7 +1477,7 @@ impl UserAuthToken {
     pub async fn get_authtoken(
         pool: &SqlitePool,
         tokenkey: String,
-    ) -> Result<UserAuthToken, sqlx::Error> {
+    ) -> Result<UserAuthToken, GoatNsError> {
         let res = sqlx::query(&format!(
             "select id, issued, expiry, tokenkey, tokenhash, userid from {} where tokenkey = ?",
             Self::TABLE
@@ -1454,10 +1485,10 @@ impl UserAuthToken {
         .bind(tokenkey)
         .fetch_one(&mut *pool.acquire().await?)
         .await?;
-        Ok(res.into())
+        res.try_into()
     }
 
-    pub async fn cleanup(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    pub async fn cleanup(pool: &SqlitePool) -> Result<(), GoatNsError> {
         let current_time = Utc::now();
         log::debug!(
             "Starting cleanup of {} table for sessions expiring before {}",
@@ -1486,7 +1517,7 @@ impl UserAuthToken {
                     "Failed to complete cleanup of {} table: {error:?}",
                     Self::TABLE
                 );
-                Err(error)
+                Err(error.into())
             }
         }
     }
@@ -1496,7 +1527,7 @@ impl UserAuthToken {
 impl DBEntity for UserAuthToken {
     const TABLE: &'static str = "user_tokens";
 
-    async fn create_table(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
         let mut conn = pool.acquire().await?;
         log::debug!("Ensuring DB {} table exists", Self::TABLE);
 
@@ -1567,12 +1598,14 @@ impl DBEntity for UserAuthToken {
                     {
                         Ok(value) => {
                             if !value {
-                                return Err(sqlx::Error::Protocol("Cancelled".to_string()));
+                                return Err(sqlx::Error::Protocol("Cancelled".to_string()).into());
+                                // TODO: replace these with proper errors
                             }
                         }
                         Err(error) => {
                             log::error!("Cancelled! {error:?}");
-                            return Err(sqlx::Error::Protocol("Cancelled".to_string()));
+                            return Err(sqlx::Error::Protocol("Cancelled".to_string()).into());
+                            // TODO: replace these with proper errors
                         }
                     };
                     sqlx::query(&format!("DELETE FROM {}", Self::TABLE))
@@ -1597,15 +1630,15 @@ impl DBEntity for UserAuthToken {
                 Self::TABLE
             ),
             Err(err) => match err {
-                sqlx::Error::Database(zzz) => {
+                sqlx::Error::Database(ref zzz) => {
                     if zzz.message() != "no such index: ind_user_tokens_fields" {
                         log::error!("Database Error: {:?}", zzz);
-                        panic!();
+                        return Err(err.into());
                     }
                 }
                 _ => {
                     log::error!("{err:?}");
-                    panic!();
+                    return Err(err.into());
                 }
             },
         };
@@ -1623,50 +1656,56 @@ impl DBEntity for UserAuthToken {
     }
 
     /// Get the entity
-    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, sqlx::Error> {
-        Ok(Box::new(
-            sqlx::query(&format!("SELECT * from {} where id = ?", Self::TABLE))
-                .bind(id)
-                .fetch_one(pool)
-                .await?
-                .into(),
-        ))
+    async fn get(pool: &Pool<Sqlite>, id: i64) -> Result<Box<Self>, GoatNsError> {
+        let res: Self = sqlx::query(&format!("SELECT * from {} where id = ?", Self::TABLE))
+            .bind(id)
+            .fetch_one(pool)
+            .await?
+            .try_into()?;
+
+        Ok(Box::new(res))
     }
 
     async fn get_with_txn<'t>(
         _txn: &mut SqliteConnection,
         _id: &i64,
-    ) -> Result<Box<Self>, sqlx::Error> {
-        todo!()
+    ) -> Result<Box<Self>, GoatNsError> {
+        unimplemented!()
     }
     // TODO: maybe get by name gets it by the username?
     async fn get_by_name<'t>(
         _txn: &mut SqliteConnection,
         _name: &str,
-    ) -> Result<Box<Self>, sqlx::Error> {
-        todo!()
+    ) -> Result<Option<Box<Self>>, GoatNsError> {
+        unimplemented!()
     }
     async fn get_all_by_name<'t>(
         _txn: &mut SqliteConnection,
         _name: &str,
-    ) -> Result<Vec<Box<Self>>, sqlx::Error> {
+    ) -> Result<Vec<Box<Self>>, GoatNsError> {
         unimplemented!()
     }
 
-    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, sqlx::Error> {
+    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, GoatNsError> {
         let res = sqlx::query(&format!("SELECT * from {} where userid = ?", Self::TABLE))
             .bind(id)
             .fetch_all(pool)
             .await?;
         let res: Vec<Arc<UserAuthToken>> = res
             .into_iter()
-            .map(|r| Arc::new(UserAuthToken::from(r)))
+            .filter_map(|r| match UserAuthToken::try_from(r) {
+                Ok(r) => Some(Arc::new(r)),
+                Err(e) => {
+                    log::error!("Failed to convert row to UserAuthToken: {e:?}");
+                    None
+                }
+            })
             .collect();
         Ok(res)
     }
 
     /// save the entity to the database
-    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, sqlx::Error> {
+    async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, GoatNsError> {
         let mut txn = pool.begin().await?;
         let res = self.save_with_txn(&mut txn).await?;
         txn.commit().await?;
@@ -1677,7 +1716,7 @@ impl DBEntity for UserAuthToken {
     async fn save_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         let expiry = self.expiry.map(|v| v.timestamp());
         let issued = self.issued.timestamp();
 
@@ -1707,26 +1746,26 @@ impl DBEntity for UserAuthToken {
     async fn create_with_txn<'t>(
         &self,
         _txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         todo!();
     }
     /// create from scratch
     async fn update_with_txn<'t>(
         &self,
         _txn: &mut SqliteConnection,
-    ) -> Result<Box<Self>, sqlx::Error> {
+    ) -> Result<Box<Self>, GoatNsError> {
         todo!();
     }
 
     /// delete the entity from the database
-    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
         let mut txn = pool.begin().await?;
         self.delete_with_txn(&mut txn).await?;
         txn.commit().await?;
         Ok(())
     }
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
         sqlx::query(&format!("DELETE FROM {} where id = ?", &Self::TABLE))
             .bind(self.id)
             .execute(txn)
@@ -1742,13 +1781,14 @@ impl DBEntity for UserAuthToken {
     }
 }
 
-impl From<SqliteRow> for UserAuthToken {
-    fn from(input: SqliteRow) -> Self {
+impl TryFrom<SqliteRow> for UserAuthToken {
+    type Error = GoatNsError;
+    fn try_from(input: SqliteRow) -> Result<Self, Self::Error> {
         let expiry: Option<String> = input.get("expiry");
         let expiry: Option<DateTime<Utc>> = match expiry {
             None => None,
             Some(val) => {
-                let expiry = chrono::NaiveDateTime::parse_from_str(&val, "%s").unwrap();
+                let expiry = chrono::NaiveDateTime::parse_from_str(&val, "%s")?;
                 let expiry: DateTime<Utc> = chrono::TimeZone::from_utc_datetime(&Utc, &expiry);
                 Some(expiry)
             }
@@ -1756,10 +1796,10 @@ impl From<SqliteRow> for UserAuthToken {
 
         let issued: String = input.get("issued");
 
-        let issued = chrono::NaiveDateTime::parse_from_str(&issued, "%s").unwrap();
+        let issued = chrono::NaiveDateTime::parse_from_str(&issued, "%s")?;
         let issued: DateTime<Utc> = chrono::TimeZone::from_utc_datetime(&Utc, &issued);
 
-        Self {
+        Ok(Self {
             id: input.get("id"),
             name: input.get("name"),
             issued,
@@ -1767,7 +1807,7 @@ impl From<SqliteRow> for UserAuthToken {
             userid: input.get("userid"),
             tokenkey: input.get("tokenkey"),
             tokenhash: input.get("tokenhash"),
-        }
+        })
     }
 }
 
@@ -1794,7 +1834,7 @@ pub async fn get_zones_with_txn(
     txn: &mut SqliteConnection,
     lim: i64,
     offset: i64,
-) -> Result<Vec<FileZone>, sqlx::Error> {
+) -> Result<Vec<FileZone>, GoatNsError> {
     let result = sqlx::query(
         "SELECT
         *
@@ -1818,15 +1858,15 @@ pub async fn get_zones_with_txn(
 }
 
 impl TryFrom<&SqliteRow> for FileZoneRecord {
-    type Error = String;
-    fn try_from(row: &SqliteRow) -> Result<Self, String> {
+    type Error = GoatNsError;
+    fn try_from(row: &SqliteRow) -> Result<Self, Self::Error> {
         row.to_owned().try_into()
     }
 }
 
 impl TryFrom<SqliteRow> for FileZoneRecord {
-    type Error = String;
-    fn try_from(row: SqliteRow) -> Result<Self, String> {
+    type Error = GoatNsError;
+    fn try_from(row: SqliteRow) -> Result<Self, Self::Error> {
         let name: String = row.get("name");
         let rrtype: i32 = row.get("rrtype");
         let rrtype = RecordType::from(&(rrtype as u16));
@@ -1835,7 +1875,7 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
         let ttl: u32 = row.get("ttl");
 
         if let RecordType::ANY = rrtype {
-            return Err("Cannot serve ANY records".to_string());
+            return Err(GoatNsError::RFC8482);
         }
 
         Ok(FileZoneRecord {
@@ -1854,7 +1894,7 @@ pub async fn get_all_fzr_by_name<'t>(
     txn: &mut SqliteConnection,
     name: &str,
     rrtype: u16,
-) -> Result<Vec<FileZoneRecord>, sqlx::Error> {
+) -> Result<Vec<FileZoneRecord>, GoatNsError> {
     let res = sqlx::query(&format!(
         "select *, record_id as id from {} where name = ? AND rrtype = ?",
         SQL_VIEW_RECORDS

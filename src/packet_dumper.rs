@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
-use log::debug;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+use tracing::{debug, error};
 
 pub enum DumpType {
     ClientRequest,
@@ -28,7 +28,10 @@ pub async fn dump_bytes(bytes: Vec<u8>, dump_type: DumpType) {
     );
     let mut fh = match File::create(&filename).await {
         Ok(value) => value,
-        Err(error) => panic!("couldn't open {} for writing: {:?}", filename, error),
+        Err(error) => {
+            error!("couldn't open {} for writing: {:?}", filename, error);
+            return;
+        }
     };
 
     match fh.write_all(&bytes).await {

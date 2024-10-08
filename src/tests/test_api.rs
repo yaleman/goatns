@@ -2,6 +2,7 @@ use crate::config::ConfigFile;
 use crate::db::test::test_get_sqlite_memory;
 use crate::db::{start_db, DBEntity, User, UserAuthToken, ZoneOwnership};
 use crate::enums::RecordType;
+use crate::error::GoatNsError;
 use crate::servers::{self, Servers};
 use crate::web::utils::{create_api_token, ApiToken};
 use crate::zones::{FileZone, FileZoneRecord};
@@ -18,12 +19,12 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     let pool = test_get_sqlite_memory().await;
 
-    start_db(&pool).await.unwrap();
+    start_db(&pool).await.expect("failed to start DB");
 
     let config = crate::config::ConfigFile::try_as_cowcell(Some(
         &"./examples/test_config/goatns-test.json".to_string(),
     ))
-    .unwrap();
+    .expect("failed to parse test config");
 
     use rand::thread_rng;
     use rand::Rng;
@@ -58,7 +59,9 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
         tokio::spawn(crate::datastore::manager(datastore_rx, pool.clone(), None));
 
     println!("Starting API Server on port {port}");
-    let apiserver = crate::web::build(datastore_tx.clone(), config.read(), pool.clone()).await;
+    let apiserver = crate::web::build(datastore_tx.clone(), config.read(), pool.clone())
+        .await
+        .expect("Failed to start API server");
 
     println!("Building server struct");
     (
@@ -114,8 +117,8 @@ pub struct AuthStruct {
     pub token: String,
 }
 
-#[tokio::test]
-async fn api_zone_create() -> Result<(), sqlx::Error> {
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_zone_create() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
 
@@ -123,23 +126,25 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
     // let apiserver = servers.apiserver.unwrap();
 
     let user = insert_test_user(&pool).await;
-    println!("Created user... {user:?}");
+    println!("api_zone_create Created user... {user:?}");
 
-    println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    println!("api_zone_create Creating token for user");
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
-    println!("Created token... {token:?}");
+    println!("api_zone_create Created token... {token:?}");
 
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
-    println!("Logging in with the token...");
+    println!("api_zone_create Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(5))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),
@@ -149,7 +154,7 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
         .unwrap();
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
-    println!("=> Token login success!");
+    println!("api_zone_create => Token login success!");
 
     let newzone = FileZone {
         id: Some(1234),
@@ -161,7 +166,7 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
         ..Default::default()
     };
 
-    println!("Sending zone create");
+    println!("api_zone_create Sending zone create");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/zone"))
         .header("Authorization", format!("Bearer {}", token.token_secret))
@@ -171,19 +176,19 @@ async fn api_zone_create() -> Result<(), sqlx::Error> {
         .unwrap();
     assert_eq!(res.status(), 200);
 
-    let response_zone: FileZone = match res.json().await {
-        Err(err) => panic!("Failed to parse response content: {err:?}"),
-        Ok(val) => val,
-    };
+    let response_zone: FileZone = res
+        .json()
+        .await
+        .inspect_err(|err| println!("Failed to parse response content: {err:?}"))?;
 
     assert_eq!(response_zone.name, "example.goat");
     assert_eq!(response_zone.serial, 12345);
     assert_ne!(response_zone.serial, 123456);
-    // apiserver.abort();
+    drop(pool);
     Ok(())
 }
 
-#[tokio::test] //(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
@@ -195,7 +200,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     println!("Created user... {user:?}");
 
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
     println!("Created token... {token:?}");
@@ -203,12 +208,14 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
     println!("Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(5))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),
@@ -253,12 +260,12 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     let res_content = res.bytes().await;
     println!("content from delete: {res_content:?}");
 
-    // apiserver.abort();
+    drop(pool);
     Ok(())
 }
 
-#[tokio::test] //(flavor = "multi_thread", worker_threads = 4)]
-async fn api_zone_create_update() -> Result<(), sqlx::Error> {
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_zone_create_update() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
 
@@ -269,7 +276,7 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     println!("Created user... {user:?}");
 
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
     println!("Created token... {token:?}");
@@ -277,12 +284,14 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
     println!("Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(5))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),
@@ -308,8 +317,8 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     println!("Saving zone ownership");
     ZoneOwnership {
         id: None,
-        userid: user.id.unwrap(),
-        zoneid: newzone.id.unwrap(),
+        userid: user.id.expect("No user id"),
+        zoneid: newzone.id.expect("No zone id"),
     }
     .save(&pool)
     .await?;
@@ -332,18 +341,19 @@ async fn api_zone_create_update() -> Result<(), sqlx::Error> {
     let res_content = res.bytes().await;
     println!("content from patch: {res_content:?}");
 
+    drop(pool);
     Ok(())
 }
 
-#[tokio::test]
-async fn api_record_create() -> Result<(), sqlx::Error> {
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_record_create() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
     let api_port = config.read().api_port;
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
     println!("Created token... {token:?}");
@@ -351,12 +361,14 @@ async fn api_record_create() -> Result<(), sqlx::Error> {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
     println!("Logging in with the token...");
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(5))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),
@@ -383,7 +395,7 @@ async fn api_record_create() -> Result<(), sqlx::Error> {
 
     let zo = ZoneOwnership {
         id: None,
-        userid: user.id.unwrap(),
+        userid: user.id.expect("no user id found"),
         zoneid: zone.id.unwrap(),
     };
     println!("ZO: {zo:?}");
@@ -409,24 +421,24 @@ async fn api_record_create() -> Result<(), sqlx::Error> {
         .unwrap();
 
     assert_eq!(res.status(), 200);
-    let response_record: FileZoneRecord = match res.json().await {
-        Err(err) => panic!("Failed to get response content: {err:?}"),
-        Ok(val) => val,
-    };
-
+    let response_record: FileZoneRecord = res
+        .json()
+        .await
+        .inspect_err(|err| eprintln!("Failed to get response content: {err:?}"))?;
     assert_eq!(response_record.name, "doggo");
-    // apiserver.abort();
+    drop(pool);
     Ok(())
 }
-#[tokio::test]
-async fn api_record_delete() -> Result<(), sqlx::Error> {
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_record_delete() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
     let api_port = config.read().api_port;
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.unwrap())
+    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
         .unwrap();
     println!("Created token... {token:?}");
@@ -434,19 +446,30 @@ async fn api_record_delete() -> Result<(), sqlx::Error> {
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
     println!("Logging in with the token...");
-    let res = client
+    let res = match client
         .post(&format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(5))
+        .timeout(std::time::Duration::from_secs(5))
         .json(&AuthStruct {
             tokenkey: token.token_key,
             token: token.token_secret.to_owned(),
         })
         .send()
         .await
-        .unwrap();
+    {
+        Ok(value) => value,
+        Err(err) => {
+            eprintln!("Failed to send login request: {err:?}");
+            return Err(GoatNsError::StartupError(
+                "Failed to send login request".to_string(),
+            ));
+        }
+    };
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
@@ -466,7 +489,7 @@ async fn api_record_delete() -> Result<(), sqlx::Error> {
 
     let zo = ZoneOwnership {
         id: None,
-        userid: user.id.unwrap(),
+        userid: user.id.expect("no user id found"),
         zoneid: zone.id.unwrap(),
     };
     println!("ZO: {zo:?}");
@@ -500,6 +523,6 @@ async fn api_record_delete() -> Result<(), sqlx::Error> {
 
     assert_eq!(status, 200);
 
-    // apiserver.abort();
+    drop(pool);
     Ok(())
 }

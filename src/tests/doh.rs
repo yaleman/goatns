@@ -1,3 +1,5 @@
+use axum::http::header::ACCEPT;
+
 use crate::db::test::test_example_com_zone;
 use crate::db::DBEntity;
 use crate::enums::RecordClass;
@@ -11,10 +13,12 @@ async fn test_doh_get_json() -> Result<(), ()> {
     let (pool, _servers, config) = start_test_server().await;
 
     let api_port = config.read().api_port;
-    // let apiserver = servers.apiserver.unwrap();
 
     let _user = insert_test_user(&pool).await;
-    test_example_com_zone().save(&pool).await.unwrap();
+    test_example_com_zone()
+        .save(&pool)
+        .await
+        .expect("Failed to save test zone");
 
     let fzr = FileZoneRecord {
         zoneid: Some(1),
@@ -27,24 +31,31 @@ async fn test_doh_get_json() -> Result<(), ()> {
     }
     .save(&pool)
     .await
-    .unwrap();
+    .expect("Failed to save test record");
 
     eprintln!("FZR result: {fzr:?}");
 
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("Accept", "application/dns-json".parse().unwrap());
+    headers.insert(
+        ACCEPT,
+        "application/dns-json"
+            .parse()
+            .expect("Failed to parse hard-coded header"),
+    );
 
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
         // .cookie_store(true)
         .default_headers(headers)
+        .timeout(std::time::Duration::from_secs(5))
         .build()
-        .unwrap();
+        .expect("Failed to build client");
 
     let res = client
         .get(&format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .unwrap();
@@ -68,6 +79,7 @@ async fn test_doh_ask_raw_accept() -> Result<(), ()> {
         .danger_accept_invalid_certs(true)
         // .cookie_store(true)
         .default_headers(headers)
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
@@ -75,6 +87,7 @@ async fn test_doh_ask_raw_accept() -> Result<(), ()> {
         .get(&format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .unwrap();
@@ -95,6 +108,7 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
         .danger_accept_invalid_certs(true)
         // .cookie_store(true)
         .default_headers(headers)
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
@@ -102,6 +116,7 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
         .get(&format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .unwrap();
@@ -122,6 +137,7 @@ async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
         .danger_accept_invalid_certs(true)
         // .cookie_store(true)
         .default_headers(headers)
+        .timeout(std::time::Duration::from_secs(5))
         .build()
         .unwrap();
 
@@ -129,6 +145,7 @@ async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
         .get(&format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .unwrap();

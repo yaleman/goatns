@@ -1,4 +1,5 @@
 use crate::enums::{PacketType, Rcode};
+use crate::error::GoatNsError;
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::{Header, Question};
 use crate::{ResourceRecord, UDP_BUFFER_SIZE};
@@ -16,22 +17,19 @@ pub struct Reply {
 
 impl Reply {
     /// This is used to turn into a series of bytes to yeet back to the client, needs to take a mutable self because the answers record length goes into the header
-    pub async fn as_bytes(&self) -> Result<Vec<u8>, String> {
+    pub async fn as_bytes(&self) -> Result<Vec<u8>, GoatNsError> {
         let mut retval: Vec<u8> = vec![];
 
         // so we can set the headers
         let mut final_reply = self.clone();
         final_reply.header.ancount = final_reply.answers.len() as u16;
         // use the packed_struct to build the bytes
-        let reply_header = match final_reply.header.pack() {
-            Ok(value) => value,
-            Err(err) => return Err(format!("Failed to pack reply header bytes: {:?}", err)),
-        };
+        let reply_header = final_reply.header.pack()?;
         retval.extend(reply_header);
 
         // need to add the question in here
         if let Some(question) = &final_reply.question {
-            retval.extend(question.to_bytes());
+            retval.extend(question.try_to_bytes()?);
 
             for answer in &final_reply.answers {
                 let ttl: &u32 = match answer {
@@ -57,9 +55,9 @@ impl Reply {
                     record_type: answer.to_owned().into(),
                     class: question.qclass,
                     ttl: *ttl,
-                    rdata: answer.as_bytes(&question.qname),
+                    rdata: answer.as_bytes(&question.qname)?,
                 };
-                let reply_bytes: Vec<u8> = answer_record.into();
+                let reply_bytes: Vec<u8> = answer_record.try_into()?;
                 retval.extend(reply_bytes);
             }
         }
@@ -82,7 +80,7 @@ impl Reply {
     }
 
     /// because sometimes you need to trunc that junk
-    pub async fn as_bytes_udp(&self) -> Result<Vec<u8>, String> {
+    pub async fn as_bytes_udp(&self) -> Result<Vec<u8>, GoatNsError> {
         let mut result = self.as_bytes().await?;
         if result.len() > UDP_BUFFER_SIZE {
             result.truncate(UDP_BUFFER_SIZE);
@@ -130,7 +128,7 @@ pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
 }
 
 /// Reply to an ANY request with a HINFO "RFC8482" "" response
-pub fn reply_any(id: u16, question: Question) -> Result<Reply, String> {
+pub fn reply_any(id: u16, question: &Question) -> Result<Reply, String> {
     Ok(Reply {
         header: Header {
             id,

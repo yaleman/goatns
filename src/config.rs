@@ -16,6 +16,8 @@ use std::str::FromStr;
 use url::Url;
 
 use crate::enums::ContactDetails;
+use crate::error::GoatNsError;
+use crate::web::utils::Urls;
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 /// Allow-listing ranges for making particular kinds of requests
@@ -114,11 +116,13 @@ impl ConfigFile {
     }
 
     /// get a string version of the listener address
-    pub fn api_listener_address(&self) -> SocketAddr {
-        SocketAddr::new(
-            self.address.parse().expect("Failed to parse IP"),
+    pub fn api_listener_address(&self) -> Result<SocketAddr, GoatNsError> {
+        Ok(SocketAddr::new(
+            self.address.parse().map_err(|err| {
+                GoatNsError::StartupError(format!("Failed to parse IP {:?}", err))
+            })?,
             self.api_port,
-        )
+        ))
     }
 
     /// It's a sekret!
@@ -126,6 +130,8 @@ impl ConfigFile {
         self.api_cookie_secret.as_bytes()
     }
 
+    /// Return the URL for the status endpoint
+    #[cfg(test)]
     pub fn status_url(&self) -> Url {
         Url::from_str(&format!(
             "https://{}:{}/status",
@@ -134,6 +140,7 @@ impl ConfigFile {
         .expect("Failed to generate a status URL!")
     }
 
+    /// Get the TLS config for the API server
     pub async fn get_tls_config(&self) -> Result<RustlsConfig, String> {
         log::trace!(
             "tls config: cert={:?} key={:?}",
@@ -145,6 +152,7 @@ impl ConfigFile {
             .map_err(|e| format!("Failed to load TLS config: {e:?}"))
     }
 
+    /// Check the configuration for errors
     pub async fn check_config(
         mut config: CowCellWriteTxn<'_, ConfigFile>,
     ) -> Result<(), Vec<String>> {
@@ -158,26 +166,14 @@ impl ConfigFile {
             );
 
             config.api_tls_cert = PathBuf::from(
-                shellexpand::tilde(
-                    &config
-                        .api_tls_cert
-                        .to_str()
-                        .expect("Failed to string-ify api_tls_cert"),
-                )
-                .to_string(),
+                shellexpand::tilde(&config.api_tls_cert.to_string_lossy()).to_string(),
             );
         }
         if config.api_tls_key.starts_with("~") {
             #[cfg(test)]
             eprintln!("updating tls key from {:#?} to shellex", config.api_tls_key);
             config.api_tls_key = PathBuf::from(
-                shellexpand::tilde(
-                    &config
-                        .api_tls_key
-                        .to_str()
-                        .expect("Failed to expand api_tls_key path"),
-                )
-                .to_string(),
+                shellexpand::tilde(&config.api_tls_key.to_string_lossy()).to_string(),
             );
         }
 
@@ -302,6 +298,7 @@ impl Default for ConfigFile {
             api_cookie_secret: generate_cookie_secret(),
             oauth2_client_id: String::from(""),
             // TODO: this should be auto-generated from stuff
+            #[allow(clippy::expect_used)]
             oauth2_redirect_url: Url::from_str("https://example.com")
                 .expect("Internal error parsing example.com into a URL"),
             oauth2_secret: String::from(""),
@@ -324,7 +321,9 @@ impl Display for ConfigFile {
                 format!(
                     "enable_api={}  api_endpoint=\"https://{}\" tls_cert={:?} tls_key={:?}",
                     self.enable_api,
-                    self.api_listener_address(),
+                    self.api_listener_address()
+                        .map(|x| x.to_string())
+                        .unwrap_or("<FAILED TO PARSE ADDRESS>".to_string()),
                     self.api_tls_cert,
                     self.api_tls_key
                 )
@@ -355,14 +354,9 @@ impl From<Config> for ConfigFile {
         let oauth2_redirect_url = match oauth2_redirect_url {
             Some(mut url) => {
                 // update the URL with the final auth path
-                // eprintln!("OAuth2 Redirect URL: {url:?}");
-                if !url.path().ends_with("/auth/login") {
-                    // println!("Adding authlogin tail");
-                    url = url
-                        .join("/auth/login")
-                        .expect("Failed to join URL path to create login URL");
+                if !url.path().ends_with(Urls::Login.as_ref()) {
+                    url.set_path(Urls::Login.as_ref());
                 }
-                // eprintln!("OAuth2 Redirect URL after update: {url:?}");
                 url
             }
             None => {
@@ -371,8 +365,11 @@ impl From<Config> for ConfigFile {
                     443 => format!("https://{}", hostname),
                     _ => format!("https://{}:{}", hostname, api_port),
                 };
-                Url::parse(&format!("{}/auth/login", baseurl))
-                    .expect("Failed to parse hostname/api_port into a valid URL")
+                #[allow(clippy::expect_used)]
+                let mut url =
+                    Url::from_str(&baseurl).expect("Failed to parse known-sensible URL as URL");
+                url.set_path(Urls::Login.as_ref());
+                url
             }
         };
 
@@ -464,11 +461,9 @@ impl FromStr for ConfigFile {
     }
 }
 
-lazy_static! {
-    static ref CONFIG_LOCATIONS: Vec<&'static str> =
-        ["./goatns.json", "~/.config/goatns.json",].to_vec();
-}
+const CONFIG_LOCATIONS: [&str; 2] = ["./goatns.json", "~/.config/goatns.json"];
 
+/// Sets up logging for the platform
 pub async fn setup_logging(
     config: CowCellReadTxn<ConfigFile>,
     clap_results: &ArgMatches,
@@ -492,6 +487,7 @@ pub async fn setup_logging(
             filters: vec![
                 "h2",
                 "hyper::proto",
+                "hyper::client",
                 "rustls",
                 "h2::proto",
                 // "tower_http::trace::make_span",
@@ -508,6 +504,7 @@ pub async fn setup_logging(
         })
 }
 
+/// A filter for log lines
 pub struct LogFilter {
     filters: Vec<&'static str>,
 }
@@ -519,12 +516,11 @@ impl LogLineFilter for LogFilter {
         record: &log::Record,
         log_line_writer: &dyn LogLineWriter,
     ) -> std::io::Result<()> {
-        if self.filters.iter().any(|r| {
-            record
-                .module_path()
-                .expect("Failed to get record module path in logger")
-                .contains(r)
-        }) {
+        if self
+            .filters
+            .iter()
+            .any(|r| record.module_path().unwrap_or("").contains(r))
+        {
             return Ok(());
         }
 

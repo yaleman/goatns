@@ -3,6 +3,7 @@ use crate::error_result_json;
 use crate::zones::FileZoneRecord;
 use goatns_macros::check_api_auth;
 use tower_sessions::Session;
+use tracing::debug;
 
 use super::*;
 
@@ -19,23 +20,35 @@ impl APIEntity for FileZoneRecord {
         let record: Self = match serde_json::from_value(payload) {
             Ok(val) => val,
             Err(err) => {
-                eprintln!("Failed to parse object: {err:?}");
+                debug!("Failed to parse object: {err:?}");
                 return error_result_json!("Failed to parse object", StatusCode::BAD_REQUEST);
             }
         };
 
-        let mut txn = state.connpool().await.begin().await.unwrap();
-        println!(
-            "looking for ZO for user: {} zoneid: {}",
-            user.id.unwrap(),
-            record.zoneid.unwrap()
-        );
-        if let Err(err) = ZoneOwnership::get_ownership_by_userid(
-            &mut txn,
-            &user.id.unwrap(),
-            &record.zoneid.unwrap(),
-        )
-        .await
+        let user_id = match user.id {
+            Some(val) => val,
+            None => {
+                debug!("No user id found in session");
+                return error_result_json!("No user id found in session", StatusCode::UNAUTHORIZED);
+            }
+        };
+
+        let zone_id = match record.zoneid {
+            Some(val) => val,
+            None => {
+                debug!("No zone id found in record");
+                return error_result_json!("No zone id found in record", StatusCode::BAD_REQUEST);
+            }
+        };
+
+        let mut txn = state.connpool().await.begin().await.map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?;
+        debug!("looking for ZO for user: {} zoneid: {}", user_id, zone_id);
+        if let Err(err) = ZoneOwnership::get_ownership_by_userid(&mut txn, &user_id, &zone_id).await
         {
             eprintln!("Error getting ownership: {err:?}");
             return error_result_json!("", StatusCode::UNAUTHORIZED);
@@ -75,7 +88,12 @@ impl APIEntity for FileZoneRecord {
                 return error_result_json!("Failed to parse object", StatusCode::BAD_REQUEST);
             }
         };
-        let mut txn = state.connpool().await.begin().await.unwrap();
+        let mut txn = state.connpool().await.begin().await.map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?;
 
         let res = match record.update_with_txn(&mut txn).await {
             Ok(val) => val,
@@ -86,18 +104,37 @@ impl APIEntity for FileZoneRecord {
             }
         };
 
-        if let Err(err) = ZoneOwnership::get_ownership_by_userid(
-            &mut txn,
-            &user.id.unwrap(),
-            &res.zoneid.unwrap(),
-        )
-        .await
+        let user_id = match user.id {
+            Some(val) => val,
+            None => {
+                debug!("No user id found in session");
+                return error_result_json!("No user id found in session", StatusCode::UNAUTHORIZED);
+            }
+        };
+
+        let zone_id = match record.zoneid {
+            Some(val) => val,
+            None => {
+                debug!("No zone id found in record");
+                return error_result_json!("No zone id found in record", StatusCode::BAD_REQUEST);
+            }
+        };
+
+        if let Err(err) = ZoneOwnership::get_ownership_by_userid(&mut txn, &user_id, &zone_id).await
         {
             eprintln!("Error getting ownership: {err:?}");
             return error_result_json!("", StatusCode::UNAUTHORIZED);
         };
 
-        Ok(Json(serde_json::to_string(&res).unwrap()))
+        let res = match serde_json::to_string(&res) {
+            Ok(val) => val,
+            Err(err) => {
+                eprintln!("Failed to parse object: {err:?}");
+                return error_result_json!("Failed to parse object", StatusCode::BAD_REQUEST);
+            }
+        };
+
+        Ok(Json(res))
     }
     async fn api_get(
         State(state): State<GoatState>,
@@ -127,7 +164,12 @@ impl APIEntity for FileZoneRecord {
     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();
 
-        let mut txn = state.connpool().await.begin().await.unwrap();
+        let mut txn = state.connpool().await.begin().await.map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?;
 
         let record = match FileZoneRecord::get_with_txn(&mut txn, &id).await {
             Ok(val) => val,
@@ -136,13 +178,22 @@ impl APIEntity for FileZoneRecord {
                 return error_result_json!(resmsg.as_str(), StatusCode::UNAUTHORIZED);
             }
         };
+        let user_id = match user.id {
+            Some(val) => val,
+            None => {
+                debug!("No user id found in session");
+                return error_result_json!("No user id found in session", StatusCode::UNAUTHORIZED);
+            }
+        };
 
-        if let Err(err) = ZoneOwnership::get_ownership_by_userid(
-            &mut txn,
-            &user.id.unwrap(),
-            &record.zoneid.unwrap(),
-        )
-        .await
+        let zone_id = match record.zoneid {
+            Some(val) => val,
+            None => {
+                debug!("No zone id found in record");
+                return error_result_json!("No zone id found in record", StatusCode::BAD_REQUEST);
+            }
+        };
+        if let Err(err) = ZoneOwnership::get_ownership_by_userid(&mut txn, &user_id, &zone_id).await
         {
             eprintln!("Error getting ownership: {err:?}");
             return error_result_json!("no zone ownership found", StatusCode::UNAUTHORIZED);

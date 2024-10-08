@@ -47,26 +47,33 @@ impl APIEntity for FileZone {
         }
 
         // check to see if the zone exists
-        let mut txn = state.connpool().await.begin().await.unwrap();
+        let mut txn = match state.connpool().await.begin().await {
+            Ok(val) => val,
+            Err(err) => {
+                log::error!("failed to get connection to the database: {err:?}");
+                return error_result_json!(
+                    "Failed to get a connection to the database!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
 
         match FileZone::get_by_name(&mut txn, &zone.name).await {
-            Ok(_) => {
+            Ok(Some(_)) => {
                 log::debug!("Zone {} already exists, user sent POST", zone.name);
                 return error_result_json!("Zone already exists!", StatusCode::BAD_REQUEST);
             }
-            Err(err) => match err {
-                sqlx::Error::RowNotFound => {}
-                _ => {
-                    log::debug!(
-                        "Couldn't get zone  {}, something went wrong: {err:?}",
-                        zone.name
-                    );
-                    return error_result_json!(
-                        "Server error querying zone!",
-                        StatusCode::INTERNAL_SERVER_ERROR
-                    );
-                }
-            },
+            Ok(None) => {}
+            Err(err) => {
+                log::debug!(
+                    "Couldn't get zone  {}, something went wrong: {err:?}",
+                    zone.name
+                );
+                return error_result_json!(
+                    "Server error querying zone!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
         };
 
         // if they got here there were no issues with querying the DB and it doesn't exist already!
@@ -93,14 +100,62 @@ impl APIEntity for FileZone {
             );
         }
         // start a new transaction!
-        let mut txn = state.connpool().await.begin().await.unwrap();
+        let mut txn = match state.connpool().await.begin().await {
+            Ok(val) => val,
+            Err(err) => {
+                log::error!("failed to get connection to the database: {err:?}");
+                return error_result_json!(
+                    "Failed to get a connection to the database!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
 
-        let zone = FileZone::get_by_name(&mut txn, &zone.name).await.unwrap();
+        let zone = match FileZone::get_by_name(&mut txn, &zone.name).await {
+            Ok(val) => match val {
+                Some(val) => *val,
+                None => {
+                    return error_result_json!("Couldn't find Zone!", StatusCode::NOT_FOUND);
+                }
+            },
+            Err(err) => {
+                log::debug!(
+                    "Couldn't get zone  {}, something went wrong: {err:?}",
+                    zone.name
+                );
+                return error_result_json!(
+                    "Server error querying zone!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
+
+        let userid = match user.id {
+            Some(val) => val,
+            None => {
+                log::debug!("User id not found in session, something went wrong");
+                return error_result_json!(
+                    "Server error creating zone, contact the admins!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
+
+        let zoneid = match zone.id {
+            Some(val) => val,
+            None => {
+                log::debug!("Zone id not found in session, something went wrong");
+                return error_result_json!(
+                    "Server error creating zone, contact the admins!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
 
         let ownership = ZoneOwnership {
             id: None,
-            userid: user.id.unwrap(),
-            zoneid: zone.id.unwrap(),
+            userid,
+            zoneid,
         };
 
         if let Err(err) = ownership.save_with_txn(&mut txn).await {
@@ -123,9 +178,9 @@ impl APIEntity for FileZone {
                 StatusCode::INTERNAL_SERVER_ERROR
             );
         }
-        log::debug!("Zone created by user={} zone={zone:?}", user.id.unwrap());
+        log::debug!("Zone created by user={:?} zone={:?}", user.id, zone);
 
-        return Ok(Json(zone));
+        return Ok(Json(Box::new(zone)));
     }
 
     async fn api_update(
@@ -135,7 +190,6 @@ impl APIEntity for FileZone {
     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();
 
-        println!("{user:?}");
         #[cfg(test)]
         println!("zone api_update payload: {payload:?}");
         #[cfg(not(test))]
@@ -157,10 +211,12 @@ impl APIEntity for FileZone {
             }
         };
         println!("deser'd zone: {zone:?}");
-
-        if zone.id.is_none() {
-            return error_result_json!("No zone ID specified", StatusCode::BAD_REQUEST);
-        }
+        let zone_id = match zone.id {
+            Some(val) => val,
+            None => {
+                return error_result_json!("No zone ID specified", StatusCode::BAD_REQUEST);
+            }
+        };
         if !check_valid_tld(&zone.name, &state.read().await.config.allowed_tlds) {
             return error_result_json!("Invalid TLD for this system", StatusCode::BAD_REQUEST);
         }
@@ -178,10 +234,20 @@ impl APIEntity for FileZone {
                 );
             }
         };
+
+        let user_id = match user.id {
+            Some(val) => val,
+            None => {
+                log::error!("User id not found in session, something went wrong");
+                return error_result_json!(
+                    "Internal server error",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
+
         // check the user owns the zone
-        if let Err(err) =
-            ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &zone.id.unwrap())
-                .await
+        if let Err(err) = ZoneOwnership::get_ownership_by_userid(&mut txn, &user_id, &zone_id).await
         {
             // TODO: make this a better log
             println!("Failed to validate user owns zone: {err:?}");
@@ -250,28 +316,34 @@ impl APIEntity for FileZone {
             }
         };
         // get the zoneownership
-        match ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &id).await {
-            Ok(val) => val,
-            Err(err) => {
-                log::error!(
-                    "Failed to get ZoneOwnership userid={} zoneid={} error=\"{err:?}\"",
-                    user.id.unwrap(),
-                    id
+        let userid = match user.id {
+            Some(val) => val,
+            None => {
+                log::error!("User id not found in session, something went wrong");
+                return error_result_json!(
+                    "Internal server error",
+                    StatusCode::INTERNAL_SERVER_ERROR
                 );
-                match err {
-                    sqlx::Error::RowNotFound => {
-                        return error_result_json!(
-                            format!("Zone ID {} not found", id).as_str(),
-                            StatusCode::NOT_FOUND
-                        )
-                    }
-                    _ => {
-                        return error_result_json!(
-                            "Internal server error",
-                            StatusCode::INTERNAL_SERVER_ERROR
-                        )
-                    }
-                };
+            }
+        };
+
+        match ZoneOwnership::get_ownership_by_userid(&mut txn, &userid, &id).await {
+            Ok(None) => {
+                return error_result_json!(
+                    format!("Zone ID {} not found", id).as_str(),
+                    StatusCode::NOT_FOUND
+                )
+            }
+            Ok(Some(val)) => val,
+            Err(err) => {
+                error!(
+                    "Failed to get zone ownership for zoneid={}: error: {:?}",
+                    id, err
+                );
+                return error_result_json!(
+                    "Internal server error",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
             }
         };
 
@@ -317,17 +389,33 @@ impl APIEntity for FileZone {
     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)> {
         check_api_auth!();
 
-        let mut txn = state.connpool().await.begin().await.unwrap();
+        let mut txn = match state.connpool().await.begin().await {
+            Ok(val) => val,
+            Err(err) => {
+                log::error!("failed to get connection to the database: {err:?}");
+                return error_result_json!(
+                    "Failed to get a connection to the database!",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
 
-        if ZoneOwnership::get_ownership_by_userid(&mut txn, &user.id.unwrap(), &id)
+        let user_id = match user.id {
+            Some(val) => val,
+            None => {
+                log::error!("User id not found in session, something went wrong");
+                return error_result_json!(
+                    "Internal server error",
+                    StatusCode::INTERNAL_SERVER_ERROR
+                );
+            }
+        };
+
+        if ZoneOwnership::get_ownership_by_userid(&mut txn, &user_id, &id)
             .await
             .is_err()
         {
-            log::error!(
-                "User {} not authorized for zoneid={}",
-                &user.id.unwrap(),
-                id
-            );
+            log::error!("User {:?} not authorized for zoneid={}", &user_id, id);
             return error_result_json!("", StatusCode::UNAUTHORIZED);
         };
 
