@@ -62,11 +62,11 @@ pub fn rname_default() -> String {
 /// A DNS Record from the JSON file
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct FileZoneRecord {
-    /// Foreign key to id in [FileZone::id]
-    pub zoneid: Option<i64>,
     /// Database row ID
     #[serde(default)]
     pub id: Option<i64>,
+    /// Foreign key to id in [FileZone::id]
+    pub zoneid: Option<i64>,
     #[serde(default = "default_record_name")]
     /// The name of the record
     pub name: String,
