@@ -110,12 +110,14 @@ pub enum ParserError {
 }
 
 /// Pull the OIDC Discovery details
-pub async fn oauth_get_discover(state: &mut GoatState) -> Result<CustomProviderMetadata, String> {
+pub async fn oauth_get_discover(
+    state: &mut GoatState,
+) -> Result<CustomProviderMetadata, GoatNsError> {
     log::debug!("Getting discovery data");
     let issuer_url = IssuerUrl::new(state.read().await.config.oauth2_config_url.clone())
-        .map_err(|err| format!("Failed to parse issuer URL: {:?}", err))?;
+        .map_err(|err| GoatNsError::Oidc(err.to_string()))?;
     match CoreProviderMetadata::discover_async(issuer_url, async_http_client).await {
-        Err(e) => Err(format!("{e:?}")),
+        Err(e) => Err(GoatNsError::Oidc(e.to_string())),
         Ok(val) => {
             state.oidc_update(val.clone()).await;
             Ok(val)
@@ -123,7 +125,7 @@ pub async fn oauth_get_discover(state: &mut GoatState) -> Result<CustomProviderM
     }
 }
 
-pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, String> {
+pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, GoatNsError> {
     let last_updated: DateTime<Utc> = state.read().await.oidc_config_updated;
     let now: DateTime<Utc> = Utc::now();
 
@@ -255,8 +257,15 @@ pub async fn login(
     let (query_state, query_code) = match (query.state, query.code) {
         (Some(state), Some(code)) => (state, code),
         _ => {
-            let auth_url = &oauth_start(&mut state).await.unwrap().to_string();
-            return Ok(Redirect::to(auth_url).into_response());
+            let auth_url = &oauth_start(&mut state).await.map_err(|err| {
+                error!("Failed to start OAuth2: {err:?}");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to start OAuth2: {err:?}"),
+                )
+                    .into_response()
+            })?;
+            return Ok(Redirect::to(auth_url.as_str()).into_response());
         }
     };
 
