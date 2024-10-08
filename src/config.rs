@@ -17,6 +17,7 @@ use url::Url;
 
 use crate::enums::ContactDetails;
 use crate::error::GoatNsError;
+use crate::web::utils::Urls;
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 /// Allow-listing ranges for making particular kinds of requests
@@ -297,6 +298,7 @@ impl Default for ConfigFile {
             api_cookie_secret: generate_cookie_secret(),
             oauth2_client_id: String::from(""),
             // TODO: this should be auto-generated from stuff
+            #[allow(clippy::expect_used)]
             oauth2_redirect_url: Url::from_str("https://example.com")
                 .expect("Internal error parsing example.com into a URL"),
             oauth2_secret: String::from(""),
@@ -352,14 +354,9 @@ impl From<Config> for ConfigFile {
         let oauth2_redirect_url = match oauth2_redirect_url {
             Some(mut url) => {
                 // update the URL with the final auth path
-                // eprintln!("OAuth2 Redirect URL: {url:?}");
-                if !url.path().ends_with("/auth/login") {
-                    // println!("Adding authlogin tail");
-                    url = url
-                        .join("/auth/login")
-                        .expect("Failed to join URL path to create login URL");
+                if !url.path().ends_with(Urls::Login.as_ref()) {
+                    url.set_path(Urls::Login.as_ref());
                 }
-                // eprintln!("OAuth2 Redirect URL after update: {url:?}");
                 url
             }
             None => {
@@ -368,8 +365,11 @@ impl From<Config> for ConfigFile {
                     443 => format!("https://{}", hostname),
                     _ => format!("https://{}:{}", hostname, api_port),
                 };
-                Url::parse(&format!("{}/auth/login", baseurl))
-                    .expect("Failed to parse hostname/api_port into a valid URL")
+                #[allow(clippy::expect_used)]
+                let mut url =
+                    Url::from_str(&baseurl).expect("Failed to parse known-sensible URL as URL");
+                url.set_path(Urls::Login.as_ref());
+                url
             }
         };
 

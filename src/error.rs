@@ -23,6 +23,7 @@ pub enum GoatNsError {
     RFC8482,
     Generic(String),
     Regex(String),
+    InvalidValue(String),
 }
 
 impl From<regex::Error> for GoatNsError {

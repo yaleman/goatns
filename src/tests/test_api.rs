@@ -19,12 +19,12 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     let pool = test_get_sqlite_memory().await;
 
-    start_db(&pool).await.unwrap();
+    start_db(&pool).await.expect("failed to start DB");
 
     let config = crate::config::ConfigFile::try_as_cowcell(Some(
         &"./examples/test_config/goatns-test.json".to_string(),
     ))
-    .unwrap();
+    .expect("failed to parse test config");
 
     use rand::thread_rng;
     use rand::Rng;

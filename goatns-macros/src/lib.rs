@@ -3,8 +3,9 @@ use proc_macro::TokenStream;
 
 #[proc_macro]
 pub fn check_api_auth(_item: TokenStream) -> TokenStream {
+    // TODO: This is terrible
     r#"
-    let user: User = match session.get("user").await.unwrap() {
+    let user: User = match session.get("user").await.expect("This shouldn't happen!") {
         Some(val) => val,
         None => {
             #[cfg(test)]
@@ -14,7 +15,7 @@ pub fn check_api_auth(_item: TokenStream) -> TokenStream {
             return error_result_json!("", StatusCode::FORBIDDEN);
         }
     };
-    
+
     "#
     .parse()
     .expect("Failed to parse code")
@@ -66,11 +67,11 @@ pub fn check_api_auth(_item: TokenStream) -> TokenStream {
 // pub async fn add_sts_headers<B>(mut req: Request<B>, next: Next<B>) -> impl IntoResponse {{
 //     let mut response = next.run(req).await;
 //     let headers = response.headers_mut();
-//     headers.insert(\"Strict-Transport-Security\", \"{}\".parse().unwrap());
+//     headers.insert(\"Strict-Transport-Security\", \"{}\".parse());
 //     response
 // }}",
 //         header_string
 //     )
 //     .parse()
-//     .unwrap()
+//
 // }

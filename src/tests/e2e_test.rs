@@ -65,7 +65,8 @@ mod tests {
         wait_for_server(status_url).await;
 
         // Construct a new Resolver pointing at localhost
-        let localhost: std::net::IpAddr = "127.0.0.1".parse().unwrap();
+        let localhost: std::net::IpAddr =
+            "127.0.0.1".parse().expect("Failed to parse localhost IP");
         let mut resolver_config = ResolverConfig::new();
         resolver_config.add_name_server(NameServerConfig::new(
             SocketAddr::new(localhost, 15353),
@@ -92,7 +93,7 @@ mod tests {
         // There can be many addresses associated with the name,
         //  this can return IPv4 and/or IPv6 addresses
         let address = response
-            .unwrap()
+            .expect("Failed to get response")
             .iter()
             .next()
             .expect("no addresses returned!");

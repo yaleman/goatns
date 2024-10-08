@@ -656,8 +656,10 @@ async fn test_normalize_ttls() {
     // use crate::zones::FileZoneRecord;
     let pool = test_get_sqlite_memory().await;
 
-    start_db(&pool).await.unwrap();
-    import_test_zone_file(&pool).await.unwrap();
+    start_db(&pool).await.expect("failed to start DB");
+    import_test_zone_file(&pool)
+        .await
+        .expect("failed to import test zone file");
 
     let response = get_records(
         &pool,
@@ -667,7 +669,7 @@ async fn test_normalize_ttls() {
         true,
     )
     .await
-    .unwrap();
+    .expect("Failed to query records");
 
     print!("Checking that we got three records...");
     println!("Response:");
@@ -700,8 +702,10 @@ async fn test_dont_normalize_ttls() {
     // use crate::zones::FileZoneRecord;
     let pool = test_get_sqlite_memory().await;
 
-    start_db(&pool).await.unwrap();
-    import_test_zone_file(&pool).await.unwrap();
+    start_db(&pool).await.expect("Failed to start DB");
+    import_test_zone_file(&pool)
+        .await
+        .expect("Failed to import zone file");
 
     let response = get_records(
         &pool,

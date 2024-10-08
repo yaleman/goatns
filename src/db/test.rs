@@ -72,7 +72,7 @@ async fn test_get_zone_records() -> Result<(), GoatNsError> {
         .await?
         .expect("Couldn't get zone");
 
-    test_create_example_com_records(&pool, zone.id.unwrap(), 1000).await?;
+    test_create_example_com_records(&pool, zone.id.expect("Zone ID not found"), 1000).await?;
 
     let zone = FileZone::get_by_name(&mut txn, &testzone.name)
         .await?

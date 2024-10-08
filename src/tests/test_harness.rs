@@ -4,7 +4,7 @@ use crate::datastore::handle_import_file;
 use crate::db::{DBEntity, User};
 use crate::error::GoatNsError;
 
-pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), String> {
+pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
     println!("#####################################################################");
     println!("importing test zone ./examples/test_config/zones.json");
     println!("#####################################################################");
@@ -14,7 +14,7 @@ pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), String> {
         Some("hello.goat".to_string()),
     )
     .await
-    .map_err(|e| format!("Failed to import test zones.json: {e:?}"))?;
+    .map_err(|e| GoatNsError::Generic(format!("Failed to import test zones.json: {e:?}")))?;
     println!("#####################################################################");
     println!("finished importing test zone ./examples/test_config/zones.json");
     println!("#####################################################################");

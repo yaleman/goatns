@@ -331,13 +331,20 @@ pub async fn get_zone_with_txn(
         }
     };
 
+    let zone_id = match zone.id {
+        Some(val) => val,
+        None => {
+            return Err(GoatNsError::InvalidValue("Zone ID is None".to_string()));
+        }
+    };
+
     let result = sqlx::query(
         "SELECT
         id, zoneid, name, ttl, rrtype, rclass, rdata
         FROM records
         WHERE zoneid = ?",
     )
-    .bind(zone.id.unwrap())
+    .bind(zone_id)
     .fetch_all(&mut *txn)
     .await?;
 
@@ -467,27 +474,32 @@ impl FileZone {
         &self,
         txn: &mut SqliteConnection,
     ) -> Result<Vec<FileZoneRecord>, GoatNsError> {
-        let res = sqlx::query(
-            "SELECT
-            id, zoneid, name, ttl, rrtype, rclass, rdata
-            FROM records
-            WHERE zoneid = ?",
-        )
-        .bind(self.id.unwrap())
-        .fetch_all(&mut *txn)
-        .await?;
+        match self.id {
+            Some(id) => {
+                let res = sqlx::query(
+                    "SELECT
+                    id, zoneid, name, ttl, rrtype, rclass, rdata
+                    FROM records
+                    WHERE zoneid = ?",
+                )
+                .bind(id)
+                .fetch_all(&mut *txn)
+                .await?;
 
-        if res.is_empty() {
-            log::trace!("No results returned for zoneid={:?}", self.id);
+                if res.is_empty() {
+                    log::trace!("No results returned for zoneid={:?}", id);
+                }
+
+                let results: Vec<FileZoneRecord> = res
+                    .iter()
+                    .filter_map(|r| FileZoneRecord::try_from(r).ok())
+                    .collect();
+
+                log::trace!("results: {results:?}");
+                Ok(results)
+            }
+            None => Err(GoatNsError::InvalidValue("Zone ID is None".to_string())),
         }
-
-        let results: Vec<FileZoneRecord> = res
-            .iter()
-            .filter_map(|r| FileZoneRecord::try_from(r).ok())
-            .collect();
-
-        log::trace!("results: {results:?}");
-        Ok(results)
     }
 
     pub async fn get_orphans(pool: &SqlitePool) -> Result<Vec<FileZone>, GoatNsError> {
