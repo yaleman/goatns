@@ -1,6 +1,5 @@
 use super::*;
 use crate::zones::FileZone;
-use crate::zones::FileZoneRecord;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::routing::{delete, post, put};
@@ -12,7 +11,6 @@ pub mod auth;
 pub(crate) mod docs;
 pub mod filezone;
 pub mod filezonerecord;
-use tower_sessions::Session;
 
 #[macro_export]
 /// message, status
@@ -51,34 +49,34 @@ impl From<&str> for ErrorResult {
 }
 
 /// This gets applied to DBEntities
-#[async_trait]
-trait APIEntity {
-    /// Save the entity to the database
-    async fn api_create(
-        State(state): State<GoatState>,
-        session: Session,
-        Json(payload): Json<serde_json::Value>,
-    ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
-    /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
-    async fn api_update(
-        State(state): State<GoatState>,
-        session: Session,
-        Json(payload): Json<serde_json::Value>,
-    ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
-    async fn api_get(
-        State(state): State<GoatState>,
-        session: Session,
-        Path(id): Path<i64>,
-    ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
+// #[async_trait]
+// trait APIEntity {
+//     /// Save the entity to the database
+//     async fn api_create(
+//         State(state): State<GoatState>,
+//         session: Session,
+//         Json(payload): Json<serde_json::Value>,
+//     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
+//     /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
+//     async fn api_update(
+//         State(state): State<GoatState>,
+//         session: Session,
+//         Json(payload): Json<serde_json::Value>,
+//     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
+//     async fn api_get(
+//         State(state): State<GoatState>,
+//         session: Session,
+//         Path(id): Path<i64>,
+//     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
 
-    /// Delete an object
-    /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
-    async fn api_delete(
-        State(state): State<GoatState>,
-        session: Session,
-        Path(id): Path<i64>,
-    ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)>;
-}
+//     /// Delete an object
+//     /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
+//     async fn api_delete(
+//         State(state): State<GoatState>,
+//         session: Session,
+//         Path(id): Path<i64>,
+//     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)>;
+// }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct FileZoneResponse {
@@ -105,13 +103,13 @@ pub async fn version_get() -> Json<GoatNSVersion> {
 
 pub fn new() -> Router<GoatState> {
     Router::new()
-        .route("/zone", post(FileZone::api_create))
-        .route("/zone", put(FileZone::api_update))
-        .route("/zone/:id", get(FileZone::api_get))
-        .route("/zone/:id", delete(FileZone::api_delete))
-        .route("/record", post(FileZoneRecord::api_create))
-        .route("/record", put(FileZoneRecord::api_update))
-        .route("/record/:id", get(FileZoneRecord::api_get))
-        .route("/record/:id", delete(FileZoneRecord::api_delete))
+        .route("/zone", post(filezone::api_create))
+        .route("/zone", put(filezone::api_update))
+        .route("/zone/:id", get(filezone::api_get))
+        .route("/zone/:id", delete(filezone::api_delete))
+        .route("/record", post(filezonerecord::api_create))
+        .route("/record", put(filezonerecord::api_update))
+        .route("/record/:id", get(filezonerecord::api_get))
+        .route("/record/:id", delete(filezonerecord::api_delete))
         .route("/login", post(auth::login))
 }

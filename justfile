@@ -82,7 +82,7 @@ release_prep: check doc semgrep
 
 # Semgrep things
 semgrep:
-    semgrep ci --config auto \
+    semgrep ci --config auto $OUTPUT \
     --exclude-rule "yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha" \
     --exclude-rule "generic.html-templates.security.var-in-script-tag.var-in-script-tag" \
     --exclude-rule "javascript.express.security.audit.xss.mustache.var-in-href.var-in-href" \

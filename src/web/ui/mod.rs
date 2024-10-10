@@ -163,7 +163,7 @@ pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, R
                     "An error storing your session occurred!",
                 )]))
             })?;
-        log::warn!("Not-logged-in-user tried to log in, how rude!");
+        log::debug!("Not-logged-in-user tried to log in, how rude!");
         // TODO: this should redirect to the current page
         return Err(Urls::Login.redirect());
     }

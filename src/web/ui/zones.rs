@@ -32,6 +32,16 @@ pub(crate) async fn zones_new_post(
 
     let user: User = check_logged_in(&mut session, path).await?;
 
+    let userid = match user.id {
+        Some(id) => id,
+        None => {
+            return Err(Urls::Home.redirect_with_query(HashMap::from([(
+                "error".to_string(),
+                "No user ID found".to_string(),
+            )])));
+        }
+    };
+
     // validate the zone is valid
     if form.name.is_empty() {
         return Err(Urls::Home.redirect_with_query(HashMap::from([(
@@ -105,7 +115,11 @@ pub(crate) async fn zones_new_post(
     };
 
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
-    let msg = Command::CreateZone { zone, resp: os_tx };
+    let msg = Command::CreateZone {
+        zone,
+        userid,
+        resp: os_tx,
+    };
 
     if let Err(err) = state.read().await.tx.send(msg).await {
         log::error!("Error sending message to datastore: {:?}", err);

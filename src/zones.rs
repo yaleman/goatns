@@ -4,11 +4,13 @@ use crate::resourcerecord::InternalResourceRecord;
 use log::*;
 
 use serde::{Deserialize, Serialize};
+use sqlx::SqliteConnection;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::str::from_utf8;
+use utoipa::ToSchema;
 
 /// A DNS Zone
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
@@ -60,13 +62,13 @@ pub fn rname_default() -> String {
 }
 
 /// A DNS Record from the JSON file
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, ToSchema)]
 pub struct FileZoneRecord {
-    /// Foreign key to id in [FileZone::id]
-    pub zoneid: Option<i64>,
     /// Database row ID
     #[serde(default)]
     pub id: Option<i64>,
+    /// Foreign key to id in [FileZone::id]
+    pub zoneid: Option<i64>,
     #[serde(default = "default_record_name")]
     /// The name of the record
     pub name: String,
@@ -161,4 +163,20 @@ pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, GoatNsError> {
     let jsonstruct: Result<Vec<FileZone>, GoatNsError> = json5::from_str(&buf)
         .map_err(|e| GoatNsError::FileError(format!("Failed to read JSON file: {e:?}")));
     jsonstruct
+}
+
+impl FileZone {
+    pub(crate) async fn get_unowned(
+        pool: &mut SqliteConnection,
+    ) -> Result<Vec<FileZone>, GoatNsError> {
+        let rows = sqlx::query(
+            "select * from zones where id not in (select DISTINCT zoneid from ownership)",
+        )
+        .fetch_all(&mut *pool)
+        .await?
+        .into_iter()
+        .map(|row| row.into())
+        .collect();
+        Ok(rows)
+    }
 }

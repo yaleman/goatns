@@ -13,6 +13,7 @@ pub enum GoatNsError {
     StartupError(String),
     SqlxError(sqlx::Error),
     Oidc(String),
+    SeaOrm(sea_orm::DbErr),
     ReqwestError(reqwest::Error),
     FileError(String),
     EmptyFile,
@@ -65,6 +66,12 @@ impl From<Utf8Error> for GoatNsError {
 impl From<chrono::format::ParseError> for GoatNsError {
     fn from(error: chrono::format::ParseError) -> Self {
         GoatNsError::DateParseError(error.to_string())
+    }
+}
+
+impl From<sea_orm::DbErr> for GoatNsError {
+    fn from(error: sea_orm::DbErr) -> Self {
+        GoatNsError::SeaOrm(error)
     }
 }
 

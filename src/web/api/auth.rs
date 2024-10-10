@@ -9,10 +9,10 @@ use crate::db::User;
 use crate::web::utils::validate_api_token;
 use crate::web::GoatState;
 
-#[derive(Debug, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct AuthPayload {
-    pub tokenkey: String,
-    pub token: String,
+    pub token_key: String,
+    pub token_secret: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
@@ -28,7 +28,7 @@ impl From<String> for AuthResponse {
 
 #[utoipa::path(
     post,
-    path = "/login",
+    path = "/api/login",
     operation_id = "login",
     request_body = AuthPayload,
     responses(
@@ -48,20 +48,13 @@ pub async fn login(
     #[cfg(not(test))]
     log::debug!("Got login payload: {payload:?}");
     let mut pool = state.read().await.connpool.clone();
-    let token = match User::get_token(&mut pool, &payload.tokenkey).await {
+    let token = match User::get_token(&mut pool, &payload.token_key).await {
         Ok(val) => val,
         Err(err) => {
-            #[cfg(test)]
-            println!(
-                "action=api_login tokenkey={} result=failure reason=\"no token found\"",
-                payload.tokenkey
-            );
             log::info!(
                 "action=api_login tokenkey={} result=failure reason=\"no token found\"",
-                payload.tokenkey
+                payload.token_key
             );
-            #[cfg(test)]
-            println!("Error: {err:?}");
             log::debug!("Error: {err:?}");
             session.flush().await.map_err(|err| {
                 error!("Failed to flush session: {err:?}");
@@ -76,7 +69,8 @@ pub async fn login(
             return Err((StatusCode::UNAUTHORIZED, Json(resp)));
         }
     };
-    match validate_api_token(&token, &payload.token) {
+
+    match validate_api_token(&token, &payload.token_secret) {
         Ok(_) => {
             println!("Successfully validated token on login");
             let session_user = session.insert("user", &token.user).await;
@@ -91,7 +85,7 @@ pub async fn login(
                         Json(AuthResponse::from("Failed to flush session!".to_string())),
                     )
                 })?;
-                log::info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.tokenkey);
+                log::info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.token_key);
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(AuthResponse {
@@ -99,10 +93,7 @@ pub async fn login(
                     }),
                 ));
             };
-            #[cfg(test)]
-            println!("action=api_login user={} result=success", payload.tokenkey);
-            #[cfg(not(test))]
-            log::info!("action=api_login user={} result=success", payload.tokenkey);
+            log::info!("action=api_login user={} result=success", payload.token_key);
             Ok((
                 StatusCode::OK,
                 Json(AuthResponse {
@@ -124,7 +115,7 @@ pub async fn login(
         "action=api_login username={} userid={} tokenkey=\"{:?}\" result=failure reason=\"failed to match token: {err:?}\"",
         token.user.username,
         token.user.id.map(|id| id.to_string()).unwrap_or("<unknown user id>".to_string()),
-        payload.tokenkey,
+        payload.token_key,
         );
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,

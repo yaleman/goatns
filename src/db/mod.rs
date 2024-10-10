@@ -17,8 +17,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
 use sqlx::{Arguments, ConnectOptions, FromRow, Pool, Row, Sqlite, SqliteConnection, SqlitePool};
 use tokio::time;
-use tracing::{error, instrument};
+use tracing::{debug, error, instrument};
 
+pub(crate) mod entities;
 #[cfg(test)]
 pub mod test;
 
@@ -776,13 +777,10 @@ impl DBEntity for FileZone {
                 }
             }
         };
-        #[cfg(test)]
-        eprintln!("Zone after update: {updated_zone:?}");
         log::trace!("Zone after update: {updated_zone:?}");
 
         // drop all the records
-        #[cfg(test)]
-        eprintln!("Dropping all records for zone {self:?}");
+        debug!("Dropping all records for zone {self:?}");
         // log::debug!("Dropping all records for zone {self:?}");
         sqlx::query("delete from records where zoneid = ?")
             .bind(updated_zone.id)
@@ -800,8 +798,8 @@ impl DBEntity for FileZone {
             }
             record.save_with_txn(txn).await?;
         }
-        #[cfg(test)]
-        println!("Done creating zone!");
+
+        debug!("Done creating zone!");
 
         let res = Self {
             id: updated_zone.id,
@@ -1358,10 +1356,18 @@ impl DBEntity for User {
         unimplemented!()
     }
     async fn get_by_name<'t>(
-        _txn: &mut SqliteConnection,
-        _name: &str,
+        txn: &mut SqliteConnection,
+        name: &str,
     ) -> Result<Option<Box<Self>>, GoatNsError> {
-        unimplemented!()
+        let res = sqlx::query(&format!(
+            "SELECT id, displayname, username, email, disabled, authref, admin from {} where username = ?",
+            Self::TABLE
+        ))
+        .bind(name)
+        .fetch_one(&mut *txn)
+        .await?;
+        let result: Box<Self> = Box::new(res.into());
+        Ok(Some(result))
     }
     async fn get_all_by_name<'t>(
         _txn: &mut SqliteConnection,
