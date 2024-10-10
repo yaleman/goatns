@@ -3,6 +3,7 @@ use enum_iterator::Sequence;
 use packed_struct::prelude::*;
 use serde::{de, Serialize, Serializer};
 use std::fmt::Display;
+use utoipa::ToSchema;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Agent {
@@ -266,7 +267,7 @@ impl RecordType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence, sqlx::Type)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence, sqlx::Type, ToSchema)]
 #[repr(i64)]
 /// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
