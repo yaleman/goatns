@@ -1,15 +1,20 @@
-// use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa::{Modify, OpenApi};
+
+use crate::zones::FileZoneRecord;
+use crate::RecordClass;
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
         super::auth::login,
+        super::filezonerecord::api_create,
     ),
     components(
         schemas(
             super::auth::AuthPayload,
             super::auth::AuthResponse,
+            FileZoneRecord,
+            RecordClass,
         )
     ),
     modifiers(&SecurityAddon),

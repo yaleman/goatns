@@ -63,6 +63,10 @@ pub enum Command {
     CreateZone {
         /// Zone data
         zone: FileZone,
+
+        /// Zone ownership
+        userid: i64,
+
         /// The response channel
         resp: Responder<FileZone>,
     },
@@ -298,9 +302,21 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
                 log::error!("{e:?}")
             };
         }
-        Command::CreateZone { zone, resp } => {
+        Command::CreateZone { zone, userid, resp } => {
             match zone.save(connpool).await {
                 Ok(zone) => {
+                    // TODO: create the ownership
+                    if let Some(zoneid) = zone.id {
+                        ZoneOwnership {
+                            id: None,
+                            userid,
+                            zoneid,
+                        }
+                        .save(connpool)
+                        .await
+                        .map_err(|e| format!("{e:?}"))?;
+                    }
+
                     if let Err(err) = resp.send(*zone.clone()) {
                         log::error!("Failed to send message back to caller after creating zone {zone:?}: {err:?}");
                     } else {

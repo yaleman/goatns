@@ -1,12 +1,17 @@
+use crate::db::{DBEntity, User, ZoneOwnership};
 use crate::web::utils::Urls;
 use crate::web::GoatState;
+use crate::zones::FileZone;
 use askama::Template;
+use axum::extract::{Path, State};
 use axum::http::Uri;
 use axum::response::Redirect;
 use axum::routing::get;
-use axum::Router;
+use axum::{Form, Router};
+use serde::Deserialize;
 use sqlx::Row;
 use tower_sessions::Session;
+use tracing::debug;
 
 use super::check_logged_in;
 
@@ -23,6 +28,8 @@ pub(crate) struct AdminReportUnownedRecords /*<'a>*/ {
     // name: &'a str,
     pub user_is_admin: bool,
     pub records: Vec<ZoneRecord>,
+
+    pub zones: Vec<FileZone>,
 }
 
 #[allow(dead_code)] // because this is only used in a template
@@ -85,6 +92,79 @@ pub(crate) async fn report_unowned_records(
     Ok(AdminReportUnownedRecords {
         user_is_admin: user.admin,
         records,
+        zones: FileZone::get_unowned(&mut pool).await.map_err(|err| {
+            log::error!("Failed to get unowned zones: {err:?}");
+            Redirect::to(Urls::Admin.as_ref())
+        })?,
+    })
+}
+
+#[derive(Template)]
+#[template(path = "admin_ownership_template.html")]
+pub(crate) struct AssignOwnershipTemplate {
+    user_is_admin: bool,
+    zone: Box<FileZone>,
+    user: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct AssignOwnershipForm {
+    // userid: Option<i64>,
+    username: Option<String>,
+}
+
+pub(crate) async fn assign_zone_ownership(
+    mut session: Session,
+    State(state): State<GoatState>,
+    Path(id): Path<i64>,
+    Form(form): Form<AssignOwnershipForm>,
+) -> Result<AssignOwnershipTemplate, Redirect> {
+    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
+
+    let mut txn = state.read().await.connpool.begin().await.map_err(|err| {
+        log::error!("Failed to start transaction: {err:?}");
+        Redirect::to(Urls::Admin.as_ref())
+    })?;
+
+    let zone = FileZone::get(&state.read().await.connpool, id)
+        .await
+        .map_err(|err| {
+            log::error!("Failed to get zone by ID: {err:?}");
+            Redirect::to(Urls::Admin.as_ref())
+        })?;
+
+    if let Some(username) = form.username.as_ref() {
+        debug!("Got a username in the form!");
+        let user = User::get_by_name(&mut txn, username.as_str())
+            .await
+            .map_err(|err| {
+                log::error!("Failed to get user by name: {err:?}");
+                Redirect::to(Urls::Admin.as_ref())
+            })?;
+        drop(txn);
+        if let Some(user) = user {
+            if let (Some(userid), Some(zoneid)) = (user.id, zone.id) {
+                // woo we found a valid user!
+                ZoneOwnership {
+                    id: None,
+                    zoneid,
+                    userid,
+                }
+                .save(&state.read().await.connpool)
+                .await
+                .map_err(|err| {
+                    log::error!("Failed to insert zone ownership: {err:?}");
+                    Redirect::to(Urls::Admin.as_ref())
+                })?;
+                return Err(Redirect::to(Urls::Admin.as_ref()));
+            }
+        }
+    }
+
+    Ok(AssignOwnershipTemplate {
+        user_is_admin: user.admin,
+        zone,
+        user: form.username,
     })
 }
 
@@ -93,4 +173,8 @@ pub fn router() -> Router<GoatState> {
     Router::new()
         .route("/", get(dashboard))
         .route("/reports/unowned_records", get(report_unowned_records))
+        .route(
+            "/zones/assign_ownership/:id",
+            get(assign_zone_ownership).post(assign_zone_ownership),
+        )
 }

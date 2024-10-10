@@ -255,7 +255,13 @@ pub async fn login(
     let (query_state, query_code) = match (query.state, query.code) {
         (Some(state), Some(code)) => (state, code),
         _ => {
-            let auth_url = &oauth_start(&mut state).await.unwrap().to_string();
+            let auth_url = &oauth_start(&mut state)
+                .await
+                .map_err(|err| {
+                    error!("Failed to do OIDC Discovery: {err:?}");
+                    (StatusCode::INTERNAL_SERVER_ERROR, "OIDC Discovery Error").into_response()
+                })?
+                .to_string();
             return Ok(Redirect::to(auth_url).into_response());
         }
     };

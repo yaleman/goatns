@@ -4,10 +4,10 @@ use crate::db::{start_db, DBEntity, User, UserAuthToken, ZoneOwnership};
 use crate::enums::RecordType;
 use crate::error::GoatNsError;
 use crate::servers::{self, Servers};
+use crate::web::api::auth::AuthPayload;
 use crate::web::utils::{create_api_token, ApiToken};
 use crate::zones::{FileZone, FileZoneRecord};
 use concread::cowcell::asynch::CowCell;
-use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tokio::net::TcpStream;
 
@@ -111,12 +111,6 @@ async fn insert_test_user_api_token(pool: &SqlitePool, userid: i64) -> Result<Ap
     Ok(token)
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct AuthStruct {
-    pub tokenkey: String,
-    pub token: String,
-}
-
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_zone_create() -> Result<(), GoatNsError> {
     // here we stand up the servers
@@ -145,9 +139,9 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
-        .json(&AuthStruct {
-            tokenkey: token.token_key,
-            token: token.token_secret.to_owned(),
+        .json(&AuthPayload {
+            token_key: token.token_key,
+            token_secret: token.token_secret.to_owned(),
         })
         .send()
         .await
@@ -216,9 +210,9 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
-        .json(&AuthStruct {
-            tokenkey: token.token_key,
-            token: token.token_secret.to_owned(),
+        .json(&AuthPayload {
+            token_key: token.token_key,
+            token_secret: token.token_secret.to_owned(),
         })
         .send()
         .await
@@ -292,9 +286,9 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
-        .json(&AuthStruct {
-            tokenkey: token.token_key,
-            token: token.token_secret.to_owned(),
+        .json(&AuthPayload {
+            token_key: token.token_key,
+            token_secret: token.token_secret.to_owned(),
         })
         .send()
         .await
@@ -369,9 +363,9 @@ async fn api_record_create() -> Result<(), GoatNsError> {
     let res = client
         .post(&format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
-        .json(&AuthStruct {
-            tokenkey: token.token_key,
-            token: token.token_secret.to_owned(),
+        .json(&AuthPayload {
+            token_key: token.token_key,
+            token_secret: token.token_secret.to_owned(),
         })
         .send()
         .await
@@ -455,9 +449,9 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
         .post(&format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .timeout(std::time::Duration::from_secs(5))
-        .json(&AuthStruct {
-            tokenkey: token.token_key,
-            token: token.token_secret.to_owned(),
+        .json(&AuthPayload {
+            token_key: token.token_key,
+            token_secret: token.token_secret.to_owned(),
         })
         .send()
         .await
