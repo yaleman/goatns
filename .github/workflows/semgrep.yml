@@ -17,9 +17,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v1
+        with:
+          just-version: 1.5.0  # optional semver specification, otherwise latest
       - name: Run semgrep
         run: |
-          ls -lah
           ./semgrep.sh
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v4
