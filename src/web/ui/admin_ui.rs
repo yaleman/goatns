@@ -50,7 +50,7 @@ pub(crate) async fn dashboard(mut session: Session) -> Result<AdminUITemplate, R
 
 pub(crate) async fn report_unowned_records(
     mut session: Session,
-    axum::extract::State(state): axum::extract::State<GoatState>,
+    State(state): State<GoatState>,
 ) -> Result<AdminReportUnownedRecords, Redirect> {
     let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 
