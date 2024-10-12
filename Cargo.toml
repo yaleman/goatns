@@ -43,7 +43,7 @@ base64 = "0.22.1"
 bit-vec = "0.8.0"
 bytes = "1.7.2"
 chrono = { version = "0.4.38", features = ["clock"] }
-clap = { version = "4.5.18", features = ["cargo"] }
+clap = { version = "4.5.20", features = ["cargo"] }
 concread = "0.5.3"
 config = { version = "0.14", features = ["json"] }
 dialoguer = "0.11.0"
@@ -65,7 +65,7 @@ log = "0.4.22"
 num-traits = "0.2.19"
 oauth2 = "4.4.2"
 openidconnect = "3.4.0"
-opentelemetry-otlp = { version = "0.17.0", features = ["http-proto"] }
+opentelemetry-otlp = { version = "0.25.0", features = ["http-proto"] }
 packed_struct = { version = "0.10.1", features = ["byte_types_256"] }
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
@@ -132,7 +132,7 @@ utoipa-swagger-ui = { version = "7.1.0", features = ["axum"] }
 
 [workspace.dependencies]
 axum = "^0.7.6"
-proc-macro2 = "1.0.86"
+proc-macro2 = "1.0.87"
 regex = "1.10.6"
 syn = "2.0.77"
 lazy_static = "1.5.0"
