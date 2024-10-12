@@ -1,7 +1,7 @@
 use super::*;
 use crate::enums::ContactDetails;
 use askama::Template;
-use axum::extract::Query;
+use axum::extract::{Query, State};
 use serde::Deserialize;
 
 pub async fn status() -> String {
@@ -24,7 +24,7 @@ pub(crate) struct QueryErrorOrMessage {
 }
 
 pub(crate) async fn index(
-    axum::extract::State(state): axum::extract::State<GoatState>,
+    State(state): State<GoatState>,
     Query(query): Query<QueryErrorOrMessage>,
 ) -> Result<IndexTemplate, ()> {
     let admin_contact = match state.read().await.config.admin_contact {

@@ -245,7 +245,7 @@ pub async fn parse_state_code(
 pub async fn login(
     Query(query): Query<QueryForLogin>,
     session: Session,
-    axum::extract::State(mut state): axum::extract::State<GoatState>,
+    State(mut state): State<GoatState>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     // check if we've got an existing, valid session
     if let Some(signed_in) = session.get("signed_in").await.unwrap_or(Some(false)) {

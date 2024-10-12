@@ -517,7 +517,7 @@ pub struct ApiTokenDeleteForm {
 }
 
 pub async fn api_tokens_delete_get(
-    axum::extract::State(state): axum::extract::State<GoatState>,
+    State(state): State<GoatState>,
     // Form(form): Form<ApiTokenPage>,
     Path(id): Path<String>,
     mut session: Session,
