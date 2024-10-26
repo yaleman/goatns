@@ -41,7 +41,7 @@ axum-server = { version = "^0.7.1", features = ["tls-rustls"] }
 axum-tracing-opentelemetry = { version = "0.21.1" }
 base64 = "0.22.1"
 bit-vec = "0.8.0"
-bytes = "1.7.2"
+bytes = "1.8.0"
 chrono = { version = "0.4.38", features = ["clock"] }
 clap = { version = "4.5.20", features = ["cargo"] }
 concread = "0.5.3"
@@ -93,10 +93,10 @@ sea-orm-migration = { version = "1.0.0", features = [
   "with-json",
   "with-uuid",
 ] }
-serde = { version = "1.0.210", features = ["derive"] }
+serde = { version = "1.0.213", features = ["derive"] }
 serde_bytes = "0.11.15"
 serde_derive = "1.0.145"
-serde_json = "1.0.129"
+serde_json = "1.0.132"
 sha2 = { version = "0.10.8", features = ["asm", "asm-aarch64"] }
 shellexpand = "3.1.0"
 sqlx = { version = "0.7.4", features = [
@@ -106,7 +106,7 @@ sqlx = { version = "0.7.4", features = [
   "time",
   "uuid",
 ], default-features = false }
-thiserror = "1.0.64"
+thiserror = "1.0.65"
 time = "0.3.36"
 tokio = { version = "1.38.1", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.13.0"
@@ -127,18 +127,18 @@ tower-sessions = { version = "^0.9.1", features = [
 tracing = "^0.1.40"
 tracing-subscriber = "0.3.18"
 url = { version = "2.5.2", features = ["serde"] }
-utoipa = "5.1.1"
-utoipa-swagger-ui = { version = "8.0.1", features = ["axum"] }
+utoipa = "5.1.2"
+utoipa-swagger-ui = { version = "8.0.3", features = ["axum"] }
 
 [workspace.dependencies]
 axum = "^0.7.6"
-proc-macro2 = "1.0.88"
-regex = "1.10.6"
+proc-macro2 = "1.0.89"
+regex = "1.11.1"
 syn = "2.0.77"
 lazy_static = "1.5.0"
 
 [dev-dependencies]
-console-subscriber = "0.4.0"
+console-subscriber = "0.4.1"
 criterion = "^0.5"
 scopeguard = "1.2.0"
 tracing-subscriber = "0.3.18"
