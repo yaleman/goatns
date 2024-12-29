@@ -65,7 +65,7 @@ async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<ChaosRe
     Ok(ChaosResult::Refused(chaos_reply))
 }
 
-/// this handles a version CHAOS request
+// this handles a version CHAOS request
 // async fn check_for_version(r: &Reply, addr: &SocketAddr, config: &ConfigFile) -> Result<(), ()> {
 //     // when you get a CHAOS from localhost with "VERSION" or "VERSION.BIND" we might respond
 //     if let Some(q) = &r.question {
