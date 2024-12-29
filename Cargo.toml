@@ -38,7 +38,7 @@ axum = { workspace = true, features = ["http2", "original-uri", "macros"] }
 axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
 axum-extra = { version = "0.9.6" }
 axum-server = { version = "^0.7.1", features = ["tls-rustls"] }
-axum-tracing-opentelemetry = { version = "0.24.1" }
+axum-tracing-opentelemetry = { version = "0.21.1" }
 base64 = "0.22.1"
 bit-vec = "0.8.0"
 bytes = "1.9.0"
@@ -55,7 +55,7 @@ gethostname = "0.5.0"
 goat-lib = { path = "goat-lib" }
 goatns-macros = { path = "./goatns-macros" }
 hex = "0.4.3"
-init-tracing-opentelemetry = { version = "0.25.0", features = [
+init-tracing-opentelemetry = { version = "0.22.0", features = [
   "tracing_subscriber_ext",
 ] }
 ipnet = { version = "2.10.1", features = ["json", "serde"] }
@@ -65,7 +65,7 @@ log = "0.4.22"
 num-traits = "0.2.19"
 oauth2 = "4.4.2"
 openidconnect = "3.4.0"
-opentelemetry-otlp = { version = "0.27.0", features = ["http-proto"] }
+opentelemetry-otlp = { version = "0.25.0", features = ["http-proto"] }
 packed_struct = { version = "0.10.1", features = ["byte_types_256"] }
 rand = "0.8.5"
 rand_core = { version = "0.6", features = ["std"] }
@@ -108,7 +108,7 @@ sqlx = { version = "0.7.4", features = [
 ], default-features = false }
 thiserror = "2.0.9"
 time = "0.3.37"
-tokio = { version = "1.42.0", features = ["full", "tracing"] }
+tokio = { version = "1.38.0", features = ["full", "tracing"] }
 tokio-cron-scheduler = "0.13.0"
 tokio-stream = { version = "0.1.17", features = ["net"] }
 tokio-util = { version = "0.7.13", features = ["full"] }
@@ -124,8 +124,8 @@ tower-sessions = { version = "^0.9.1", features = [
   "deletion-task",
   "axum-core",
 ] }
-tracing = "^0.1.41"
-tracing-subscriber = "0.3.19"
+tracing = "^0.1.40"
+tracing-subscriber = "0.3.18"
 url = { version = "2.5.4", features = ["serde"] }
 utoipa = "5.3.0"
 utoipa-swagger-ui = { version = "8.1.0", features = ["axum"] }
