@@ -544,12 +544,12 @@ pub trait DBEntity: Send {
         txn: &mut SqliteConnection,
         name: &str,
     ) -> Result<Vec<Box<Self>>, GoatNsError>;
-    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, GoatNsError>;
     /// save the entity to the database
+    async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, GoatNsError>;
 
     async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, GoatNsError>;
-    /// save the entity to the database, but you're in a transaction
 
+    /// save the entity to the database, but you're in a transaction
     async fn save_with_txn<'t>(&self, txn: &mut SqliteConnection)
         -> Result<Box<Self>, GoatNsError>;
     /// create from scratch
