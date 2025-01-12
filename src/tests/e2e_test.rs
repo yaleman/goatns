@@ -39,7 +39,9 @@ mod tests {
         ));
 
         println!("Starting database connection pool");
-        let connpool = crate::db::get_conn(config.read()).await.unwrap();
+        let connpool = crate::db::get_conn(config.read())
+            .await
+            .expect("Failed to get connpool");
 
         println!("Starting datastore");
 

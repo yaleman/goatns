@@ -15,7 +15,7 @@ use crate::zones::FileZone;
 
 /// Handles the command-line arguments.
 pub fn clap_parser() -> ArgMatches {
-    command!()
+    let command = command!()
         .arg(
             arg!(
                 -c --config <FILE> "Sets a custom config file"
@@ -74,8 +74,11 @@ pub fn clap_parser() -> ArgMatches {
                 .long("using-zonefile")
                 .help("Load the zone file into the DB on startup, typically used for testing.")
                 .action(clap::ArgAction::SetTrue),
-        )
-        .get_matches()
+        );
+
+    #[cfg(any(test, debug_assertions))]
+    let command = command.arg(Arg::new("disable_oauth2"));
+    command.get_matches()
 }
 
 /// Turns the clap inputs into actions.

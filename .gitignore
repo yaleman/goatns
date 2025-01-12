@@ -16,3 +16,5 @@ results.xml
 .envrc
 *.profraw
 tarpaulin-report.html
+.cargo/config.toml
+examples/knot/storage/

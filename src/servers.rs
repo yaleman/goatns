@@ -140,7 +140,7 @@ pub async fn udp_server(
 
         match udp_result {
             Ok(mut r) => {
-                log::debug!("Result: {:?}", r);
+                log::debug!("Ok Result: {:?}", r);
 
                 let reply_bytes: Vec<u8> = match r.as_bytes().await {
                     Ok(value) => {

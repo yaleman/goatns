@@ -188,8 +188,6 @@ pub async fn handle_import_file(
     filename: String,
     zone_name: Option<String>,
 ) -> Result<(), GoatNsError> {
-    let mut txn = pool.begin().await?;
-
     let zones: Vec<FileZone> = crate::zones::load_zones(&filename)?;
 
     let zones = match zone_name {
@@ -202,6 +200,7 @@ pub async fn handle_import_file(
         return Err(GoatNsError::EmptyFile);
     }
 
+    let mut txn = pool.begin().await?;
     for zone in zones {
         let _saved_zone = zone
             .save_with_txn(&mut txn)

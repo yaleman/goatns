@@ -85,9 +85,9 @@ pub async fn insert_test_user(pool: &SqlitePool) -> Box<User> {
         authref: Some("zooooom".to_string()),
         admin: true,
     }
-    .save(&pool)
+    .save(pool)
     .await
-    .unwrap()
+    .expect("Failed to save test user")
 }
 
 /// Shoves an API token into the DB for a user
@@ -104,9 +104,9 @@ async fn insert_test_user_api_token(pool: &SqlitePool, userid: i64) -> Result<Ap
         tokenhash: token.token_hash.to_owned(),
         userid,
     }
-    .save(&pool)
+    .save(pool)
     .await
-    .unwrap();
+    .expect("Failed to save test token");
 
     Ok(token)
 }
@@ -125,7 +125,7 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
     println!("api_zone_create Creating token for user");
     let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
-        .unwrap();
+        .expect("Failed to insert test user api token");
     println!("api_zone_create Created token... {token:?}");
 
     let client = reqwest::ClientBuilder::new()
@@ -133,11 +133,11 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
         .cookie_store(true)
         .timeout(std::time::Duration::from_secs(5))
         .build()
-        .unwrap();
+        .expect("Failed to build client");
 
     println!("api_zone_create Logging in with the token...");
     let res = client
-        .post(&format!("https://localhost:{api_port}/api/login"))
+        .post(format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
             token_key: token.token_key,
@@ -145,7 +145,7 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
         })
         .send()
         .await
-        .unwrap();
+        .expect("Failed to log in with token");
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
     println!("api_zone_create => Token login success!");
@@ -162,12 +162,12 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
 
     println!("api_zone_create Sending zone create");
     let res = client
-        .post(&format!("https://localhost:{api_port}/api/zone"))
+        .post(format!("https://localhost:{api_port}/api/zone"))
         .header("Authorization", format!("Bearer {}", token.token_secret))
         .json(&newzone)
         .send()
         .await
-        .unwrap();
+        .expect("Failed to send create request");
     assert_eq!(res.status(), 200);
 
     let response_zone: FileZone = res
@@ -196,7 +196,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     println!("Creating token for user");
     let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
-        .unwrap();
+        .expect("Failed to insert test user api token");
     println!("Created token... {token:?}");
 
     let client = reqwest::ClientBuilder::new()
@@ -204,11 +204,11 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
         .cookie_store(true)
         .timeout(std::time::Duration::from_secs(5))
         .build()
-        .unwrap();
+        .expect("Failed to build client");
 
     println!("Logging in with the token...");
     let res = client
-        .post(&format!("https://localhost:{api_port}/api/login"))
+        .post(format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
             token_key: token.token_key,
@@ -216,7 +216,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
         })
         .send()
         .await
-        .unwrap();
+        .expect("Failed to log in with token");
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
@@ -233,11 +233,11 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
 
     println!("Sending zone create");
     let res = client
-        .post(&format!("https://localhost:{api_port}/api/zone"))
+        .post(format!("https://localhost:{api_port}/api/zone"))
         .json(&newzone)
         .send()
         .await
-        .unwrap();
+        .expect("Failed to send create request");
 
     assert_eq!(res.status(), 200);
     let res_content = res.bytes().await;
@@ -245,10 +245,10 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
 
     println!("Sending zone delete");
     let res = client
-        .delete(&format!("https://localhost:{api_port}/api/zone/1234"))
+        .delete(format!("https://localhost:{api_port}/api/zone/1234"))
         .send()
         .await
-        .unwrap();
+        .expect("Failed to send delete request");
 
     assert_eq!(res.status(), 200);
     let res_content = res.bytes().await;
@@ -272,7 +272,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
     println!("Creating token for user");
     let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
-        .unwrap();
+        .expect("Failed to insert test user api token");
     println!("Created token... {token:?}");
 
     let client = reqwest::ClientBuilder::new()
@@ -280,11 +280,11 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
         .cookie_store(true)
         .timeout(std::time::Duration::from_secs(5))
         .build()
-        .unwrap();
+        .expect("Failed to build client");
 
     println!("Logging in with the token...");
     let res = client
-        .post(&format!("https://localhost:{api_port}/api/login"))
+        .post(format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
             token_key: token.token_key,
@@ -292,7 +292,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
         })
         .send()
         .await
-        .unwrap();
+        .expect("Failed to log in with token");
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
@@ -325,11 +325,11 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
 
     println!("Sending zone update");
     let res = client
-        .put(&format!("https://localhost:{api_port}/api/zone",))
+        .put(format!("https://localhost:{api_port}/api/zone",))
         .json(&newzone)
         .send()
         .await
-        .unwrap();
+        .expect("Failed to send update request");
 
     assert_eq!(res.status(), 200);
     let res_content = res.bytes().await;
@@ -349,7 +349,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
     println!("Creating token for user");
     let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
-        .unwrap();
+        .expect("Failed to insert test user api token");
     println!("Created token... {token:?}");
 
     let client = reqwest::ClientBuilder::new()
@@ -357,11 +357,11 @@ async fn api_record_create() -> Result<(), GoatNsError> {
         .cookie_store(true)
         .timeout(std::time::Duration::from_secs(5))
         .build()
-        .unwrap();
+        .expect("Failed to build client");
 
     println!("Logging in with the token...");
     let res = client
-        .post(&format!("https://localhost:{api_port}/api/login"))
+        .post(format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
             token_key: token.token_key,
@@ -369,7 +369,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
         })
         .send()
         .await
-        .unwrap();
+        .expect("Failed to log in with token");
     println!("{:?}", res);
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
@@ -385,15 +385,15 @@ async fn api_record_create() -> Result<(), GoatNsError> {
     }
     .save(&pool)
     .await
-    .unwrap();
+    .expect("Failed to save filezone");
 
     let zo = ZoneOwnership {
         id: None,
         userid: user.id.expect("no user id found"),
-        zoneid: zone.id.unwrap(),
+        zoneid: zone.id.expect("Failed to get zone id"),
     };
     println!("ZO: {zo:?}");
-    zo.save(&pool).await.unwrap();
+    zo.save(&pool).await.expect("Failed to save zone ownership");
 
     println!("building fzr object");
     let fzr = FileZoneRecord {
@@ -407,12 +407,12 @@ async fn api_record_create() -> Result<(), GoatNsError> {
     };
     println!("Sending record create");
     let res = client
-        .post(&format!("https://localhost:{api_port}/api/record"))
+        .post(format!("https://localhost:{api_port}/api/record"))
         .header("Authorization", format!("Bearer {}", token.token_secret))
         .json(&fzr)
         .send()
         .await
-        .unwrap();
+        .expect("Failed to create record");
 
     assert_eq!(res.status(), 200);
     let response_record: FileZoneRecord = res
@@ -434,7 +434,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
     println!("Creating token for user");
     let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
         .await
-        .unwrap();
+        .expect("Failed to insert test user api token");
     println!("Created token... {token:?}");
 
     let client = reqwest::ClientBuilder::new()
@@ -442,11 +442,11 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
         .cookie_store(true)
         .timeout(std::time::Duration::from_secs(5))
         .build()
-        .unwrap();
+        .expect("Failed to build client");
 
     println!("Logging in with the token...");
     let res = match client
-        .post(&format!("https://localhost:{api_port}/api/login"))
+        .post(format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
@@ -479,15 +479,15 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
     }
     .save(&pool)
     .await
-    .unwrap();
+    .expect("Failed to save filezone");
 
     let zo = ZoneOwnership {
         id: None,
         userid: user.id.expect("no user id found"),
-        zoneid: zone.id.unwrap(),
+        zoneid: zone.id.expect("Failed to get zone id"),
     };
     println!("ZO: {zo:?}");
-    zo.save(&pool).await.unwrap();
+    zo.save(&pool).await.expect("failed to save zone ownership");
 
     println!("creating fzr object in the database");
     let fzr = FileZoneRecord {
@@ -506,7 +506,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
 
     println!("Sending record delete");
     let res = client
-        .delete(&format!("https://localhost:{api_port}/api/record/3"))
+        .delete(format!("https://localhost:{api_port}/api/record/3"))
         .header("Authorization", format!("Bearer {}", token.token_secret))
         .send()
         .await

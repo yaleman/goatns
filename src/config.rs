@@ -40,7 +40,7 @@ pub struct ConfigFile {
     pub address: String,
     /// Listen for DNS queries on this port, default is 15353
     pub port: u16,
-    /// If we should capture packets on request/response
+    /// If we should capture packets on request/response, this can lead to huge disk space usage!
     pub capture_packets: bool,
     /// Default is "DEBUG"
     pub log_level: String,
@@ -84,6 +84,7 @@ pub struct ConfigFile {
     /// A list of scopes to request from the IdP
     pub oauth2_user_scopes: Vec<String>,
     /// Log things sometimes
+    #[serde(default)]
     pub sql_log_statements: bool,
     /// When queries take more than this many seconds, log them
     pub sql_log_slow_duration: u64,
@@ -93,6 +94,11 @@ pub struct ConfigFile {
     pub admin_contact: ContactDetails,
     /// Allow auto-provisioning of users
     pub user_auto_provisioning: bool,
+
+    /// Allow disabling oauth2 under test/debug mode
+    #[cfg(any(test, debug_assertions))]
+    #[serde(default)]
+    pub disable_oauth2: bool,
 }
 
 fn generate_cookie_secret() -> String {
@@ -309,6 +315,8 @@ impl Default for ConfigFile {
             sql_db_cleanup_seconds: 3600, // one hour
             admin_contact: Default::default(),
             user_auto_provisioning: false,
+            #[cfg(any(test, debug_assertions))]
+            disable_oauth2: false,
         }
     }
 }
@@ -439,6 +447,11 @@ impl From<Config> for ConfigFile {
             user_auto_provisioning: config
                 .get("user_auto_provisioning")
                 .unwrap_or(Self::default().user_auto_provisioning),
+
+            #[cfg(any(test, debug_assertions))]
+            disable_oauth2: config
+                .get("disable_oauth2")
+                .unwrap_or(Self::default().disable_oauth2),
         }
     }
 }

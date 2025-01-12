@@ -14,7 +14,7 @@ pub async fn wait_for_server(status_url: Url) {
         .read_timeout(std::time::Duration::from_secs(1))
         .timeout(std::time::Duration::from_secs(1))
         .build()
-        .unwrap();
+        .expect("Failed to query server");
     for i in 0..10 {
         match client
             .get(status_url.clone())
@@ -26,7 +26,7 @@ pub async fn wait_for_server(status_url: Url) {
                 eprintln!("OK: {value:?}");
                 if let Ok(text) = value.text().await {
                     eprintln!("Server response: {text}");
-                    if text == crate::web::STATUS_OK.to_string() {
+                    if text == crate::web::STATUS_OK {
                         println!("API is up!");
                         break;
                     }
@@ -87,7 +87,7 @@ pub fn test_name_bytes_with_compression() {
     let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 12];
 
     println!("{:?}", from_utf8(&example_com));
-    println!("{:?}", from_utf8(&test_input));
+    println!("{:?}", from_utf8(test_input));
 
     let result =
         name_as_bytes(test_input, Some(12), Some(&example_com)).expect("Failed to parse name");
@@ -103,7 +103,7 @@ pub fn test_name_bytes_with_tail_compression() {
     let expected_result: Vec<u8> = vec![3, 108, 111, 108, 192, 16];
 
     println!("{:?}", from_utf8(&example_com));
-    println!("{:?}", from_utf8(&test_input));
+    println!("{:?}", from_utf8(test_input));
 
     let result =
         name_as_bytes(test_input, Some(12), Some(&example_com)).expect("Failed to parse name");
@@ -116,21 +116,21 @@ fn test_test_valid_tld() {
     // empty list
     let valid_tlds = vec![];
     let zone_name = "hello.example.goat";
-    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), true);
+    assert!(check_valid_tld(zone_name, &valid_tlds));
 
     let valid_tlds = vec!["goat".to_string()];
     let zone_name = "hello.example.goat";
-    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), true);
+    assert!(check_valid_tld(zone_name, &valid_tlds));
 
     let valid_tlds = vec!["cheese".to_string()];
     let zone_name = "hello.example.goat";
-    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), false);
+    assert!(!check_valid_tld(zone_name, &valid_tlds));
 
     let valid_tlds = vec!["goat".to_string()];
     let zone_name = "hello.example.happygoat";
-    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), false);
+    assert!(!check_valid_tld(zone_name, &valid_tlds));
 
     let valid_tlds = vec!["goat".to_string()];
     let zone_name = "hello.example.goat.cheese";
-    assert_eq!(check_valid_tld(&zone_name, &valid_tlds), false);
+    assert!(!check_valid_tld(zone_name, &valid_tlds));
 }

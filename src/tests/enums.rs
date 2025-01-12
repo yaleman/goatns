@@ -11,7 +11,10 @@ fn test_contactdetails() {
         contact: "yaleman".to_string(),
         server: "mastodon.social".to_string(),
     };
-    assert_eq!(good_mastodon.unwrap(), expected_mastodon);
+    assert_eq!(
+        good_mastodon.expect("failed to parse out mastodon"),
+        expected_mastodon
+    );
 
     let good_mastodon = ContactDetails::try_from("Mastodon:@yaleman@mastodon.social".to_string());
     println!("{good_mastodon:?}");
@@ -20,7 +23,10 @@ fn test_contactdetails() {
         contact: "yaleman".to_string(),
         server: "mastodon.social".to_string(),
     };
-    assert_eq!(good_mastodon.unwrap(), expected_mastodon);
+    assert_eq!(
+        good_mastodon.expect("failed to parse out mastodon"),
+        expected_mastodon
+    );
 
     let good_twitter = ContactDetails::try_from("Twitter:@yaleman43381258".to_string());
     assert!(good_twitter.is_ok());
@@ -41,7 +47,7 @@ fn test_contactdetails_deser() {
 }
 "#;
     print!("Parsing config file...");
-    let configfile = ConfigFile::from_str(configfile).unwrap();
+    let configfile = ConfigFile::from_str(configfile).expect("failed to parse config");
     println!("OK");
 
     println!(
@@ -56,7 +62,7 @@ fn test_contactdetails_deser() {
 }
 "#;
     print!("Parsing config file...");
-    let configfile = ConfigFile::from_str(configfile).unwrap();
+    let configfile = ConfigFile::from_str(configfile).expect("failed to parse config");
     println!("OK");
 
     let expected_result: ContactDetails = ContactDetails::Mastodon {

@@ -1,0 +1,37 @@
+; TODO: make this match the test zone file
+$ORIGIN hello.goat.
+$TTL 3600
+
+@	SOA	ns1.hello.goat. admin.hello.goat. (
+	1	; Serial
+	2		; Refresh
+	3		; Retry
+	4		; Expire
+	60		; Minimum TTL
+)
+
+; Name servers
+@	NS	ns1.hello.goat.
+@	NS	ns2.hello.goat.
+
+; A records for name servers
+;ns1	A	192.0.2.1
+;ns2	A	192.0.2.2
+
+; Main domain records
+@	A	192.0.2.10
+www	A	192.0.2.10
+
+; Mail records
+@	MX	10 mail.hello.goat.
+mail	A	192.0.2.20
+
+; AAAA records (IPv6)
+@	AAAA	2001:db8::1
+www	AAAA	2001:db8::1
+
+; TXT records
+@	TXT	"v=spf1 ip4:192.0.2.20 -all"
+
+; CAA records
+@	CAA	0 issue "letsencrypt.org"

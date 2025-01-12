@@ -47,7 +47,7 @@ fn custom_claim_type_things() {
         EmptyAdditionalClaims, EndUserEmail, IssuerUrl, StandardClaims, SubjectIdentifier,
     };
     let cct = CustomClaimType::new(
-        IssuerUrl::from_url(Url::parse("https://example.com").unwrap()),
+        IssuerUrl::from_url(Url::parse("https://example.com").expect("Failed to parse URL")),
         vec![],
         chrono::Utc::now(),
         chrono::Utc::now(),
@@ -60,5 +60,8 @@ fn custom_claim_type_things() {
 
     assert_eq!("".to_string(), cct.get_username());
 
-    assert_eq!("billy@goat.net".to_string(), cct.get_email().unwrap());
+    assert_eq!(
+        "billy@goat.net".to_string(),
+        cct.get_email().expect("Failed to get email")
+    );
 }
