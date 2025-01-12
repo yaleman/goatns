@@ -1,0 +1,36 @@
+$ORIGIN example.goat.
+$TTL 3600
+
+@	SOA	ns1.example.goat. admin.example.goat. (
+	2024011201	; Serial
+	3600		; Refresh
+	1800		; Retry
+	604800		; Expire
+	86400		; Minimum TTL
+)
+
+; Name servers
+@	NS	ns1.example.goat.
+@	NS	ns2.example.goat.
+
+; A records for name servers
+ns1	A	192.0.2.1
+ns2	A	192.0.2.2
+
+; Main domain records
+@	A	192.0.2.10
+www	A	192.0.2.10
+
+; Mail records
+@	MX	10 mail.example.goat.
+mail	A	192.0.2.20
+
+; AAAA records (IPv6)
+@	AAAA	2001:db8::1
+www	AAAA	2001:db8::1
+
+; TXT records
+@	TXT	"v=spf1 ip4:192.0.2.20 -all"
+
+; CAA records
+@	CAA	0 issue "letsencrypt.org"
