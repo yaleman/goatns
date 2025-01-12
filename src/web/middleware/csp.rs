@@ -1,5 +1,6 @@
 use axum::{extract::State, http::HeaderValue, middleware::Next, response::Response};
 use axum_csp::*;
+use tracing::debug;
 
 use crate::web::GoatState;
 
@@ -28,7 +29,7 @@ pub async fn cspheaders(
             headers.insert("Content-Security-Policy", header);
         }
     } else {
-        tracing::debug!("didn't match uri");
+        debug!("didn't match uri");
     }
 
     response

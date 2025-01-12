@@ -35,7 +35,7 @@ pub(crate) async fn api_create(
     let mut txn = match state.connpool().await.begin().await {
         Ok(val) => val,
         Err(err) => {
-            tracing::error!("failed to get connection to the database: {err:?}");
+            error!("failed to get connection to the database: {err:?}");
             return error_result_json!(
                 "Failed to get a connection to the database!",
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -45,12 +45,12 @@ pub(crate) async fn api_create(
 
     match FileZone::get_by_name(&mut txn, &zone.name).await {
         Ok(Some(_)) => {
-            tracing::debug!("Zone {} already exists, user sent POST", zone.name);
+            debug!("Zone {} already exists, user sent POST", zone.name);
             return error_result_json!("Zone already exists!", StatusCode::BAD_REQUEST);
         }
         Ok(None) => {}
         Err(err) => {
-            tracing::debug!(
+            debug!(
                 "Couldn't get zone  {}, something went wrong: {err:?}",
                 zone.name
             );
@@ -64,7 +64,7 @@ pub(crate) async fn api_create(
     // if they got here there were no issues with querying the DB and it doesn't exist already!
 
     if let Err(err) = zone.save_with_txn(&mut txn).await {
-        tracing::debug!(
+        debug!(
             "Couldn't create zone  {}, something went wrong during save: {err:?}",
             zone.name
         );
@@ -75,7 +75,7 @@ pub(crate) async fn api_create(
     }
 
     if let Err(err) = txn.commit().await {
-        tracing::debug!(
+        debug!(
             "Couldn't create zone {}, something went wrong committing transaction: {err:?}",
             zone.name
         );
@@ -88,7 +88,7 @@ pub(crate) async fn api_create(
     let mut txn = match state.connpool().await.begin().await {
         Ok(val) => val,
         Err(err) => {
-            tracing::error!("failed to get connection to the database: {err:?}");
+            error!("failed to get connection to the database: {err:?}");
             return error_result_json!(
                 "Failed to get a connection to the database!",
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -104,7 +104,7 @@ pub(crate) async fn api_create(
             }
         },
         Err(err) => {
-            tracing::debug!(
+            debug!(
                 "Couldn't get zone  {}, something went wrong: {err:?}",
                 zone.name
             );
@@ -118,7 +118,7 @@ pub(crate) async fn api_create(
     let userid = match user.id {
         Some(val) => val,
         None => {
-            tracing::debug!("User id not found in session, something went wrong");
+            debug!("User id not found in session, something went wrong");
             return error_result_json!(
                 "Server error creating zone, contact the admins!",
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -129,7 +129,7 @@ pub(crate) async fn api_create(
     let zoneid = match zone.id {
         Some(val) => val,
         None => {
-            tracing::debug!("Zone id not found in session, something went wrong");
+            debug!("Zone id not found in session, something went wrong");
             return error_result_json!(
                 "Server error creating zone, contact the admins!",
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -144,9 +144,7 @@ pub(crate) async fn api_create(
     };
 
     if let Err(err) = ownership.save_with_txn(&mut txn).await {
-        tracing::debug!(
-            "Couldn't store zone ownership {ownership:?}, something went wrong: {err:?}"
-        );
+        debug!("Couldn't store zone ownership {ownership:?}, something went wrong: {err:?}");
         return error_result_json!(
             "Server error creating zone ownership, contact the admins!",
             StatusCode::INTERNAL_SERVER_ERROR
@@ -154,7 +152,7 @@ pub(crate) async fn api_create(
     };
 
     if let Err(err) = txn.commit().await {
-        tracing::debug!(
+        debug!(
             "Couldn't create zone {}, something went wrong committing transaction: {err:?}",
             zone.name
         );
@@ -163,7 +161,7 @@ pub(crate) async fn api_create(
             StatusCode::INTERNAL_SERVER_ERROR
         );
     }
-    tracing::debug!("Zone created by user={:?} zone={:?}", user.id, zone);
+    debug!("Zone created by user={:?} zone={:?}", user.id, zone);
 
     Ok(Json(Box::new(zone)))
 }
@@ -191,7 +189,7 @@ pub(crate) async fn api_update(
     let mut txn = match connpool.begin().await {
         Ok(val) => val,
         Err(err) => {
-            tracing::error!("failed to get connection to the database: {err:?}");
+            error!("failed to get connection to the database: {err:?}");
             return error_result_json!(
                 "Failed to get a connection to the database!",
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -202,7 +200,7 @@ pub(crate) async fn api_update(
     let user_id = match user.id {
         Some(val) => val,
         None => {
-            tracing::error!("User id not found in session, something went wrong");
+            error!("User id not found in session, something went wrong");
             return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -257,7 +255,7 @@ pub(crate) async fn api_delete(
     let mut txn = match state.connpool().await.begin().await {
         Ok(val) => val,
         Err(err) => {
-            tracing::error!("Error getting txn: {err:?}");
+            error!("Error getting txn: {err:?}");
             return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -265,7 +263,7 @@ pub(crate) async fn api_delete(
     let userid = match user.id {
         Some(val) => val,
         None => {
-            tracing::error!("User id not found in session, something went wrong");
+            error!("User id not found in session, something went wrong");
             return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -291,7 +289,7 @@ pub(crate) async fn api_delete(
     let zone = match FileZone::get_with_txn(&mut txn, &id).await {
         Ok(val) => val,
         Err(err) => {
-            tracing::error!(
+            error!(
                 "Failed to get Zone during api_delete zoneid={} error=\"{err:?}\"",
                 id
             );
@@ -302,7 +300,7 @@ pub(crate) async fn api_delete(
     let res = match zone.delete_with_txn(&mut txn).await {
         Ok(_) => Ok(StatusCode::OK),
         Err(err) => {
-            tracing::error!(
+            error!(
                 "Failed to delete Zone during api_delete zoneid={} error=\"{err:?}\"",
                 id
             );
@@ -311,7 +309,7 @@ pub(crate) async fn api_delete(
     };
 
     if let Err(err) = txn.commit().await {
-        tracing::error!(
+        error!(
             "Failed to commit txn for zone.delete during api_delete zoneid={} error=\"{err:?}\"",
             id
         );
@@ -330,7 +328,7 @@ pub(crate) async fn api_get(
     let mut txn = match state.connpool().await.begin().await {
         Ok(val) => val,
         Err(err) => {
-            tracing::error!("failed to get connection to the database: {err:?}");
+            error!("failed to get connection to the database: {err:?}");
             return error_result_json!(
                 "Failed to get a connection to the database!",
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -341,7 +339,7 @@ pub(crate) async fn api_get(
     let user_id = match user.id {
         Some(val) => val,
         None => {
-            tracing::error!("User id not found in session, something went wrong");
+            error!("User id not found in session, something went wrong");
             return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -350,11 +348,11 @@ pub(crate) async fn api_get(
         .await
         .is_err()
     {
-        tracing::error!("User {:?} not authorized for zoneid={}", &user_id, id);
+        error!("User {:?} not authorized for zoneid={}", &user_id, id);
         return error_result_json!("", StatusCode::UNAUTHORIZED);
     };
 
-    tracing::debug!("Searching for zone id {id:?}");
+    debug!("Searching for zone id {id:?}");
     let zone = match FileZone::get(&state.connpool().await, id).await {
         Ok(val) => val,
         Err(err) => {

@@ -134,20 +134,20 @@ fn check_static_dir_exists(static_dir: &PathBuf, config: &ConfigFile) -> bool {
         },
         Err(err) => match err.kind() {
             std::io::ErrorKind::PermissionDenied => {
-                tracing::error!(
+                error!(
                     "Permission denied accssing static resources dir ({:?}) for web API: {}",
                     &config.api_static_dir,
                     err.to_string()
                 )
             }
             std::io::ErrorKind::NotFound => {
-                tracing::error!(
+                error!(
                     "Static resources dir ({:?}) not found for web API: {}",
                     &config.api_static_dir,
                     err.to_string()
                 )
             }
-            _ => tracing::error!(
+            _ => error!(
                 "Error accessing static resources dir ({:?}) for web API: {}",
                 &config.api_static_dir,
                 err.to_string()

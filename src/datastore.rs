@@ -217,6 +217,7 @@ pub async fn handle_import_file(
     Ok(())
 }
 
+#[instrument(level = "debug", skip(tx, pool))]
 async fn handle_get_zone(
     tx: oneshot::Sender<Option<FileZone>>,
     pool: &Pool<Sqlite>,
@@ -224,8 +225,8 @@ async fn handle_get_zone(
     name: Option<String>,
 ) -> Result<(), GoatNsError> {
     let mut txn = pool.begin().await?;
-
     let zone = crate::db::get_zone_with_txn(&mut txn, id, name).await?;
+    drop(txn);
 
     tx.send(zone).map_err(|e| {
         GoatNsError::SendError(format!("Failed to send response on tokio channel: {:?}", e))

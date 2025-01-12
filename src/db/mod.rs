@@ -298,6 +298,8 @@ impl ZoneOwnership {
 }
 
 /// Query the zones table, name_or_id can be the zoneid or the name - if they match then you're bad and you should feel bad.
+
+#[instrument(level = "debug", skip(txn))]
 pub async fn get_zone_with_txn(
     txn: &mut SqliteConnection,
     id: Option<i64>,
@@ -313,6 +315,7 @@ pub async fn get_zone_with_txn(
     .bind(id)
     .fetch_optional(&mut *txn)
     .await?;
+
     let mut zone = match result {
         None => return Ok(None),
         Some(row) => {
@@ -350,7 +353,7 @@ pub async fn get_zone_with_txn(
     .await?;
 
     zone.records = result
-        .iter()
+        .into_iter()
         .filter_map(|r| match FileZoneRecord::try_from(r) {
             Ok(val) => Some(val),
             Err(_) => None,
@@ -494,7 +497,7 @@ impl FileZone {
                 }
 
                 let results: Vec<FileZoneRecord> = res
-                    .iter()
+                    .into_iter()
                     .filter_map(|r| FileZoneRecord::try_from(r).ok())
                     .collect();
 
@@ -986,7 +989,7 @@ impl DBEntity for FileZoneRecord {
         .fetch_all(txn)
         .await?;
         let res = res
-            .iter()
+            .into_iter()
             .filter_map(|r| match FileZoneRecord::try_from(r) {
                 Ok(val) => Some(Box::from(val)),
                 Err(err) => {
@@ -1870,13 +1873,6 @@ pub async fn get_zones_with_txn(
     Ok(rows)
 }
 
-impl TryFrom<&SqliteRow> for FileZoneRecord {
-    type Error = GoatNsError;
-    fn try_from(row: &SqliteRow) -> Result<Self, Self::Error> {
-        row.to_owned().try_into()
-    }
-}
-
 impl TryFrom<SqliteRow> for FileZoneRecord {
     type Error = GoatNsError;
     fn try_from(row: SqliteRow) -> Result<Self, Self::Error> {
@@ -1891,7 +1887,7 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
             return Err(GoatNsError::RFC8482);
         }
 
-        Ok(FileZoneRecord {
+        Ok(Self {
             zoneid: row.get("zoneid"),
             id: row.get("id"),
             name,

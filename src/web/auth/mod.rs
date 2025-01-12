@@ -29,7 +29,7 @@ use tower_sessions::{session_store::ExpiredDeletion, sqlx::SqlitePool, SqliteSto
 // pub(crate) mod sessionstore;
 pub mod traits;
 use tower_sessions::{Expiry, Session, SessionManagerLayer};
-use tracing::{error, info, trace};
+use tracing::{debug, error, info, instrument, trace};
 use traits::*;
 
 #[derive(Deserialize)]
@@ -110,10 +110,10 @@ pub enum ParserError {
 }
 
 /// Pull the OIDC Discovery details
+#[instrument(level = "debug", skip(state))]
 pub async fn oauth_get_discover(
     state: &mut GoatState,
 ) -> Result<CustomProviderMetadata, GoatNsError> {
-    tracing::debug!("Getting discovery data");
     let issuer_url = IssuerUrl::new(state.read().await.config.oauth2_config_url.clone())
         .map_err(|err| GoatNsError::Oidc(err.to_string()))?;
     match CoreProviderMetadata::discover_async(issuer_url, async_http_client).await {
@@ -135,7 +135,7 @@ pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, GoatNsError>
     let provider_metadata: CustomProviderMetadata = match delta.num_minutes() > 5 {
         true => discovery,
         false => {
-            tracing::debug!("Using cached OIDC discovery data");
+            debug!("Using cached OIDC discovery data");
             let config = state.read().await.oidc_config.clone();
             let meta = config.unwrap_or(discovery);
             state.oidc_update(meta.clone()).await;
@@ -225,7 +225,7 @@ pub async fn parse_state_code(
             })
         }
     };
-    tracing::trace!("id_token: {id_token:?}");
+    trace!("id_token: {id_token:?}");
     let allowed_algs = vec![
         CoreJwsSigningAlgorithm::EcdsaP256Sha256,
         CoreJwsSigningAlgorithm::RsaSsaPkcs1V15Sha256,
@@ -276,7 +276,7 @@ pub async fn login(
     let (pkce_verifier_secret, nonce) = match verifier {
         Some((p, n)) => (p, n),
         None => {
-            tracing::error!("Couldn't find a session, redirecting...");
+            error!("Couldn't find a session, redirecting...");
             return Err(Urls::Login.redirect().into_response());
         }
     };
@@ -302,7 +302,7 @@ pub async fn login(
                 Ok(None) => {
                     if !state.read().await.config.user_auto_provisioning {
                         // TODO: show a "sorry" page when auto-provisioning's not enabled
-                        // tracing::warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
+                        // warn!("User attempted login when auto-provisioning is not enabled, yeeting them to the home page.");
                         let (admin_contact_name, admin_contact_url) =
                             state.read().await.config.admin_contact.to_html_parts();
 
@@ -336,7 +336,7 @@ pub async fn login(
                     .into_response());
                 }
                 Err(error) => {
-                    tracing::error!("Database error finding user {:?}: {error:?}", email.clone());
+                    error!("Database error finding user {:?}: {error:?}", email.clone());
                     let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
                     return match redirect {
                         Some(destination) => Err(Redirect::to(&destination).into_response()),
@@ -344,7 +344,7 @@ pub async fn login(
                     };
                 }
             };
-            tracing::debug!("Found user in database: {dbuser:?}");
+            debug!("Found user in database: {dbuser:?}");
 
             if dbuser.disabled {
                 session.flush().await.map_err(|err| {
@@ -362,28 +362,27 @@ pub async fn login(
             if let Some(claims_email) = claims.email() {
                 let claims_email = claims_email.to_string();
                 if claims_email != dbuser.email {
-                    tracing::debug!(
+                    debug!(
                         "Email doesn't match on login: {} != {}",
-                        claims_email,
-                        dbuser.email
+                        claims_email, dbuser.email
                     );
 
                     dbuser.email = claims_email;
                     let mut db_txn = match state.connpool().await.begin().await {
                         Ok(val) => val,
                         Err(err) => {
-                            tracing::error!("Failed to start transaction to store user: {err:?}");
+                            error!("Failed to start transaction to store user: {err:?}");
                             return Err(Urls::Home.redirect().into_response());
                             // TODO: this probably... should be handled as a better error?
                         }
                     };
                     if let Err(err) = dbuser.update_with_txn(&mut db_txn).await {
-                        tracing::error!("Failed to update user email: {err:?}");
+                        error!("Failed to update user email: {err:?}");
                         return Err(Urls::Home.redirect().into_response());
                         // TODO: this probably... should be handled as a better error?
                     }
                     if let Err(err) = db_txn.commit().await {
-                        tracing::error!("Failed to commit user email update: {err:?}");
+                        error!("Failed to commit user email update: {err:?}");
                         return Err(Urls::Home.redirect().into_response());
                     };
                 }
@@ -420,11 +419,11 @@ pub async fn login(
         Err(error) => match error {
             ParserError::Redirect { content } => Ok(content.into_response()),
             ParserError::ErrorMessage { content } => {
-                tracing::debug!("Failed to parse state: {content}");
+                debug!("Failed to parse state: {content}");
                 Err(Urls::Home.redirect().into_response())
             }
             ParserError::ClaimsVerificationError { content } => {
-                tracing::error!("Failed to verify claim token: {content:?}");
+                error!("Failed to verify claim token: {content:?}");
                 Err(Urls::Home.redirect().into_response())
             }
         },
@@ -480,7 +479,7 @@ pub async fn signup(
     State(mut state): State<GoatState>,
     Form(form): Form<SignupForm>,
 ) -> Result<Response, Redirect> {
-    tracing::debug!("Dumping form: {form:?}");
+    debug!("Dumping form: {form:?}");
 
     let query_state = form.state;
 
@@ -489,7 +488,7 @@ pub async fn signup(
     let (pkce_verifier, nonce) = match verifier {
         Some((p, n)) => (p, n),
         None => {
-            tracing::error!("Couldn't find a signup session, redirecting user...");
+            error!("Couldn't find a signup session, redirecting user...");
             return Ok(Urls::Login.redirect().into_response());
         }
     };
@@ -504,16 +503,16 @@ pub async fn signup(
         Err(error) => match error {
             ParserError::Redirect { content } => Ok(content.into_response()),
             ParserError::ErrorMessage { content } => {
-                tracing::error!("Failed to parse claim: {}", content);
+                error!("Failed to parse claim: {}", content);
                 Ok(Urls::Home.redirect().into_response())
             }
             ParserError::ClaimsVerificationError { content } => {
-                tracing::error!("Failed to verify claim token: {content:?}");
+                error!("Failed to verify claim token: {content:?}");
                 Ok(Urls::Home.redirect().into_response())
             }
         },
         Ok(claims) => {
-            tracing::debug!("Verified claims in signup form: {claims:?}");
+            debug!("Verified claims in signup form: {claims:?}");
             let user = User {
                 id: None,
                 displayname: claims.get_displayname(),
@@ -526,7 +525,7 @@ pub async fn signup(
             match user.save(&state.connpool().await).await {
                 Ok(_) => Ok(Urls::Dashboard.redirect().into_response()),
                 Err(error) => {
-                    tracing::debug!("Failed to save new user signup... oh no! {error:?}");
+                    debug!("Failed to save new user signup... oh no! {error:?}");
                     // TODO: throw an error page on this one
                     Ok(Urls::Home.redirect().into_response())
                 }

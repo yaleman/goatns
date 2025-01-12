@@ -8,7 +8,7 @@ use axum::Form;
 use goat_lib::validators::dns_name;
 use serde::Deserialize;
 use tower_sessions::Session;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::datastore::Command;
 use crate::db::User;
@@ -60,7 +60,7 @@ pub(crate) async fn zones_new_post(
     // check if the zone already exists
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
 
-    tracing::debug!("Checking if {} exists", form.name);
+    debug!("Checking if {} exists", form.name);
 
     let getzonemsg = Command::GetZone {
         id: None,
@@ -68,7 +68,7 @@ pub(crate) async fn zones_new_post(
         resp: os_tx,
     };
     if let Err(err) = state.read().await.tx.send(getzonemsg).await {
-        tracing::error!("Error sending message to datastore: {:?}", err);
+        error!("Error sending message to datastore: {:?}", err);
         return Err(Urls::Home.redirect_with_query(HashMap::from([(
             "error".to_string(),
             "Error checking if zone exists... please try again.".to_string(),
@@ -77,17 +77,17 @@ pub(crate) async fn zones_new_post(
 
     match os_rx.await {
         Ok(Some(_)) => {
-            tracing::debug!("Zone already exists: {:?}", form.name);
+            debug!("Zone already exists: {:?}", form.name);
             return Err(Urls::Home.redirect_with_query(HashMap::from([(
                 "error".to_string(),
                 "Zone already exists!".to_string(),
             )])));
         }
         Ok(None) => {
-            tracing::debug!("Zone {} doesn't exist, we can continue", form.name);
+            debug!("Zone {} doesn't exist, we can continue", form.name);
         }
         Err(err) => {
-            tracing::error!("Error getting zone {}: {:?}", form.name, err);
+            error!("Error getting zone {}: {:?}", form.name, err);
             return Err(Urls::Home.redirect_with_query(HashMap::from([(
                 "error".to_string(),
                 "Error checking if zone exists... please try again.".to_string(),
@@ -122,7 +122,7 @@ pub(crate) async fn zones_new_post(
     };
 
     if let Err(err) = state.read().await.tx.send(msg).await {
-        tracing::error!("Error sending message to datastore: {:?}", err);
+        error!("Error sending message to datastore: {:?}", err);
         return Err(Urls::Home.redirect_with_query(HashMap::from([(
             "error".to_string(),
             "Error creating zone!".to_string(),
@@ -136,12 +136,12 @@ pub(crate) async fn zones_new_post(
                 debug!("Redirecting to /ui/zones/{}", id);
                 Ok(Redirect::to(&format!("/ui/zones/{}", id)))
             } else {
-                tracing::error!("Redirecting to /ui/zones because zone didn't have an ID?");
+                error!("Redirecting to /ui/zones because zone didn't have an ID?");
                 Err(Urls::ZonesList.redirect())
             }
         }
         Err(err) => {
-            tracing::error!("Error creating zone {}: {:?}", form.name, err);
+            error!("Error creating zone {}: {:?}", form.name, err);
             Err(Urls::Home.redirect_with_query(HashMap::from([(
                 "error".to_string(),
                 "Error creating zone!".to_string(),
