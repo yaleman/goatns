@@ -5,13 +5,15 @@ use proc_macro::TokenStream;
 pub fn check_api_auth(_item: TokenStream) -> TokenStream {
     // TODO: This is terrible
     r#"
+    use tracing::debug;
+
     let user: User = match session.get("user").await.expect("This shouldn't happen!") {
         Some(val) => val,
         None => {
             #[cfg(test)]
             println!("User not found in api_create call");
             #[cfg(not(test))]
-            tracing::debug!("User not found in api_create call");
+            debug!("User not found in api_create call");
             return error_result_json!("", StatusCode::FORBIDDEN);
         }
     };

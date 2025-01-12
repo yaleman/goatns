@@ -2,7 +2,7 @@ use axum::http::StatusCode;
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
-use tracing::error;
+use tracing::{error, info};
 use utoipa::ToSchema;
 
 use crate::db::User;
@@ -51,7 +51,7 @@ pub async fn login(
     let token = match User::get_token(&mut pool, &payload.token_key).await {
         Ok(val) => val,
         Err(err) => {
-            tracing::info!(
+            info!(
                 "action=api_login tokenkey={} result=failure reason=\"no token found\"",
                 payload.token_key
             );
@@ -85,7 +85,7 @@ pub async fn login(
                         Json(AuthResponse::from("Failed to flush session!".to_string())),
                     )
                 })?;
-                tracing::info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.token_key);
+                info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.token_key);
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(AuthResponse {
@@ -93,7 +93,7 @@ pub async fn login(
                     }),
                 ));
             };
-            tracing::info!("action=api_login user={} result=success", payload.token_key);
+            info!("action=api_login user={} result=success", payload.token_key);
             Ok((
                 StatusCode::OK,
                 Json(AuthResponse {

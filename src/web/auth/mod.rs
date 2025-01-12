@@ -29,7 +29,7 @@ use tower_sessions::{session_store::ExpiredDeletion, sqlx::SqlitePool, SqliteSto
 // pub(crate) mod sessionstore;
 pub mod traits;
 use tower_sessions::{Expiry, Session, SessionManagerLayer};
-use tracing::{error, trace};
+use tracing::{error, info, trace};
 use traits::*;
 
 #[derive(Deserialize)]
@@ -355,7 +355,7 @@ pub async fn login(
                     )
                         .into_response()
                 })?;
-                tracing::info!("Disabled user attempted to log in: {dbuser:?}");
+                info!("Disabled user attempted to log in: {dbuser:?}");
                 return Err(Urls::Home.redirect().into_response());
             }
 

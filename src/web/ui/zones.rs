@@ -8,7 +8,7 @@ use axum::Form;
 use goat_lib::validators::dns_name;
 use serde::Deserialize;
 use tower_sessions::Session;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::datastore::Command;
 use crate::db::User;
@@ -131,9 +131,9 @@ pub(crate) async fn zones_new_post(
 
     match os_rx.await {
         Ok(zone) => {
-            tracing::info!("Zone {} created successfully", form.name);
+            info!("Zone {} created successfully", form.name);
             if let Some(id) = zone.id {
-                tracing::info!("Redirecting to /ui/zones/{}", id);
+                debug!("Redirecting to /ui/zones/{}", id);
                 Ok(Redirect::to(&format!("/ui/zones/{}", id)))
             } else {
                 tracing::error!("Redirecting to /ui/zones because zone didn't have an ID?");

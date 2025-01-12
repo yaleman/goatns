@@ -37,7 +37,7 @@ use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
-use tracing::{error, trace};
+use tracing::{debug, error, info, trace};
 use utils::{handler_404, Urls};
 use utoipa::OpenApi;
 
@@ -77,7 +77,7 @@ impl GoatStateTrait for GoatState {
         self.read().await.connpool.clone()
     }
     async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata) {
-        tracing::debug!("Storing OIDC config!");
+        debug!("Storing OIDC config!");
         let mut writer = self.write().await;
         writer.oidc_config = Some(response.clone());
         writer.oidc_config_updated =
@@ -125,11 +125,11 @@ fn check_static_dir_exists(static_dir: &PathBuf, config: &ConfigFile) -> bool {
     match static_dir.try_exists() {
         Ok(res) => match res {
             true => {
-                tracing::info!("Found static resources dir ({static_dir:#?}) for web API.");
+                info!("Found static resources dir ({static_dir:#?}) for web API.");
                 return true;
             }
             false => {
-                tracing::error!("Couldn't find static resources dir ({static_dir:#?}) for web API!")
+                error!("Couldn't find static resources dir ({static_dir:#?}) for web API!")
             }
         },
         Err(err) => match err.kind() {
@@ -240,6 +240,6 @@ pub async fn build(
 
     #[cfg(test)]
     println!("{}", startup_message);
-    tracing::info!("{}", startup_message);
+    info!("{}", startup_message);
     Ok(res)
 }

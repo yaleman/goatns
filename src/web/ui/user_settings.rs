@@ -20,7 +20,7 @@ use enum_iterator::Sequence;
 use oauth2::CsrfToken;
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::db::UserAuthToken;
 use crate::web::GoatState;
@@ -627,10 +627,10 @@ pub async fn api_tokens_delete_post(
     };
 
     if let Err(error) = uat.delete(&pool).await {
-        tracing::debug!("Failed to delete token {:?}: {error:?}", uat.id);
+        debug!("Failed to delete token {:?}: {error:?}", uat.id);
     };
 
-    tracing::info!(
+    info!(
         "id={} action=api_token_delete token_id={}",
         uat.userid,
         uat.id.unwrap_or(-1)
