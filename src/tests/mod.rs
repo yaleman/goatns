@@ -24,10 +24,10 @@ use std::str::FromStr;
 #[test]
 /// test my assumptions about ipnet things
 fn test_ip_in_ipnet() {
-    let net = IpNet::from_str("10.0.0.0/24").unwrap();
+    let net = IpNet::from_str("10.0.0.0/24").expect("Failed to parse CIDR");
 
-    let addr: IpAddr = "10.0.0.69".parse().unwrap();
-    let noaddr: IpAddr = "69.0.0.69".parse().unwrap();
+    let addr: IpAddr = "10.0.0.69".parse().expect("Failed to parse IP address");
+    let noaddr: IpAddr = "69.0.0.69".parse().expect("Failed to parse IP address");
 
     assert!(net.contains(&addr));
     assert!(!net.contains(&noaddr));
@@ -93,7 +93,7 @@ async fn test_build_iana_org_a_reply() {
         .expect("Failed to convert question to bytes")
         .len();
     debug!("question byte length: {}", question_length);
-    let address = std::net::Ipv4Addr::from_str("192.0.43.8").unwrap();
+    let address = std::net::Ipv4Addr::from_str("192.0.43.8").expect("Failed to parse IP address");
     let answers = vec![InternalResourceRecord::A {
         ttl: 350,
         address: address.into(),
@@ -239,11 +239,12 @@ async fn test_cloudflare_soa_reply() {
     };
     reply.header.recursion_available = true;
     debug!("{:?}", reply);
-    let reply_bytes: Vec<u8> = reply.as_bytes().await.unwrap();
+    let reply_bytes: Vec<u8> = reply.as_bytes().await.expect("Failed to get reply bytes");
     debug!("{:?}", reply_bytes);
 
     // testing if I was parsing it right...
-    let mut their_header = Header::unpack_from_slice(&original_question[0..HEADER_BYTES]).unwrap();
+    let mut their_header = Header::unpack_from_slice(&original_question[0..HEADER_BYTES])
+        .expect("Failed to get header bytes");
     their_header.ancount = 1;
     assert_eq!(header, their_header.as_answer());
     log::trace!("Parsed header matched!");
@@ -258,7 +259,7 @@ async fn test_cloudflare_soa_reply() {
             current_block = "Answer   ";
         }
 
-        let b = [byte.clone()];
+        let b = [*byte];
         let ascii_byte_us = match byte.is_ascii_alphanumeric() {
             true => std::str::from_utf8(&b).unwrap_or("-"),
             false => " ",
@@ -266,7 +267,7 @@ async fn test_cloudflare_soa_reply() {
 
         match expected_bytes.get(index) {
             Some(expected_byte) => {
-                let eb: u8 = expected_byte.clone();
+                let eb: u8 = *expected_byte;
                 let ascii_byte_them = match eb.is_ascii_alphanumeric() {
                     true => std::str::from_utf8(&b).unwrap_or("-"),
                     false => " ",
@@ -351,7 +352,10 @@ async fn build_ackcdn_allzeros() {
         authorities: vec![],
         additional: vec![],
     };
-    let reply_bytes: Vec<u8> = reply.as_bytes().await.unwrap();
+    let reply_bytes: Vec<u8> = reply
+        .as_bytes()
+        .await
+        .expect("Failed to get reply as bytes");
     debug!("{} bytes: {:?}", reply_bytes.len(), reply_bytes);
 
     let expected_bytes = [
@@ -385,6 +389,7 @@ async fn build_ackcdn_allzeros() {
                 expected_byte,
                 (byte == expected_byte)
             ),
+            #[allow(clippy::panic)]
             None => {
                 panic!("Our reply is longer!");
                 // break;
@@ -435,7 +440,7 @@ fn test_loc_as_bytes() {
         longitude: 2151206648,
         altitude: 10001000,
     };
-    let test_result = test_record.pack().unwrap();
+    let test_result = test_record.pack().expect("failed to pack record to bytes");
     assert_eq!(expected_bytes, test_result);
 }
 
@@ -555,7 +560,7 @@ fn test_loc_record_parser() {
         eprintln!("Testing {input}");
         let record = FileLocRecord::try_from(input);
         assert!(record.is_ok());
-        assert_eq!(record.unwrap(), output);
+        assert_eq!(record.expect("Failed to get record"), output);
     }
 }
 
@@ -608,13 +613,19 @@ fn test_normalize_name() {
         qtype: crate::enums::RecordType::A,
         qclass: crate::enums::RecordClass::Internet,
     };
-    assert_eq!(q.normalized_name().unwrap(), String::from("hello.world"));
+    assert_eq!(
+        q.normalized_name().expect("Failed to normalize name"),
+        String::from("hello.world")
+    );
     let q = Question {
         qname: String::from("hello.world").into_bytes(),
         qtype: crate::enums::RecordType::A,
         qclass: crate::enums::RecordClass::Internet,
     };
-    assert_eq!(q.normalized_name().unwrap(), String::from("hello.world"));
+    assert_eq!(
+        q.normalized_name().expect("Failed to normalize name"),
+        String::from("hello.world")
+    );
 }
 
 #[test]
@@ -633,7 +644,7 @@ fn test_get_question_qname() {
 #[tokio::test]
 ///tries to test when input buffers are weird
 async fn test_question_from_bytes() {
-    let ok_question = vec![
+    let ok_question = [
         /* question - 14 bytes */
         0x04, 0x69, 0x61, 0x6e, 0x61, 0x03, 0x6f, 0x72, 0x67, 0x00, 0x00, 0x01, //0x00, 0x01,
     ];
@@ -715,7 +726,7 @@ async fn test_dont_normalize_ttls() {
         false,
     )
     .await
-    .unwrap();
+    .expect("Failed to get records");
 
     print!("Checking that we got three records...");
     assert!(response.iter().len() == 3);

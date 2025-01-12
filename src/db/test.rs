@@ -53,7 +53,7 @@ pub async fn test_create_example_com_records(
             id: None,
             ttl: i as u32,
         }
-        .save(&pool)
+        .save(pool)
         .await?;
     }
     println!("Completed creating records");
@@ -90,7 +90,7 @@ async fn test_db_create_table_zones() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
     FileZone::create_table(&pool).await?;
     FileZone::create_table(&pool).await?;
-    Ok(FileZone::create_table(&pool).await?)
+    FileZone::create_table(&pool).await
 }
 
 /// Checks that the table create process works and is idempotent
@@ -100,7 +100,7 @@ async fn test_db_create_table_records() -> Result<(), GoatNsError> {
     println!("Creating Records Table");
     FileZoneRecord::create_table(&pool).await?;
     FileZoneRecord::create_table(&pool).await?;
-    Ok(FileZoneRecord::create_table(&pool).await?)
+    FileZoneRecord::create_table(&pool).await
 }
 
 /// An example zone for testing
@@ -115,7 +115,9 @@ pub fn test_example_com_zone() -> FileZone {
 
 /// Get a sqlite pool with a memory-only database
 pub async fn test_get_sqlite_memory() -> SqlitePool {
-    SqlitePool::connect("sqlite::memory:").await.unwrap()
+    SqlitePool::connect("sqlite::memory:")
+        .await
+        .expect("Failed to connect to sqlite memory")
 }
 
 /// A whole lotta tests
@@ -145,7 +147,7 @@ async fn test_db_create_records() -> Result<(), GoatNsError> {
         ttl: 123,
         id: None,
         rrtype: rrtype.into(),
-        class: RecordClass::Internet.into(),
+        class: RecordClass::Internet,
         rdata: "test txt".to_string(),
     };
     println!("rec to create: {rec_to_create:?}");
@@ -202,7 +204,7 @@ async fn test_all_db_things() -> Result<(), GoatNsError> {
         zoneid: Some(1),
         id: None,
         rrtype: rrtype.into(),
-        class: RecordClass::Internet.into(),
+        class: RecordClass::Internet,
         rdata: "test txt".to_string(),
     };
     println!("rec to create: {rec_to_create:?}");
@@ -259,10 +261,10 @@ async fn test_load_zone() -> Result<(), GoatNsError> {
     // compare the record lists
     println!("comparing the list of records in each zone");
     for record in zone_first.records.iter() {
-        assert!(zone_second.records.contains(&record));
+        assert!(zone_second.records.contains(record));
     }
     for record in zone_second.records.iter() {
-        assert!(zone_first.records.contains(&record));
+        assert!(zone_first.records.contains(record));
     }
 
     Ok(())
@@ -271,7 +273,7 @@ async fn test_load_zone() -> Result<(), GoatNsError> {
 #[cfg(test)]
 /// create a zone example.com
 async fn test_create_example_com_zone(pool: &SqlitePool) -> Result<(), GoatNsError> {
-    test_example_com_zone().save(&pool).await?;
+    test_example_com_zone().save(pool).await?;
     Ok(())
 }
 
@@ -291,28 +293,33 @@ async fn test_export_zone() -> Result<(), GoatNsError> {
 
     let records_to_create = 100usize;
     eprintln!("Creating records");
-    if let Err(err) =
-        test_create_example_com_records(&pool, zone.id.unwrap(), records_to_create).await
+    if let Err(err) = test_create_example_com_records(
+        &pool,
+        zone.id.expect("Failed to get zone id"),
+        records_to_create,
+    )
+    .await
     {
         panic!("failed to create test records: {err:?}");
     }
 
-    eprintln!("Exporting zone {}", zone.id.unwrap());
-    // let exported_zone = export_zone(pool.acquire().await?, zone.id.try_into().unwrap()).await?;
-    let exported_zone = FileZone::get(&pool, zone.id.unwrap()).await?;
+    eprintln!("Exporting zone {}", zone.id.expect("Failed to get zone id"));
+    let exported_zone = FileZone::get(&pool, zone.id.expect("Failed to get zone id")).await?;
     eprintln!("Done exporting zone");
 
     println!("found {} records", exported_zone.records.len());
     assert_eq!(exported_zone.records.len(), records_to_create);
 
-    let json_result = serde_json::to_string_pretty(&exported_zone).unwrap();
+    let json_result =
+        serde_json::to_string_pretty(&exported_zone).expect("Failed to convert to json");
 
     println!("{json_result}");
 
-    let export_json_result = match export_zone_json(&pool, zone.id.unwrap()).await {
-        Ok(val) => val,
-        Err(err) => panic!("error exporting json: {err}"),
-    };
+    let export_json_result =
+        match export_zone_json(&pool, zone.id.expect("Failed to get zone id")).await {
+            Ok(val) => val,
+            Err(err) => panic!("error exporting json: {err}"),
+        };
 
     println!("Checking that the result matches expectation");
     assert_eq!(json_result, export_json_result);
@@ -345,13 +352,17 @@ async fn load_then_export() -> Result<(), GoatNsError> {
         }
     };
     let mut buf: String = String::new();
-    file.read_to_string(&mut buf).await.unwrap();
+    file.read_to_string(&mut buf)
+        .await
+        .expect("Failed to read test file");
 
     eprintln!("File contents: {:?}", buf);
 
-    let json: FileZone = json5::from_str(&buf).map_err(|e| panic!("{e:?}")).unwrap();
+    let json: FileZone = json5::from_str(&buf)
+        .map_err(|e| panic!("{e:?}"))
+        .expect("Failed to parse json");
     eprintln!("loaded zone from file again: {json:?}");
-    let _json: String = serde_json::to_string(&json).unwrap();
+    let _json: String = serde_json::to_string(&json).expect("Failed to convert to json");
 
     eprintln!("Exporting zone");
     let zone_got = FileZone::get_by_name(&mut *pool.begin().await?, &example_zone.name).await?;

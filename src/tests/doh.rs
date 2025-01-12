@@ -52,14 +52,17 @@ async fn test_doh_get_json() -> Result<(), ()> {
         .expect("Failed to build client");
 
     let res = client
-        .get(&format!(
+        .get(format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
         .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
-        .unwrap();
-    assert_eq!(res.status(), reqwest::StatusCode::from_u16(200).unwrap());
+        .expect("Failed to send request");
+    assert_eq!(
+        res.status(),
+        reqwest::StatusCode::from_u16(200).expect("Failed to parse status")
+    );
     eprintln!("{:?}", res);
     eprintln!("{:?}", res.bytes().await);
 
@@ -73,26 +76,33 @@ async fn test_doh_ask_raw_accept() -> Result<(), ()> {
 
     let api_port = config.read().api_port;
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("Accept", "application/dns-message".parse().unwrap());
+    headers.insert(
+        "Accept",
+        "application/dns-message"
+            .parse()
+            .expect("Failed to parse header"),
+    );
 
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
-        // .cookie_store(true)
         .default_headers(headers)
         .timeout(std::time::Duration::from_secs(5))
         .build()
-        .unwrap();
+        .expect("Failed to build client");
 
     let res = client
-        .get(&format!(
+        .get(format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
         .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
-        .unwrap();
+        .expect("Failed to send request");
     eprintln!("{res:?}");
-    assert_eq!(res.status(), reqwest::StatusCode::from_u16(200).unwrap());
+    assert_eq!(
+        res.status(),
+        reqwest::StatusCode::from_u16(200).expect("Failed to parse status")
+    );
     Ok(())
 }
 
@@ -102,7 +112,12 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
 
     let api_port = config.read().api_port;
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("Accept", "application/dns-json".parse().unwrap());
+    headers.insert(
+        "Accept",
+        "application/dns-json"
+            .parse()
+            .expect("Failed to parse header"),
+    );
 
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
@@ -110,18 +125,21 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
         .default_headers(headers)
         .timeout(std::time::Duration::from_secs(5))
         .build()
-        .unwrap();
+        .expect("Failed to build client");
 
     let res = client
-        .get(&format!(
+        .get(format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
         .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
-        .unwrap();
+        .expect("Failed to send request");
     eprintln!("{res:?}");
-    assert_eq!(res.status(), reqwest::StatusCode::from_u16(200).unwrap());
+    assert_eq!(
+        res.status(),
+        reqwest::StatusCode::from_u16(200).expect("Failed to parse status")
+    );
     Ok(())
 }
 
@@ -131,7 +149,12 @@ async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
 
     let api_port = config.read().api_port;
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("Accept", "application/cheese".parse().unwrap());
+    headers.insert(
+        "Accept",
+        "application/cheese"
+            .parse()
+            .expect("Failed to parse header"),
+    );
 
     let client = reqwest::ClientBuilder::new()
         .danger_accept_invalid_certs(true)
@@ -139,17 +162,20 @@ async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
         .default_headers(headers)
         .timeout(std::time::Duration::from_secs(5))
         .build()
-        .unwrap();
+        .expect("Failed to build client");
 
     let res = client
-        .get(&format!(
+        .get(format!(
             "https://localhost:{api_port}/dns-query?name=test.example.com&type=A"
         ))
         .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
-        .unwrap();
+        .expect("Failed to send request");
     eprintln!("{res:?}");
-    assert_eq!(res.status(), reqwest::StatusCode::from_u16(406).unwrap());
+    assert_eq!(
+        res.status(),
+        reqwest::StatusCode::from_u16(406).expect("Failed to parse status")
+    );
     Ok(())
 }

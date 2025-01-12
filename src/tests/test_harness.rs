@@ -9,7 +9,7 @@ pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), GoatNsErro
     println!("importing test zone ./examples/test_config/zones.json");
     println!("#####################################################################");
     handle_import_file(
-        &pool,
+        pool,
         "./examples/test_config/zones.json".to_string(),
         Some("hello.goat".to_string()),
     )
@@ -23,7 +23,7 @@ pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), GoatNsErro
 
 pub async fn create_test_user(pool: &Pool<Sqlite>) -> Result<Box<User>, GoatNsError> {
     println!("Creating User");
-    Ok(User {
+    User {
         id: None,
         displayname: "Testuser".to_string(),
         username: "testuser".to_string(),
@@ -32,6 +32,6 @@ pub async fn create_test_user(pool: &Pool<Sqlite>) -> Result<Box<User>, GoatNsEr
         authref: None,
         admin: false,
     }
-    .save(&pool)
-    .await?)
+    .save(pool)
+    .await
 }
