@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::env::consts;
 use std::str::{from_utf8, FromStr};
 use std::string::FromUtf8Error;
-use tracing::error;
+use tracing::{error, trace, warn};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct DomainName {
@@ -300,10 +300,9 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                 let address: u32 = match std::net::Ipv4Addr::from_str(&record.rdata) {
                     Ok(value) => value.into(),
                     Err(error) => {
-                        log::error!(
+                        error!(
                             "Failed to parse {:?} into an IPv4 address: {:?}",
-                            record.rdata,
-                            error
+                            record.rdata, error
                         );
                         0u32
                     }
@@ -318,7 +317,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                 let address: u128 = match std::net::Ipv6Addr::from_str(&record.rdata) {
                     Ok(value) => {
                         let res: u128 = value.into();
-                        log::trace!("Encoding {:?} as {:?}", value, res);
+                        trace!("Encoding {:?} as {:?}", value, res);
                         res
                     }
                     Err(error) => {
@@ -369,7 +368,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                         )))
                     }
                 };
-                log::trace!("got pref {}, now {pref}", split_bit[0]);
+                trace!("got pref {}, now {pref}", split_bit[0]);
                 Ok(InternalResourceRecord::MX {
                     preference: pref,
                     exchange: DomainName::from(split_bit[1]),
@@ -537,7 +536,7 @@ impl InternalResourceRecord {
             InternalResourceRecord::AAAA { address, .. } => Ok(address.to_be_bytes().to_vec()),
 
             InternalResourceRecord::CNAME { cname, .. } => {
-                log::trace!("turning CNAME {cname:?} into bytes");
+                trace!("turning CNAME {cname:?} into bytes");
                 cname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
             }
             InternalResourceRecord::LOC {
@@ -551,7 +550,7 @@ impl InternalResourceRecord {
                 altitude,
                 ..
             } => {
-                log::error!("LOC {:?} - TTL={ttl}", from_utf8(question));
+                error!("LOC {:?} - TTL={ttl}", from_utf8(question));
                 Ok(LocRecord {
                     version: *version,
                     size: *size,
@@ -842,7 +841,7 @@ impl SetTTL for InternalResourceRecord {
             },
             //  Self::InvalidType => &0,
             _ => {
-                log::error!("Tried to set TTL on an invalid type! {:?}", self);
+                error!("Tried to set TTL on an invalid type! {:?}", self);
                 self
             }
         }
@@ -854,7 +853,7 @@ mod tests {
     use std::net::Ipv6Addr;
     use std::str::FromStr;
 
-    use log::debug;
+    use tracing::debug;
 
     use crate::enums::RecordType;
     use crate::zones::FileZoneRecord;
@@ -1003,13 +1002,13 @@ impl TryFrom<&str> for FileLocRecord {
                 ));
             }
         };
-        log::trace!("{result:?}");
+        trace!("{result:?}");
 
         let d1: u8 = match result.name("d1") {
             Some(value) => match value.as_str().parse::<u8>() {
                 Ok(value) => value,
                 Err(err) => {
-                    log::error!("Failed to parse d1: {err:?}");
+                    error!("Failed to parse d1: {err:?}");
                     0
                 }
             },
@@ -1019,7 +1018,7 @@ impl TryFrom<&str> for FileLocRecord {
             Some(value) => match value.as_str().parse::<u8>() {
                 Ok(value) => value,
                 Err(err) => {
-                    log::error!("Failed to parse d2: {err:?}");
+                    error!("Failed to parse d2: {err:?}");
                     0
                 }
             },
@@ -1030,7 +1029,7 @@ impl TryFrom<&str> for FileLocRecord {
             Some(value) => match value.as_str().parse::<u8>() {
                 Ok(value) => value,
                 Err(err) => {
-                    log::error!("Failed to parse m1: {err:?}");
+                    error!("Failed to parse m1: {err:?}");
                     FileLocRecord::default().m1
                 }
             },
@@ -1040,7 +1039,7 @@ impl TryFrom<&str> for FileLocRecord {
             Some(value) => match value.as_str().parse::<u8>() {
                 Ok(value) => value,
                 Err(err) => {
-                    log::error!("Failed to parse m2: {err:?}");
+                    error!("Failed to parse m2: {err:?}");
                     FileLocRecord::default().m2
                 }
             },
@@ -1049,11 +1048,11 @@ impl TryFrom<&str> for FileLocRecord {
         let s1: f32 = match result.name("s1") {
             Some(value) => match f32::from_str_radix(value.as_str(), 10) {
                 Ok(value) => {
-                    log::trace!("Parsed s1 as {value} from string");
+                    trace!("Parsed s1 as {value} from string");
                     value
                 }
                 Err(err) => {
-                    log::error!("Failed to parse s1: {err:?}");
+                    error!("Failed to parse s1: {err:?}");
                     0.0
                 }
             },
@@ -1063,7 +1062,7 @@ impl TryFrom<&str> for FileLocRecord {
             Some(value) => match f32::from_str_radix(value.as_str(), 10) {
                 Ok(value) => value,
                 Err(err) => {
-                    log::error!("Failed to parse s2: {err:?}");
+                    error!("Failed to parse s2: {err:?}");
                     0.0
                 }
             },
@@ -1106,7 +1105,7 @@ impl TryFrom<&str> for FileLocRecord {
         let size: u32 = match result.name("size") {
             Some(value) => match value.as_str().parse::<u32>() {
                 Ok(value) => {
-                    log::trace!("Parsed size as {value} from string");
+                    trace!("Parsed size as {value} from string");
                     value
                 }
                 Err(err) => {
@@ -1116,7 +1115,7 @@ impl TryFrom<&str> for FileLocRecord {
                 }
             },
             None => {
-                log::trace!("defaulting to size of 1");
+                trace!("defaulting to size of 1");
                 DEFAULT_LOC_SIZE
             }
         };
@@ -1126,12 +1125,12 @@ impl TryFrom<&str> for FileLocRecord {
             Some(value) => match value.as_str().parse::<u32>() {
                 Ok(value) => value,
                 Err(_) => {
-                    log::warn!("Failed to parse {value:?} as horizontal precision, using default");
+                    warn!("Failed to parse {value:?} as horizontal precision, using default");
                     DEFAULT_LOC_HORIZ_PRE
                 }
             },
             None => {
-                log::trace!("Using horiz_pre default as it wasn't specified");
+                trace!("Using horiz_pre default as it wasn't specified");
                 DEFAULT_LOC_HORIZ_PRE
             }
         };
@@ -1140,13 +1139,13 @@ impl TryFrom<&str> for FileLocRecord {
             Some(value) => match value.as_str().parse::<u32>() {
                 Ok(value) => value,
                 Err(_) => {
-                    log::warn!("Failed to parse {value:?} as vertical precision, using default");
+                    warn!("Failed to parse {value:?} as vertical precision, using default");
                     DEFAULT_LOC_VERT_PRE
                 }
             },
 
             None => {
-                log::trace!("Using vert_pre default as it wasn't specified");
+                trace!("Using vert_pre default as it wasn't specified");
                 DEFAULT_LOC_VERT_PRE
             }
         };

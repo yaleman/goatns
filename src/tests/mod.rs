@@ -16,10 +16,10 @@ use crate::tests::test_harness::*;
 use crate::utils::name_as_bytes;
 use crate::{get_question_qname, PacketType, Question};
 use ipnet::IpNet;
-use log::debug;
 use packed_struct::prelude::*;
 use std::net::IpAddr;
 use std::str::FromStr;
+use tracing::{debug, error, trace};
 
 #[test]
 /// test my assumptions about ipnet things
@@ -247,7 +247,7 @@ async fn test_cloudflare_soa_reply() {
         .expect("Failed to get header bytes");
     their_header.ancount = 1;
     assert_eq!(header, their_header.as_answer());
-    log::trace!("Parsed header matched!");
+    trace!("Parsed header matched!");
 
     let mut current_block: &str;
     for (index, byte) in reply_bytes.iter().enumerate() {
@@ -272,7 +272,7 @@ async fn test_cloudflare_soa_reply() {
                     true => std::str::from_utf8(&b).unwrap_or("-"),
                     false => " ",
                 };
-                log::trace!(
+                trace!(
                     "{current_block} \t {index} us: {}\t{:#010b}\tex: {expected_byte}\t{expected_byte:#010b} \tchars: {} {}\t matched: {}",
                     byte.clone(),
                     byte.clone(),
@@ -368,8 +368,8 @@ async fn build_ackcdn_allzeros() {
         0x00,
     ];
 
-    log::trace!("Our length: {}", reply_bytes.len());
-    log::trace!("Exp length: {}", expected_bytes.len());
+    trace!("Our length: {}", reply_bytes.len());
+    trace!("Exp length: {}", expected_bytes.len());
 
     let mut current_block: &str;
     for (index, byte) in reply_bytes.iter().enumerate() {
@@ -381,7 +381,7 @@ async fn build_ackcdn_allzeros() {
             current_block = "Answer   ";
         }
         match expected_bytes.get(index) {
-            Some(expected_byte) => log::error!(
+            Some(expected_byte) => error!(
                 "{} \t {} us: {} ex: {} {}",
                 current_block,
                 index,

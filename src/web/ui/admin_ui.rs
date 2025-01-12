@@ -11,7 +11,7 @@ use axum::{Form, Router};
 use serde::Deserialize;
 use sqlx::Row;
 use tower_sessions::Session;
-use tracing::debug;
+use tracing::{debug, error};
 
 use super::check_logged_in;
 
@@ -55,7 +55,7 @@ pub(crate) async fn report_unowned_records(
     let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 
     let mut pool = state.read().await.connpool.acquire().await.map_err(|err| {
-        log::error!("Failed to get DB connection: {err:?}");
+        error!("Failed to get DB connection: {err:?}");
         Redirect::to(Urls::Dashboard.as_ref())
     })?;
 
@@ -69,16 +69,16 @@ pub(crate) async fn report_unowned_records(
     .await
     {
         Ok(val) => {
-            log::debug!("Got the rows!");
+            debug!("Got the rows!");
             val
         }
         Err(err) => {
-            log::error!("Failed to query records from DB: {err:?}");
+            error!("Failed to query records from DB: {err:?}");
             vec![]
         }
     };
 
-    log::debug!("starting to do the rows!");
+    debug!("starting to do the rows!");
 
     let records: Vec<ZoneRecord> = rows
         .iter()
@@ -93,7 +93,7 @@ pub(crate) async fn report_unowned_records(
         user_is_admin: user.admin,
         records,
         zones: FileZone::get_unowned(&mut pool).await.map_err(|err| {
-            log::error!("Failed to get unowned zones: {err:?}");
+            error!("Failed to get unowned zones: {err:?}");
             Redirect::to(Urls::Admin.as_ref())
         })?,
     })
@@ -122,14 +122,14 @@ pub(crate) async fn assign_zone_ownership(
     let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 
     let mut txn = state.read().await.connpool.begin().await.map_err(|err| {
-        log::error!("Failed to start transaction: {err:?}");
+        error!("Failed to start transaction: {err:?}");
         Redirect::to(Urls::Admin.as_ref())
     })?;
 
     let zone = FileZone::get(&state.read().await.connpool, id)
         .await
         .map_err(|err| {
-            log::error!("Failed to get zone by ID: {err:?}");
+            error!("Failed to get zone by ID: {err:?}");
             Redirect::to(Urls::Admin.as_ref())
         })?;
 
@@ -138,7 +138,7 @@ pub(crate) async fn assign_zone_ownership(
         let user = User::get_by_name(&mut txn, username.as_str())
             .await
             .map_err(|err| {
-                log::error!("Failed to get user by name: {err:?}");
+                error!("Failed to get user by name: {err:?}");
                 Redirect::to(Urls::Admin.as_ref())
             })?;
         drop(txn);
@@ -153,7 +153,7 @@ pub(crate) async fn assign_zone_ownership(
                 .save(&state.read().await.connpool)
                 .await
                 .map_err(|err| {
-                    log::error!("Failed to insert zone ownership: {err:?}");
+                    error!("Failed to insert zone ownership: {err:?}");
                     Redirect::to(Urls::Admin.as_ref())
                 })?;
                 return Err(Redirect::to(Urls::Admin.as_ref()));

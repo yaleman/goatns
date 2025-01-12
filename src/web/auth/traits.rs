@@ -1,5 +1,6 @@
 use axum::response::Redirect;
 use openidconnect::EndUserUsername;
+use tracing::error;
 
 use crate::web::utils::Urls;
 
@@ -19,7 +20,7 @@ impl CustomClaimTypeThings for CustomClaimType {
         } else if let Some(user_email) = self.preferred_username() {
             email = user_email.to_string();
         } else {
-            log::error!("Couldn't extract email address from claim: {self:?}");
+            error!("Couldn't extract email address from claim: {self:?}");
             return Err(Urls::Home.redirect());
         }
         Ok(email)

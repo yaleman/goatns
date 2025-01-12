@@ -6,11 +6,10 @@ use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
 use crate::zones::{FileZone, ZoneRecord};
-use log::debug;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
-use tracing::{error, instrument};
+use tracing::{debug, error, info, instrument, warn};
 
 type Responder<T> = oneshot::Sender<T>;
 
@@ -156,7 +155,7 @@ async fn handle_get_command(
     match db::get_records(conn, db_name.to_string(), rrtype, rclass, true).await {
         Ok(value) => zr.typerecords.extend(value),
         Err(err) => {
-            log::error!("Failed to query db: {err:?}")
+            error!("Failed to query db: {err:?}")
         }
     };
 
@@ -183,6 +182,7 @@ async fn handle_get_command(
 }
 
 /// Import a file directly into the database. Normally, you shouldn't use this directly, call it through calls to the datastore.
+#[instrument(level = "info", skip(pool))]
 pub async fn handle_import_file(
     pool: &Pool<Sqlite>,
     filename: String,
@@ -196,8 +196,10 @@ pub async fn handle_import_file(
     };
 
     if zones.is_empty() {
-        log::warn!("No zones to import!");
+        warn!("No zones to import!");
         return Err(GoatNsError::EmptyFile);
+    } else {
+        debug!("Starting import process");
     }
 
     let mut txn = pool.begin().await?;
@@ -206,15 +208,16 @@ pub async fn handle_import_file(
             .save_with_txn(&mut txn)
             .await
             .inspect_err(|err| error!("Failed to save zone {}: {err:?}", zone.name))?;
-        log::info!("Imported {}", zone.name);
+        info!("Imported {}", zone.name);
     }
     txn.commit()
         .await
-        .inspect_err(|err| log::error!("Failed to commit transaction! {:?}", err))?;
-    log::info!("Completed import process");
+        .inspect_err(|err| error!("Failed to commit transaction! {:?}", err))?;
+    info!("Completed import process");
     Ok(())
 }
 
+#[instrument(level = "debug", skip(tx, pool))]
 async fn handle_get_zone(
     tx: oneshot::Sender<Option<FileZone>>,
     pool: &Pool<Sqlite>,
@@ -222,8 +225,8 @@ async fn handle_get_zone(
     name: Option<String>,
 ) -> Result<(), GoatNsError> {
     let mut txn = pool.begin().await?;
-
     let zone = crate::db::get_zone_with_txn(&mut txn, id, name).await?;
+    drop(txn);
 
     tx.send(zone).map_err(|e| {
         GoatNsError::SendError(format!("Failed to send response on tokio channel: {:?}", e))
@@ -239,10 +242,10 @@ async fn handle_get_zone_names(
 ) -> Result<(), GoatNsError> {
     let mut txn = pool.begin().await?;
 
-    log::debug!("handle_get_zone_names: user={user:?}");
+    debug!("handle_get_zone_names: user={user:?}");
     let zones = user.get_zones_for_user(&mut txn, offset, limit).await?;
 
-    log::debug!("handle_get_zone_names: {zones:?}");
+    debug!("handle_get_zone_names: {zones:?}");
     tx.send(zones).map_err(|e| {
         GoatNsError::SendError(format!("Failed to send response on tokio channel: {:?}", e))
     })
@@ -254,7 +257,7 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
         Command::GetZone { id, name, resp } => {
             let res = handle_get_zone(resp, connpool, id, name).await;
             if let Err(e) = res {
-                log::error!("{e:?}")
+                error!("{e:?}")
             };
         }
         Command::GetZoneNames {
@@ -265,13 +268,13 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
         } => {
             let res = handle_get_zone_names(user, resp, connpool, offset, limit).await;
             if let Err(e) = res {
-                log::error!("{e:?}")
+                error!("{e:?}")
             };
         }
         Command::Shutdown => {
             #[cfg(test)]
             println!("### Datastore was sent shutdown message, shutting down.");
-            log::info!("Datastore was sent shutdown message, shutting down.");
+            info!("Datastore was sent shutdown message, shutting down.");
             return Err("Datastore was sent shutdown message, shutting down.".to_string());
         }
         Command::ImportFile {
@@ -283,10 +286,10 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
                 .await
                 .map_err(|e| format!("{e:?}"))?;
             match resp.send(()) {
-                Ok(_) => log::info!("DS Sent Success"),
+                Ok(_) => info!("DS Sent Success"),
                 Err(err) => {
                     let res = format!("Failed to send response: {err:?}");
-                    log::info!("{res}");
+                    info!("{res}");
                 }
             }
         }
@@ -298,7 +301,7 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
         } => {
             let res = handle_get_command(connpool, name, rrtype, rclass, resp).await;
             if let Err(e) = res {
-                log::error!("{e:?}")
+                error!("{e:?}")
             };
         }
         Command::CreateZone { zone, userid, resp } => {
@@ -317,13 +320,13 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
                     }
 
                     if let Err(err) = resp.send(*zone.clone()) {
-                        log::error!("Failed to send message back to caller after creating zone {zone:?}: {err:?}");
+                        error!("Failed to send message back to caller after creating zone {zone:?}: {err:?}");
                     } else {
-                        log::info!("Created zone: {:?}", zone);
+                        info!("Created zone: {:?}", zone);
                     }
                 }
                 Err(err) => {
-                    log::error!("Failed to create zone: {zone:?} {err:?}");
+                    error!("Failed to create zone: {zone:?} {err:?}");
                 }
             };
         }
@@ -347,16 +350,16 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
                 disabled,
                 ..Default::default()
             };
-            log::debug!("Creating: {new_user:?}");
+            debug!("Creating: {new_user:?}");
             let res = match new_user.save(connpool).await {
                 Ok(_) => true,
                 Err(error) => {
-                    log::error!("Failed to create {username}: {error:?}");
+                    error!("Failed to create {username}: {error:?}");
                     false
                 }
             };
             if let Err(error) = resp.send(res) {
-                log::error!("Failed to send message back to caller: {error:?}");
+                error!("Failed to send message back to caller: {error:?}");
             }
         }
         Command::DeleteUser => error!("Unimplemented: Command::DeleteUser"),
@@ -397,7 +400,7 @@ pub async fn manager(
     cron_db_cleanup_timer: Option<Duration>,
 ) -> Result<(), String> {
     if let Some(timer) = cron_db_cleanup_timer {
-        log::debug!("Spawning DB cron cleanup task");
+        debug!("Spawning DB cron cleanup task");
         tokio::spawn(db::cron_db_cleanup(connpool.clone(), timer, None));
     }
 

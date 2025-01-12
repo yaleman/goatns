@@ -26,10 +26,11 @@ extern crate lazy_static;
 use crate::enums::*;
 use crate::utils::*;
 use error::GoatNsError;
-use log::trace;
 use packed_struct::prelude::*;
 use std::fmt::{Debug, Display};
 use std::str::from_utf8;
+use tracing::instrument;
+use tracing::trace;
 
 pub mod cli;
 /// Configuration handling for the server
@@ -302,6 +303,7 @@ impl Question {
     }
 
     /// hand it the buffer and the things, and get back a [Question]
+    #[instrument(level = "debug", skip(buf))]
     fn from_packets(buf: &[u8]) -> Result<Self, String> {
         let qname = get_question_qname(buf)?;
 

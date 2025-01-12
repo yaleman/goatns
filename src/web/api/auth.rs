@@ -2,7 +2,7 @@ use axum::http::StatusCode;
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
-use tracing::error;
+use tracing::{debug, error, info};
 use utoipa::ToSchema;
 
 use crate::db::User;
@@ -46,16 +46,16 @@ pub async fn login(
     #[cfg(test)]
     println!("Got login payload: {payload:?}");
     #[cfg(not(test))]
-    log::debug!("Got login payload: {payload:?}");
+    debug!("Got login payload: {payload:?}");
     let mut pool = state.read().await.connpool.clone();
     let token = match User::get_token(&mut pool, &payload.token_key).await {
         Ok(val) => val,
         Err(err) => {
-            log::info!(
+            info!(
                 "action=api_login tokenkey={} result=failure reason=\"no token found\"",
                 payload.token_key
             );
-            log::debug!("Error: {err:?}");
+            debug!("Error: {err:?}");
             session.flush().await.map_err(|err| {
                 error!("Failed to flush session: {err:?}");
                 (
@@ -85,7 +85,7 @@ pub async fn login(
                         Json(AuthResponse::from("Failed to flush session!".to_string())),
                     )
                 })?;
-                log::info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.token_key);
+                info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.token_key);
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(AuthResponse {
@@ -93,7 +93,7 @@ pub async fn login(
                     }),
                 ));
             };
-            log::info!("action=api_login user={} result=success", payload.token_key);
+            info!("action=api_login user={} result=success", payload.token_key);
             Ok((
                 StatusCode::OK,
                 Json(AuthResponse {
@@ -111,7 +111,7 @@ pub async fn login(
             })?;
             #[cfg(test)]
             println!("Failed to validate token! {err:?}");
-            log::error!(
+            error!(
         "action=api_login username={} userid={} tokenkey=\"{:?}\" result=failure reason=\"failed to match token: {err:?}\"",
         token.user.username,
         token.user.id.map(|id| id.to_string()).unwrap_or("<unknown user id>".to_string()),

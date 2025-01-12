@@ -9,6 +9,7 @@ use base64::{engine::general_purpose, Engine as _};
 use packed_struct::PackedStruct;
 use serde::{Deserialize, Serialize};
 use std::str::from_utf8;
+use tracing::{debug, error, trace};
 
 use crate::db::get_all_fzr_by_name;
 use crate::enums::{Rcode, RecordClass, RecordType};
@@ -119,7 +120,7 @@ async fn parse_raw_http(bytes: Vec<u8>) -> Result<GetQueryString, String> {
     };
 
     let question = Question::from_packets(&bytes[HEADER_BYTES..])?;
-    log::debug!("Question: {question:?}");
+    debug!("Question: {question:?}");
 
     let name = match from_utf8(&question.qname) {
         Ok(value) => value.to_string(),
@@ -185,13 +186,13 @@ pub async fn handle_get(
         let bytes = match general_purpose::STANDARD.decode(dns) {
             Ok(val) => val,
             Err(err) => {
-                log::debug!("Failed to parse DoH GET RAW: {err:?}");
+                debug!("Failed to parse DoH GET RAW: {err:?}");
                 return Err(response_500()); // TODO: this could probably be a SERVFAIL?
             }
         };
 
         let query = parse_raw_http(bytes).await.map_err(|err| {
-            log::error!("Failed to parse DoH GET RAW: {err:?}");
+            error!("Failed to parse DoH GET RAW: {err:?}");
             response_500() // TODO: should this be a SERVFAIL?
         })?;
         if let Some(name) = query.name {
@@ -202,7 +203,7 @@ pub async fn handle_get(
     }
 
     let mut read_txn = state.read().await.connpool.begin().await.map_err(|err| {
-        log::error!("Failed to get DB connection: {err:?}");
+        error!("Failed to get DB connection: {err:?}");
         response_500()
     })?;
 
@@ -215,23 +216,23 @@ pub async fn handle_get(
     {
         Ok(value) => value,
         Err(error) => {
-            log::error!("Failed to query {qname}/{}: {error:?}", rrtype);
+            error!("Failed to query {qname}/{}: {error:?}", rrtype);
             return Err(response_500()); // TODO: This should probably be a SERVFAIL
         }
     };
 
-    log::trace!("Completed record request...");
+    trace!("Completed record request...");
 
     let ttl = records.iter().map(|r| r.ttl).min();
     let ttl = match ttl {
         Some(val) => val.to_owned(),
         None => {
-            log::trace!("Failed to get minimum TTL from query, using 1");
+            trace!("Failed to get minimum TTL from query, using 1");
             1
         }
     };
 
-    log::trace!("Returned records: {records:?}");
+    trace!("Returned records: {records:?}");
 
     match response_type {
         ResponseType::Invalid => Err(response_500()),
@@ -262,7 +263,7 @@ pub async fn handle_get(
             };
 
             let response = serde_json::to_string(&reply).map_err(|err| {
-                log::error!("Failed to parse DoH GET request into JSON: {err:?}");
+                error!("Failed to parse DoH GET request into JSON: {err:?}");
                 response_500()
             })?;
 
@@ -272,7 +273,7 @@ pub async fn handle_get(
                 .header("Cache-Control", format!("max-age={ttl}"));
             // TODO: add handler for DNSSEC responses
             response_builder.body(Body::from(response)).map_err(|err| {
-                log::error!("Failed to turn DoH GET request into JSON: {err:?}");
+                error!("Failed to turn DoH GET request into JSON: {err:?}");
                 response_500()
             })
         }
@@ -323,11 +324,11 @@ pub async fn handle_get(
                     .header("Cache-Control", format!("max-age={ttl}"))
                     .body(Body::from(value))
                     .map_err(|err| {
-                        log::error!("Failed to turn DoH GET request into bytes: {err:?}");
+                        error!("Failed to turn DoH GET request into bytes: {err:?}");
                         response_500()
                     }),
                 Err(err) => {
-                    log::error!("Failed to turn DoH GET request into bytes: {err:?}");
+                    error!("Failed to turn DoH GET request into bytes: {err:?}");
                     Err(response_500())
                 }
             }
@@ -370,7 +371,7 @@ pub async fn handle_post(
                     if value.len() > 65535 {
                         reply.header.truncated = true;
                         let mut bytes: Vec<u8> = reply.as_bytes().await.map_err(|err| {
-                            log::error!("Failed to turn DoH POST response into bytes: {err:?}");
+                            error!("Failed to turn DoH POST response into bytes: {err:?}");
                             response_500()
                         })?;
                         bytes.resize(65535, 0);
@@ -380,7 +381,7 @@ pub async fn handle_post(
                     }
                 }
                 Err(error) => {
-                    log::error!("Failed to turn DoH POST response into bytes! {error:?}");
+                    error!("Failed to turn DoH POST response into bytes! {error:?}");
                     return Err(response_500());
                 }
             };
@@ -397,12 +398,12 @@ pub async fn handle_post(
                 .header("Cache-Control", format!("max-age={ttl}"))
                 .body(Body::from(bytes))
                 .map_err(|err| {
-                    log::error!("Failed to turn DoH POST response into bytes: {err:?}");
+                    error!("Failed to turn DoH POST response into bytes: {err:?}");
                     response_500()
                 })
         }
         Err(err) => {
-            log::error!("Failed to parse DoH POST query: {err:?}");
+            error!("Failed to parse DoH POST query: {err:?}");
             Err(response_500())
         }
     }

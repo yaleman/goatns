@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteRow};
 use sqlx::{Arguments, ConnectOptions, FromRow, Pool, Row, Sqlite, SqliteConnection, SqlitePool};
 use tokio::time;
-use tracing::{debug, error, instrument};
+use tracing::{debug, error, info, instrument, trace};
 
 pub(crate) mod entities;
 #[cfg(test)]
@@ -32,7 +32,7 @@ pub async fn get_conn(
     let db_path: &str = &shellexpand::full(&config_reader.sqlite_path)
         .map_err(|err| GoatNsError::StartupError(err.to_string()))?;
     let db_url = format!("sqlite://{db_path}?mode=rwc");
-    log::debug!("Opening Database: {db_url}");
+    debug!("Opening Database: {db_url}");
 
     let options = SqliteConnectOptions::from_str(&db_url)?;
     let options = if config_reader.sql_log_statements {
@@ -59,7 +59,7 @@ pub async fn start_db(pool: &SqlitePool) -> Result<(), GoatNsError> {
     UserAuthToken::create_table(pool).await?;
     FileZoneRecord::create_table(pool).await?;
     ZoneOwnership::create_table(pool).await?;
-    log::info!("Completed DB Startup!");
+    info!("Completed DB Startup!");
     Ok(())
 }
 
@@ -154,21 +154,21 @@ impl User {
                     LIMIT ?1 OFFSET ?2"
             }
         };
-        log::trace!(
+        trace!(
             "get_zones_for_user query: {:?}",
             query_string.replace('\n', "")
         );
-        log::trace!("Building query");
+        trace!("Building query");
         let query = sqlx::query(query_string).bind(limit).bind(offset);
         let query = match self.admin {
             true => query,
             false => query.bind(self.id),
         };
-        log::trace!("About to send query");
+        trace!("About to send query");
 
         let rows: Vec<FileZone> = match query.fetch_all(txn).await {
             Err(error) => {
-                log::error!("Error: {error:?}");
+                error!("Error: {error:?}");
                 vec![]
             }
             Ok(rows) => rows.into_iter().map(|row| row.into()).collect(),
@@ -298,6 +298,8 @@ impl ZoneOwnership {
 }
 
 /// Query the zones table, name_or_id can be the zoneid or the name - if they match then you're bad and you should feel bad.
+
+#[instrument(level = "debug", skip(txn))]
 pub async fn get_zone_with_txn(
     txn: &mut SqliteConnection,
     id: Option<i64>,
@@ -313,6 +315,7 @@ pub async fn get_zone_with_txn(
     .bind(id)
     .fetch_optional(&mut *txn)
     .await?;
+
     let mut zone = match result {
         None => return Ok(None),
         Some(row) => {
@@ -350,7 +353,7 @@ pub async fn get_zone_with_txn(
     .await?;
 
     zone.records = result
-        .iter()
+        .into_iter()
         .filter_map(|r| match FileZoneRecord::try_from(r) {
             Ok(val) => Some(val),
             Err(_) => None,
@@ -430,7 +433,7 @@ pub async fn get_records(
             let min_ttl = match min_ttl {
                 Some(val) => val.to_owned(),
                 None => {
-                    log::error!("Somehow failed to get minimum TTL from query");
+                    error!("Somehow failed to get minimum TTL from query");
                     1
                 }
             };
@@ -490,15 +493,15 @@ impl FileZone {
                 .await?;
 
                 if res.is_empty() {
-                    log::trace!("No results returned for zoneid={:?}", id);
+                    trace!("No results returned for zoneid={:?}", id);
                 }
 
                 let results: Vec<FileZoneRecord> = res
-                    .iter()
+                    .into_iter()
                     .filter_map(|r| FileZoneRecord::try_from(r).ok())
                     .collect();
 
-                log::trace!("results: {results:?}");
+                trace!("results: {results:?}");
                 Ok(results)
             }
             None => Err(GoatNsError::InvalidValue("Zone ID is None".to_string())),
@@ -585,7 +588,7 @@ impl DBEntity for FileZone {
     async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
         let mut tx = pool.begin().await?;
 
-        log::debug!("Ensuring DB Zones table exists");
+        debug!("Ensuring DB Zones table exists");
         sqlx::query(
             r#"CREATE TABLE IF NOT EXISTS
             zones (
@@ -603,7 +606,7 @@ impl DBEntity for FileZone {
         .await?;
 
         // .execute(tx).await;
-        log::debug!("Ensuring DB Records index exists");
+        debug!("Ensuring DB Records index exists");
         sqlx::query(
             "CREATE UNIQUE INDEX
             IF NOT EXISTS
@@ -638,7 +641,7 @@ impl DBEntity for FileZone {
         .fetch_one(&mut *txn)
         .await?;
         let mut zone: FileZone = res.into();
-        log::debug!("got a zone: {zone:?}");
+        debug!("got a zone: {zone:?}");
 
         if zone.id.is_none() {
             return Err(sqlx::Error::RowNotFound.into());
@@ -701,14 +704,17 @@ impl DBEntity for FileZone {
     }
 
     /// save the entity to the database, but you're in a transaction
+    #[instrument(skip(txn))]
     async fn save_with_txn<'t>(
         &self,
         txn: &mut SqliteConnection,
     ) -> Result<Box<Self>, GoatNsError> {
         // check the zone exists
+
+        debug!("Getting zone");
         let find_zone = match get_zone_with_txn(txn, None, Some(self.name.clone())).await {
             Ok(val) => {
-                log::trace!("Found existing zone");
+                trace!("Found existing zone");
                 val
             }
             Err(err) => {
@@ -717,12 +723,14 @@ impl DBEntity for FileZone {
             }
         };
 
+        debug!("got zone!");
+
         let updated_zone: FileZone = match find_zone {
             None => {
                 // if it's new, add it
                 #[cfg(test)]
                 eprintln!("Creating zone {self:?}");
-                log::debug!("Creating zone {self:?}");
+                debug!("Creating zone {self:?}");
 
                 // zone.create
                 let serial = self.serial.to_string();
@@ -747,7 +755,7 @@ impl DBEntity for FileZone {
                 .await?;
 
                 #[cfg(not(test))]
-                log::debug!("Insert statement succeeded");
+                debug!("Insert statement succeeded");
                 #[cfg(test)]
                 eprintln!("Done creating zone");
                 match get_zone_with_txn(txn, None, Some(self.name.clone())).await? {
@@ -761,15 +769,15 @@ impl DBEntity for FileZone {
                 if !self.matching_data(&ez) {
                     // update it if it's wrong
 
-                    log::debug!("Updating zone");
+                    debug!("Updating zone");
                     let mut new_zone = self.clone();
                     new_zone.id = ez.id;
 
                     let updated = new_zone.update_with_txn(txn).await?;
 
-                    log::debug!("Updated: {:?} record", updated);
+                    debug!("Updated: {:?} record", updated);
                 } else {
-                    log::debug!("Zone data is fine")
+                    debug!("Zone data is fine")
                 }
                 match get_zone_with_txn(txn, None, Some(self.name.clone())).await? {
                     Some(val) => val,
@@ -779,11 +787,11 @@ impl DBEntity for FileZone {
                 }
             }
         };
-        log::trace!("Zone after update: {updated_zone:?}");
+        debug!("Zone after update: {updated_zone:?}");
 
         // drop all the records
         debug!("Dropping all records for zone {self:?}");
-        // log::debug!("Dropping all records for zone {self:?}");
+        // debug!("Dropping all records for zone {self:?}");
         sqlx::query("delete from records where zoneid = ?")
             .bind(updated_zone.id)
             .execute(&mut *txn)
@@ -794,7 +802,7 @@ impl DBEntity for FileZone {
             record.zoneid = updated_zone.id;
             #[cfg(test)]
             eprintln!("Creating new zone record: {record:?}");
-            log::trace!("Creating new zone record: {record:?}");
+            trace!("Creating new zone record: {record:?}");
             if record.name == "@" {
                 record.name = "".to_string();
             }
@@ -893,7 +901,7 @@ impl DBEntity for FileZoneRecord {
     const TABLE: &'static str = "records";
 
     async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
-        log::debug!("Ensuring DB Records table exists");
+        debug!("Ensuring DB Records table exists");
 
         let mut tx = pool.begin().await?;
 
@@ -912,7 +920,7 @@ impl DBEntity for FileZoneRecord {
         )
         .execute(&mut *tx)
         .await?;
-        log::debug!("Ensuring DB Records index exists");
+        debug!("Ensuring DB Records index exists");
         sqlx::query(
             "CREATE UNIQUE INDEX
         IF NOT EXISTS
@@ -923,7 +931,7 @@ impl DBEntity for FileZoneRecord {
         )
         .execute(&mut *tx)
         .await?;
-        log::debug!("Ensuring DB Records view exists");
+        debug!("Ensuring DB Records view exists");
         // this view lets us query based on the full name
         sqlx::query(
         &format!("CREATE VIEW IF NOT EXISTS {} ( record_id, zoneid, rrtype, rclass, rdata, name, ttl ) as
@@ -981,7 +989,7 @@ impl DBEntity for FileZoneRecord {
         .fetch_all(txn)
         .await?;
         let res = res
-            .iter()
+            .into_iter()
             .filter_map(|r| match FileZoneRecord::try_from(r) {
                 Ok(val) => Some(Box::from(val)),
                 Err(err) => {
@@ -1022,7 +1030,7 @@ impl DBEntity for FileZoneRecord {
     ) -> Result<Box<Self>, GoatNsError> {
         #[cfg(test)]
         eprintln!("Starting save_with_txn for {self:?}");
-        log::trace!("Starting save_with_txn for {self:?}");
+        trace!("Starting save_with_txn for {self:?}");
         let record_name = match self.name.len() {
             0 => None,
             _ => Some(self.to_owned().name),
@@ -1150,7 +1158,7 @@ impl DBEntity for ZoneOwnership {
 
         #[cfg(test)]
         eprintln!("Ensuring DB {} table exists", Self::TABLE);
-        log::debug!("Ensuring DB {} table exists", Self::TABLE);
+        debug!("Ensuring DB {} table exists", Self::TABLE);
         sqlx::query(&format!(
             r#"CREATE TABLE IF NOT EXISTS
                 {} (
@@ -1167,7 +1175,7 @@ impl DBEntity for ZoneOwnership {
 
         #[cfg(test)]
         eprintln!("Ensuring DB Ownership index exists");
-        log::debug!("Ensuring DB Ownership index exists");
+        debug!("Ensuring DB Ownership index exists");
         sqlx::query(
             "CREATE UNIQUE INDEX
                 IF NOT EXISTS
@@ -1310,7 +1318,7 @@ impl DBEntity for User {
     const TABLE: &'static str = "users";
 
     async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
-        log::debug!("Ensuring DB Users table exists");
+        debug!("Ensuring DB Users table exists");
         sqlx::query(&format!(
             r#"CREATE TABLE IF NOT EXISTS
         {} (
@@ -1498,7 +1506,7 @@ impl UserAuthToken {
 
     pub async fn cleanup(pool: &SqlitePool) -> Result<(), GoatNsError> {
         let current_time = Utc::now();
-        log::debug!(
+        debug!(
             "Starting cleanup of {} table for sessions expiring before {}",
             Self::TABLE,
             current_time.to_rfc3339()
@@ -1513,7 +1521,7 @@ impl UserAuthToken {
         .await
         {
             Ok(res) => {
-                log::info!(
+                info!(
                     "Cleanup of {} table complete, {} rows deleted.",
                     Self::TABLE,
                     res.rows_affected()
@@ -1521,7 +1529,7 @@ impl UserAuthToken {
                 Ok(())
             }
             Err(error) => {
-                log::error!(
+                error!(
                     "Failed to complete cleanup of {} table: {error:?}",
                     Self::TABLE
                 );
@@ -1537,7 +1545,7 @@ impl DBEntity for UserAuthToken {
 
     async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
         let mut conn = pool.acquire().await?;
-        log::debug!("Ensuring DB {} table exists", Self::TABLE);
+        debug!("Ensuring DB {} table exists", Self::TABLE);
 
         match sqlx::query(&format!(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='{}'",
@@ -1547,7 +1555,7 @@ impl DBEntity for UserAuthToken {
         .await?
         {
             None => {
-                log::debug!("Creating {} table", Self::TABLE);
+                debug!("Creating {} table", Self::TABLE);
                 sqlx::query(&format!(
                     r#"CREATE TABLE IF NOT EXISTS
                     {} (
@@ -1566,7 +1574,7 @@ impl DBEntity for UserAuthToken {
                 .await?;
             }
             Some(_) => {
-                log::debug!("Updating the table");
+                debug!("Updating the table");
                 // get the columns in the table
                 let res = sqlx::query(&format!("PRAGMA table_info({})", Self::TABLE))
                     .fetch_all(&mut *conn)
@@ -1577,19 +1585,19 @@ impl DBEntity for UserAuthToken {
                 for row in res.iter() {
                     let rowname: &str = row.get("name");
                     if rowname == "name" {
-                        log::debug!("Found the name column in the {} table", Self::TABLE);
+                        debug!("Found the name column in the {} table", Self::TABLE);
                         found_name = true;
                     }
 
                     let rowname: &str = row.get("name");
                     if rowname == "tokenkey" {
-                        log::debug!("Found the tokenkey column in the {} table", Self::TABLE);
+                        debug!("Found the tokenkey column in the {} table", Self::TABLE);
                         found_tokenkey = true;
                     }
                 }
 
                 if !found_name {
-                    log::info!("Adding the name column to the {} table", Self::TABLE);
+                    info!("Adding the name column to the {} table", Self::TABLE);
                     sqlx::query(&format!(
                         "ALTER TABLE \"{}\" ADD COLUMN name TEXT NOT NULL DEFAULT \"Token Name\"",
                         Self::TABLE
@@ -1598,7 +1606,7 @@ impl DBEntity for UserAuthToken {
                     .await?;
                 }
                 if !found_tokenkey {
-                    log::info!("Adding the tokenkey column to the {} table, this will drop the contents of the API tokens table, because of the format change.", Self::TABLE);
+                    info!("Adding the tokenkey column to the {} table, this will drop the contents of the API tokens table, because of the format change.", Self::TABLE);
 
                     match dialoguer::Confirm::new()
                         .with_prompt("Please confirm that you want to take this action")
@@ -1611,7 +1619,7 @@ impl DBEntity for UserAuthToken {
                             }
                         }
                         Err(error) => {
-                            log::error!("Cancelled! {error:?}");
+                            error!("Cancelled! {error:?}");
                             return Err(sqlx::Error::Protocol("Cancelled".to_string()).into());
                             // TODO: replace these with proper errors
                         }
@@ -1633,19 +1641,19 @@ impl DBEntity for UserAuthToken {
             .execute(&mut *conn)
             .await
         {
-            Ok(_) => log::trace!(
+            Ok(_) => trace!(
                 "Didn't find  ind_{}_fields index, no action required",
                 Self::TABLE
             ),
             Err(err) => match err {
                 sqlx::Error::Database(ref zzz) => {
                     if zzz.message() != "no such index: ind_user_tokens_fields" {
-                        log::error!("Database Error: {:?}", zzz);
+                        error!("Database Error: {:?}", zzz);
                         return Err(err.into());
                     }
                 }
                 _ => {
-                    log::error!("{err:?}");
+                    error!("{err:?}");
                     return Err(err.into());
                 }
             },
@@ -1704,7 +1712,7 @@ impl DBEntity for UserAuthToken {
             .filter_map(|r| match UserAuthToken::try_from(r) {
                 Ok(r) => Some(Arc::new(r)),
                 Err(e) => {
-                    log::error!("Failed to convert row to UserAuthToken: {e:?}");
+                    error!("Failed to convert row to UserAuthToken: {e:?}");
                     None
                 }
             })
@@ -1827,7 +1835,7 @@ pub async fn cron_db_cleanup(pool: Pool<Sqlite>, period: Duration, max_iter: Opt
         interval.tick().await;
 
         if let Err(error) = UserAuthToken::cleanup(&pool).await {
-            log::error!("Failed to clean up UserAuthToken objects in DB cron: {error:?}");
+            error!("Failed to clean up UserAuthToken objects in DB cron: {error:?}");
         }
         if let Some(max_iter) = max_iter {
             iterations += 1;
@@ -1865,13 +1873,6 @@ pub async fn get_zones_with_txn(
     Ok(rows)
 }
 
-impl TryFrom<&SqliteRow> for FileZoneRecord {
-    type Error = GoatNsError;
-    fn try_from(row: &SqliteRow) -> Result<Self, Self::Error> {
-        row.to_owned().try_into()
-    }
-}
-
 impl TryFrom<SqliteRow> for FileZoneRecord {
     type Error = GoatNsError;
     fn try_from(row: SqliteRow) -> Result<Self, Self::Error> {
@@ -1886,7 +1887,7 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
             return Err(GoatNsError::RFC8482);
         }
 
-        Ok(FileZoneRecord {
+        Ok(Self {
             zoneid: row.get("zoneid"),
             id: row.get("id"),
             name,
