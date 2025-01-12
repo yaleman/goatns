@@ -401,13 +401,15 @@ pub async fn get_records(
     let res = sqlx::query(&query)
         .bind(&name)
         .bind(rrtype as u16)
-        .bind(rclass)
+        .bind(rclass as u16)
         .fetch_all(&mut *conn.acquire().await?)
         .await?;
 
     if res.is_empty() {
-        eprintln!("No results returned for {name} {rrtype} {rclass}");
-        log::trace!("No results returned for {name} ");
+        debug!(
+            "No results returned for name={} rrtype={} rclass={}",
+            name, rrtype as u16, rclass as u16
+        );
     }
 
     let mut results: Vec<InternalResourceRecord> = vec![];
@@ -927,7 +929,7 @@ impl DBEntity for FileZoneRecord {
         &format!("CREATE VIEW IF NOT EXISTS {} ( record_id, zoneid, rrtype, rclass, rdata, name, ttl ) as
         SELECT records.id as record_id, zones.id as zoneid, records.rrtype, records.rclass ,records.rdata,
         CASE
-            WHEN records.name is NULL THEN zones.name
+            WHEN records.name is NULL OR length(records.name) == 0 THEN zones.name
             ELSE records.name || '.' || zones.name
         END AS name,
         CASE WHEN records.ttl is NULL then zones.minimum
