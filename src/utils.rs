@@ -2,9 +2,9 @@ use crate::datastore::Command;
 use crate::enums::AgentState;
 use crate::error::GoatNsError;
 use crate::HEADER_BYTES;
-use log::{debug, trace};
 use std::str::from_utf8;
 use tokio::sync::{broadcast, mpsc};
+use tracing::{debug, trace};
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
     for (index, curr_byte) in search.iter().enumerate() {

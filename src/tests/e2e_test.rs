@@ -21,7 +21,7 @@ mod tests {
         }
 
         let config = crate::config::ConfigFile::try_as_cowcell(Some(
-            &"./examples/test_config/goatns-test.json".to_string(),
+            "./examples/test_config/goatns-test.json".to_string(),
         ))?;
 
         println!("Config as loaded");

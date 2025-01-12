@@ -24,7 +24,6 @@ use axum_csp::CspUrlMatcher;
 use axum_tracing_opentelemetry::middleware::OtelAxumLayer;
 use chrono::{DateTime, NaiveDateTime, TimeDelta, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
-use log::error;
 use oauth2::{ClientId, ClientSecret};
 use openidconnect::Nonce;
 use regex::RegexSet;
@@ -38,6 +37,7 @@ use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
+use tracing::{error, trace};
 use utils::{handler_404, Urls};
 use utoipa::OpenApi;
 
@@ -77,7 +77,7 @@ impl GoatStateTrait for GoatState {
         self.read().await.connpool.clone()
     }
     async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata) {
-        log::debug!("Storing OIDC config!");
+        tracing::debug!("Storing OIDC config!");
         let mut writer = self.write().await;
         writer.oidc_config = Some(response.clone());
         writer.oidc_config_updated =
@@ -102,7 +102,7 @@ impl GoatStateTrait for GoatState {
     /// Store the PKCE verifier details server-side for when the user comes back with their auth token
     async fn push_verifier(&mut self, csrftoken: String, verifier: (String, Nonce)) {
         let mut writer = self.write().await;
-        log::trace!("Pushing CSRF token into shared state: token={csrftoken}");
+        trace!("Pushing CSRF token into shared state: token={csrftoken}");
         writer.oidc_verifier.insert(csrftoken, verifier);
     }
 }
@@ -125,29 +125,29 @@ fn check_static_dir_exists(static_dir: &PathBuf, config: &ConfigFile) -> bool {
     match static_dir.try_exists() {
         Ok(res) => match res {
             true => {
-                log::info!("Found static resources dir ({static_dir:#?}) for web API.");
+                tracing::info!("Found static resources dir ({static_dir:#?}) for web API.");
                 return true;
             }
             false => {
-                log::error!("Couldn't find static resources dir ({static_dir:#?}) for web API!")
+                tracing::error!("Couldn't find static resources dir ({static_dir:#?}) for web API!")
             }
         },
         Err(err) => match err.kind() {
             std::io::ErrorKind::PermissionDenied => {
-                log::error!(
+                tracing::error!(
                     "Permission denied accssing static resources dir ({:?}) for web API: {}",
                     &config.api_static_dir,
                     err.to_string()
                 )
             }
             std::io::ErrorKind::NotFound => {
-                log::error!(
+                tracing::error!(
                     "Static resources dir ({:?}) not found for web API: {}",
                     &config.api_static_dir,
                     err.to_string()
                 )
             }
-            _ => log::error!(
+            _ => tracing::error!(
                 "Error accessing static resources dir ({:?}) for web API: {}",
                 &config.api_static_dir,
                 err.to_string()
@@ -240,6 +240,6 @@ pub async fn build(
 
     #[cfg(test)]
     println!("{}", startup_message);
-    log::info!("{}", startup_message);
+    tracing::info!("{}", startup_message);
     Ok(res)
 }

@@ -26,10 +26,10 @@ extern crate lazy_static;
 use crate::enums::*;
 use crate::utils::*;
 use error::GoatNsError;
-use log::trace;
 use packed_struct::prelude::*;
 use std::fmt::{Debug, Display};
 use std::str::from_utf8;
+use tracing::trace;
 
 pub mod cli;
 /// Configuration handling for the server

@@ -11,7 +11,7 @@ pub fn check_api_auth(_item: TokenStream) -> TokenStream {
             #[cfg(test)]
             println!("User not found in api_create call");
             #[cfg(not(test))]
-            log::debug!("User not found in api_create call");
+            tracing::debug!("User not found in api_create call");
             return error_result_json!("", StatusCode::FORBIDDEN);
         }
     };

@@ -1,120 +1,131 @@
 [
     {
-    "name" : "hello.goat",
-    "rname" : "billy@hello.goat",
-    "serial" : 1,
-    "refresh" : 2,
-    "retry" : 3,
-    "expire" : 4,
-    "minimum" : 60,
-    "records" :
-        [
+        "name": "hello.goat",
+        "rname": "billy@hello.goat",
+        "serial": 1,
+        "refresh": 2,
+        "retry": 3,
+        "expire": 4,
+        "minimum": 60,
+        "records": [
             {
-                "name" : "foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890",
-                "rrtype" : "TXT",
-                "rdata" : "1",
-                "ttl" : 1,
-                "class" : "IN"
+                "name": "foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+                "rrtype": "TXT",
+                "rdata": "1",
+                "ttl": 1,
+                "class": "IN"
             },
 
             {
-                "rrtype" : "URI",
-                "ttl" : 5,
-                "name" : "_mqtt._http",
-                "rdata" : "1 2 mqtt://example.goat"
+                "rrtype": "URI",
+                "ttl": 5,
+                "name": "_mqtt._http",
+                "rdata": "1 2 mqtt://example.goat"
             },
             {
-                "rrtype" : "NS",
-                "rdata" : "ns1.hello.goat",
-                "ttl" : 3600
+                "rrtype": "NS",
+                "rdata": "ns1.hello.goat",
+                "ttl": 3600
             },
             {
-                "rrtype" : "MX",
-                "ttl" : 60,
-                "rdata" : "10 mx.hello.goat"
+                "rrtype": "MX",
+                "ttl": 60,
+                "rdata": "10 mx.hello.goat"
             },
             {
-                "rrtype" : "MX",
-                "ttl" : 60,
-                "rdata" : "150 mx2.hello.goat"
+                "rrtype": "MX",
+                "ttl": 60,
+                "rdata": "150 mx2.hello.goat"
             },
             {
-                "name" : "fooptr",
-                "rrtype" : "PTR",
-                "rdata" : "ns1.hello.goat",
-                "ttl" : 3600
+                "name": "fooptr",
+                "rrtype": "PTR",
+                "rdata": "ns1.hello.goat",
+                "ttl": 3600
             },
             {
-                "rrtype" : "NS",
-                "rdata" : "ns2.hello.goat",
-                "ttl" : 300
+                "rrtype": "NS",
+                "rdata": "ns2.hello.goat",
+                "ttl": 300
             },
             {
-                "name" : "test",
-                "rrtype" : "A",
-                "rdata" : "1.2.3.4",
-                "ttl" : 60
+                "rrtype": "A",
+                "name": "ns1.hello.goat",
+                "rdata": "192.168.0.1",
+                "ttl": 300
             },
             {
-                "name" : "test",
-                "rrtype" : "A",
-                "rdata" : "12.2.3.4",
-                "ttl" : 60
+                "rrtype": "A",
+                "name": "ns2.hello.goat",
+                "rdata": "192.168.0.2",
+                "ttl": 300
             },
             {
-                "name" : "@",
-                "rrtype" : "A",
-                "rdata" : "6.6.6.6",
-                "ttl" : 60
+                "name": "test",
+                "rrtype": "A",
+                "rdata": "1.2.3.4",
+                "ttl": 60
             },
             {
-                "name" : "a",
-                "rrtype" : "A",
-                "rdata" : "1.2.3.5",
-                "ttl" : 60
+                "name": "test",
+                "rrtype": "A",
+                "rdata": "12.2.3.4",
+                "ttl": 60
             },
             {
-                "name" : "aaaa" ,
-                "rrtype" : "AAAA",
-                "rdata" : "1234:5678:cafe:beef:ca75:0:4b9:e94d",
-                "ttl" : 60
+                "name": "@",
+                "rrtype": "A",
+                "rdata": "6.6.6.6",
+                "ttl": 60
             },
             {
-                "name" : "cafe",
-                "rrtype" : "AAAA",
-                "rdata" : "fe80:580a:2d::caf3:b33f",
-                "ttl" : 60
+                "name": "a",
+                "rrtype": "A",
+                "rdata": "1.2.3.5",
+                "ttl": 60
             },
             {
-                "name" : "cafe",
-                "rrtype" : "TXT",
-                "rdata" : "Hello world",
-                "ttl" : 60
+                "name": "aaaa",
+                "rrtype": "AAAA",
+                "rdata": "1234:5678:cafe:beef:ca75:0:4b9:e94d",
+                "ttl": 60
             },
             {
-                "name" : "ttltest",
-                "rrtype" : "A",
-                "rdata" : "1.1.1.1",
-                "ttl" : 1
+                "name": "cafe",
+                "rrtype": "AAAA",
+                "rdata": "fe80:580a:2d::caf3:b33f",
+                "ttl": 60
             },
             {
-                "name" : "ttltest",
-                "rrtype" : "AAAA",
-                "rdata" : "2001::cafe:beeef",
-                "ttl" : 2
+                "name": "cafe",
+                "rrtype": "TXT",
+                "rdata": "Hello world",
+                "ttl": 60
             },
             {
-                "name" : "ttltest",
-                "rrtype" : "A",
-                "rdata" : "2.2.2.2",
-                "ttl" : 2
+                "name": "ttltest",
+                "rrtype": "A",
+                "rdata": "1.1.1.1",
+                "ttl": 1
+            },
+            {
+                "name": "ttltest",
+                "rrtype": "AAAA",
+                "rdata": "2001::cafe:beeef",
+                "ttl": 2
+            },
+            {
+                "name": "ttltest",
+                "rrtype": "A",
+                "rdata": "2.2.2.2",
+                "ttl": 2
             },
 
             {
-                "name" : "ttltest",
-                "rrtype" : "A",
-                "rdata" : "3.3.3.3",
-                "ttl" : 3
+                "name": "ttltest",
+                "rrtype": "A",
+                "rdata": "3.3.3.3",
+                "ttl": 3
             }
         ]
     }

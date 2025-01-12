@@ -1,5 +1,5 @@
 use serde::{de, Serializer};
-use tracing::error;
+use tracing::{error, trace};
 
 use std::net::{IpAddr, Ipv6Addr};
 
@@ -33,7 +33,7 @@ impl<'de> de::Deserialize<'de> for ContactDetails {
     {
         let s: String = de::Deserialize::deserialize(deserializer)?;
         let res = ContactDetails::try_from(s.clone());
-        log::trace!("deser input='{}' result='{:?}'", s, res);
+        trace!("deser input='{}' result='{:?}'", s, res);
         match res {
             Ok(val) => Ok(val),
             Err(err) => match err {

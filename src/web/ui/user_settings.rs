@@ -59,7 +59,7 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
                 .inspect_err(|err| {
                     error!("Failed to remove CSRF token from session: {err:?}");
                 });
-            log::debug!("Couldn't get session token from storage");
+            tracing::debug!("Couldn't get session token from storage");
             return false;
         }
         Some(value) => value,
@@ -68,20 +68,20 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
     let mut split = session_token.split('|');
     let csrf_token = match split.next() {
         None => {
-            log::debug!("Didn't get split token");
+            tracing::debug!("Didn't get split token");
             return false;
         }
         Some(value) => value,
     };
 
     if user_input != csrf_token {
-        log::debug!("Session and form CSRF token failed to match! user={user_input} <> session={csrf_token}");
+        tracing::debug!("Session and form CSRF token failed to match! user={user_input} <> session={csrf_token}");
         return false;
     }
 
     let expiry = match split.next() {
         None => {
-            log::debug!("Couldn't get timestamp from stored CSRF Token");
+            tracing::debug!("Couldn't get timestamp from stored CSRF Token");
             let _ = session
                 .remove_value(SESSION_CSRFTOKEN_FIELD)
                 .await
@@ -95,7 +95,7 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
 
     let expiry: DateTime<Utc> = match DateTime::parse_from_rfc3339(expiry) {
         Err(error) => {
-            log::debug!("Failed to parse {expiry:?} into datetime: {error:?}");
+            tracing::debug!("Failed to parse {expiry:?} into datetime: {error:?}");
             let _ = session
                 .remove_value(SESSION_CSRFTOKEN_FIELD)
                 .await
@@ -109,7 +109,7 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
     let now = Utc::now();
 
     if expiry < now {
-        log::debug!("Token has expired at {expiry:?}, time is now {now:?}");
+        tracing::debug!("Token has expired at {expiry:?}, time is now {now:?}");
         let _ = session
             .remove_value(SESSION_CSRFTOKEN_FIELD)
             .await
@@ -118,7 +118,7 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
             });
         return false;
     }
-    log::debug!("CSRF Token was valid!");
+    tracing::debug!("CSRF Token was valid!");
     true
 }
 
@@ -169,7 +169,7 @@ pub async fn api_tokens_get(
     let csrftoken = match store_api_csrf_token(&mut session, None).await {
         Ok(value) => value,
         Err(error) => {
-            log::error!("Failed to store csrf token in DB: {error:?}");
+            tracing::error!("Failed to store csrf token in DB: {error:?}");
             return Err(Urls::Home.redirect());
         }
     };
@@ -178,14 +178,14 @@ pub async fn api_tokens_get(
     let token_value: Option<String> = match session.remove("new_api_token").await {
         Ok(val) => val,
         Err(err) => {
-            log::error!("Failed to get new_api_token from session store: {err:?}");
+            tracing::error!("Failed to get new_api_token from session store: {err:?}");
             return Err(Urls::Dashboard.redirect());
         }
     };
     let tokenkey: Option<String> = match session.remove("new_api_tokenkey").await {
         Ok(val) => val,
         Err(err) => {
-            log::error!("Failed to get new_api_tokenkey from session store: {err:?}");
+            tracing::error!("Failed to get new_api_tokenkey from session store: {err:?}");
             return Err(Urls::Dashboard.redirect());
         }
     };
@@ -193,14 +193,14 @@ pub async fn api_tokens_get(
     let user_id = match user.id {
         Some(val) => val,
         None => {
-            log::debug!("Couldn't get user id from session store");
+            tracing::debug!("Couldn't get user id from session store");
             return Err(Urls::Dashboard.redirect());
         }
     };
 
     let tokens = match UserAuthToken::get_all_user(&state.read().await.connpool, user_id).await {
         Err(error) => {
-            log::error!("Failed to pull tokens for user {:#?}: {error:?}", user_id);
+            tracing::error!("Failed to pull tokens for user {:#?}: {error:?}", user_id);
             vec![]
         }
         Ok(val) => val,
@@ -339,7 +339,7 @@ pub async fn api_tokens_post(
 
     if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
         // TODO: redirect to the start
-        log::debug!("Failed to validate csrf expiry");
+        tracing::debug!("Failed to validate csrf expiry");
         return Err(Urls::Settings.redirect());
     }
 
@@ -355,7 +355,7 @@ pub async fn api_tokens_post(
             let csrftoken = match store_api_csrf_token(&mut session, None).await {
                 Ok(val) => val,
                 Err(err) => {
-                    log::error!("Failed to store CSRF token in the session store: {err:?}");
+                    tracing::error!("Failed to store CSRF token in the session store: {err:?}");
                     return Err(Urls::SettingsApiTokens.redirect());
                 }
             };
@@ -374,7 +374,7 @@ pub async fn api_tokens_post(
         }
         // The user has set a lifetime and we're generating a token
         ApiTokenCreatePageState::Generating => {
-            log::debug!("In the 'Generating' state");
+            tracing::debug!("In the 'Generating' state");
 
             // generate the credential
 
@@ -386,7 +386,7 @@ pub async fn api_tokens_post(
             let userid: i64 = match user.id {
                 Some(val) => val,
                 None => {
-                    log::error!("Failed to get user id from session store");
+                    tracing::error!("Failed to get user id from session store");
                     return Err(Urls::SettingsApiTokens.redirect());
                 }
             };
@@ -396,7 +396,7 @@ pub async fn api_tokens_post(
             let name = match form.token_name {
                 Some(val) => val,
                 None => {
-                    log::error!("Failed to get token name from form");
+                    tracing::error!("Failed to get token name from form");
                     return Err(Urls::SettingsApiTokens.redirect_with_query(HashMap::from([(
                         "error",
                         "Token name needs to be set!",
@@ -412,7 +412,7 @@ pub async fn api_tokens_post(
                 tokenkey: api_token.token_key.to_owned(),
                 tokenhash: api_token.token_hash,
             };
-            log::trace!("Starting to store token in the DB, grabbing transaction...");
+            tracing::trace!("Starting to store token in the DB, grabbing transaction...");
 
             let mut txn = match state_reader.connpool.begin().await {
                 Ok(val) => val,
@@ -422,7 +422,7 @@ pub async fn api_tokens_post(
                 }
             };
 
-            log::trace!("Starting to store token in the DB, saving...");
+            tracing::trace!("Starting to store token in the DB, saving...");
             match uat.save_with_txn(&mut txn).await {
                 Err(error) => {
                     error!("Failed to save api_token for user {:?}", error);
@@ -434,11 +434,11 @@ pub async fn api_tokens_post(
                         .insert("new_api_token", &api_token.token_secret)
                         .await
                     {
-                        log::error!(
+                        tracing::error!(
                             "Failed to store new API token in the session, ruh roh? {error:?}"
                         );
                         txn.rollback().await.map_err(|e| {
-                            log::error!(
+                            tracing::error!(
                                 "Txn rollback fail after failing to store the token: {e:?}"
                             );
                             Urls::SettingsApiTokens.redirect()
@@ -450,11 +450,11 @@ pub async fn api_tokens_post(
                         .insert("new_api_tokenkey", &api_token.token_key)
                         .await
                     {
-                        log::error!(
+                        tracing::error!(
                             "Failed to store new API tokenkey in the session, ruh roh? {error:?}"
                         );
                         txn.rollback().await.map_err(|e| {
-                            log::error!("Txn rollback fail: {e:?}");
+                            tracing::error!("Txn rollback fail: {e:?}");
                             Urls::SettingsApiTokens.redirect()
                         })?;
                         // TODO: bail, which should roll back the txn
@@ -465,7 +465,7 @@ pub async fn api_tokens_post(
                     };
 
                     if let Err(error) = txn.commit().await {
-                        log::error!(
+                        tracing::error!(
                             "Failed to save the API token to storage, oh no? {:?}",
                             error
                         );
@@ -531,7 +531,7 @@ pub async fn api_tokens_delete_get(
     let csrftoken = match store_api_csrf_token(&mut session, None).await {
         Ok(val) => val,
         Err(err) => {
-            log::error!("Failed to store CSRF token in the session store: {err:?}");
+            tracing::error!("Failed to store CSRF token in the session store: {err:?}");
             return Err(Urls::SettingsApiTokens.redirect());
         }
     };
@@ -539,7 +539,7 @@ pub async fn api_tokens_delete_get(
     let id = match i64::from_str(&id) {
         Ok(val) => val,
         Err(error) => {
-            log::debug!("Got an invalid id parsing the URL: {error:?}");
+            tracing::debug!("Got an invalid id parsing the URL: {error:?}");
             return Err(Urls::Home.redirect());
         }
     };
@@ -548,20 +548,20 @@ pub async fn api_tokens_delete_get(
     let pool = state_reader.connpool.clone();
     let uat = match UserAuthToken::get(&pool, id).await {
         Err(err) => {
-            log::debug!("Requested delete for token: {err:?}");
+            tracing::debug!("Requested delete for token: {err:?}");
             return Err(Urls::SettingsApiTokens.redirect());
         }
         Ok(res) => {
             let user_id = match user.id {
                 Some(val) => val,
                 None => {
-                    log::debug!("Couldn't get user id from session store");
+                    tracing::debug!("Couldn't get user id from session store");
                     return Err(Urls::Dashboard.redirect());
                 }
             };
 
             if res.userid != user_id {
-                log::debug!(
+                tracing::debug!(
                     "You can't delete another user's tokens! uid={} token.userid={}",
                     user_id,
                     res.userid
@@ -591,30 +591,30 @@ pub async fn api_tokens_delete_post(
 
     if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
         // TODO: redirect to the start
-        log::debug!("Failed to validate CSRF expiry");
+        tracing::debug!("Failed to validate CSRF expiry");
         return Err(Urls::SettingsApiTokens.redirect());
     }
 
-    log::debug!("Deleting token from Form: {form:?}");
+    tracing::debug!("Deleting token from Form: {form:?}");
 
     let pool = state.read().await.connpool.clone();
 
     let user_id = match user.id {
         Some(val) => val,
         None => {
-            log::debug!("Couldn't get user id from session store");
+            tracing::debug!("Couldn't get user id from session store");
             return Err(Urls::Dashboard.redirect());
         }
     };
 
     let uat = match UserAuthToken::get(&pool, form.id).await {
         Err(err) => {
-            log::debug!("Requested delete for existing token: {err:?}");
+            tracing::debug!("Requested delete for existing token: {err:?}");
             return Err(Urls::SettingsApiTokens.redirect());
         }
         Ok(res) => {
             if res.userid != user_id {
-                log::debug!(
+                tracing::debug!(
                     "You can't delete another user's tokens! uid={} token.userid={}",
                     user_id,
                     res.userid
@@ -627,10 +627,10 @@ pub async fn api_tokens_delete_post(
     };
 
     if let Err(error) = uat.delete(&pool).await {
-        log::debug!("Failed to delete token {:?}: {error:?}", uat.id);
+        tracing::debug!("Failed to delete token {:?}: {error:?}", uat.id);
     };
 
-    log::info!(
+    tracing::info!(
         "id={} action=api_token_delete token_id={}",
         uat.userid,
         uat.id.unwrap_or(-1)

@@ -28,7 +28,7 @@ pub async fn cspheaders(
             headers.insert("Content-Security-Policy", header);
         }
     } else {
-        log::debug!("didn't match uri");
+        tracing::debug!("didn't match uri");
     }
 
     response

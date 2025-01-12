@@ -19,7 +19,7 @@ impl CustomClaimTypeThings for CustomClaimType {
         } else if let Some(user_email) = self.preferred_username() {
             email = user_email.to_string();
         } else {
-            log::error!("Couldn't extract email address from claim: {self:?}");
+            tracing::error!("Couldn't extract email address from claim: {self:?}");
             return Err(Urls::Home.redirect());
         }
         Ok(email)

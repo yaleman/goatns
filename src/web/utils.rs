@@ -89,12 +89,12 @@ pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) ->
 
     let api_token = hex::encode(Sha256::digest(api_token_to_hash));
     let token_secret = format!("goatns_{api_token}");
-    log::trace!("Final token: {token_secret}");
+    tracing::trace!("Final token: {token_secret}");
 
     // TODO: is rand_core the thing we want to use for generating randomness?
     let salt = SaltString::generate(&mut OsRng);
 
-    log::debug!("generating hash");
+    tracing::debug!("generating hash");
     // Argon2 with default params (Argon2id v19)
     let argon2 = Argon2::default();
     #[allow(clippy::expect_used)]
@@ -103,7 +103,7 @@ pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) ->
         .expect("Failed to hash password!");
 
     let password_hash_string = password_hash.to_string();
-    log::debug!("Done hashing password");
+    tracing::debug!("Done hashing password");
 
     let token_key = Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
     let token_key = format!("GA{}", token_key);

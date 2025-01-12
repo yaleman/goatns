@@ -1,7 +1,7 @@
 use crate::enums::RecordClass;
 use crate::error::GoatNsError;
 use crate::resourcerecord::InternalResourceRecord;
-use log::*;
+use tracing::*;
 
 use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
@@ -146,6 +146,7 @@ pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, GoatNsError> {
 }
 
 /// Loads a zone file
+#[instrument(level = "debug")]
 pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, GoatNsError> {
     let mut file = match File::open(filename) {
         Ok(value) => value,

@@ -1,5 +1,4 @@
 use axum_server::tls_rustls::RustlsConfig;
-use clap::ArgMatches;
 use concread::cowcell::asynch::{CowCell, CowCellReadTxn, CowCellWriteTxn};
 use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
@@ -13,6 +12,7 @@ use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
+use tracing::{error, trace};
 use url::Url;
 
 use crate::enums::ContactDetails;
@@ -94,11 +94,10 @@ pub struct ConfigFile {
     pub admin_contact: ContactDetails,
     /// Allow auto-provisioning of users
     pub user_auto_provisioning: bool,
-
-    /// Allow disabling oauth2 under test/debug mode
-    #[cfg(any(test, debug_assertions))]
-    #[serde(default)]
-    pub disable_oauth2: bool,
+    // /// Allow disabling oauth2 under test/debug mode
+    // #[cfg(any(test, debug_assertions))]
+    // #[serde(default)]
+    // pub disable_oauth2: bool,
 }
 
 fn generate_cookie_secret() -> String {
@@ -116,7 +115,7 @@ impl ConfigFile {
         let listen_addr = format!("{}:{}", &self.address, &self.port);
 
         listen_addr.parse::<SocketAddr>().map_err(|e| {
-            log::error!("Failed to parse address: {e:?}");
+            error!("Failed to parse address: {e:?}");
             None
         })
     }
@@ -148,7 +147,7 @@ impl ConfigFile {
 
     /// Get the TLS config for the API server
     pub async fn get_tls_config(&self) -> Result<RustlsConfig, String> {
-        log::trace!(
+        trace!(
             "tls config: cert={:?} key={:?}",
             self.api_tls_cert,
             self.api_tls_key
@@ -208,7 +207,7 @@ impl ConfigFile {
     ///
     /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
     pub fn try_as_cowcell(
-        config_path: Option<&String>,
+        config_path: Option<String>,
     ) -> Result<CowCell<ConfigFile>, std::io::Error> {
         Ok(CowCell::new(ConfigFile::try_from(config_path)?))
     }
@@ -216,7 +215,7 @@ impl ConfigFile {
     /// Loads the configuration from a given file or from some default locations.
     ///
     /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
-    pub fn try_from(config_path: Option<&String>) -> Result<ConfigFile, std::io::Error> {
+    pub fn try_from(config_path: Option<String>) -> Result<ConfigFile, std::io::Error> {
         let file_locations = match config_path {
             Some(value) => vec![value.to_owned()],
             None => CONFIG_LOCATIONS.iter().map(|x| x.to_string()).collect(),
@@ -315,8 +314,8 @@ impl Default for ConfigFile {
             sql_db_cleanup_seconds: 3600, // one hour
             admin_contact: Default::default(),
             user_auto_provisioning: false,
-            #[cfg(any(test, debug_assertions))]
-            disable_oauth2: false,
+            // #[cfg(any(test, debug_assertions))]
+            // disable_oauth2: false,
         }
     }
 }
@@ -447,11 +446,10 @@ impl From<Config> for ConfigFile {
             user_auto_provisioning: config
                 .get("user_auto_provisioning")
                 .unwrap_or(Self::default().user_auto_provisioning),
-
-            #[cfg(any(test, debug_assertions))]
-            disable_oauth2: config
-                .get("disable_oauth2")
-                .unwrap_or(Self::default().disable_oauth2),
+            // #[cfg(any(test, debug_assertions))]
+            // disable_oauth2: config
+            //     .get("disable_oauth2")
+            //     .unwrap_or(Self::default().disable_oauth2),
         }
     }
 }
@@ -479,11 +477,11 @@ const CONFIG_LOCATIONS: [&str; 2] = ["./goatns.json", "~/.config/goatns.json"];
 /// Sets up logging for the platform
 pub async fn setup_logging(
     config: CowCellReadTxn<ConfigFile>,
-    clap_results: &ArgMatches,
+    cli_debug: bool,
 ) -> Result<LoggerHandle, std::io::Error> {
     // force the log level to info if we're testing config
-    let log_level = match clap_results.get_flag("configcheck") {
-        true => "info".to_string(),
+    let log_level = match cli_debug {
+        true => "debug".to_string(),
         false => config.log_level.to_ascii_lowercase(),
     };
 

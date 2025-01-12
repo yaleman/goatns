@@ -3,8 +3,8 @@ use crate::error::GoatNsError;
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::{Header, Question};
 use crate::{ResourceRecord, UDP_BUFFER_SIZE};
-use log::error;
 use packed_struct::prelude::*;
+use tracing::error;
 
 #[derive(Debug, Clone)]
 pub struct Reply {

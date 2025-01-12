@@ -57,7 +57,7 @@ pub(crate) async fn zones_list(
     let offset = 0;
     let limit = 20;
 
-    log::trace!("Sending request for zones");
+    tracing::trace!("Sending request for zones");
     if let Err(err) = state
         .read()
         .await
@@ -71,7 +71,7 @@ pub(crate) async fn zones_list(
         .await
     {
         eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
-        log::error!("failed to send GetZoneNames command to datastore: {err:?}");
+        tracing::error!("failed to send GetZoneNames command to datastore: {err:?}");
         return Err(Urls::Dashboard.redirect().into_response());
     };
 
@@ -108,10 +108,10 @@ pub(crate) async fn zone_view(
         id: Some(name_or_id),
         name: None,
     };
-    log::debug!("{cmd:?}");
+    tracing::debug!("{cmd:?}");
     if let Err(err) = state.read().await.tx.send(cmd).await {
         eprintln!("failed to send GetZone command to datastore: {err:?}");
-        log::error!("failed to send GetZone command to datastore: {err:?}");
+        tracing::error!("failed to send GetZone command to datastore: {err:?}");
         return Err(Urls::ZonesList.redirect().into_response());
     };
 
@@ -127,12 +127,12 @@ pub(crate) async fn zone_view(
             }
         },
         Err(err) => {
-            log::error!("failed to get response from datastore: {err:?}");
+            tracing::error!("failed to get response from datastore: {err:?}");
             return Err(Urls::ZonesList.redirect().into_response());
         }
     };
 
-    log::trace!("Returning zone: {zone:?}");
+    tracing::trace!("Returning zone: {zone:?}");
     Ok(TemplateViewZone {
         zone,
         user_is_admin: user.admin,
@@ -157,17 +157,17 @@ pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, R
             .insert("redirect", redirect_path)
             .await
             .map_err(|e| {
-                log::debug!("Couldn't store redirect for user: {e:?}");
+                tracing::debug!("Couldn't store redirect for user: {e:?}");
                 Urls::Home.redirect_with_query(HashMap::from([(
                     "error",
                     "An error storing your session occurred!",
                 )]))
             })?;
-        log::debug!("Not-logged-in-user tried to log in, how rude!");
+        tracing::debug!("Not-logged-in-user tried to log in, how rude!");
         // TODO: this should redirect to the current page
         return Err(Urls::Login.redirect());
     }
-    log::debug!("session ok!");
+    tracing::debug!("session ok!");
 
     let user = match session.get("user").await.unwrap_or(None) {
         Some(val) => val,
