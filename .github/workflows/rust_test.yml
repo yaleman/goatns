@@ -10,8 +10,6 @@ jobs:
   rust_test:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Linux dependencies
-        run: sudo apt-get update && apt-get install -y libpcap-dev
       - uses: actions/cache@v4
         with:
           path: |
@@ -24,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Generate certs
         run: ./insecure_generate_tls.sh
-      - name: Install protoc
-        run: sudo apt-get install -y protobuf-compiler
+      - name: Install linux dependencies
+        run: sudo apt-get install -y protobuf-compiler libpcap-dev
       - name: Run cargo test
         run: cargo test
