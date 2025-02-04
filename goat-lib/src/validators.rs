@@ -1,13 +1,12 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
-lazy_static! {
-    pub static ref CAA_TAG_VALIDATOR: Regex =
-        Regex::new(r"[a-zA-Z0-9]").expect("Failed to parse an internal regex!");
-    pub static ref URI_RECORD: Regex =
-        Regex::new(r"^(?P<priority>\d+) (?P<weight>\d+) (?P<target>.*)")
-            .expect("Failed to parse an internal regex!");
-}
+pub static CAA_TAG_VALIDATOR: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[a-zA-Z0-9]").expect("Failed to parse an internal regex!"));
+pub static URI_RECORD: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^(?P<priority>\d+) (?P<weight>\d+) (?P<target>.*)")
+        .expect("Failed to parse an internal regex!")
+});
 
 pub fn dns_name(name: &str) -> bool {
     if !name.contains('.') {

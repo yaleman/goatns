@@ -1,4 +1,5 @@
 use concread::cowcell::asynch::CowCellReadTxn;
+use once_cell::sync::Lazy;
 use packed_struct::prelude::*;
 use std::io::Error;
 use std::net::SocketAddr;
@@ -431,18 +432,16 @@ pub async fn parse_query(
     get_result(header, len, buf, datastore).await
 }
 
-lazy_static! {
-    static ref CHAOS_OK: InternalResourceRecord = InternalResourceRecord::TXT {
-        txtdata: DNSCharString::from("OK"),
-        ttl: 0,
-        class: RecordClass::Chaos,
-    };
-    static ref CHAOS_NO: InternalResourceRecord = InternalResourceRecord::TXT {
-        txtdata: DNSCharString::from("NO"),
-        ttl: 0,
-        class: RecordClass::Chaos,
-    };
-}
+static CHAOS_OK: Lazy<InternalResourceRecord> = Lazy::new(|| InternalResourceRecord::TXT {
+    txtdata: DNSCharString::from("OK"),
+    ttl: 0,
+    class: RecordClass::Chaos,
+});
+static CHAOS_NO: Lazy<InternalResourceRecord> = Lazy::new(|| InternalResourceRecord::TXT {
+    txtdata: DNSCharString::from("NO"),
+    ttl: 0,
+    class: RecordClass::Chaos,
+});
 
 /// The generic handler for the packets once they've been pulled out of their protocol handlers. TCP has a slightly different stream format to UDP, y'know?
 #[instrument(level="info", skip_all, fields(qname=field::Empty, qtype=field::Empty))]

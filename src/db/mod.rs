@@ -271,7 +271,7 @@ impl ZoneOwnership {
     }
 
     // get the thing by the other thing
-    pub async fn get_ownership_by_userid<'t>(
+    pub async fn get_ownership_by_userid(
         txn: &mut SqliteConnection,
         userid: &i64,
         zoneid: &i64,
@@ -1899,7 +1899,7 @@ impl TryFrom<SqliteRow> for FileZoneRecord {
     }
 }
 
-pub async fn get_all_fzr_by_name<'t>(
+pub async fn get_all_fzr_by_name(
     txn: &mut SqliteConnection,
     name: &str,
     rrtype: u16,
