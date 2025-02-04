@@ -6,5 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lazy_static = { workspace = true }
+once_cell = { workspace = true }
+
 regex = { workspace = true }

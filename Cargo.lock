@@ -1767,7 +1767,7 @@ checksum = "a8d1add55171497b4705a648c6b583acafb01d58050a51727785f0b2c8e0a2b2"
 name = "goat-lib"
 version = "0.1.0"
 dependencies = [
- "lazy_static",
+ "once_cell",
  "regex",
 ]
 
@@ -1805,10 +1805,10 @@ dependencies = [
  "init-tracing-opentelemetry",
  "ipnet",
  "json5",
- "lazy_static",
  "log",
  "num-traits",
  "oauth2",
+ "once_cell",
  "openidconnect",
  "opentelemetry-otlp",
  "packed_struct",

@@ -17,4 +17,5 @@ results.xml
 *.profraw
 tarpaulin-report.html
 .cargo/config.toml
-examples/knot/storage/
+examples/knot/storage/.cargo/config.toml
+vendor/
