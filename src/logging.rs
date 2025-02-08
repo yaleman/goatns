@@ -57,10 +57,13 @@ pub(crate) fn init_otel_subscribers(otel_endpoint: Option<String>) -> Result<(),
 
     let otlp_exporter = match otel_endpoint {
         Some(endpoint) => otlp_exporter.with_endpoint(endpoint),
-        None => otlp_exporter.with_endpoint(
-            env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
-                .unwrap_or_else(|_| "http://localhost:4317".to_string()),
-        ),
+        None => {
+            if let Ok(endpoint) = env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
+                otlp_exporter.with_endpoint(endpoint)
+            } else {
+                otlp_exporter
+            }
+        }
     };
     let otlp_exporter = otlp_exporter
         .with_protocol(Protocol::HttpBinary)
