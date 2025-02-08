@@ -24,6 +24,7 @@ use crate::RecordClass;
         (name = "Zones", description = "DNS Zone operations"),
     )
 )]
+#[allow(dead_code)]
 pub(crate) struct ApiDoc;
 
 pub(crate) struct SecurityAddon;

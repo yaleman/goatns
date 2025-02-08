@@ -36,13 +36,13 @@ pub async fn test_create_example_com_records(
     zoneid: i64,
     num_records: usize,
 ) -> Result<(), GoatNsError> {
-    use rand::distributions::{Alphanumeric, DistString};
+    use rand::distr::{Alphanumeric, SampleString};
 
     let mut name: String;
     let mut rdata: String;
     for i in 0..num_records {
-        name = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
-        rdata = Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
+        name = Alphanumeric.sample_string(&mut rand::rng(), 16);
+        rdata = Alphanumeric.sample_string(&mut rand::rng(), 32);
 
         FileZoneRecord {
             zoneid: Some(zoneid),

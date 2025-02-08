@@ -9,9 +9,7 @@ use crate::config::ConfigFile;
 use crate::datastore;
 use crate::error::GoatNsError;
 
-#[cfg(not(test))]
-use crate::logging::init_otel_subscribers;
-use crate::web::api::docs::ApiDoc;
+// TODO: return the API docs use crate::web::api::docs::ApiDoc;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
 use axum::extract::FromRef;
@@ -39,7 +37,6 @@ use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
 use tracing::{debug, error, info, trace};
 use utils::{handler_404, Urls};
-use utoipa::OpenApi;
 
 use self::auth::CustomProviderMetadata;
 
@@ -166,11 +163,6 @@ pub async fn build(
         .to_string()
         .into();
 
-    #[cfg(not(test))]
-    init_otel_subscribers().map_err(|err| {
-        GoatNsError::StartupError(format!("Failed to initialize OpenTelemetry tracing: {err}"))
-    })?;
-
     let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await?;
 
     let csp_matchers = vec![CspUrlMatcher::default_self(
@@ -201,10 +193,10 @@ pub async fn build(
         .route(Urls::Home.as_ref(), get(generic::index))
         .nest("/ui", ui::new())
         .nest("/api", api::new())
-        .merge(
-            utoipa_swagger_ui::SwaggerUi::new("/api/docs")
-                .url("/api/openapi.json", ApiDoc::openapi()),
-        )
+        // .merge(
+        //     utoipa_swagger_ui::SwaggerUi::new("/api/docs")
+        //         .url("/api/openapi.json", ApiDoc::openapi()),
+        // )
         .nest("/auth", auth::new())
         .nest("/dns-query", doh::new())
         .with_state(state)

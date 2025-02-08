@@ -1863,7 +1863,10 @@ dependencies = [
  "oauth2",
  "once_cell",
  "openidconnect",
+ "opentelemetry",
  "opentelemetry-otlp",
+ "opentelemetry-semantic-conventions",
+ "opentelemetry_sdk",
  "packed_struct",
  "pcap",
  "rand 0.9.0",
@@ -1893,10 +1896,12 @@ dependencies = [
  "tower-http",
  "tower-sessions",
  "tracing",
+ "tracing-opentelemetry",
  "tracing-subscriber",
  "trust-dns-resolver",
  "url",
  "utoipa",
+ "utoipa-axum",
  "utoipa-swagger-ui",
 ]
 
@@ -3006,6 +3011,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tokio-stream",
+ "tracing",
 ]
 
 [[package]]
@@ -5658,6 +5664,19 @@ dependencies = [
  "serde",
  "serde_json",
  "utoipa-gen",
+]
+
+[[package]]
+name = "utoipa-axum"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c25bae5bccc842449ec0c5ddc5cbb6a3a1eaeac4503895dc105a1138f8234a0"
+dependencies = [
+ "axum 0.8.1",
+ "paste",
+ "tower-layer",
+ "tower-service",
+ "utoipa",
 ]
 
 [[package]]

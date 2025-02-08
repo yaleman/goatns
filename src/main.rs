@@ -158,7 +158,6 @@ async fn run() -> Result<(), GoatNsError> {
         }
     };
     debug!("Finishing up...");
-    logger.flush();
     logger.shutdown();
     Ok(())
 }

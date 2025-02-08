@@ -4,7 +4,7 @@ use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
 use flexi_logger::{DeferredNow, LoggerHandle};
 use gethostname::gethostname;
-use rand::distributions::{Alphanumeric, DistString};
+use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::io::ErrorKind;
@@ -98,10 +98,12 @@ pub struct ConfigFile {
     // #[cfg(any(test, debug_assertions))]
     // #[serde(default)]
     // pub disable_oauth2: bool,
+    /// If you want to export traces to an OTLP endpoint, set this to the endpoint
+    pub otel_endpoint: Option<String>,
 }
 
 fn generate_cookie_secret() -> String {
-    Alphanumeric.sample_string(&mut rand::thread_rng(), 64)
+    Alphanumeric.sample_string(&mut rand::rng(), 64)
 }
 
 impl ConfigFile {
@@ -316,6 +318,7 @@ impl Default for ConfigFile {
             user_auto_provisioning: false,
             // #[cfg(any(test, debug_assertions))]
             // disable_oauth2: false,
+            otel_endpoint: None,
         }
     }
 }
@@ -450,6 +453,9 @@ impl From<Config> for ConfigFile {
             // disable_oauth2: config
             //     .get("disable_oauth2")
             //     .unwrap_or(Self::default().disable_oauth2),
+            otel_endpoint: config
+                .get("otel_endpoint")
+                .unwrap_or(Self::default().otel_endpoint),
         }
     }
 }
@@ -474,17 +480,14 @@ impl FromStr for ConfigFile {
 
 const CONFIG_LOCATIONS: [&str; 2] = ["./goatns.json", "~/.config/goatns.json"];
 
-/// Sets up logging for the platform
-pub async fn setup_logging(
+pub async fn use_flexi_logger(
     config: CowCellReadTxn<ConfigFile>,
     cli_debug: bool,
 ) -> Result<LoggerHandle, std::io::Error> {
-    // force the log level to info if we're testing config
     let log_level = match cli_debug {
         true => "debug".to_string(),
         false => config.log_level.to_ascii_lowercase(),
     };
-
     let logger = flexi_logger::Logger::try_with_str(log_level).map_err(|e| {
         std::io::Error::new(
             std::io::ErrorKind::Other,
@@ -513,6 +516,58 @@ pub async fn setup_logging(
                 format!("Failed to start logger! {e:?}"),
             )
         })
+}
+
+/// For handling either otel or flexi_logger shutdown things
+pub struct GoatNsLogHandler {
+    loghandle: Option<LoggerHandle>,
+    otel_enabled: bool,
+}
+
+impl GoatNsLogHandler {
+    /// Shutdown the logger
+    pub fn shutdown(&self) {
+        if let Some(handle) = &self.loghandle {
+            handle.shutdown();
+        }
+        if self.otel_enabled {
+            opentelemetry::global::shutdown_tracer_provider();
+            eprintln!("Logging pipeline completed shutdown");
+        }
+    }
+}
+
+impl From<LoggerHandle> for GoatNsLogHandler {
+    fn from(handle: LoggerHandle) -> Self {
+        Self {
+            loghandle: Some(handle),
+            otel_enabled: false,
+        }
+    }
+}
+
+/// Sets up logging for the platform
+pub async fn setup_logging(
+    config: CowCellReadTxn<ConfigFile>,
+    cli_debug: bool,
+) -> Result<GoatNsLogHandler, GoatNsError> {
+    if cfg!(test) {
+        use_flexi_logger(config, cli_debug)
+            .await
+            .map(GoatNsLogHandler::from)
+            .map_err(|err| GoatNsError::StartupError(format!("Failed to start logger: {err}")))
+    } else {
+        crate::logging::init_otel_subscribers(config.otel_endpoint.clone())
+            .map_err(|err| {
+                GoatNsError::StartupError(format!(
+                    "Failed to initialize OpenTelemetry tracing: {err}"
+                ))
+            })
+            .map(|_| GoatNsLogHandler {
+                loghandle: None,
+                otel_enabled: true,
+            })
+    }
 }
 
 /// A filter for log lines

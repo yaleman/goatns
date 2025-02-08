@@ -65,7 +65,10 @@ num-traits = "0.2.19"
 oauth2 = "5.0.0"
 once_cell = { workspace = true }
 openidconnect = "4.0.0"
+opentelemetry = "0.27.1"
 opentelemetry-otlp = { version = "0.27.0", features = ["http-proto"] }
+opentelemetry-semantic-conventions = "0.27.0"
+opentelemetry_sdk = { version = "0.27.1", features = ["rt-tokio"] }
 packed_struct = { version = "0.10.1", features = ["byte_types_256"] }
 rand = "0.9.0"
 rand_core = { version = "0.9", features = ["std"] }
@@ -125,9 +128,11 @@ tower-sessions = { version = "^0.9.1", features = [
   "axum-core",
 ] }
 tracing = "^0.1.40"
+tracing-opentelemetry = "0.28.0"
 tracing-subscriber = "0.3.18"
 url = { version = "2.5.4", features = ["serde"] }
 utoipa = "5.3.1"
+utoipa-axum = "0.2.0"
 utoipa-swagger-ui = { version = "9.0.0", features = ["axum"] }
 
 [workspace.dependencies]
