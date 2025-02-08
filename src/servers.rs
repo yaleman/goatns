@@ -550,12 +550,10 @@ async fn get_result(
             authoritative: true,
             truncated: false, // TODO: work out if it's truncated (ie, UDP)
             recursion_desired: header.recursion_desired,
-            recursion_available: header.recursion_available, // TODO: work this out
+            recursion_available: false, // TODO: work this out
             z: false,
-            ad: true, // TODO: decide how the ad flag should be set -  "authentic data" - This requests the server to return whether all of the answer and
-            // authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all
-            // records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer
-            // was insecure or not validated. This bit is set by default.
+            // TODO: decide how the ad flag should be set
+            ad: false,
             cd: false, // TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
             rcode: Rcode::NoError,
             qdcount: 1,

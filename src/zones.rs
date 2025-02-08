@@ -56,10 +56,10 @@ impl FileZone {
             && self.serial == cmp.serial
     }
 
-    pub fn get_soa_record(&self) -> InternalResourceRecord {
+    pub fn get_soa_record(&self, server_hostname: &str) -> InternalResourceRecord {
         InternalResourceRecord::SOA {
             zone: self.name.clone().into(),
-            mname: self.name.clone().into(),
+            mname: server_hostname.into(),
             rname: self.rname.clone().into(),
             serial: self.serial,
             refresh: self.refresh,

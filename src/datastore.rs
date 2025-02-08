@@ -130,6 +130,7 @@ pub enum Command {
 }
 
 async fn handle_soa_query(
+    server_hostname: &str,
     conn: &Pool<Sqlite>,
     name: &[u8],
 ) -> Result<Option<InternalResourceRecord>, GoatNsError> {
@@ -141,7 +142,7 @@ async fn handle_soa_query(
     match FileZone::get_by_name(&mut txn, name).await? {
         Some(zone) => {
             // get the SOA record
-            let soa = zone.get_soa_record();
+            let soa = zone.get_soa_record(server_hostname);
             debug!("SOA Record: {soa:?}");
             Ok(Some(soa))
         }
@@ -153,6 +154,7 @@ async fn handle_soa_query(
 }
 
 async fn handle_get_command(
+    server_hostname: &str,
     // database pool
     conn: &Pool<Sqlite>,
     // this is the result from the things in memory
@@ -180,7 +182,7 @@ async fn handle_get_command(
 
     // TODO: need to get an SOA for any record we're authoritative for?
     if rrtype == RecordType::SOA {
-        match handle_soa_query(conn, &name).await {
+        match handle_soa_query(server_hostname, conn, &name).await {
             Ok(Some(soa)) => zr.typerecords.push(soa),
             Ok(None) => {
                 info!("SOA not found for {db_name}");
@@ -291,7 +293,11 @@ async fn handle_get_zone_names(
 }
 
 #[instrument(level = "info", skip(connpool))]
-pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Result<(), String> {
+pub(crate) async fn handle_message(
+    server_hostname: &str,
+    cmd: Command,
+    connpool: &Pool<Sqlite>,
+) -> Result<(), String> {
     match cmd {
         Command::GetZone { id, name, resp } => {
             let res = handle_get_zone(resp, connpool, id, name).await;
@@ -338,7 +344,8 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
             rclass,
             resp,
         } => {
-            let res = handle_get_command(connpool, name, rrtype, rclass, resp).await;
+            let res =
+                handle_get_command(server_hostname, connpool, name, rrtype, rclass, resp).await;
             if let Err(e) = res {
                 error!("{e:?}")
             };
@@ -435,6 +442,7 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
 /// Manages the datastore, waits for signals from the server instances and responds with data
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
+    server_hostname: String,
     connpool: Pool<Sqlite>,
     cron_db_cleanup_timer: Option<Duration>,
 ) -> Result<(), String> {
@@ -444,7 +452,10 @@ pub async fn manager(
     }
 
     while let Some(cmd) = rx.recv().await {
-        if handle_message(cmd, &connpool).await.is_err() {
+        if handle_message(&server_hostname, cmd, &connpool)
+            .await
+            .is_err()
+        {
             break;
         };
     }
