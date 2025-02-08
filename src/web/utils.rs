@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
+use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use axum::http::StatusCode;
 use axum::response::Redirect;
 use chrono::{DateTime, TimeDelta, Utc};
-use rand::distributions::{Alphanumeric, DistString};
-use rand_core::OsRng;
+use rand::distr::{Alphanumeric, SampleString};
 use sha2::{Digest, Sha256};
 use tracing::{debug, trace};
 
@@ -106,7 +106,7 @@ pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) ->
     let password_hash_string = password_hash.to_string();
     debug!("Done hashing password");
 
-    let token_key = Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
+    let token_key = Alphanumeric.sample_string(&mut rand::rng(), 12);
     let token_key = format!("GA{}", token_key);
     ApiToken {
         token_key,

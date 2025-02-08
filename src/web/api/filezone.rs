@@ -20,6 +20,13 @@ pub struct FileZoneResponse {
     pub id: Option<i64>,
 }
 
+#[utoipa::path(
+    method(post),
+    path = "/api/zone",
+    responses(
+        (status = OK, description = "Success", body = str, content_type = "text/plain")
+    )
+)]
 pub(crate) async fn api_create(
     State(state): State<GoatState>,
     session: Session,

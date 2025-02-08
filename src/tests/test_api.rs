@@ -26,15 +26,14 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     ))
     .expect("failed to parse test config");
 
-    use rand::thread_rng;
     use rand::Rng;
-    let mut rng = thread_rng();
-    let mut port: u16 = rng.gen_range(2000..=65000);
+    let mut rng = rand::rng();
+    let mut port: u16 = rng.random_range(2000..=65000);
     loop {
         if is_free_port(port).await {
             break;
         }
-        port = rng.gen_range(2000..=65000);
+        port = rng.random_range(2000..=65000);
     }
 
     let mut config_tx = config.write().await;

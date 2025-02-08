@@ -14,7 +14,7 @@ use axum::{Form, Router};
 use chrono::{DateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{PkceCodeChallenge, PkceCodeVerifier, RedirectUrl};
-use openidconnect::reqwest::async_http_client;
+
 use openidconnect::EmptyAdditionalProviderMetadata;
 use openidconnect::{
     core::*, ClaimsVerificationError, EmptyAdditionalClaims, IdTokenClaims, TokenResponse,
@@ -53,9 +53,6 @@ pub type CustomProviderMetadata = ProviderMetadata<
     CoreGrantType,
     CoreJweContentEncryptionAlgorithm,
     CoreJweKeyManagementAlgorithm,
-    CoreJwsSigningAlgorithm,
-    CoreJsonWebKeyType,
-    CoreJsonWebKeyUse,
     CoreJsonWebKey,
     CoreResponseMode,
     CoreResponseType,
@@ -116,7 +113,10 @@ pub async fn oauth_get_discover(
 ) -> Result<CustomProviderMetadata, GoatNsError> {
     let issuer_url = IssuerUrl::new(state.read().await.config.oauth2_config_url.clone())
         .map_err(|err| GoatNsError::Oidc(err.to_string()))?;
-    match CoreProviderMetadata::discover_async(issuer_url, async_http_client).await {
+
+    let http_client = get_http_client()?;
+
+    match CoreProviderMetadata::discover_async(issuer_url, &http_client).await {
         Err(e) => Err(GoatNsError::Oidc(e.to_string())),
         Ok(val) => {
             state.oidc_update(val.clone()).await;
@@ -178,6 +178,12 @@ pub async fn oauth_start(state: &mut GoatState) -> Result<url::Url, GoatNsError>
     Ok(authorize_url)
 }
 
+pub fn get_http_client() -> Result<openidconnect::reqwest::Client, reqwest::Error> {
+    openidconnect::reqwest::Client::builder()
+        .redirect(openidconnect::reqwest::redirect::Policy::none())
+        .build()
+}
+
 pub async fn parse_state_code(
     shared_state: &GoatState,
     query_code: String,
@@ -205,12 +211,23 @@ pub async fn parse_state_code(
     ));
     let verifier_copy = PkceCodeVerifier::new(pkce_verifier.secret().clone());
     assert_eq!(verifier_copy.secret(), pkce_verifier.secret());
+
+    let http_client = get_http_client().map_err(|err| ParserError::ErrorMessage {
+        content: format!(
+            "Failed to build reqwest client to query OIDC token response: {:?}",
+            err
+        ),
+    })?;
+
     // Now you can exchange it for an access token and ID token.
     let token_response = client
         .exchange_code(auth_code)
+        .map_err(|err| ParserError::ErrorMessage {
+            content: format!("{err:?}"),
+        })?
         // Set the PKCE code verifier.
         .set_pkce_verifier(pkce_verifier)
-        .request_async(async_http_client)
+        .request_async(&http_client)
         .await
         .map_err(|e| ParserError::ErrorMessage {
             content: format!("{e:?}"),
