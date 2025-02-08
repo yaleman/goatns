@@ -147,11 +147,8 @@ pub async fn udp_server(
                     Ok(value) => {
                         // Check if it's too long and set truncate flag if so, it's safe to unwrap since we've already gone
                         if value.len() > UDP_BUFFER_SIZE {
-                            let mut response_bytes = value.to_vec();
-                            response_bytes.truncate(UDP_BUFFER_SIZE);
                             r = r.check_set_truncated().await;
-                            let r = r.as_bytes_udp().await;
-                            r.unwrap_or(value)
+                            r.as_bytes_udp().await?
                         } else {
                             value
                         }
@@ -489,18 +486,15 @@ async fn get_result(
     }
 
     // Check for CHAOS commands
-    #[allow(clippy::collapsible_if)]
-    if question.qclass == RecordClass::Chaos {
-        if &question.normalized_name()? == "shutdown" {
-            debug!("Got CHAOS shutdown!");
-            return Ok(Reply {
-                header,
-                question: Some(question),
-                answers: vec![],
-                authorities: vec![],
-                additional: vec![],
-            });
-        }
+    if question.qclass == RecordClass::Chaos && &question.normalized_name()? == "shutdown" {
+        debug!("Got CHAOS shutdown!");
+        return Ok(Reply {
+            header,
+            question: Some(question),
+            answers: vec![],
+            authorities: vec![],
+            additional: vec![],
+        });
     }
 
     if let RecordType::ANY {} = question.qtype {
@@ -541,6 +535,12 @@ async fn get_result(
         }
     };
 
+    let nscount = record
+        .typerecords
+        .iter()
+        .filter(|r| r.is_type(RecordType::NS))
+        .count() as u16;
+
     // this is our reply - static until that bit's done
     Ok(Reply {
         header: Header {
@@ -558,7 +558,7 @@ async fn get_result(
             rcode: Rcode::NoError,
             qdcount: 1,
             ancount: record.typerecords.len() as u16,
-            nscount: 0,
+            nscount,
             arcount: 0,
         },
         question: Some(question),
