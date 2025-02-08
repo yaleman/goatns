@@ -37,12 +37,13 @@ pub(crate) struct TemplateViewZone {
     pub user_is_admin: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub(crate) struct ViewZonesQueryString {
     message: Option<String>,
     error: Option<String>,
 }
 
+#[instrument(level = "info", skip(state, session))]
 pub(crate) async fn zones_list(
     State(state): State<GoatState>,
     mut session: Session,
