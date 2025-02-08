@@ -5,6 +5,7 @@ use std::time::Duration;
 use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
+use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::{FileZone, ZoneRecord};
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
@@ -128,6 +129,29 @@ pub enum Command {
     },
 }
 
+async fn handle_soa_query(
+    conn: &Pool<Sqlite>,
+    name: &[u8],
+) -> Result<Option<InternalResourceRecord>, GoatNsError> {
+    let mut txn = conn.begin().await?;
+
+    let name = from_utf8(name)?;
+
+    // get the zone
+    match FileZone::get_by_name(&mut txn, name).await? {
+        Some(zone) => {
+            // get the SOA record
+            let soa = zone.get_soa_record();
+            debug!("SOA Record: {soa:?}");
+            Ok(Some(soa))
+        }
+        None => {
+            info!("Zone not found: {name}");
+            Ok(None)
+        }
+    }
+}
+
 async fn handle_get_command(
     // database pool
     conn: &Pool<Sqlite>,
@@ -152,12 +176,27 @@ async fn handle_get_command(
         typerecords: vec![],
     };
 
-    match db::get_records(conn, db_name.to_string(), rrtype, rclass, true).await {
-        Ok(value) => zr.typerecords.extend(value),
-        Err(err) => {
-            error!("Failed to query db: {err:?}")
+    //  if it's an SOA record we don't go to the database directly, it's based on the zone, but currently we're only doing this for the specific zone.
+
+    // TODO: need to get an SOA for any record we're authoritative for?
+    if rrtype == RecordType::SOA {
+        match handle_soa_query(conn, &name).await {
+            Ok(Some(soa)) => zr.typerecords.push(soa),
+            Ok(None) => {
+                info!("SOA not found for {db_name}");
+            }
+            Err(err) => {
+                error!("Failed to query db: {err:?}");
+            }
         }
-    };
+    } else {
+        match db::get_records(conn, db_name.to_string(), rrtype, rclass, true).await {
+            Ok(value) => zr.typerecords.extend(value),
+            Err(err) => {
+                error!("Failed to query db: {err:?}")
+            }
+        };
+    }
 
     // if let Some(value) = zone_get {
     //     // check if the type we want is in there, and only return the matching records
