@@ -53,39 +53,43 @@ pub(crate) fn init_otel_subscribers(otel_endpoint: Option<String>) -> Result<(),
         SCHEMA_URL,
     );
 
-    let otlp_exporter = opentelemetry_otlp::SpanExporter::builder().with_tonic();
-
-    let otlp_exporter = match otel_endpoint {
-        Some(endpoint) => otlp_exporter.with_endpoint(endpoint),
-        None => otlp_exporter.with_endpoint(
-            env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
-                .unwrap_or_else(|_| "http://localhost:4317".to_string()),
-        ),
+    let endpoint = match (otel_endpoint, env::var("OTEL_EXPORTER_OTLP_ENDPOINT")) {
+        (Some(endpoint), _) => Some(endpoint),
+        (_, Ok(endpoint)) => Some(endpoint),
+        _ => None,
     };
-    let otlp_exporter = otlp_exporter
-        .with_protocol(Protocol::HttpBinary)
-        .with_timeout(Duration::from_secs(5))
-        .build()
-        .map_err(|err| err.to_string())?;
-
-    let provider = TracerProvider::builder()
-        .with_batch_exporter(otlp_exporter, opentelemetry_sdk::runtime::Tokio)
-        // we want *everything!*
-        .with_sampler(Sampler::AlwaysOn)
-        .with_max_events_per_span(1000)
-        .with_max_attributes_per_span(1000)
-        .with_resource(resource)
-        .build();
-
-    global::set_tracer_provider(provider.clone());
-    provider.tracer("tracing-otel-subscriber");
 
     let subscriber = tracing_subscriber::registry()
-        .with(OpenTelemetryLayer::new(
-            provider.tracer("tracing-otel-subscriber"),
-        ))
         .with(build_loglevel_filter_layer())
         .with(tracing_subscriber_ext::build_logger_text());
-    tracing::subscriber::set_global_default(subscriber).map_err(|err| err.to_string())?;
+
+    match endpoint {
+        Some(endpoint) => {
+            let otlp_exporter = opentelemetry_otlp::SpanExporter::builder()
+                .with_tonic()
+                .with_endpoint(endpoint)
+                .with_protocol(Protocol::HttpBinary)
+                .with_timeout(Duration::from_secs(5))
+                .build()
+                .map_err(|err| err.to_string())?;
+
+            let provider = TracerProvider::builder()
+                .with_batch_exporter(otlp_exporter, opentelemetry_sdk::runtime::Tokio)
+                // we want *everything!*
+                .with_sampler(Sampler::AlwaysOn)
+                .with_max_events_per_span(1000)
+                .with_max_attributes_per_span(1000)
+                .with_resource(resource)
+                .build();
+
+            global::set_tracer_provider(provider.clone());
+            provider.tracer("goatns");
+            let subscriber = subscriber.with(OpenTelemetryLayer::new(provider.tracer("goatns")));
+            tracing::subscriber::set_global_default(subscriber).map_err(|err| err.to_string())?
+        }
+        None => {
+            tracing::subscriber::set_global_default(subscriber).map_err(|err| err.to_string())?
+        }
+    };
     Ok(())
 }
