@@ -84,8 +84,11 @@ async fn run() -> Result<(), GoatNsError> {
         _ => None,
     };
 
+    let hostname = config.read().hostname.clone();
+
     let datastore_manager = tokio::spawn(datastore::manager(
         datastore_receiver,
+        hostname,
         connpool.clone(),
         cron_db_cleanup_timer,
     ));

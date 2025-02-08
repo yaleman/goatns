@@ -5,6 +5,7 @@ use std::time::Duration;
 use crate::db::{self, DBEntity, User, ZoneOwnership};
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
+use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::{FileZone, ZoneRecord};
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc;
@@ -128,7 +129,32 @@ pub enum Command {
     },
 }
 
+async fn handle_soa_query(
+    server_hostname: &str,
+    conn: &Pool<Sqlite>,
+    name: &[u8],
+) -> Result<Option<InternalResourceRecord>, GoatNsError> {
+    let mut txn = conn.begin().await?;
+
+    let name = from_utf8(name)?;
+
+    // get the zone
+    match FileZone::get_by_name(&mut txn, name).await? {
+        Some(zone) => {
+            // get the SOA record
+            let soa = zone.get_soa_record(server_hostname);
+            debug!("SOA Record: {soa:?}");
+            Ok(Some(soa))
+        }
+        None => {
+            info!("Zone not found: {name}");
+            Ok(None)
+        }
+    }
+}
+
 async fn handle_get_command(
+    server_hostname: &str,
     // database pool
     conn: &Pool<Sqlite>,
     // this is the result from the things in memory
@@ -152,12 +178,27 @@ async fn handle_get_command(
         typerecords: vec![],
     };
 
-    match db::get_records(conn, db_name.to_string(), rrtype, rclass, true).await {
-        Ok(value) => zr.typerecords.extend(value),
-        Err(err) => {
-            error!("Failed to query db: {err:?}")
+    //  if it's an SOA record we don't go to the database directly, it's based on the zone, but currently we're only doing this for the specific zone.
+
+    // TODO: need to get an SOA for any record we're authoritative for?
+    if rrtype == RecordType::SOA {
+        match handle_soa_query(server_hostname, conn, &name).await {
+            Ok(Some(soa)) => zr.typerecords.push(soa),
+            Ok(None) => {
+                info!("SOA not found for {db_name}");
+            }
+            Err(err) => {
+                error!("Failed to query db: {err:?}");
+            }
         }
-    };
+    } else {
+        match db::get_records(conn, db_name.to_string(), rrtype, rclass, true).await {
+            Ok(value) => zr.typerecords.extend(value),
+            Err(err) => {
+                error!("Failed to query db: {err:?}")
+            }
+        };
+    }
 
     // if let Some(value) = zone_get {
     //     // check if the type we want is in there, and only return the matching records
@@ -252,7 +293,11 @@ async fn handle_get_zone_names(
 }
 
 #[instrument(level = "info", skip(connpool))]
-pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Result<(), String> {
+pub(crate) async fn handle_message(
+    server_hostname: &str,
+    cmd: Command,
+    connpool: &Pool<Sqlite>,
+) -> Result<(), String> {
     match cmd {
         Command::GetZone { id, name, resp } => {
             let res = handle_get_zone(resp, connpool, id, name).await;
@@ -299,7 +344,8 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
             rclass,
             resp,
         } => {
-            let res = handle_get_command(connpool, name, rrtype, rclass, resp).await;
+            let res =
+                handle_get_command(server_hostname, connpool, name, rrtype, rclass, resp).await;
             if let Err(e) = res {
                 error!("{e:?}")
             };
@@ -396,6 +442,7 @@ pub(crate) async fn handle_message(cmd: Command, connpool: &Pool<Sqlite>) -> Res
 /// Manages the datastore, waits for signals from the server instances and responds with data
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
+    server_hostname: String,
     connpool: Pool<Sqlite>,
     cron_db_cleanup_timer: Option<Duration>,
 ) -> Result<(), String> {
@@ -405,7 +452,10 @@ pub async fn manager(
     }
 
     while let Some(cmd) = rx.recv().await {
-        if handle_message(cmd, &connpool).await.is_err() {
+        if handle_message(&server_hostname, cmd, &connpool)
+            .await
+            .is_err()
+        {
             break;
         };
     }

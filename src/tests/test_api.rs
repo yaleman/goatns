@@ -54,8 +54,12 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
         agent_sender.clone(),
     ));
     // start all the things!
-    let datastore_manager =
-        tokio::spawn(crate::datastore::manager(datastore_rx, pool.clone(), None));
+    let datastore_manager = tokio::spawn(crate::datastore::manager(
+        datastore_rx,
+        "test.goatns.goat".to_string(),
+        pool.clone(),
+        None,
+    ));
 
     println!("Starting API Server on port {port}");
     let apiserver = crate::web::build(datastore_tx.clone(), config.read(), pool.clone())

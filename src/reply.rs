@@ -4,7 +4,7 @@ use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::{Header, Question};
 use crate::{ResourceRecord, UDP_BUFFER_SIZE};
 use packed_struct::prelude::*;
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(Debug, Clone)]
 pub struct Reply {
@@ -83,6 +83,7 @@ impl Reply {
     pub async fn as_bytes_udp(&self) -> Result<Vec<u8>, GoatNsError> {
         let mut result = self.as_bytes().await?;
         if result.len() > UDP_BUFFER_SIZE {
+            debug!("Truncating response to fit in UDP buffer");
             result.truncate(UDP_BUFFER_SIZE);
         };
         Ok(result)

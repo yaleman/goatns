@@ -48,6 +48,7 @@ mod tests {
         // start all the things!
         let datastore_manager = tokio::spawn(crate::datastore::manager(
             datastore_rx,
+            "test.goatns.goat".to_string(),
             connpool.clone(),
             None,
         ));

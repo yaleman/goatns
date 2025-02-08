@@ -55,6 +55,20 @@ impl FileZone {
             && self.rname == cmp.rname
             && self.serial == cmp.serial
     }
+
+    pub fn get_soa_record(&self, server_hostname: &str) -> InternalResourceRecord {
+        InternalResourceRecord::SOA {
+            zone: self.name.clone().into(),
+            mname: server_hostname.into(),
+            rname: self.rname.clone().into(),
+            serial: self.serial,
+            refresh: self.refresh,
+            retry: self.retry,
+            expire: self.expire,
+            minimum: self.minimum,
+            rclass: RecordClass::Internet,
+        }
+    }
 }
 /// default RNAME value for FileZone
 pub fn rname_default() -> String {

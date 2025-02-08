@@ -89,6 +89,9 @@ pub struct Header {
     #[packed_field(bits = "25")]
     z: bool, // 25-27 -
     #[packed_field(bits = "26")]
+    /// "authentic data" - This requests the server to return whether all of the answer and
+    /// authority sections have all been validated as secure according to the security policy of the server. AD=1 indicates that all
+    /// records have been validated as secure and the answer is not from a OPT-OUT range. AD=0 indicate that some part of the answer was insecure or not validated. This bit is set by default.
     ad: bool,
     #[packed_field(bits = "27")]
     cd: bool,

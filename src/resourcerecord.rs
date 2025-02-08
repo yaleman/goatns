@@ -282,6 +282,28 @@ pub enum InternalResourceRecord {
     InvalidType,
 }
 
+impl InternalResourceRecord {
+    pub fn is_type(&self, rrtype: RecordType) -> bool {
+        match self {
+            InternalResourceRecord::A { .. } => rrtype == RecordType::A,
+            InternalResourceRecord::AAAA { .. } => rrtype == RecordType::AAAA,
+            InternalResourceRecord::AXFR { .. } => rrtype == RecordType::AXFR,
+            InternalResourceRecord::CAA { .. } => rrtype == RecordType::CAA,
+            InternalResourceRecord::CNAME { .. } => rrtype == RecordType::CNAME,
+            InternalResourceRecord::HINFO { .. } => rrtype == RecordType::HINFO,
+            InternalResourceRecord::InvalidType => rrtype == RecordType::InvalidType,
+            InternalResourceRecord::LOC { .. } => rrtype == RecordType::LOC,
+            InternalResourceRecord::MX { .. } => rrtype == RecordType::MX,
+            InternalResourceRecord::NAPTR { .. } => rrtype == RecordType::NAPTR,
+            InternalResourceRecord::NS { .. } => rrtype == RecordType::NS,
+            InternalResourceRecord::PTR { .. } => rrtype == RecordType::PTR,
+            InternalResourceRecord::SOA { .. } => rrtype == RecordType::SOA,
+            InternalResourceRecord::TXT { .. } => rrtype == RecordType::TXT,
+            InternalResourceRecord::URI { .. } => rrtype == RecordType::URI,
+        }
+    }
+}
+
 impl TryFrom<FileZoneRecord> for InternalResourceRecord {
     type Error = GoatNsError;
     /// This is where we convert from the JSON blob in the file to an internal representation of the data.
