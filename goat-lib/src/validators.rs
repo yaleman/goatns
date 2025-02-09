@@ -1,9 +1,10 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
+
 use regex::Regex;
 
-pub static CAA_TAG_VALIDATOR: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"[a-zA-Z0-9]").expect("Failed to parse an internal regex!"));
-pub static URI_RECORD: Lazy<Regex> = Lazy::new(|| {
+pub static CAA_TAG_VALIDATOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[a-zA-Z0-9]").expect("Failed to parse an internal regex!"));
+pub static URI_RECORD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(?P<priority>\d+) (?P<weight>\d+) (?P<target>.*)")
         .expect("Failed to parse an internal regex!")
 });
