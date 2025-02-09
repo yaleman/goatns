@@ -1,9 +1,9 @@
 use concread::cowcell::asynch::CowCellReadTxn;
-use once_cell::sync::Lazy;
 use packed_struct::prelude::*;
 use std::io::Error;
 use std::net::SocketAddr;
 use std::str::from_utf8;
+use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::io::{self, AsyncReadExt};
 use tokio::net::{TcpListener, TcpStream, UdpSocket};
@@ -429,12 +429,12 @@ pub async fn parse_query(
     get_result(header, len, buf, datastore).await
 }
 
-static CHAOS_OK: Lazy<InternalResourceRecord> = Lazy::new(|| InternalResourceRecord::TXT {
+static CHAOS_OK: LazyLock<InternalResourceRecord> = LazyLock::new(|| InternalResourceRecord::TXT {
     txtdata: DNSCharString::from("OK"),
     ttl: 0,
     class: RecordClass::Chaos,
 });
-static CHAOS_NO: Lazy<InternalResourceRecord> = Lazy::new(|| InternalResourceRecord::TXT {
+static CHAOS_NO: LazyLock<InternalResourceRecord> = LazyLock::new(|| InternalResourceRecord::TXT {
     txtdata: DNSCharString::from("NO"),
     ttl: 0,
     class: RecordClass::Chaos,
