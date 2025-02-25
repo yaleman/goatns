@@ -49,8 +49,7 @@ book:
 
 # Run a local debug instance
 run:
-    cargo run
-
+    cargo run -- server
 
 # Run all the checks
 check: codespell clippy test doc_check
