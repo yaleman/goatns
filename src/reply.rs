@@ -18,18 +18,18 @@ pub struct Reply {
 impl Reply {
     /// This is used to turn into a series of bytes to yeet back to the client, needs to take a mutable self because the answers record length goes into the header
     pub async fn as_bytes(&self) -> Result<Vec<u8>, GoatNsError> {
-        let mut retval: Vec<u8> = vec![];
+        let mut reply_bytes: Vec<u8> = vec![];
 
         // so we can set the headers
         let mut final_reply = self.clone();
         final_reply.header.ancount = final_reply.answers.len() as u16;
         // use the packed_struct to build the bytes
         let reply_header = final_reply.header.pack()?;
-        retval.extend(reply_header);
+        reply_bytes.extend(reply_header);
 
         // need to add the question in here
         if let Some(question) = &final_reply.question {
-            retval.extend(question.try_to_bytes()?);
+            reply_bytes.extend(question.try_to_bytes()?);
 
             for answer in &final_reply.answers {
                 let ttl: &u32 = match answer {
@@ -57,8 +57,8 @@ impl Reply {
                     ttl: *ttl,
                     rdata: answer.as_bytes(&question.qname)?,
                 };
-                let reply_bytes: Vec<u8> = answer_record.try_into()?;
-                retval.extend(reply_bytes);
+                let record_bytes: Vec<u8> = answer_record.try_into()?;
+                reply_bytes.extend(record_bytes);
             }
         }
 
@@ -76,7 +76,7 @@ impl Reply {
             );
         }
 
-        Ok(retval)
+        Ok(reply_bytes)
     }
 
     /// because sometimes you need to trunc that junk
