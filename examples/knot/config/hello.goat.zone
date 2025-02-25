@@ -1,13 +1,13 @@
 ; TODO: make this match the test zone file
 $ORIGIN hello.goat.
-$TTL 3600
+;$TTL 3600
 
 @	SOA	ns1.hello.goat. admin.hello.goat. (
-	1	; Serial
-	2		; Refresh
-	3		; Retry
-	4		; Expire
-	60		; Minimum TTL
+	12345	; Serial
+	60		; Refresh
+	30		; Retry
+	15		; Expire
+	5		; Minimum TTL
 )
 
 ; Name servers

@@ -292,7 +292,7 @@ pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
 }
 
 impl Question {
-    fn normalized_name(&self) -> Result<String, String> {
+    pub fn normalized_name(&self) -> Result<String, String> {
         match from_utf8(&self.qname) {
             Ok(value) => Ok(value.to_lowercase()),
             Err(error) => Err(format!(
@@ -302,9 +302,9 @@ impl Question {
         }
     }
 
-    /// hand it the buffer and the things, and get back a [Question]
+    /// hand it the buffer and the things, and get back a tuple of ([Question], usize) where usize is the offset when it's done
     #[instrument(level = "debug", skip(buf))]
-    fn from_packets(buf: &[u8]) -> Result<Self, String> {
+    pub fn from_packets_with_offset(buf: &[u8]) -> Result<(Self, usize), String> {
         let qname = get_question_qname(buf)?;
 
         // skip past the end of the question
@@ -338,15 +338,24 @@ impl Question {
         qclass_bytes.copy_from_slice(&buf[read_pointer + 2..read_pointer + 4]);
         let qclass: RecordClass = RecordClass::from(&u16::from_be_bytes(qclass_bytes));
 
-        Ok(Question {
-            qname,
-            qtype,
-            qclass,
-        })
+        Ok((
+            Question {
+                qname,
+                qtype,
+                qclass,
+            },
+            read_pointer + 5,
+        ))
+    }
+
+    /// hand it the buffer and the things, and get back a [Question]
+    #[instrument(level = "debug", skip(buf))]
+    pub fn from_packets(buf: &[u8]) -> Result<Self, String> {
+        Self::from_packets_with_offset(buf).map(|(question, _)| question)
     }
 
     /// turn a question into a vec of bytes to send back to the user
-    fn try_to_bytes(&self) -> Result<Vec<u8>, GoatNsError> {
+    pub fn try_to_bytes(&self) -> Result<Vec<u8>, GoatNsError> {
         let mut retval: Vec<u8> = vec![];
 
         let name_bytes = name_as_bytes(&self.qname, None, None)?;

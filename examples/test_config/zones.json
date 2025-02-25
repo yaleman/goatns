@@ -2,11 +2,11 @@
     {
         "name": "hello.goat",
         "rname": "billy@hello.goat",
-        "serial": 1,
-        "refresh": 2,
-        "retry": 3,
-        "expire": 4,
-        "minimum": 60,
+        "serial": 12345,
+        "refresh": 60,
+        "retry": 30,
+        "expire": 15,
+        "minimum": 5,
         "records": [
             {
                 "name": "foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890",

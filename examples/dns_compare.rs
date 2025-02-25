@@ -4,8 +4,12 @@
 //!
 
 use clap::*;
+use goatns::Question;
 use packed_struct::prelude::*;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::{
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    process::exit,
+};
 
 const UDP_HEADER_LENGTH: usize = 12;
 
@@ -146,6 +150,29 @@ impl TcpPacket {
     }
 }
 
+fn hexdump(data: &[u8]) {
+    for chunk in data.chunks(16) {
+        for byte in chunk {
+            print!("{:02x} ", byte);
+        }
+        for _ in chunk.len()..16 {
+            print!("   ");
+        }
+        print!("  ");
+        for byte in chunk {
+            print!(
+                "{}",
+                if byte.is_ascii_graphic() {
+                    *byte as char
+                } else {
+                    '.'
+                }
+            );
+        }
+        println!("");
+    }
+}
+
 #[tokio::main]
 pub async fn main() {
     let cli = Cli::parse();
@@ -161,8 +188,11 @@ pub async fn main() {
 
     // filter for DNS packets on the specified port.
     let filter = format!("port {}", cli.port);
-    eprintln!("Filter: {}", filter);
-    cap.filter(&filter, true).expect("Failed to build filter");
+    if let Err(err) = cap.filter(&filter, true) {
+        eprintln!("Failed to set filter '{}', quitting: {}", filter, err);
+        exit(1)
+    };
+    eprintln!("Watching for packets with the filter: '{}'", filter);
 
     while let Ok(packet) = cap.next_packet() {
         let header_slice: [u8; UDP_HEADER_LENGTH] = packet.data[0..UDP_HEADER_LENGTH]
@@ -240,8 +270,12 @@ pub async fn main() {
         };
 
         println!(
-            "{}:{} -> {}:{}",
-            ip_data.source, source_port, ip_data.dest, dest_port
+            "{}:{} -> {}:{} ({} bytes)",
+            ip_data.source,
+            source_port,
+            ip_data.dest,
+            dest_port,
+            packet.data.len()
         );
 
         // println!("remaining bytes of packet {:x?}", remaining_packets);
@@ -258,8 +292,25 @@ pub async fn main() {
         };
         println!("DNS Header: {:?}", dns_header);
 
-        println!("\n\n");
+        let body = &remaining_packets[12..];
 
+        if let Ok((question, byte_offset)) = Question::from_packets_with_offset(body) {
+            println!("Question: {:?}", question);
+            println!("Remaining bytes: {}", body.len() - byte_offset);
+            if let Ok(name) = question.normalized_name() {
+                println!("Question: {:?}", name);
+            } else {
+                eprintln!("Failed to normalize name");
+            }
+            println!("Dumping remainder of packet");
+            hexdump(&body[byte_offset..]);
+        } else {
+            eprintln!("Failed to parse question header");
+        }
+        println!("\nDumping whole packet");
+        hexdump(packet.data);
         // TODO: dig around and parse the response betterer
+
+        println!("####################");
     }
 }
