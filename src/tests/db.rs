@@ -1,7 +1,8 @@
 use chrono::{TimeDelta, Utc};
 
 use crate::db::test::test_get_sqlite_memory;
-use crate::db::{cron_db_cleanup, get_zones_with_txn, start_db, DBEntity, ZoneOwnership};
+use crate::db::zoneownership::ZoneOwnership;
+use crate::db::{cron_db_cleanup, get_zones_with_txn, start_db, DBEntity};
 use crate::error::GoatNsError;
 use crate::tests::test_harness;
 

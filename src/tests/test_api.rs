@@ -1,6 +1,8 @@
 use crate::config::ConfigFile;
 use crate::db::test::test_get_sqlite_memory;
-use crate::db::{start_db, DBEntity, User, UserAuthToken, ZoneOwnership};
+use crate::db::zoneownership::ZoneOwnership;
+
+use crate::db::{start_db, DBEntity, User, UserAuthToken};
 use crate::enums::RecordType;
 use crate::error::GoatNsError;
 use crate::servers::{self, Servers};

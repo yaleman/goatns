@@ -2,7 +2,8 @@ use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::db::{self, DBEntity, User, ZoneOwnership};
+use crate::db::zoneownership::ZoneOwnership;
+use crate::db::{self, DBEntity, User};
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
 use crate::resourcerecord::InternalResourceRecord;

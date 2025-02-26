@@ -106,7 +106,7 @@ pub(crate) async fn zones_new_post(
         id: None,
         name: form.name.clone(),
         records: vec![],
-        rname: user.email.replace("@", "."),
+        rname: user.email.replace("@", "."), // TODO: work out how this gets into the database
         serial: 0,
         refresh: Default::default(),
         retry: Default::default(),

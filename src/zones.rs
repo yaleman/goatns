@@ -60,7 +60,7 @@ impl FileZone {
         InternalResourceRecord::SOA {
             zone: self.name.clone().into(),
             mname: server_hostname.into(),
-            rname: self.rname.clone().into(),
+            rname: self.rname.clone().replace("@", ".").into(),
             serial: self.serial,
             refresh: self.refresh,
             retry: self.retry,
@@ -193,5 +193,54 @@ impl FileZone {
         .map(|row| row.into())
         .collect();
         Ok(rows)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        enums::RecordClass,
+        resourcerecord::{DomainName, InternalResourceRecord},
+    };
+
+    #[test]
+    fn test_get_soa_record() {
+        use crate::zones::FileZone;
+        let zone = FileZone {
+            id: None,
+            name: "example.com".to_string(),
+            rname: "admin@example.com".to_string(),
+            serial: 20210901,
+            refresh: 3600,
+            retry: 900,
+            expire: 604800,
+            minimum: 3600,
+            records: vec![],
+        };
+        let soa = zone.get_soa_record("ns1.example.com");
+        match soa {
+            InternalResourceRecord::SOA {
+                zone,
+                mname,
+                rname,
+                serial,
+                refresh,
+                retry,
+                expire,
+                minimum,
+                rclass,
+            } => {
+                assert_eq!(zone, DomainName::from("example.com"));
+                assert_eq!(mname, DomainName::from("ns1.example.com"));
+                assert_eq!(rname, DomainName::from("admin.example.com"));
+                assert_eq!(serial, 20210901);
+                assert_eq!(refresh, 3600);
+                assert_eq!(retry, 900);
+                assert_eq!(expire, 604800);
+                assert_eq!(minimum, 3600);
+                assert_eq!(rclass, RecordClass::Internet);
+            }
+            _ => panic!("Expected SOA record"),
+        }
     }
 }

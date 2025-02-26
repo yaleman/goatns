@@ -1,4 +1,6 @@
-use crate::db::{DBEntity, User, ZoneOwnership};
+use crate::db::zoneownership::ZoneOwnership;
+
+use crate::db::{DBEntity, User};
 use crate::web::utils::Urls;
 use crate::web::GoatState;
 use crate::zones::FileZone;

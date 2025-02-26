@@ -1,8 +1,9 @@
 use super::*;
 use crate::db::DBEntity;
 
+use crate::db::zoneownership::ZoneOwnership;
 use crate::db::User;
-use crate::db::ZoneOwnership;
+
 use crate::error_result_json;
 use crate::utils::check_valid_tld;
 use crate::zones::FileZone;
