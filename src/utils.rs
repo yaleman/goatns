@@ -113,7 +113,6 @@ pub fn name_as_bytes(
     compress_target: Option<u16>,
     compress_reference: Option<&Vec<u8>>,
 ) -> Result<Vec<u8>, GoatNsError> {
-    trace!("################################");
     match from_utf8(name) {
         Ok(nstr) => trace!("name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
         Err(_) =>  trace!("failed to utf-8 name name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
@@ -203,7 +202,11 @@ pub fn name_as_bytes(
             }
         }
     }
-    trace!("Final result {result:?}");
+    trace!(
+        "Final result from {} - {:?}",
+        from_utf8(name).unwrap_or(""),
+        result
+    );
     Ok(result)
 }
 

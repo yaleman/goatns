@@ -4,8 +4,11 @@
 //!
 
 use clap::*;
+use crossterm::style::Stylize;
 use goatns::Question;
+use itertools::Itertools;
 use packed_struct::prelude::*;
+use std::collections::BTreeMap;
 use std::{
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
     process::exit,
@@ -97,7 +100,7 @@ impl Ipv6Header {
 
 #[derive(Debug, Parser)]
 struct Cli {
-    port: u16,
+    port: Vec<u16>,
 }
 
 #[allow(dead_code)]
@@ -186,15 +189,29 @@ pub async fn main() {
         .open()
         .expect("Failed to open device");
 
+    if cli.port.is_empty() {
+        eprintln!("No ports specified, quitting");
+        exit(1)
+    }
+
+    // only buffer if we have more than one port
+    let buffering = !matches!(cli.port.len(), 0 | 1);
+
     // filter for DNS packets on the specified port.
-    let filter = format!("port {}", cli.port);
+    let filter = format!("port {}", cli.port.iter().join(" or port "));
     if let Err(err) = cap.filter(&filter, true) {
         eprintln!("Failed to set filter '{}', quitting: {}", filter, err);
         exit(1)
     };
     eprintln!("Watching for packets with the filter: '{}'", filter);
 
+    let mut last_packets: BTreeMap<u16, Vec<u8>> = BTreeMap::new();
+    for port in cli.port.iter().sorted() {
+        last_packets.insert(*port, Vec::new());
+    }
+
     while let Ok(packet) = cap.next_packet() {
+        // if buffering and
         let header_slice: [u8; UDP_HEADER_LENGTH] = packet.data[0..UDP_HEADER_LENGTH]
             .try_into()
             .expect("slice with incorrect length");
@@ -209,7 +226,6 @@ pub async fn main() {
                 header.length
             );
         }
-        // println!("Header length: {}", header.header_length());
 
         let (ip_data, remaining_packets) = match header.version {
             4 => {
@@ -269,6 +285,16 @@ pub async fn main() {
             }
         };
 
+        if buffering {
+            // we only care about source ports because they're the responses
+            if cli.port.contains(&source_port) {
+                last_packets.insert(source_port, remaining_packets.to_vec());
+            } else {
+                eprintln!("Ignoring port: {}", source_port);
+                continue;
+            }
+        }
+
         println!(
             "{}:{} -> {}:{} ({} bytes)",
             ip_data.source,
@@ -277,8 +303,6 @@ pub async fn main() {
             dest_port,
             packet.data.len()
         );
-
-        // println!("remaining bytes of packet {:x?}", remaining_packets);
 
         let dns_header: &[u8; 12] = remaining_packets[0..12]
             .try_into()
@@ -296,7 +320,10 @@ pub async fn main() {
 
         if let Ok((question, byte_offset)) = Question::from_packets_with_offset(body) {
             println!("Question: {:?}", question);
-            println!("Remaining bytes: {}", body.len() - byte_offset);
+            println!(
+                "Remaining bytes: {}",
+                body.len().saturating_sub(byte_offset)
+            );
             if let Ok(name) = question.normalized_name() {
                 println!("Question: {:?}", name);
             } else {
@@ -312,5 +339,83 @@ pub async fn main() {
         // TODO: dig around and parse the response betterer
 
         println!("####################");
+
+        if buffering && last_packets.values().all(|v| !v.is_empty()) {
+            // we have packets to compare
+            // let lines = vec![];
+
+            // we're doing a visual diff of the packets so we iterate through the ports we're collecting and compare them
+            let mut index = 0;
+
+            let mut port_index = BTreeMap::new();
+            let mut port_cells = BTreeMap::new();
+            // make sure we have the ports
+            for port in last_packets.keys().sorted() {
+                port_index.insert(port, 0);
+                port_cells.insert(port, vec![]);
+            }
+
+            // print a header showing the ports, spaced out
+            for port in last_packets.keys().sorted() {
+                print!("{:^24} | ", port);
+            }
+            println!();
+
+            loop {
+                for port in last_packets.keys().sorted() {
+                    if let Some(packet) = last_packets.get(port).unwrap().get(index) {
+                        port_cells.get_mut(port).unwrap().push(*packet);
+                        port_index.insert(port, port_index.get(port).unwrap() + 1);
+                    } else {
+                        // port_cells.get_mut(port).unwrap().push("  ".to_string());
+                    }
+                }
+
+                // if any of the port_rows is over 8 entries or we're over the end then print them and start a new line
+                if port_cells.values().any(|v| v.len() == 8)
+                    || index >= last_packets.values().map(|v| v.len()).max().unwrap()
+                {
+                    // print the line
+                    for (index, cells) in port_cells
+                        .iter()
+                        .sorted_by_key(|&(k, _)| k)
+                        .map(|(_, v)| v)
+                        .enumerate()
+                    {
+                        for (cell_index, cell) in cells.iter().enumerate() {
+                            if index > 0 {
+                                if let Some(first_cell) = port_cells.values().next() {
+                                    if first_cell.get(cell_index).cloned().unwrap_or(0) != *cell {
+                                        print!("{} ", format!("{:2x}", cell).red().on_black());
+                                    } else {
+                                        print!("{} ", format!("{:2x}", cell).white().on_black());
+                                    }
+                                } else {
+                                    print!("");
+                                }
+                            } else {
+                                print!("{} ", format!("{:2x}", cell).white().on_black());
+                            }
+                        }
+                        // if port_cells is less than 8, space it out
+                        for _ in cells.len()..8 {
+                            print!("   ");
+                        }
+                        print!(" | ");
+                    }
+                    println!();
+                    // clean the port_rows
+                    port_cells.iter_mut().for_each(|(_, v)| v.clear());
+                }
+
+                if index >= last_packets.values().map(|v| v.len()).max().unwrap() {
+                    break;
+                }
+                index += 1;
+            }
+
+            // reset last_packets for next time
+            last_packets.iter_mut().for_each(|(_, v)| v.clear());
+        }
     }
 }

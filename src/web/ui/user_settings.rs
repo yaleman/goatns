@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
 use tracing::{debug, error, info, trace};
 
-use crate::db::UserAuthToken;
+use crate::db::userauthtoken::UserAuthToken;
 use crate::web::GoatState;
 
 static SESSION_CSRFTOKEN_FIELD: &str = "api_token_csrf_token";

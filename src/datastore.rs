@@ -130,6 +130,7 @@ pub enum Command {
     },
 }
 
+#[instrument(level = "info", skip(server_hostname, conn))]
 async fn handle_soa_query(
     server_hostname: &str,
     conn: &Pool<Sqlite>,
@@ -154,12 +155,10 @@ async fn handle_soa_query(
     }
 }
 
+#[instrument(level = "info", skip(server_hostname, conn, resp))]
 async fn handle_get_command(
     server_hostname: &str,
-    // database pool
     conn: &Pool<Sqlite>,
-    // this is the result from the things in memory
-    // zone_get: Option<&ZoneRecord>,
     name: Vec<u8>,
     rrtype: RecordType,
     rclass: RecordClass,

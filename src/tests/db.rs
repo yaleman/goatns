@@ -23,7 +23,7 @@ fn zoneownership_serde() {
 }
 #[tokio::test]
 async fn userauthtoken_saves() -> Result<(), GoatNsError> {
-    use crate::db::UserAuthToken;
+    use crate::db::userauthtoken::UserAuthToken;
 
     let pool = test_get_sqlite_memory().await;
 
@@ -62,8 +62,7 @@ async fn userauthtoken_saves() -> Result<(), GoatNsError> {
 }
 #[tokio::test]
 async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
-    use crate::db::UserAuthToken;
-
+    use crate::db::userauthtoken::UserAuthToken;
     let pool = test_get_sqlite_memory().await;
 
     println!("Starting DB");

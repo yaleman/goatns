@@ -57,9 +57,16 @@ impl FileZone {
     }
 
     pub fn get_soa_record(&self, server_hostname: &str) -> InternalResourceRecord {
+        // ensure mname has a trailing period
+        let mname = if server_hostname.ends_with('.') {
+            server_hostname.to_string()
+        } else {
+            format!("{}.", server_hostname)
+        };
+
         InternalResourceRecord::SOA {
             zone: self.name.clone().into(),
-            mname: server_hostname.into(),
+            mname: mname.into(),
             rname: self.rname.clone().replace("@", ".").into(),
             serial: self.serial,
             refresh: self.refresh,
@@ -231,7 +238,7 @@ mod tests {
                 rclass,
             } => {
                 assert_eq!(zone, DomainName::from("example.com"));
-                assert_eq!(mname, DomainName::from("ns1.example.com"));
+                assert_eq!(mname, DomainName::from("ns1.example.com."));
                 assert_eq!(rname, DomainName::from("admin.example.com"));
                 assert_eq!(serial, 20210901);
                 assert_eq!(refresh, 3600);

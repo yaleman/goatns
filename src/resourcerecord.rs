@@ -599,11 +599,13 @@ impl InternalResourceRecord {
                 retry,
                 expire,
                 minimum,
-                ..
+                rclass: _,
             } => {
                 let zone_as_bytes = zone.name.as_bytes().to_vec();
                 let mut res: Vec<u8> =
                     mname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?;
+                res.push(0); // null  to end the mname
+                             // TODO: work out why this is is needed but not on rname...?
                 res.extend(rname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?);
                 res.extend(serial.to_be_bytes());
                 res.extend(refresh.to_be_bytes());

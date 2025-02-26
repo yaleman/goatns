@@ -148,6 +148,9 @@ async fn test_cloudflare_soa_reply() {
     use crate::reply::Reply;
     use crate::resourcerecord::DomainName;
     use crate::{Header, HEADER_BYTES};
+
+    flexi_logger::init();
+
     //     /*
     //     from: <https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA>
 
@@ -252,7 +255,7 @@ async fn test_cloudflare_soa_reply() {
     let mut current_block: &str;
     for (index, byte) in reply_bytes.iter().enumerate() {
         if index < HEADER_BYTES {
-            current_block = "Header ";
+            current_block = "Header   ";
         } else if index < HEADER_BYTES + 9 {
             current_block = "Question ";
         } else {
