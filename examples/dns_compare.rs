@@ -169,7 +169,7 @@ fn hexdump(data: &[u8]) {
                 }
             );
         }
-        println!("");
+        println!();
     }
 }
 
