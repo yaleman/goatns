@@ -68,6 +68,7 @@ impl App {
 
     /// updates the application's state based on user input
     fn handle_events(&mut self) -> io::Result<()> {
+        #[allow(clippy::single_match)]
         match event::read()? {
             // it's important to check that the event is a key press event as
             // crossterm also emits key release and repeat events on Windows.
