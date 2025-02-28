@@ -13,6 +13,7 @@ use tracing::{debug, error, trace};
 
 use crate::db::get_all_fzr_by_name;
 use crate::enums::{Rcode, RecordClass, RecordType};
+use crate::error::GoatNsError;
 use crate::reply::Reply;
 use crate::resourcerecord::InternalResourceRecord;
 use crate::servers::{parse_query, QueryProtocol};
@@ -107,7 +108,7 @@ enum ResponseType {
     Invalid,
 }
 
-async fn parse_raw_http(bytes: Vec<u8>) -> Result<GetQueryString, String> {
+async fn parse_raw_http(bytes: Vec<u8>) -> Result<GetQueryString, GoatNsError> {
     let mut split_header: [u8; HEADER_BYTES] = [0; HEADER_BYTES];
     split_header.copy_from_slice(&bytes[0..HEADER_BYTES]);
     // unpack the header for great justice
@@ -115,7 +116,7 @@ async fn parse_raw_http(bytes: Vec<u8>) -> Result<GetQueryString, String> {
         Ok(value) => value,
         Err(error) => {
             // can't return a servfail if we can't unpack the header, they're probably doing something bad.
-            return Err(format!("Failed to parse header: {:?}", error));
+            return Err(GoatNsError::InvalidHeader(format!("{:?}", error)));
         }
     };
 

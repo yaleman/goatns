@@ -8,6 +8,7 @@ pub enum GoatNsError {
     Csrf(String),
     BytePackingError(String),
     InvalidName,
+    InvalidHeader(String),
     IoError(std::io::Error),
     /// Something failed in the start up of the platform
     StartupError(String),

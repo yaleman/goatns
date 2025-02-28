@@ -106,7 +106,7 @@ impl Reply {
 }
 
 /// Want a generic empty reply with an ID and an RCODE? Here's your function.
-pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, String> {
+pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, GoatNsError> {
     let header = Header {
         id,
         qr: PacketType::Answer,
@@ -123,13 +123,13 @@ pub fn reply_builder(id: u16, rcode: Rcode) -> Result<Reply, String> {
 }
 
 /// Build a NXDOMAIN response
-pub fn reply_nxdomain(id: u16) -> Result<Reply, String> {
+pub fn reply_nxdomain(id: u16) -> Result<Reply, GoatNsError> {
     // RFC 2308  - 2.1 Name Error - <https://www.rfc-editor.org/rfc/rfc2308#section-2.1>
     reply_builder(id, Rcode::NameError)
 }
 
 /// Reply to an ANY request with a HINFO "RFC8482" "" response
-pub fn reply_any(id: u16, question: &Question) -> Result<Reply, String> {
+pub fn reply_any(id: u16, question: &Question) -> Result<Reply, GoatNsError> {
     Ok(Reply {
         header: Header {
             id,

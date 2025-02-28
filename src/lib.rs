@@ -229,10 +229,12 @@ impl Display for Question {
 ///
 /// # Errors
 /// Will return Strings telling you what's gone wrong.
-pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
+pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, GoatNsError> {
     trace!("got buf: {input_val:?}");
     if input_val.is_empty() {
-        return Err("zero-length buffer? That's bad.".to_string());
+        return Err(GoatNsError::InvalidValue(
+            "zero-length buffer? That's bad.".to_string(),
+        ));
     }
     // let's make a mut copy of the input so we can do things to do it
     let mut buf = input_val.to_owned();
@@ -244,21 +246,21 @@ pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
             // we got to the end
             break;
         } else if label_len > 63 {
-            return Err(format!("Label length provided was {label_len}, needs to be <=63 while parsing {input_val:?}"));
+            return Err(GoatNsError::InvalidValue(format!("Label length provided was {label_len}, needs to be <=63 while parsing {input_val:?}")));
         }
         if buf.len() < label_len + 1 {
-            return Err(format!(
+            return Err(GoatNsError::InvalidValue(format!(
                 "Label length was {label_len} but remaining size was too short: {} while parsing {input_val:?}",
                 buf.len()
-            ));
+            )));
         }
         #[cfg(test)]
         eprintln!("Before extend: {result:?}");
         if buf.len() < label_len {
-            return Err(format!(
+            return Err(GoatNsError::InvalidValue(format!(
                 "Buffer was too sort to pull bytes from ({})",
                 buf.len()
-            ));
+            )));
         }
         result.extend(buf[1..=label_len].to_vec());
         #[cfg(test)]
@@ -277,14 +279,14 @@ pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
             result.push(46);
         }
         if result.len() > 255 {
-            return Err(format!(
+            return Err(GoatNsError::InvalidValue(format!(
                 "qname length over 255 while parsing question: {result:?}"
-            ));
+            )));
         }
     }
     let result_string = match from_utf8(&result) {
         Ok(value) => value.to_owned().to_lowercase(),
-        Err(error) => return Err(format!("{error:?}")),
+        Err(error) => return Err(GoatNsError::Utf8Error(error)),
     };
     #[cfg(test)]
     eprintln!("Returning from get_question_qname {result_string:?}");
@@ -292,48 +294,48 @@ pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
 }
 
 impl Question {
-    pub fn normalized_name(&self) -> Result<String, String> {
+    pub fn normalized_name(&self) -> Result<String, GoatNsError> {
         match from_utf8(&self.qname) {
             Ok(value) => Ok(value.to_lowercase()),
-            Err(error) => Err(format!(
+            Err(error) => Err(GoatNsError::InvalidValue(format!(
                 "Failed to normalize {:?}: {:?}",
                 &self.qname, error
-            )),
+            ))),
         }
     }
 
     /// hand it the buffer and the things, and get back a tuple of ([Question], usize) where usize is the offset when it's done
     #[instrument(level = "debug", skip(buf))]
-    pub fn from_packets_with_offset(buf: &[u8]) -> Result<(Self, usize), String> {
+    pub fn from_packets_with_offset(buf: &[u8]) -> Result<(Self, usize), GoatNsError> {
         let qname = get_question_qname(buf)?;
 
         // skip past the end of the question
         let read_pointer = qname.len() + 2;
         if buf.len() <= read_pointer + 1 {
-            return Err(format!(
+            return Err(GoatNsError::InvalidValue(format!(
                 "Packet not long enough, looked for {read_pointer}, got {}",
                 buf.len()
-            ));
+            )));
         }
         let mut qtype_bytes: [u8; 2] = [0; 2];
         if buf[read_pointer..read_pointer + 2].len() != 2 {
-            return Err(
+            return Err(GoatNsError::InvalidValue(
                 "Couldn't get two bytes when I asked for it from the header for the QTYPE"
                     .to_string(),
-            );
+            ));
         }
         qtype_bytes.copy_from_slice(&buf[read_pointer..read_pointer + 2]);
         let qtype = RecordType::from(&u16::from_be_bytes(qtype_bytes));
         let mut qclass_bytes: [u8; 2] = [0; 2];
         if buf.len() <= read_pointer + 3 {
-            return Err("Buffer length too short to get two bytes when I asked for it from the header for the QCLASS"
-            .to_string(),);
+            return Err(GoatNsError::InvalidValue("Buffer length too short to get two bytes when I asked for it from the header for the QCLASS"
+            .to_string()));
         }
         if buf[read_pointer + 2..read_pointer + 4].len() != 2 {
-            return Err(
+            return Err(GoatNsError::InvalidValue(
                 "Couldn't get two bytes when I asked for it from the header for the QCLASS"
                     .to_string(),
-            );
+            ));
         }
         qclass_bytes.copy_from_slice(&buf[read_pointer + 2..read_pointer + 4]);
         let qclass: RecordClass = RecordClass::from(&u16::from_be_bytes(qclass_bytes));
@@ -350,7 +352,7 @@ impl Question {
 
     /// hand it the buffer and the things, and get back a [Question]
     #[instrument(level = "debug", skip(buf))]
-    pub fn from_packets(buf: &[u8]) -> Result<Self, String> {
+    pub fn from_packets(buf: &[u8]) -> Result<Self, GoatNsError> {
         Self::from_packets_with_offset(buf).map(|(question, _)| question)
     }
 

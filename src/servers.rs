@@ -170,7 +170,7 @@ pub async fn udp_server(
                 // let len = sock.send_to(r.answer.as_bytes(), addr).await?;
                 trace!("{:?} bytes sent", len);
             }
-            Err(error) => error!("Error: {}", error),
+            Err(error) => error!("Error: {:?}", error),
         }
     }
 }
@@ -299,7 +299,7 @@ pub async fn tcp_conn_handler(
             };
             trace!("{:?} bytes sent", len);
         }
-        Err(error) => error!("Error: {}", error),
+        Err(error) => error!("Error: {:?}", error),
     }
     Ok(())
 }
@@ -405,7 +405,7 @@ pub async fn parse_query(
     buf: &[u8],
     capture_packets: bool,
     protocol: QueryProtocol,
-) -> Result<Reply, String> {
+) -> Result<Reply, GoatNsError> {
     if capture_packets {
         crate::packet_dumper::dump_bytes(
             buf[0..len].into(),
@@ -421,7 +421,10 @@ pub async fn parse_query(
         Ok(value) => value,
         Err(error) => {
             // can't return a servfail if we can't unpack the header, they're probably doing something bad.
-            return Err(format!("Failed to parse header: {:?}", error));
+            return Err(GoatNsError::InvalidValue(format!(
+                "Failed to parse header: {:?}",
+                error
+            )));
         }
     };
     trace!("Buffer length: {}", len);
@@ -447,22 +450,24 @@ async fn get_result(
     len: usize,
     buf: &[u8],
     datastore: mpsc::Sender<crate::datastore::Command>,
-) -> Result<Reply, String> {
+) -> Result<Reply, GoatNsError> {
     trace!("called get_result(header={header}, len={len})");
 
     // if we get something other than a query, yeah nah.
     if header.opcode != OpCode::Query {
-        return Err(format!("Invalid OPCODE, got {:?}", header.opcode));
+        return Err(GoatNsError::InvalidValue(format!(
+            "Invalid OPCODE, got {:?}",
+            header.opcode
+        )));
     };
 
     let question = match Question::from_packets(&buf[HEADER_BYTES..len]) {
         Ok(value) => {
             trace!("Parsed question: {:?}", value);
-
             value
         }
         Err(error) => {
-            debug!("Failed to parse question: {} id={}", error, header.id);
+            debug!("Failed to parse question: {:?} id={}", error, header.id);
             return reply_builder(header.id, Rcode::ServFail);
         }
     };
