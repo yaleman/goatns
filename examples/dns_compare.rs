@@ -227,7 +227,7 @@ pub async fn main() {
             );
         }
 
-        let (ip_data, remaining_packets) = match header.version {
+        let (ip_data, packet_contents) = match header.version {
             4 => {
                 let mut slice: [u8; 8] = [0; 8];
                 slice.copy_from_slice(header.ip_data(packet.data));
@@ -288,7 +288,7 @@ pub async fn main() {
         if buffering {
             // we only care about source ports because they're the responses
             if cli.port.contains(&source_port) {
-                last_packets.insert(source_port, remaining_packets.to_vec());
+                last_packets.insert(source_port, packet_contents.to_vec());
             } else {
                 eprintln!("Ignoring port: {}", source_port);
                 continue;
@@ -304,7 +304,7 @@ pub async fn main() {
             packet.data.len()
         );
 
-        let dns_header: &[u8; 12] = remaining_packets[0..12]
+        let dns_header: &[u8; 12] = packet_contents[0..12]
             .try_into()
             .expect("slice with incorrect length");
         let dns_header = match goatns::Header::unpack(dns_header) {
@@ -316,7 +316,7 @@ pub async fn main() {
         };
         println!("DNS Header: {:?}", dns_header);
 
-        let body = &remaining_packets[12..];
+        let body = &packet_contents[12..];
 
         if let Ok((question, byte_offset)) = Question::from_packets_with_offset(body) {
             println!("Question: {:?}", question);
@@ -334,8 +334,8 @@ pub async fn main() {
         } else {
             eprintln!("Failed to parse question header");
         }
-        println!("\nDumping whole packet");
-        hexdump(packet.data);
+        println!("\nDumping packet contents");
+        hexdump(packet_contents);
         // TODO: dig around and parse the response betterer
 
         println!("####################");

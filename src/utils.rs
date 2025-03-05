@@ -4,7 +4,7 @@ use crate::error::GoatNsError;
 use crate::HEADER_BYTES;
 use std::str::from_utf8;
 use tokio::sync::{broadcast, mpsc};
-use tracing::{debug, trace};
+use tracing::{debug, instrument, trace};
 
 pub fn vec_find(item: u8, search: &[u8]) -> Option<usize> {
     for (index, curr_byte) in search.iter().enumerate() {
@@ -108,16 +108,12 @@ name_as_bytes(
     Some("example.com".as_bytes().to_vec())
 )
 */
+#[instrument(level = "trace", fields(name_utf8=from_utf8(name).unwrap_or("<unparseable>")))]
 pub fn name_as_bytes(
     name: &[u8],
     compress_target: Option<u16>,
     compress_reference: Option<&Vec<u8>>,
 ) -> Result<Vec<u8>, GoatNsError> {
-    match from_utf8(name) {
-        Ok(nstr) => trace!("name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
-        Err(_) =>  trace!("failed to utf-8 name name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
-    };
-
     // if we're given a compression target and no reference just compress it and return
     if let (Some(target), None) = (compress_target, compress_reference) {
         trace!("we got a compress target ({target}) but no reference we're just going to compress");
@@ -128,7 +124,7 @@ pub fn name_as_bytes(
         return Ok(result);
     };
 
-    let mut result: Vec<u8> = vec![];
+    let mut result: Vec<u8> = Vec::new();
     // if somehow it's a weird bare domain then we don't have to do much it
     if !name.contains(&46) {
         result.push(name.len() as u8);
@@ -204,7 +200,7 @@ pub fn name_as_bytes(
     }
     trace!(
         "Final result from {} - {:?}",
-        from_utf8(name).unwrap_or(""),
+        from_utf8(name).unwrap_or("<not utf8>"),
         result
     );
     Ok(result)

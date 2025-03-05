@@ -169,7 +169,6 @@ async fn test_cloudflare_soa_reply() {
     //     ;cloudflare.com.                IN      SOA
     //     ;; ANSWER SECTION:
     //     cloudflare.com.         173     IN      SOA     ns3.cloudflare.com. dns.cloudflare.com. 2030489112 10000 2400 604800 300
-
     //     */
     let original_question: [u8; 32] = [
         0x89, 0x28, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x63, 0x6c,
@@ -177,16 +176,27 @@ async fn test_cloudflare_soa_reply() {
         0x00, 0x01,
     ];
 
-    let expected_bytes = [
-        /* header - 12 bytes */
+    // header - 12 bytes
+    let expected_header_bytes = [
         0x89, 0x28, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-        /* question - 14 bytes */
-        0x0a, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x66, 0x6c, 0x61, /* answer - 16 bytes */
-        0x72, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x00, 0x00, 0x06, 0x00, 0x01, 0xc0, 0x0c, 0x00, 0x06,
-        0x00, 0x01, 0x00, 0x00, 0x00, 0xad, 0x00, 0x20, 0x03, 0x6e, 0x73, 0x33, 0xc0, 0x0c, 0x03,
-        0x64, 0x6e, 0x73, 0xc0, 0x0c, 0x79, 0x06, 0xce, 0x18, 0x00, 0x00, 0x27, 0x10, 0x00, 0x00,
-        0x09, 0x60, 0x00, 0x09, 0x3a, 0x80, 0x00, 0x00, 0x01, 0x2c,
     ];
+
+    // question - 20 bytes
+    let expected_question_bytes = [
+        0x0a, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x66, 0x6c, 0x61, 0x72, 0x65, 0x03, 0x63, 0x6f, 0x6d,
+        0x00, 0x00, 0x06, 0x00, 0x01,
+    ];
+
+    // answer - 16 bytes
+    let expected_answer_bytes = [
+        0xc0, 0x0c, 0x00, 0x06, 0x00, 0x01, 0x00, 0x00, 0x00, 0xad, 0x00, 0x20, 0x03, 0x6e, 0x73,
+        0x33, 0xc0, 0x0c, 0x03, 0x64, 0x6e, 0x73, 0xc0, 0x0c, 0x79, 0x06, 0xce, 0x18, 0x00, 0x00,
+        0x27, 0x10, 0x00, 0x00, 0x09, 0x60, 0x00, 0x09, 0x3a, 0x80, 0x00, 0x00, 0x01, 0x2c,
+    ];
+
+    let mut expected_bytes = expected_header_bytes.to_vec();
+    expected_bytes.extend(expected_question_bytes);
+    expected_bytes.extend(expected_answer_bytes);
 
     let header = Header {
         id: 35112,
@@ -205,16 +215,18 @@ async fn test_cloudflare_soa_reply() {
         arcount: 0,
         nscount: 0,
     };
-    let qname = "cloudflare.com".as_bytes().to_vec();
+
     let question = Question {
-        qname: qname.clone(),
+        qname: "cloudflare.com".as_bytes().to_vec(),
         qtype: crate::RecordType::SOA,
         qclass: crate::RecordClass::Internet,
     };
+
     let question_length = question
         .try_to_bytes()
         .expect("Failed to convert question to bytes")
         .len();
+
     debug!("question byte length: {}", question_length);
 
     // YOLO the  string conversions because it's a test
@@ -241,9 +253,9 @@ async fn test_cloudflare_soa_reply() {
         additional: vec![],
     };
     reply.header.recursion_available = true;
-    debug!("{:?}", reply);
+    debug!("reply {:?}", reply);
     let reply_bytes: Vec<u8> = reply.as_bytes().await.expect("Failed to get reply bytes");
-    debug!("{:?}", reply_bytes);
+    debug!("reply bytes {:?}", reply_bytes);
 
     // testing if I was parsing it right...
     let mut their_header = Header::unpack_from_slice(&original_question[0..HEADER_BYTES])
@@ -253,10 +265,11 @@ async fn test_cloudflare_soa_reply() {
     trace!("Parsed header matched!");
 
     let mut current_block: &str;
+    trace!("Block       n  us (binary)      ex  (binary)    chr matched?");
     for (index, byte) in reply_bytes.iter().enumerate() {
-        if index < HEADER_BYTES {
+        if index < expected_header_bytes.len() {
             current_block = "Header   ";
-        } else if index < HEADER_BYTES + 9 {
+        } else if index < expected_header_bytes.len() + expected_question_bytes.len() {
             current_block = "Question ";
         } else {
             current_block = "Answer   ";
@@ -276,7 +289,7 @@ async fn test_cloudflare_soa_reply() {
                     false => " ",
                 };
                 trace!(
-                    "{current_block} \t {index} us: {}\t{:#010b}\tex: {expected_byte}\t{expected_byte:#010b} \tchars: {} {}\t matched: {}",
+                    "{current_block} {index:>3} {:>3} ({:#010b}) {expected_byte:>3} ({expected_byte:#010b}) {} {} {}",
                     byte.clone(),
                     byte.clone(),
                     ascii_byte_us,
@@ -638,10 +651,15 @@ fn test_get_question_qname() {
     let sample_data = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
     eprintln!("{:?}", sample_data);
     let result = get_question_qname(&sample_data);
-    assert_eq!(
-        result,
-        Ok(vec![101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109])
-    );
+    if let Ok(res) = result {
+        eprintln!("{:?}", res);
+        assert_eq!(
+            res,
+            vec![101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109]
+        );
+    } else {
+        panic!("invalid value {:?}", result);
+    }
 }
 
 #[tokio::test]

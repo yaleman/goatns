@@ -2,7 +2,7 @@
 $ORIGIN hello.goat.
 ;$TTL 3600
 
-@	SOA	ns1.hello.goat. admin.hello.goat. (
+@	SOA	m1.housenet.yaleman.org. admin.hello.goat. (
 	12345	; Serial
 	60		; Refresh
 	30		; Retry

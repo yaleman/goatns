@@ -93,6 +93,7 @@ impl Reply {
     pub async fn check_set_truncated(&self) -> Reply {
         if let Ok(ret_bytes) = self.as_bytes().await {
             if ret_bytes.len() > UDP_BUFFER_SIZE {
+                debug!("Setting packet truncation flag");
                 let mut header = self.header.clone();
                 header.truncated = true;
                 return Self {
