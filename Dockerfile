@@ -41,4 +41,6 @@ COPY --from=builder /goatns/static_files /static_files
 
 WORKDIR /
 USER nonroot
-ENTRYPOINT ["./goatns", "server"]
+ENTRYPOINT ["./goatns"]
+
+CMD ["server"]

@@ -54,4 +54,4 @@ jobs:
             --mount type=bind,source=$(pwd)/privkey.pem,target=/privkey.pem \
             --mount type=bind,source=$(pwd)/goatns.example.json,target=/goatns.json \
             goatns:test \
-            --configcheck --config goatns.json
+            config-check --config goatns.json
