@@ -41,6 +41,7 @@ COPY --from=builder /goatns/static_files /static_files
 
 WORKDIR /
 USER nonroot
+RUN mkdir /home/nonroot/.cache/
 ENTRYPOINT ["./goatns"]
 
 CMD ["server"]
