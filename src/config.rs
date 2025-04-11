@@ -354,13 +354,7 @@ impl From<Config> for ConfigFile {
         // The OAuth2 redirect URL is a magical pony.
 
         // TODO: test this with different values
-        let oauth2_redirect_url: Option<Url> = match config.get("oauth2_redirect_url") {
-            Ok(value) => {
-                // println!("Found url in config: {:?}", value);
-                Some(value)
-            }
-            Err(_) => None,
-        };
+        let oauth2_redirect_url: Option<Url> = config.get("oauth2_redirect_url").ok();
         let oauth2_redirect_url = match oauth2_redirect_url {
             Some(mut url) => {
                 // update the URL with the final auth path

@@ -497,7 +497,7 @@ async fn get_result(
         });
     }
 
-    if let RecordType::ANY {} = question.qtype {
+    if let RecordType::ANY = question.qtype {
         // TODO this should check to see if we have a zone record, but that requires walking down the qname record recursively, which is its own thing. We just YOLO a HINFO back for any request now.
         return reply_any(header.id, &question);
     };
