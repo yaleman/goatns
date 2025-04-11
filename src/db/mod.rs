@@ -354,10 +354,7 @@ pub async fn get_zone_with_txn(
 
     zone.records = result
         .into_iter()
-        .filter_map(|r| match FileZoneRecord::try_from(r) {
-            Ok(val) => Some(val),
-            Err(_) => None,
-        })
+        .filter_map(|r| FileZoneRecord::try_from(r).ok())
         .collect();
     Ok(Some(zone))
 }
@@ -659,10 +656,7 @@ impl DBEntity for FileZone {
 
         zone.records = records
             .into_iter()
-            .filter_map(|r| match FileZoneRecord::try_from(r) {
-                Ok(val) => Some(val),
-                Err(_) => None,
-            })
+            .filter_map(|r| FileZoneRecord::try_from(r).ok())
             .collect();
         Ok(Box::new(zone))
     }

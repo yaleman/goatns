@@ -280,13 +280,7 @@ pub async fn handle_get(
         ResponseType::Raw => {
             let answers: Vec<InternalResourceRecord> = records
                 .iter()
-                .filter_map(|r| {
-                    let rec: Option<InternalResourceRecord> = match r.to_owned().try_into() {
-                        Ok(val) => Some(val),
-                        Err(_) => None,
-                    };
-                    rec
-                })
+                .filter_map(|r| InternalResourceRecord::try_from(r.to_owned()).ok())
                 .collect();
 
             let reply = Reply {
