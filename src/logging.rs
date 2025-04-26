@@ -15,9 +15,10 @@ use opentelemetry_semantic_conventions::{
     attribute::{SERVICE_NAME, SERVICE_VERSION},
     SCHEMA_URL,
 };
+use tracing::Subscriber;
 use tracing_opentelemetry::OpenTelemetryLayer;
-use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{layer::SubscriberExt, registry::LookupSpan};
 
 #[allow(dead_code)]
 pub(crate) fn build_loglevel_filter_layer(log_level: &str) -> EnvFilter {
@@ -33,6 +34,33 @@ pub(crate) fn build_loglevel_filter_layer(log_level: &str) -> EnvFilter {
         ),
     );
     EnvFilter::from_default_env()
+}
+
+/// Tweaked version of what ships with tracing_subscriber
+fn build_logger_text<S>() -> Box<dyn tracing_subscriber::Layer<S> + Send + Sync + 'static>
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+{
+    use tracing_subscriber::fmt::format::FmtSpan;
+    if cfg!(debug_assertions) {
+        Box::new(
+            tracing_subscriber::fmt::layer()
+                // .pretty()
+                .compact()
+                .with_line_number(false)
+                .with_thread_names(false)
+                .with_span_events(FmtSpan::CLOSE)
+                // .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+                .with_timer(tracing_subscriber::fmt::time::uptime()),
+        )
+    } else {
+        Box::new(
+            tracing_subscriber::fmt::layer()
+                .json()
+                //.with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+                .with_timer(tracing_subscriber::fmt::time::uptime()),
+        )
+    }
 }
 
 #[allow(dead_code)]
@@ -68,7 +96,7 @@ pub(crate) fn init_otel_subscribers(
 
     let subscriber = tracing_subscriber::registry()
         .with(build_loglevel_filter_layer(log_level))
-        .with(tracing_subscriber_ext::build_logger_text());
+        .with(build_logger_text());
 
     match endpoint {
         Some(endpoint) => {

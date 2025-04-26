@@ -143,11 +143,10 @@ async fn handle_soa_query(
         Some(zone) => {
             // get the SOA record
             let soa = zone.get_soa_record(server_hostname);
-            debug!("SOA Record: {soa:?}");
             Ok(Some(soa))
         }
         None => {
-            info!("Zone not found: {name}");
+            debug!("Zone not found during SOA query: {name}");
             Ok(None)
         }
     }
