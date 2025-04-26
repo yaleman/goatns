@@ -91,8 +91,8 @@ pub fn find_tail_match(name: &[u8], target: &Vec<u8>) -> usize {
     tail_index
 }
 
-/*
-turn the NAME field into the bytes for a response
+/**
+Turn the NAME field into the bytes for a response
 
 so example.com turns into
 
@@ -107,7 +107,7 @@ name_as_bytes(
     Some(12),
     Some("example.com".as_bytes().to_vec())
 )
-*/
+**/
 pub fn name_as_bytes(
     name: &[u8],
     compress_target: Option<u16>,
