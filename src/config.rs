@@ -551,16 +551,18 @@ pub async fn setup_logging(
             .map(GoatNsLogHandler::from)
             .map_err(|err| GoatNsError::StartupError(format!("Failed to start logger: {err}")))
     } else {
-        crate::logging::init_otel_subscribers(config.otel_endpoint.clone())
-            .map_err(|err| {
-                GoatNsError::StartupError(format!(
-                    "Failed to initialize OpenTelemetry tracing: {err}"
-                ))
-            })
-            .map(|_| GoatNsLogHandler {
-                loghandle: None,
-                otel_enabled: true,
-            })
+        crate::logging::init_otel_subscribers(
+            config.otel_endpoint.clone(),
+            &config.log_level,
+            cli_debug,
+        )
+        .map_err(|err| {
+            GoatNsError::StartupError(format!("Failed to initialize OpenTelemetry tracing: {err}"))
+        })
+        .map(|_| GoatNsLogHandler {
+            loghandle: None,
+            otel_enabled: true,
+        })
     }
 }
 
