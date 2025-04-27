@@ -2,6 +2,7 @@ use std::str::from_utf8;
 
 use url::Url;
 
+use crate::config::test_logging;
 use crate::utils::{check_valid_tld, find_tail_match, loc_size_to_u8, name_as_bytes};
 use std::thread::sleep;
 use std::time::Duration;
@@ -48,18 +49,23 @@ fn test_loc_size_to_u8() {
     eprintln!("{:3x}", loc_size_to_u8(20000000.0));
 }
 
-#[test]
-pub fn test_find_tail_match() {
+#[tokio::test]
+async fn test_find_tail_match() {
+    let _ = test_logging().await;
     let name = "foo.example.com".as_bytes().to_vec();
     let target = "zot.example.com".as_bytes().to_vec();
     let result = find_tail_match(&name, &target);
-
     assert_eq!(result, 3);
     let name = "foo.yeanah.xyz".as_bytes().to_vec();
     let target = "zot.example.com".as_bytes().to_vec();
     let result = find_tail_match(&name, &target);
+    assert_eq!(result, 0);
 
-    assert_eq!(result, 0)
+    // can't find a tail with a longer target
+    let name = "example.com".as_bytes().to_vec();
+    let target = "foo.example.com".as_bytes().to_vec();
+    let result = find_tail_match(&name, &target);
+    assert_eq!(result, 0);
 }
 
 #[test]
@@ -79,8 +85,9 @@ pub fn test_name_bytes_no_compress() {
     assert_eq!(expected_result, test_result);
 }
 
-#[test]
-pub fn test_name_bytes_with_compression() {
+#[tokio::test]
+async fn test_name_bytes_with_compression() {
+    test_logging().await;
     let example_com = "example.com".as_bytes().to_vec();
     let test_input = "lol.example.com".as_bytes();
 

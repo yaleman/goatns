@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::env::consts;
 use std::str::{from_utf8, FromStr};
 use std::string::FromUtf8Error;
-use tracing::{error, trace, warn};
+use tracing::{error, instrument, trace, warn};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct DomainName {
@@ -22,6 +22,7 @@ pub struct DomainName {
 
 impl DomainName {
     /// Push the DomainName through the name_as_bytes function
+    #[instrument(level = "debug")]
     pub fn as_bytes(
         &self,
         compress_target: Option<u16>,

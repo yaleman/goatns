@@ -8,6 +8,7 @@ mod test_api;
 pub mod test_harness;
 mod utils;
 
+use crate::config::test_logging;
 use crate::db::test::test_get_sqlite_memory;
 use crate::db::*;
 use crate::enums::{RecordClass, RecordType};
@@ -49,8 +50,9 @@ fn test_resourcerecord_short_name_to_bytes() {
         [6, 99, 104, 101, 101, 115, 101, 0]
     );
 }
-#[test]
-fn test_name_as_bytes() {
+#[tokio::test]
+async fn test_name_as_bytes() {
+    let _ = test_logging().await;
     let rdata = "cheese.hello.world".as_bytes();
     let compress_ref = "zing.hello.world".as_bytes().to_vec();
     assert_eq!(
@@ -143,11 +145,14 @@ async fn test_build_iana_org_a_reply() {
     }
     assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
 }
+
 #[tokio::test]
 async fn test_cloudflare_soa_reply() {
     use crate::reply::Reply;
     use crate::resourcerecord::DomainName;
     use crate::{Header, HEADER_BYTES};
+    test_logging().await;
+
     //     /*
     //     from: <https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA>
 
@@ -272,13 +277,19 @@ async fn test_cloudflare_soa_reply() {
                     true => std::str::from_utf8(&b).unwrap_or("-"),
                     false => " ",
                 };
+                let (matched, matched_colour) = match byte == expected_byte {
+                    true => ("matched", "\x1b[32m"),
+                    false => ("mismatch", "\x1b[31m"),
+                };
+
                 trace!(
-                    "{current_block} \t {index} us: {}\t{:#010b}\tex: {expected_byte}\t{expected_byte:#010b} \tchars: {} {}\t matched: {}",
+                    "{current_block} \t {index} us: {}\t{:#010b}\tex: {expected_byte}\t{expected_byte:#010b} \tchars: {} {}\t {}{}\x1b[0m",
                     byte.clone(),
                     byte.clone(),
                     ascii_byte_us,
                     ascii_byte_them,
-                    (byte == expected_byte)
+                    matched_colour,
+                    matched,
                 )
             }
             None => {

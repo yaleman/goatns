@@ -20,74 +20,63 @@ fn seven_dot_three_conversion(name: &[u8]) -> Vec<u8> {
     trace!("7.3 conversion for {name:?} {:?}", from_utf8(name));
     let mut result: Vec<u8> = vec![];
 
-    // TODO: reimplement this with slices and stuff
-    let mut next_dot: usize = match vec_find(46, name) {
-        Some(value) => value,
-        None => {
-            // if there's no dots, then just push a length on the front and include the data. then bail
-            result.push(name.len() as u8);
-            result.extend(name);
-            return result;
-        }
-    };
-    let mut name_bytes: Vec<u8> = name.to_vec();
-    let mut keep_looping = true;
-    let mut current_position: usize = 0;
-    // add the first segment length
-    result.push(next_dot as u8);
-
-    while keep_looping {
-        if next_dot == current_position {
-            name_bytes = name_bytes.to_vec()[current_position + 1..].into();
-            next_dot = match vec_find(46, &name_bytes) {
-                Some(value) => value,
-                None => name_bytes.len(),
-            };
-            current_position = 0;
-            // this should be the
-            // debug!(". - {:?} ({:?})", next_dot, name_bytes);
-            if next_dot != 0 {
-                result.push(next_dot as u8);
-                trace!("pushing next_dot {}", next_dot as u8);
-            }
-        } else {
-            // we are processing bytes
-            trace!("pushing {}", name_bytes[current_position]);
-            result.push(name_bytes[current_position]);
-            // debug!("{:?} {:?}", current_position, name_bytes.as_bytes()[current_position]);
-            current_position += 1;
-        }
-        if current_position == name_bytes.len() {
-            keep_looping = false;
-        }
+    if !name.contains(&46) {
+        // if there's no dots, then just push a length on the front and include the data. then bail
+        result.push(name.len() as u8);
+        result.extend(name);
+        return result;
     }
-    result
+
+    // Split name into groups by the dot character (ASCII 46)
+    name.split(|&b| b == 46)
+        .filter(|segment| !segment.is_empty()) // drop the empty tail segments if there are any
+        .flat_map(|segment| {
+            // Add the length of the segment followed by the segment itself
+            let mut part = Vec::with_capacity(segment.len() + 1);
+            part.push(segment.len() as u8);
+            part.extend_from_slice(segment);
+            part
+        })
+        .collect()
 }
 
 /// If you have a `name` and a `target` and want to see if you can find a chunk of the `target` that the `name` ends with, this is your function!
 pub fn find_tail_match(name: &[u8], target: &Vec<u8>) -> usize {
-    // #[cfg(debug)]
-    // {
-    let name_str = format!("{name:?}");
-    let target_str = format!("{target:?}");
-    let longest = match name_str.len() > target_str.len() {
-        true => name_str.len(),
-        false => target_str.len(),
-    };
-    trace!("find_tail_match(\n  name={name_str:>longest$}, \ntarget={target_str:>longest$}\n)",);
-    // }
-    let mut tail_index: usize = 0;
-    for (i, _) in target.iter().enumerate() {
-        trace!("Tail index={i}");
-        let tail = &target[i..];
-        if name.ends_with(tail) {
-            trace!("Found a tail at index {i}");
-            tail_index = i;
-            break;
-        } else {
-            trace!("Didn't match: name / target \n{name:?}\n{:?}", &target[i..]);
-        }
+    #[cfg(any(test, debug_assertions))]
+    {
+        let name_str = format!("{name:?}");
+        let target_str = format!("{target:?}");
+        let longest = match name_str.len() > target_str.len() {
+            true => name_str.len(),
+            false => target_str.len(),
+        };
+        trace!("Find_tail_match(\n  name={name_str:>longest$}, \ntarget={target_str:>longest$}\n)",);
     }
+
+    if target.len() > name.len() {
+        trace!("Name is longer than target, can't match");
+        return 0;
+    }
+    let mut tail_index: usize = 0;
+    for i in (0..target.len()).rev() {
+        if !name.ends_with(&target[i..]) {
+            trace!("Didn't match: name / target \n{name:?}\n{:?}", &target[i..]);
+            return tail_index;
+        }
+        trace!("Updating tail to match at index {i}");
+        tail_index = i;
+    }
+    // for (i, _) in target.iter().enumerate() {
+    //     trace!("Tail index={i}");
+
+    //     if name.ends_with(&target[i..]) {
+    //         trace!("Found a tail at index {i}");
+    //         tail_index = i;
+    //         break;
+    //     } else {
+    //         trace!("Didn't match: name / target \n{name:?}\n{:?}", &target[i..]);
+    //     }
+    // }
     tail_index
 }
 
@@ -114,10 +103,6 @@ pub fn name_as_bytes(
     compress_reference: Option<&Vec<u8>>,
 ) -> Result<Vec<u8>, GoatNsError> {
     trace!("################################");
-    match from_utf8(name) {
-        Ok(nstr) => trace!("name_as_bytes name={nstr:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
-        Err(_) =>  trace!("failed to utf-8 name name_as_bytes name={name:?} compress_target={compress_target:?} compress_reference={compress_reference:?}"),
-    };
 
     // if we're given a compression target and no reference just compress it and return
     if let (Some(target), None) = (compress_target, compress_reference) {
@@ -140,8 +125,8 @@ pub fn name_as_bytes(
     result = seven_dot_three_conversion(name);
 
     if compress_target.is_none() {
-        trace!("no compression target, adding the trailing null and returning!");
         result.push(0);
+        trace!("no compression target, adding the trailing null and returning!");
         return Ok(result);
     };
 
@@ -152,6 +137,8 @@ pub fn name_as_bytes(
             trace!("The thing we're converting is the same as the compression reference!");
             // return a pointer to the target_byte (probably the name in the header)
             if let Some(target) = compress_target {
+                // we need the first two bits to be 1, to mark it as compressed
+                // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
                 let result: u16 = 0b1100000000000000 | target;
                 return Ok(result.to_be_bytes().to_vec());
             } else {
@@ -167,11 +154,12 @@ pub fn name_as_bytes(
 
             // do the 7.3 conversion
             result = seven_dot_three_conversion(&result);
-            trace!("7.3converted: {:?}", from_utf8(&result));
+            trace!("7.3converted: {:?} {:?}", from_utf8(&result), result);
 
             // then we need to return the pointer to the tail
             if let Some(target) = compress_target {
                 let pointer_bytes: u16 = 0b1100000000000000 | target;
+                trace!("pointer_bytes: {:?}", pointer_bytes.to_be_bytes());
                 result.extend(pointer_bytes.to_be_bytes());
             } else {
                 return Err(GoatNsError::BytePackingError(
@@ -200,6 +188,8 @@ pub fn name_as_bytes(
                 trace!("converted result to {result:?}");
                 let pointer: u16 = 0b1100000000000000 | (HEADER_BYTES + tail_index + 1) as u16;
                 result.extend(pointer.to_be_bytes());
+            } else {
+                trace!("There's no matching tail-parts between the compress reference and the name")
             }
         }
     }
