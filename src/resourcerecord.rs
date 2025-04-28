@@ -1225,3 +1225,44 @@ impl TryFrom<&str> for FileLocRecord {
 pub fn check_long_labels(testval: &str) -> bool {
     testval.split('.').any(|x| x.len() > 63)
 }
+
+#[tokio::test]
+async fn test_soa_record() {
+    let soa = InternalResourceRecord::SOA {
+        zone: DomainName::from("example.com"),
+        mname: DomainName::from("ns1.example.com"),
+        rname: DomainName::from("hostmasterw.example.com"),
+        serial: 123456789,
+        refresh: 7200,
+        retry: 3600,
+        expire: 604800,
+        minimum: 86400,
+        rclass: RecordClass::Internet,
+    };
+    assert_eq!(soa.ttl(), &86400);
+    let bytes = soa
+        .as_bytes(&vec![])
+        .expect("Failed to convert SOA record to bytes");
+
+    // Expected bytes structure for SOA record:
+    // - mname as domain name bytes (with trailing null)
+    // - rname as domain name bytes (with trailing null)
+    // - serial, refresh, retry, expire, minimum as u32 be bytes
+
+    // Check the domain name format for mname (ns1.example.com)
+    assert_eq!(bytes[0], 3); // length of 'ns1'
+    assert_eq!(&bytes[1..4], b"ns1");
+    assert_eq!(bytes[4], 192); // because of compression
+
+    // Check the domain name format for rname (hostmaster.example.com)
+    assert_eq!(bytes[18..=19], [192, 12]); // because of compression
+
+    // Check the serial, refresh, retry, expire, minimum values
+    assert_eq!(&bytes[20..24], [7, 91, 205, 21]); // serial
+    assert_eq!(&bytes[24..28], [0, 0, 28, 32]); // refresh
+    assert_eq!(&bytes[28..32], [0, 0, 14, 16]); // retry
+    assert_eq!(&bytes[32..36], [0, 9, 58, 128]); // expire
+    assert_eq!(&bytes[36..40], [0, 1, 81, 128]); // minimum
+
+    assert_eq!(bytes.len(), 40); // Ensure there are more bytes after the minimum
+}
