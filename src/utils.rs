@@ -1,7 +1,7 @@
-use crate::datastore::Command;
 use crate::enums::AgentState;
 use crate::error::GoatNsError;
 use crate::HEADER_BYTES;
+use crate::{datastore::Command, resourcerecord::CompressResult};
 use std::str::from_utf8;
 use tokio::sync::{broadcast, mpsc};
 use tracing::{debug, trace};
@@ -78,6 +78,112 @@ pub fn find_tail_match(name: &[u8], target: &Vec<u8>) -> usize {
     //     }
     // }
     tail_index
+}
+
+pub(crate) fn name_as_bytes_compressed(
+    name: &[u8],
+    compress_target: Option<u16>,
+    compress_reference: Option<&Vec<u8>>,
+) -> Result<CompressResult, GoatNsError> {
+    trace!("################################");
+
+    // if we're given a compression target and no reference just compress it and return
+    if let (Some(target), None) = (compress_target, compress_reference) {
+        trace!("we got a compress target ({target}) but no reference we're just going to compress");
+        // we need the first two bits to be 1, to mark it as compressed
+        // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
+        let result: Vec<u8> = (0b1100000000000000 | target).to_be_bytes().into();
+        trace!("result of name_as_bytes {result:?}");
+        return Ok(CompressResult::Compressed(result));
+    };
+
+    let mut result: Vec<u8> = vec![];
+    // if somehow it's a weird bare domain then we don't have to do much it
+    if !name.contains(&46) {
+        result.push(name.len() as u8);
+        result.extend(name);
+        result.push(0); // null pad the name
+        return Ok(CompressResult::Uncompressed(result));
+    }
+    result = seven_dot_three_conversion(name);
+
+    if compress_target.is_none() {
+        result.push(0);
+        trace!("no compression target, adding the trailing null and returning!");
+        return Ok(CompressResult::Uncompressed(result));
+    };
+
+    if let Some(ct) = compress_reference {
+        trace!("you gave me {ct:?} as a compression reference");
+
+        if name == ct {
+            trace!("The thing we're converting is the same as the compression reference!");
+            // return a pointer to the target_byte (probably the name in the header)
+            if let Some(target) = compress_target {
+                // we need the first two bits to be 1, to mark it as compressed
+                // 4.1.4 RFC1035 - https://www.rfc-editor.org/rfc/rfc1035.html#section-4.1.4
+                let result: u16 = 0b1100000000000000 | target;
+                return Ok(CompressResult::Compressed(result.to_be_bytes().to_vec()));
+            } else {
+                return Err(GoatNsError::InvalidName);
+            }
+        }
+        if name.ends_with(ct) {
+            trace!("the name ends with the target! woo!");
+            // Ok, we've gotten this far. We need to slice off the "front" of the string and return that.
+            result.clone_from(&name.to_vec());
+            result.truncate(name.len() - ct.len());
+            trace!("The result is trimmed and now {:?}", from_utf8(&result));
+
+            // do the 7.3 conversion
+            result = seven_dot_three_conversion(&result);
+            trace!("7.3converted: {:?} {:?}", from_utf8(&result), result);
+
+            // then we need to return the pointer to the tail
+            if let Some(target) = compress_target {
+                let pointer_bytes: u16 = 0b1100000000000000 | target;
+                trace!("pointer_bytes: {:?}", pointer_bytes.to_be_bytes());
+                result.extend(pointer_bytes.to_be_bytes());
+            } else {
+                return Err(GoatNsError::BytePackingError(
+                    "No compression target and we totally could have compressed this.".to_string(),
+                ));
+            }
+
+            trace!("The result is trimmed and now {:?}", result);
+            Ok(CompressResult::Compressed(result))
+        } else {
+            // dropped into tail-finding mode where we're looking for a sub-string of the parent to target a compression pointer
+            trace!("trying to find a sub-part of {ct:?} in {name:?}");
+
+            let tail_index = find_tail_match(name, ct);
+            trace!("tail_index: {tail_index}");
+            // if we get to here and the tail_index is 0 then we haven't set it - because we'd have caught the whole thing in the ends_with matcher earlier.
+            if tail_index != 0 {
+                trace!("Found a tail-match: {tail_index}");
+                // slice the tail off the name
+                let mut name_copy = name.to_vec();
+                // the amount of the tail that matched to the name, ie abc, bc = 2, aab, bbb = 1
+                let matched_length = ct.len() - tail_index;
+                name_copy.truncate(name.len() - matched_length);
+                trace!("sliced name down to {name_copy:?}");
+                // put the pointer on there
+                result = seven_dot_three_conversion(&name_copy);
+                trace!("converted result to {result:?}");
+                let pointer: u16 = 0b1100000000000000 | (HEADER_BYTES + tail_index + 1) as u16;
+                result.extend(pointer.to_be_bytes());
+                Ok(CompressResult::Compressed(result))
+            } else {
+                trace!(
+                    "There's no matching tail-parts between the compress reference and the name"
+                );
+                Ok(CompressResult::Uncompressed(result))
+            }
+        }
+    } else {
+        Ok(CompressResult::Uncompressed(result))
+    }
+    // trace!("Final result {result:?}");
 }
 
 /**

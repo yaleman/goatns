@@ -1,6 +1,6 @@
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
-use crate::utils::{dms_to_u32, hexdump, name_as_bytes};
+use crate::utils::{dms_to_u32, hexdump, name_as_bytes, name_as_bytes_compressed};
 use crate::zones::FileZoneRecord;
 use crate::HEADER_BYTES;
 use core::fmt::Debug;
@@ -20,6 +20,20 @@ pub struct DomainName {
     pub name: String,
 }
 
+pub(crate) enum CompressResult {
+    Compressed(Vec<u8>),
+    Uncompressed(Vec<u8>),
+}
+impl CompressResult {
+    /// Sometimes you want the trailing null to be added!
+    pub fn as_bytes_with_trailing_null(&self) -> Vec<u8> {
+        match self {
+            CompressResult::Compressed(value) => value.to_vec(),
+            CompressResult::Uncompressed(value) => value.iter().copied().chain(vec![0]).collect(),
+        }
+    }
+}
+
 impl DomainName {
     /// Push the DomainName through the name_as_bytes function
     #[instrument(level = "debug")]
@@ -29,6 +43,18 @@ impl DomainName {
         compress_reference: Option<&Vec<u8>>,
     ) -> Result<Vec<u8>, GoatNsError> {
         name_as_bytes(
+            &self.name.to_owned().into_bytes(),
+            compress_target,
+            compress_reference,
+        )
+    }
+
+    pub(crate) fn as_bytes_compressed(
+        &self,
+        compress_target: Option<u16>,
+        compress_reference: Option<&Vec<u8>>,
+    ) -> Result<CompressResult, GoatNsError> {
+        name_as_bytes_compressed(
             &self.name.to_owned().into_bytes(),
             compress_target,
             compress_reference,
@@ -603,9 +629,14 @@ impl InternalResourceRecord {
                 ..
             } => {
                 let zone_as_bytes = zone.name.as_bytes().to_vec();
-                let mut res: Vec<u8> =
-                    mname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?;
-                res.extend(rname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?);
+                let mut res = mname
+                    .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?
+                    .as_bytes_with_trailing_null();
+                res.extend(
+                    rname
+                        .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?
+                        .as_bytes_with_trailing_null(),
+                );
                 res.extend(serial.to_be_bytes());
                 res.extend(refresh.to_be_bytes());
                 res.extend(retry.to_be_bytes());
