@@ -15,7 +15,7 @@ use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::{InternalResourceRecord, LocRecord, NameAsBytes};
 use crate::tests::test_harness::*;
 
-use crate::utils::name_as_bytes_compressed;
+use crate::utils::name_as_bytes;
 use crate::{get_question_qname, PacketType, Question};
 use ipnet::IpNet;
 use packed_struct::prelude::*;
@@ -39,7 +39,7 @@ fn test_ip_in_ipnet() {
 fn test_resourcerecord_name_to_bytes() {
     let rdata = "cheese.world".as_bytes();
     assert_eq!(
-        name_as_bytes_compressed(rdata, None, None).expect("Failed to parse name"),
+        name_as_bytes(rdata, None, None).expect("Failed to parse name"),
         NameAsBytes::Uncompressed(vec![
             6, 99, 104, 101, 101, 115, 101, 5, 119, 111, 114, 108, 100, 0
         ])
@@ -49,7 +49,7 @@ fn test_resourcerecord_name_to_bytes() {
 fn test_resourcerecord_short_name_to_bytes() {
     let rdata = "cheese".as_bytes();
     assert_eq!(
-        name_as_bytes_compressed(rdata, None, None).expect("Failed to parse name"),
+        name_as_bytes(rdata, None, None).expect("Failed to parse name"),
         NameAsBytes::Uncompressed(vec![6, 99, 104, 101, 101, 115, 101, 0])
     );
 }
@@ -59,7 +59,7 @@ async fn test_name_as_bytes_compressed() {
     let rdata = "cheese.hello.world".as_bytes();
     let compress_ref = "zing.hello.world".as_bytes().to_vec();
     assert_eq!(
-        name_as_bytes_compressed(rdata, Some(12u16), Some(&compress_ref)).expect("Failed to parse"),
+        name_as_bytes(rdata, Some(12u16), Some(&compress_ref)).expect("Failed to parse"),
         NameAsBytes::Compressed(vec![6, 99, 104, 101, 101, 115, 101, 192, 17])
     );
 }

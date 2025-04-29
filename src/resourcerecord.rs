@@ -1,6 +1,6 @@
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
-use crate::utils::{dms_to_u32, hexdump, name_as_bytes_compressed};
+use crate::utils::{dms_to_u32, hexdump, name_as_bytes};
 use crate::zones::FileZoneRecord;
 use crate::HEADER_BYTES;
 use core::fmt::Debug;
@@ -62,7 +62,7 @@ impl DomainName {
         compress_target: Option<u16>,
         compress_reference: Option<&Vec<u8>>,
     ) -> Result<NameAsBytes, GoatNsError> {
-        name_as_bytes_compressed(
+        name_as_bytes(
             &self.name.to_owned().into_bytes(),
             compress_target,
             compress_reference,
@@ -101,7 +101,7 @@ impl TryFrom<&Vec<u8>> for DomainName {
 impl TryFrom<&DomainName> for Vec<u8> {
     type Error = GoatNsError;
     fn try_from(dn: &DomainName) -> Result<Self, Self::Error> {
-        Ok(name_as_bytes_compressed(dn.name.as_bytes(), None, None)?.into())
+        Ok(name_as_bytes(dn.name.as_bytes(), None, None)?.into())
     }
 }
 

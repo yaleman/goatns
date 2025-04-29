@@ -98,7 +98,7 @@ name_as_bytes_compressed(
     Some("example.com".as_bytes().to_vec())
 )
 **/
-pub fn name_as_bytes_compressed(
+pub fn name_as_bytes(
     name: &[u8],
     compress_target: Option<u16>,
     compress_reference: Option<&Vec<u8>>,
