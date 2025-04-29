@@ -56,6 +56,7 @@ impl FileZone {
             && self.serial == cmp.serial
     }
 
+    #[instrument(level = "debug")]
     pub fn get_soa_record(&self, server_hostname: &str) -> InternalResourceRecord {
         InternalResourceRecord::SOA {
             zone: self.name.clone().into(),

@@ -49,7 +49,7 @@ book:
 
 # Run a local debug instance
 run:
-    cargo run
+    cargo run -- server
 
 
 # Run all the checks

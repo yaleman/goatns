@@ -8,11 +8,13 @@ mod test_api;
 pub mod test_harness;
 mod utils;
 
+use crate::config::test_logging;
 use crate::db::test::test_get_sqlite_memory;
 use crate::db::*;
 use crate::enums::{RecordClass, RecordType};
-use crate::resourcerecord::{InternalResourceRecord, LocRecord};
+use crate::resourcerecord::{InternalResourceRecord, LocRecord, NameAsBytes};
 use crate::tests::test_harness::*;
+
 use crate::utils::name_as_bytes;
 use crate::{get_question_qname, PacketType, Question};
 use ipnet::IpNet;
@@ -38,7 +40,9 @@ fn test_resourcerecord_name_to_bytes() {
     let rdata = "cheese.world".as_bytes();
     assert_eq!(
         name_as_bytes(rdata, None, None).expect("Failed to parse name"),
-        [6, 99, 104, 101, 101, 115, 101, 5, 119, 111, 114, 108, 100, 0]
+        NameAsBytes::Uncompressed(vec![
+            6, 99, 104, 101, 101, 115, 101, 5, 119, 111, 114, 108, 100, 0
+        ])
     );
 }
 #[test]
@@ -46,16 +50,17 @@ fn test_resourcerecord_short_name_to_bytes() {
     let rdata = "cheese".as_bytes();
     assert_eq!(
         name_as_bytes(rdata, None, None).expect("Failed to parse name"),
-        [6, 99, 104, 101, 101, 115, 101, 0]
+        NameAsBytes::Uncompressed(vec![6, 99, 104, 101, 101, 115, 101, 0])
     );
 }
-#[test]
-fn test_name_as_bytes() {
+#[tokio::test]
+async fn test_name_as_bytes_compressed() {
+    let _ = test_logging().await;
     let rdata = "cheese.hello.world".as_bytes();
     let compress_ref = "zing.hello.world".as_bytes().to_vec();
     assert_eq!(
         name_as_bytes(rdata, Some(12u16), Some(&compress_ref)).expect("Failed to parse"),
-        [6, 99, 104, 101, 101, 115, 101, 192, 17]
+        NameAsBytes::Compressed(vec![6, 99, 104, 101, 101, 115, 101, 192, 17])
     );
 }
 
@@ -143,11 +148,14 @@ async fn test_build_iana_org_a_reply() {
     }
     assert_eq!([reply_bytes[0], reply_bytes[1]], [0xA3, 0x70])
 }
+
 #[tokio::test]
 async fn test_cloudflare_soa_reply() {
     use crate::reply::Reply;
     use crate::resourcerecord::DomainName;
     use crate::{Header, HEADER_BYTES};
+    test_logging().await;
+
     //     /*
     //     from: <https://raw.githubusercontent.com/paulc/dnslib/master/dnslib/test/cloudflare.com-SOA>
 
@@ -272,13 +280,19 @@ async fn test_cloudflare_soa_reply() {
                     true => std::str::from_utf8(&b).unwrap_or("-"),
                     false => " ",
                 };
+                let (matched, matched_colour) = match byte == expected_byte {
+                    true => ("matched", "\x1b[32m"),
+                    false => ("mismatch", "\x1b[31m"),
+                };
+
                 trace!(
-                    "{current_block} \t {index} us: {}\t{:#010b}\tex: {expected_byte}\t{expected_byte:#010b} \tchars: {} {}\t matched: {}",
+                    "{current_block} \t {index} us: {}\t{:#010b}\tex: {expected_byte}\t{expected_byte:#010b} \tchars: {} {}\t {}{}\x1b[0m",
                     byte.clone(),
                     byte.clone(),
                     ascii_byte_us,
                     ascii_byte_them,
-                    (byte == expected_byte)
+                    matched_colour,
+                    matched,
                 )
             }
             None => {

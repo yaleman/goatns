@@ -490,7 +490,7 @@ pub async fn use_flexi_logger(
     })?;
 
     logger
-        .write_mode(flexi_logger::WriteMode::Async)
+        .write_mode(flexi_logger::WriteMode::Direct)
         .filter(Box::new(LogFilter {
             filters: vec![
                 "h2",
@@ -545,23 +545,28 @@ pub async fn setup_logging(
     config: CowCellReadTxn<ConfigFile>,
     cli_debug: bool,
 ) -> Result<GoatNsLogHandler, GoatNsError> {
-    if cfg!(test) {
-        use_flexi_logger(config, cli_debug)
-            .await
-            .map(GoatNsLogHandler::from)
-            .map_err(|err| GoatNsError::StartupError(format!("Failed to start logger: {err}")))
-    } else {
-        crate::logging::init_otel_subscribers(config.otel_endpoint.clone())
-            .map_err(|err| {
-                GoatNsError::StartupError(format!(
-                    "Failed to initialize OpenTelemetry tracing: {err}"
-                ))
-            })
-            .map(|_| GoatNsLogHandler {
-                loghandle: None,
-                otel_enabled: true,
-            })
-    }
+    crate::logging::init_otel_subscribers(
+        config.otel_endpoint.clone(),
+        &config.log_level,
+        cli_debug,
+    )
+    .map_err(|err| {
+        GoatNsError::StartupError(format!("Failed to initialize OpenTelemetry tracing: {err}"))
+    })
+    .map(|_| GoatNsLogHandler {
+        loghandle: None,
+        otel_enabled: true,
+    })
+}
+
+#[cfg(test)]
+pub async fn test_logging() {
+    let config = ConfigFile {
+        log_level: "trace".to_string(),
+        ..ConfigFile::default()
+    };
+
+    let _ = setup_logging(CowCell::new(config).read(), false).await;
 }
 
 /// A filter for log lines

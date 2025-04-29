@@ -2,6 +2,8 @@ use std::str::from_utf8;
 
 use url::Url;
 
+use crate::config::test_logging;
+use crate::resourcerecord::NameAsBytes;
 use crate::utils::{check_valid_tld, find_tail_match, loc_size_to_u8, name_as_bytes};
 use std::thread::sleep;
 use std::time::Duration;
@@ -48,23 +50,28 @@ fn test_loc_size_to_u8() {
     eprintln!("{:3x}", loc_size_to_u8(20000000.0));
 }
 
-#[test]
-pub fn test_find_tail_match() {
+#[tokio::test]
+async fn test_find_tail_match() {
+    let _ = test_logging().await;
     let name = "foo.example.com".as_bytes().to_vec();
     let target = "zot.example.com".as_bytes().to_vec();
     let result = find_tail_match(&name, &target);
-
     assert_eq!(result, 3);
     let name = "foo.yeanah.xyz".as_bytes().to_vec();
     let target = "zot.example.com".as_bytes().to_vec();
     let result = find_tail_match(&name, &target);
+    assert_eq!(result, 0);
 
-    assert_eq!(result, 0)
+    // can't find a tail with a longer target
+    let name = "example.com".as_bytes().to_vec();
+    let target = "foo.example.com".as_bytes().to_vec();
+    let result = find_tail_match(&name, &target);
+    assert_eq!(result, 0);
 }
 
 #[test]
 pub fn test_name_bytes_simple_compress() {
-    let expected_result: Vec<u8> = vec![192, 12];
+    let expected_result = NameAsBytes::Compressed(vec![192, 12]);
 
     let test_result =
         name_as_bytes("example.com".as_bytes(), Some(12), None).expect("Failed to parse name");
@@ -76,11 +83,16 @@ pub fn test_name_bytes_no_compress() {
 
     let test_result =
         name_as_bytes("example.com".as_bytes(), None, None).expect("Failed to parse name");
-    assert_eq!(expected_result, test_result);
+    assert_eq!(test_result, expected_result);
+    assert_eq!(
+        test_result,
+        NameAsBytes::Uncompressed(expected_result.clone())
+    );
 }
 
-#[test]
-pub fn test_name_bytes_with_compression() {
+#[tokio::test]
+async fn test_name_bytes_with_compression() {
+    test_logging().await;
     let example_com = "example.com".as_bytes().to_vec();
     let test_input = "lol.example.com".as_bytes();
 
@@ -93,6 +105,7 @@ pub fn test_name_bytes_with_compression() {
         name_as_bytes(test_input, Some(12), Some(&example_com)).expect("Failed to parse name");
 
     assert_eq!(result, expected_result);
+    assert_eq!(result, NameAsBytes::Compressed(expected_result));
 }
 
 #[test]

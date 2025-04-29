@@ -13,20 +13,55 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::env::consts;
 use std::str::{from_utf8, FromStr};
 use std::string::FromUtf8Error;
-use tracing::{error, trace, warn};
+use tracing::{error, instrument, trace, warn};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct DomainName {
     pub name: String,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum NameAsBytes {
+    Compressed(Vec<u8>),
+    Uncompressed(Vec<u8>),
+}
+
+impl PartialEq<Vec<u8>> for NameAsBytes {
+    fn eq(&self, other: &Vec<u8>) -> bool {
+        match self {
+            NameAsBytes::Compressed(value) => value == other,
+            NameAsBytes::Uncompressed(value) => value == other,
+        }
+    }
+}
+
+impl NameAsBytes {
+    /// Sometimes you want the trailing null to be added!
+    pub fn as_bytes_with_trailing_null(&self) -> Vec<u8> {
+        match self {
+            NameAsBytes::Compressed(value) => value.to_vec(),
+            NameAsBytes::Uncompressed(value) => value.iter().copied().chain(vec![0]).collect(),
+        }
+    }
+}
+
+impl From<NameAsBytes> for Vec<u8> {
+    fn from(input: NameAsBytes) -> Self {
+        match input {
+            NameAsBytes::Compressed(value) => value,
+            NameAsBytes::Uncompressed(value) => value,
+        }
+    }
+}
+
 impl DomainName {
     /// Push the DomainName through the name_as_bytes function
-    pub fn as_bytes(
+    #[instrument(level = "debug")]
+    pub(crate) fn as_bytes_compressed(
         &self,
         compress_target: Option<u16>,
         compress_reference: Option<&Vec<u8>>,
-    ) -> Result<Vec<u8>, GoatNsError> {
+    ) -> Result<NameAsBytes, GoatNsError> {
         name_as_bytes(
             &self.name.to_owned().into_bytes(),
             compress_target,
@@ -66,7 +101,7 @@ impl TryFrom<&Vec<u8>> for DomainName {
 impl TryFrom<&DomainName> for Vec<u8> {
     type Error = GoatNsError;
     fn try_from(dn: &DomainName) -> Result<Self, Self::Error> {
-        name_as_bytes(dn.name.as_bytes(), None, None)
+        Ok(name_as_bytes(dn.name.as_bytes(), None, None)?.into())
     }
 }
 
@@ -559,7 +594,9 @@ impl InternalResourceRecord {
 
             InternalResourceRecord::CNAME { cname, .. } => {
                 trace!("turning CNAME {cname:?} into bytes");
-                cname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
+                Ok(cname
+                    .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(question))?
+                    .into())
             }
             InternalResourceRecord::LOC {
                 ttl,
@@ -584,12 +621,12 @@ impl InternalResourceRecord {
                 }
                 .pack_to_vec()?)
             }
-            InternalResourceRecord::NS { nsdname, .. } => {
-                nsdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
-            }
-            InternalResourceRecord::PTR { ptrdname, .. } => {
-                ptrdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
-            }
+            InternalResourceRecord::NS { nsdname, .. } => Ok(nsdname
+                .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(question))?
+                .into()),
+            InternalResourceRecord::PTR { ptrdname, .. } => Ok(ptrdname
+                .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(question))?
+                .into()),
             InternalResourceRecord::SOA {
                 zone,
                 mname,
@@ -602,9 +639,14 @@ impl InternalResourceRecord {
                 ..
             } => {
                 let zone_as_bytes = zone.name.as_bytes().to_vec();
-                let mut res: Vec<u8> =
-                    mname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?;
-                res.extend(rname.as_bytes(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?);
+                let mut res = mname
+                    .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?
+                    .as_bytes_with_trailing_null();
+                res.extend(
+                    rname
+                        .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(&zone_as_bytes))?
+                        .as_bytes_with_trailing_null(),
+                );
                 res.extend(serial.to_be_bytes());
                 res.extend(refresh.to_be_bytes());
                 res.extend(retry.to_be_bytes());
@@ -655,7 +697,9 @@ impl InternalResourceRecord {
                 ..
             } => {
                 let mut mx_bytes: Vec<u8> = preference.to_be_bytes().into();
-                mx_bytes.extend(exchange.as_bytes(Some(HEADER_BYTES as u16), Some(question))?);
+                mx_bytes.extend(Into::<Vec<u8>>::into(
+                    exchange.as_bytes_compressed(Some(HEADER_BYTES as u16), Some(question))?,
+                ));
                 Ok(mx_bytes)
             }
             InternalResourceRecord::AXFR { .. } => unimplemented!(), // TODO: handle axfr records
@@ -1192,4 +1236,45 @@ impl TryFrom<&str> for FileLocRecord {
 /// tests to ensure that no label in the name is longer than 63 octets (bytes)
 pub fn check_long_labels(testval: &str) -> bool {
     testval.split('.').any(|x| x.len() > 63)
+}
+
+#[tokio::test]
+async fn test_soa_record() {
+    let soa = InternalResourceRecord::SOA {
+        zone: DomainName::from("example.com"),
+        mname: DomainName::from("ns1.example.com"),
+        rname: DomainName::from("hostmasterw.example.com"),
+        serial: 123456789,
+        refresh: 7200,
+        retry: 3600,
+        expire: 604800,
+        minimum: 86400,
+        rclass: RecordClass::Internet,
+    };
+    assert_eq!(soa.ttl(), &86400);
+    let bytes = soa
+        .as_bytes(&vec![])
+        .expect("Failed to convert SOA record to bytes");
+
+    // Expected bytes structure for SOA record:
+    // - mname as domain name bytes (with trailing null)
+    // - rname as domain name bytes (with trailing null)
+    // - serial, refresh, retry, expire, minimum as u32 be bytes
+
+    // Check the domain name format for mname (ns1.example.com)
+    assert_eq!(bytes[0], 3); // length of 'ns1'
+    assert_eq!(&bytes[1..4], b"ns1");
+    assert_eq!(bytes[4], 192); // because of compression
+
+    // Check the domain name format for rname (hostmaster.example.com)
+    assert_eq!(bytes[18..=19], [192, 12]); // because of compression
+
+    // Check the serial, refresh, retry, expire, minimum values
+    assert_eq!(&bytes[20..24], [7, 91, 205, 21]); // serial
+    assert_eq!(&bytes[24..28], [0, 0, 28, 32]); // refresh
+    assert_eq!(&bytes[28..32], [0, 0, 14, 16]); // retry
+    assert_eq!(&bytes[32..36], [0, 9, 58, 128]); // expire
+    assert_eq!(&bytes[36..40], [0, 1, 81, 128]); // minimum
+
+    assert_eq!(bytes.len(), 40); // Ensure there are more bytes after the minimum
 }
