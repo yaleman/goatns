@@ -1,6 +1,6 @@
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
-use crate::utils::{dms_to_u32, hexdump, name_as_bytes, name_as_bytes_compressed};
+use crate::utils::{dms_to_u32, hexdump, name_as_bytes_compressed};
 use crate::zones::FileZoneRecord;
 use crate::HEADER_BYTES;
 use core::fmt::Debug;
@@ -20,16 +20,36 @@ pub struct DomainName {
     pub name: String,
 }
 
-pub(crate) enum CompressResult {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum NameAsBytes {
     Compressed(Vec<u8>),
     Uncompressed(Vec<u8>),
 }
-impl CompressResult {
+
+impl PartialEq<Vec<u8>> for NameAsBytes {
+    fn eq(&self, other: &Vec<u8>) -> bool {
+        match self {
+            NameAsBytes::Compressed(value) => value == other,
+            NameAsBytes::Uncompressed(value) => value == other,
+        }
+    }
+}
+
+impl NameAsBytes {
     /// Sometimes you want the trailing null to be added!
     pub fn as_bytes_with_trailing_null(&self) -> Vec<u8> {
         match self {
-            CompressResult::Compressed(value) => value.to_vec(),
-            CompressResult::Uncompressed(value) => value.iter().copied().chain(vec![0]).collect(),
+            NameAsBytes::Compressed(value) => value.to_vec(),
+            NameAsBytes::Uncompressed(value) => value.iter().copied().chain(vec![0]).collect(),
+        }
+    }
+}
+
+impl From<NameAsBytes> for Vec<u8> {
+    fn from(input: NameAsBytes) -> Self {
+        match input {
+            NameAsBytes::Compressed(value) => value,
+            NameAsBytes::Uncompressed(value) => value,
         }
     }
 }
@@ -37,23 +57,11 @@ impl CompressResult {
 impl DomainName {
     /// Push the DomainName through the name_as_bytes function
     #[instrument(level = "debug")]
-    pub fn as_bytes(
-        &self,
-        compress_target: Option<u16>,
-        compress_reference: Option<&Vec<u8>>,
-    ) -> Result<Vec<u8>, GoatNsError> {
-        name_as_bytes(
-            &self.name.to_owned().into_bytes(),
-            compress_target,
-            compress_reference,
-        )
-    }
-
     pub(crate) fn as_bytes_compressed(
         &self,
         compress_target: Option<u16>,
         compress_reference: Option<&Vec<u8>>,
-    ) -> Result<CompressResult, GoatNsError> {
+    ) -> Result<NameAsBytes, GoatNsError> {
         name_as_bytes_compressed(
             &self.name.to_owned().into_bytes(),
             compress_target,
@@ -93,7 +101,7 @@ impl TryFrom<&Vec<u8>> for DomainName {
 impl TryFrom<&DomainName> for Vec<u8> {
     type Error = GoatNsError;
     fn try_from(dn: &DomainName) -> Result<Self, Self::Error> {
-        name_as_bytes(dn.name.as_bytes(), None, None)
+        Ok(name_as_bytes_compressed(dn.name.as_bytes(), None, None)?.into())
     }
 }
 
@@ -586,7 +594,9 @@ impl InternalResourceRecord {
 
             InternalResourceRecord::CNAME { cname, .. } => {
                 trace!("turning CNAME {cname:?} into bytes");
-                cname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
+                Ok(cname
+                    .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(question))?
+                    .into())
             }
             InternalResourceRecord::LOC {
                 ttl,
@@ -611,12 +621,12 @@ impl InternalResourceRecord {
                 }
                 .pack_to_vec()?)
             }
-            InternalResourceRecord::NS { nsdname, .. } => {
-                nsdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
-            }
-            InternalResourceRecord::PTR { ptrdname, .. } => {
-                ptrdname.as_bytes(Some(HEADER_BYTES as u16), Some(question))
-            }
+            InternalResourceRecord::NS { nsdname, .. } => Ok(nsdname
+                .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(question))?
+                .into()),
+            InternalResourceRecord::PTR { ptrdname, .. } => Ok(ptrdname
+                .as_bytes_compressed(Some(HEADER_BYTES as u16), Some(question))?
+                .into()),
             InternalResourceRecord::SOA {
                 zone,
                 mname,
@@ -687,7 +697,9 @@ impl InternalResourceRecord {
                 ..
             } => {
                 let mut mx_bytes: Vec<u8> = preference.to_be_bytes().into();
-                mx_bytes.extend(exchange.as_bytes(Some(HEADER_BYTES as u16), Some(question))?);
+                mx_bytes.extend(Into::<Vec<u8>>::into(
+                    exchange.as_bytes_compressed(Some(HEADER_BYTES as u16), Some(question))?,
+                ));
                 Ok(mx_bytes)
             }
             InternalResourceRecord::AXFR { .. } => unimplemented!(), // TODO: handle axfr records

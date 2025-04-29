@@ -3,7 +3,8 @@ use std::str::from_utf8;
 use url::Url;
 
 use crate::config::test_logging;
-use crate::utils::{check_valid_tld, find_tail_match, loc_size_to_u8, name_as_bytes};
+use crate::resourcerecord::NameAsBytes;
+use crate::utils::{check_valid_tld, find_tail_match, loc_size_to_u8, name_as_bytes_compressed};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -70,19 +71,23 @@ async fn test_find_tail_match() {
 
 #[test]
 pub fn test_name_bytes_simple_compress() {
-    let expected_result: Vec<u8> = vec![192, 12];
+    let expected_result = NameAsBytes::Compressed(vec![192, 12]);
 
-    let test_result =
-        name_as_bytes("example.com".as_bytes(), Some(12), None).expect("Failed to parse name");
+    let test_result = name_as_bytes_compressed("example.com".as_bytes(), Some(12), None)
+        .expect("Failed to parse name");
     assert_eq!(expected_result, test_result);
 }
 #[test]
 pub fn test_name_bytes_no_compress() {
     let expected_result: Vec<u8> = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
 
-    let test_result =
-        name_as_bytes("example.com".as_bytes(), None, None).expect("Failed to parse name");
-    assert_eq!(expected_result, test_result);
+    let test_result = name_as_bytes_compressed("example.com".as_bytes(), None, None)
+        .expect("Failed to parse name");
+    assert_eq!(test_result, expected_result);
+    assert_eq!(
+        test_result,
+        NameAsBytes::Uncompressed(expected_result.clone())
+    );
 }
 
 #[tokio::test]
@@ -96,10 +101,11 @@ async fn test_name_bytes_with_compression() {
     println!("{:?}", from_utf8(&example_com));
     println!("{:?}", from_utf8(test_input));
 
-    let result =
-        name_as_bytes(test_input, Some(12), Some(&example_com)).expect("Failed to parse name");
+    let result = name_as_bytes_compressed(test_input, Some(12), Some(&example_com))
+        .expect("Failed to parse name");
 
     assert_eq!(result, expected_result);
+    assert_eq!(result, NameAsBytes::Compressed(expected_result));
 }
 
 #[test]
@@ -112,8 +118,8 @@ pub fn test_name_bytes_with_tail_compression() {
     println!("{:?}", from_utf8(&example_com));
     println!("{:?}", from_utf8(test_input));
 
-    let result =
-        name_as_bytes(test_input, Some(12), Some(&example_com)).expect("Failed to parse name");
+    let result = name_as_bytes_compressed(test_input, Some(12), Some(&example_com))
+        .expect("Failed to parse name");
 
     assert_eq!(result, expected_result);
 }
