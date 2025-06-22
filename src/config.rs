@@ -377,6 +377,20 @@ impl From<Config> for ConfigFile {
             }
         };
 
+        let mut otel_endpoint = None;
+        if let Ok(val) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
+            if !val.is_empty() {
+                otel_endpoint = Some(val);
+            }
+        }
+        if otel_endpoint.is_none() {
+            otel_endpoint = config
+                .get("otel_endpoint")
+                .unwrap_or(Self::default().otel_endpoint);
+        }
+        #[cfg(debug_assertions)]
+        eprintln!("Using OpenTelemetry endpoint: {:?}", otel_endpoint);
+
         ConfigFile {
             hostname,
             address: config.get("address").unwrap_or(Self::default().address),
@@ -447,9 +461,7 @@ impl From<Config> for ConfigFile {
             // disable_oauth2: config
             //     .get("disable_oauth2")
             //     .unwrap_or(Self::default().disable_oauth2),
-            otel_endpoint: config
-                .get("otel_endpoint")
-                .unwrap_or(Self::default().otel_endpoint),
+            otel_endpoint,
         }
     }
 }

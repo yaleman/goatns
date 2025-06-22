@@ -19,7 +19,7 @@ use axum::routing::get;
 use axum::Router;
 use axum_csp::CspUrlMatcher;
 #[cfg(not(test))]
-use axum_tracing_opentelemetry::middleware::OtelAxumLayer;
+use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use chrono::{DateTime, NaiveDateTime, TimeDelta, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{ClientId, ClientSecret};
@@ -206,8 +206,11 @@ pub async fn build(
         .layer(service_layer);
 
     // here we add the tracing layer
+
     #[cfg(not(test))]
-    let router = router.layer(OtelAxumLayer::default());
+    let router = router
+        .layer(OtelInResponseLayer)
+        .layer(OtelAxumLayer::default());
 
     let router = router.route("/status", get(generic::status));
 

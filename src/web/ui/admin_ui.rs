@@ -12,7 +12,7 @@ use axum::{Form, Router};
 use serde::Deserialize;
 use sqlx::Row;
 use tower_sessions::Session;
-use tracing::{debug, error};
+use tracing::{debug, error, instrument};
 
 use super::check_logged_in;
 
@@ -41,6 +41,7 @@ pub(crate) struct ZoneRecord {
     zoneid: u32,
 }
 
+#[instrument(level = "info", skip(session))]
 pub(crate) async fn dashboard(mut session: Session) -> Result<AdminUITemplate, Redirect> {
     let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 

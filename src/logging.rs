@@ -5,7 +5,7 @@ use std::{env, time::Duration};
 use init_tracing_opentelemetry::tracing_subscriber_ext;
 use opentelemetry::{global, trace::TracerProvider as _, KeyValue};
 
-use opentelemetry_otlp::{Protocol, WithExportConfig};
+use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
     trace::{Sampler, SdkTracerProvider},
     Resource,
@@ -83,22 +83,15 @@ pub(crate) fn init_otel_subscribers(
         // .with_schema_url(SCHEMA_URL)
         .build();
 
-    let endpoint = match (otel_endpoint, env::var("OTEL_EXPORTER_OTLP_ENDPOINT")) {
-        (Some(endpoint), _) => Some(endpoint),
-        (_, Ok(endpoint)) => Some(endpoint),
-        _ => None,
-    };
-
     let subscriber = tracing_subscriber::registry()
         .with(build_loglevel_filter_layer(log_level))
         .with(build_logger_text());
 
-    match endpoint {
+    match otel_endpoint {
         Some(endpoint) => {
             let otlp_exporter = opentelemetry_otlp::SpanExporter::builder()
-                .with_tonic()
+                .with_http()
                 .with_endpoint(endpoint)
-                .with_protocol(Protocol::HttpBinary)
                 .with_timeout(Duration::from_secs(5))
                 .build()
                 .map_err(|err| err.to_string())?;
