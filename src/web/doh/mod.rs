@@ -2,7 +2,7 @@ use askama_axum::IntoResponse;
 use axum::body::{Body, Bytes};
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::Router;
 use base64::{engine::general_purpose, Engine as _};

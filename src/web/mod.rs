@@ -40,6 +40,9 @@ use utils::{handler_404, Urls};
 
 use self::auth::CustomProviderMetadata;
 
+pub(crate) use askama::Template;
+pub(crate) use askama_web::WebTemplate;
+
 #[macro_use]
 pub mod macros;
 

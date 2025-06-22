@@ -6,6 +6,7 @@ use crate::web::utils::Urls;
 use crate::web::GoatStateTrait;
 use crate::COOKIE_NAME;
 use askama::Template;
+use askama_web::WebTemplate;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect, Response};
@@ -60,7 +61,7 @@ pub type CustomProviderMetadata = ProviderMetadata<
 >;
 type CustomClaimType = IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>;
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "auth_login.html.j2")]
 #[allow(dead_code)]
 struct AuthLoginTemplate {
@@ -69,7 +70,7 @@ struct AuthLoginTemplate {
     pub user_is_admin: bool,
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "auth_new_user.html")]
 struct AuthNewUserTemplate {
     state: String,
@@ -81,14 +82,14 @@ struct AuthNewUserTemplate {
     pub user_is_admin: bool,
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "auth_logout.html")]
 #[allow(dead_code)]
 struct AuthLogoutTemplate {
     pub user_is_admin: bool,
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "auth_provisioning_disabled.html")]
 /// This renders a page telling the user that auto-provisioning is disabled and to tell the admin which username to add
 struct AuthProvisioningDisabledTemplate {

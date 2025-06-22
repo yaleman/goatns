@@ -566,7 +566,7 @@ pub async fn test_logging() {
         ..ConfigFile::default()
     };
 
-    let _ = setup_logging(CowCell::new(config).read(), false).await;
+    let _ = setup_logging(CowCell::new(config).read().await, false).await;
 }
 
 /// A filter for log lines

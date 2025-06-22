@@ -2,6 +2,7 @@
 //!
 
 use askama::Template;
+use askama_web::WebTemplate;
 use axum::extract::{OriginalUri, State};
 use axum::response::Redirect;
 use tower_sessions::Session;
@@ -11,7 +12,7 @@ use crate::web::ui::check_logged_in;
 
 use crate::web::GoatState;
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "view_profile.html")]
 pub(crate) struct UserProfilePage {
     pub user: User,

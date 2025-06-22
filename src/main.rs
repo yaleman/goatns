@@ -22,7 +22,7 @@ async fn run() -> Result<(), GoatNsError> {
     let config = ConfigFile::try_as_cowcell(cli.config())
         .map_err(|err| GoatNsError::StartupError(format!("Config loading failed! {:?}", err)))?;
 
-    let logger = setup_logging(config.read(), cli.debug())
+    let logger = setup_logging(config.read().await, cli.debug())
         .await
         .map_err(|err| GoatNsError::StartupError(format!("Log setup failed! {:?}", err)))?;
 
@@ -134,18 +134,22 @@ async fn run() -> Result<(), GoatNsError> {
     if let SystemState::Server = next_step {
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
         let udpserver = tokio::spawn(servers::udp_server(
-            config.read(),
+            config.read().await,
             datastore_sender.clone(),
             agent_tx.clone(),
         ));
         let tcpserver = tokio::spawn(servers::tcp_server(
-            config.read(),
+            config.read().await,
             datastore_sender.clone(),
             agent_tx.clone(),
         ));
 
-        let apiserver =
-            goatns::web::build(datastore_sender.clone(), config.read(), connpool.clone()).await?;
+        let apiserver = goatns::web::build(
+            datastore_sender.clone(),
+            config.read().await,
+            connpool.clone(),
+        )
+        .await?;
 
         let servers = servers::Servers::build(agent_tx)
             .with_datastore(datastore_manager)
