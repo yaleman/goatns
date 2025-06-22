@@ -12,7 +12,7 @@ async fn test_doh_get_json() -> Result<(), ()> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
 
-    let api_port = config.read().api_port;
+    let api_port = config.read().await.api_port;
 
     let _user = insert_test_user(&pool).await;
     test_example_com_zone()
@@ -74,7 +74,7 @@ async fn test_doh_get_json() -> Result<(), ()> {
 async fn test_doh_ask_raw_accept() -> Result<(), ()> {
     let (_pool, _servers, config) = start_test_server().await;
 
-    let api_port = config.read().api_port;
+    let api_port = config.read().await.api_port;
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
         "Accept",
@@ -110,7 +110,7 @@ async fn test_doh_ask_raw_accept() -> Result<(), ()> {
 async fn test_doh_ask_json_accept() -> Result<(), ()> {
     let (_pool, _servers, config) = start_test_server().await;
 
-    let api_port = config.read().api_port;
+    let api_port = config.read().await.api_port;
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
         "Accept",
@@ -147,7 +147,7 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
 async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
     let (_pool, _servers, config) = start_test_server().await;
 
-    let api_port = config.read().api_port;
+    let api_port = config.read().await.api_port;
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
         "Accept",

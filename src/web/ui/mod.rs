@@ -5,6 +5,7 @@ use crate::db::User;
 use crate::web::utils::Urls;
 use crate::zones::FileZone;
 use askama::Template;
+use askama_web::WebTemplate;
 use axum::extract::{OriginalUri, Path, Query, State};
 use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Redirect};
@@ -21,7 +22,7 @@ mod profile;
 mod user_settings;
 mod zones;
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "view_zones.html")]
 pub(crate) struct TemplateViewZones {
     zones: Vec<FileZone>,
@@ -30,7 +31,7 @@ pub(crate) struct TemplateViewZones {
     error: Option<String>,
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "view_zone.html")]
 pub(crate) struct TemplateViewZone {
     zone: FileZone,
@@ -180,7 +181,7 @@ pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, R
     Ok(user)
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "dashboard.html")]
 pub(crate) struct DashboardTemplate /*<'a>*/ {
     // name: &'a str,
@@ -201,7 +202,7 @@ pub(crate) async fn dashboard(
 pub fn new() -> Router<GoatState> {
     Router::new()
         .route("/", get(dashboard))
-        .route("/zones/:id", get(zone_view))
+        .route("/zones/{id}", get(zone_view))
         .route("/zones/list", get(zones_list))
         .route("/zones/new", post(zones::zones_new_post))
         .route("/profile", get(profile::user_profile_get))

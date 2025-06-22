@@ -51,6 +51,12 @@ impl From<reqwest::Error> for GoatNsError {
     }
 }
 
+impl From<Box<(dyn std::error::Error + Send + Sync + 'static)>> for GoatNsError {
+    fn from(error: Box<(dyn std::error::Error + Send + Sync + 'static)>) -> Self {
+        GoatNsError::Generic(error.to_string())
+    }
+}
+
 impl From<PackingError> for GoatNsError {
     fn from(error: PackingError) -> Self {
         GoatNsError::BytePackingError(error.to_string())
@@ -79,13 +85,13 @@ impl From<GoatNsError> for std::io::Error {
     fn from(error: GoatNsError) -> Self {
         match error {
             GoatNsError::IoError(err) => err,
-            GoatNsError::StartupError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
-            GoatNsError::SqlxError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
-            GoatNsError::ReqwestError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
-            GoatNsError::FileError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
-            GoatNsError::EmptyFile => std::io::Error::new(std::io::ErrorKind::Other, "Empty file"),
-            GoatNsError::SendError(err) => std::io::Error::new(std::io::ErrorKind::Other, err),
-            _ => std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", error)),
+            GoatNsError::StartupError(err) => std::io::Error::other(err),
+            GoatNsError::SqlxError(err) => std::io::Error::other(err),
+            GoatNsError::ReqwestError(err) => std::io::Error::other(err),
+            GoatNsError::FileError(err) => std::io::Error::other(err),
+            GoatNsError::EmptyFile => std::io::Error::other("Empty file"),
+            GoatNsError::SendError(err) => std::io::Error::other(err),
+            _ => std::io::Error::other(format!("{:?}", error)),
         }
     }
 }

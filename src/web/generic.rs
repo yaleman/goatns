@@ -1,6 +1,6 @@
 use super::*;
 use crate::enums::ContactDetails;
-use askama::Template;
+
 use axum::extract::{Query, State};
 use serde::Deserialize;
 
@@ -8,7 +8,7 @@ pub async fn status() -> String {
     STATUS_OK.to_string()
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "index.html")]
 pub(crate) struct IndexTemplate {
     admin_contact: String,

@@ -8,6 +8,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use askama::Template;
+use askama_web::WebTemplate;
 use axum::extract::{OriginalUri, Path, State};
 use axum::response::{Html, IntoResponse, Redirect};
 use axum::routing::get;
@@ -27,7 +28,7 @@ use crate::web::GoatState;
 
 static SESSION_CSRFTOKEN_FIELD: &str = "api_token_csrf_token";
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "user_settings.html")]
 pub(crate) struct Settings {
     pub user_is_admin: bool,
@@ -40,7 +41,7 @@ pub(crate) async fn settings(State(_state): State<GoatState>) -> Settings {
     }
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "user_api_tokens.html")]
 pub(crate) struct ApiTokensGetPage {
     csrftoken: String,
@@ -306,7 +307,7 @@ pub struct ApiTokenForm {
     pub lifetime: Option<ApiTokenLifetime>,
 }
 /// Form handler for the api tokens post endpoint
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Template, Default)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Template, WebTemplate, Default)]
 #[template(path = "user_api_token_form.html")]
 pub struct ApiTokenPage {
     pub token_name: Option<String>,
@@ -497,7 +498,7 @@ pub async fn api_tokens_post(
     // Html::from("Welcome to the api tokens page".to_string())
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Template)]
+#[derive(Deserialize, Serialize, Debug, Clone, Template, WebTemplate)]
 #[template(path = "user_api_token_delete.html")]
 pub struct ApiTokenDeleteTemplate {
     pub id: i64,
@@ -637,6 +638,6 @@ pub fn router() -> Router<GoatState> {
         .route("/", get(settings))
         .route("/api_tokens", get(api_tokens_get))
         .route("/api_tokens", post(api_tokens_post))
-        .route("/api_tokens/delete/:id", get(api_tokens_delete_get))
-        .route("/api_tokens/delete/:id", post(api_tokens_delete_post))
+        .route("/api_tokens/delete/{id}", get(api_tokens_delete_get))
+        .route("/api_tokens/delete/{id}", post(api_tokens_delete_post))
 }

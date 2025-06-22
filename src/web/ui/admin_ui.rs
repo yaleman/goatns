@@ -3,6 +3,7 @@ use crate::web::utils::Urls;
 use crate::web::GoatState;
 use crate::zones::FileZone;
 use askama::Template;
+use askama_web::WebTemplate;
 use axum::extract::{Path, State};
 use axum::http::Uri;
 use axum::response::Redirect;
@@ -11,18 +12,18 @@ use axum::{Form, Router};
 use serde::Deserialize;
 use sqlx::Row;
 use tower_sessions::Session;
-use tracing::{debug, error};
+use tracing::{debug, error, instrument};
 
 use super::check_logged_in;
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "admin_ui.html")]
 pub(crate) struct AdminUITemplate /*<'a>*/ {
     // name: &'a str,
     pub user_is_admin: bool,
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "admin_report_unowned_records.html")]
 pub(crate) struct AdminReportUnownedRecords /*<'a>*/ {
     // name: &'a str,
@@ -40,6 +41,7 @@ pub(crate) struct ZoneRecord {
     zoneid: u32,
 }
 
+#[instrument(level = "info", skip(session))]
 pub(crate) async fn dashboard(mut session: Session) -> Result<AdminUITemplate, Redirect> {
     let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 
@@ -99,7 +101,7 @@ pub(crate) async fn report_unowned_records(
     })
 }
 
-#[derive(Template)]
+#[derive(Template, WebTemplate)]
 #[template(path = "admin_ownership_template.html")]
 pub(crate) struct AssignOwnershipTemplate {
     user_is_admin: bool,
@@ -174,7 +176,7 @@ pub fn router() -> Router<GoatState> {
         .route("/", get(dashboard))
         .route("/reports/unowned_records", get(report_unowned_records))
         .route(
-            "/zones/assign_ownership/:id",
+            "/zones/assign_ownership/{id}",
             get(assign_zone_ownership).post(assign_zone_ownership),
         )
 }

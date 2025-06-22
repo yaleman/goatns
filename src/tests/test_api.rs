@@ -38,18 +38,18 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
 
     let mut config_tx = config.write().await;
     config_tx.api_port = port;
-    config_tx.commit();
+    config_tx.commit().await;
 
     // println!("Starting channels");
     let (agent_sender, datastore_tx, datastore_rx) = crate::utils::start_channels();
 
     let udpserver = tokio::spawn(servers::udp_server(
-        config.read(),
+        config.read().await,
         datastore_tx.clone(),
         agent_sender.clone(),
     ));
     let tcpserver = tokio::spawn(servers::tcp_server(
-        config.read(),
+        config.read().await,
         datastore_tx.clone(),
         agent_sender.clone(),
     ));
@@ -62,7 +62,7 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     ));
 
     println!("Starting API Server on port {port}");
-    let apiserver = crate::web::build(datastore_tx.clone(), config.read(), pool.clone())
+    let apiserver = crate::web::build(datastore_tx.clone(), config.read().await, pool.clone())
         .await
         .expect("Failed to start API server");
 
@@ -119,7 +119,7 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
 
-    let api_port = config.read().api_port;
+    let api_port = config.read().await.api_port;
     // let apiserver = servers.apiserver.unwrap();
 
     let user = insert_test_user(&pool).await;
@@ -190,7 +190,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
 
-    let api_port = config.read().api_port;
+    let api_port = config.read().await.api_port;
     // let apiserver = servers.apiserver.unwrap();
 
     let user = insert_test_user(&pool).await;
@@ -266,7 +266,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
 
-    let api_port = config.read().api_port;
+    let api_port = config.read().await.api_port;
     // let apiserver = servers.apiserver.unwrap();
 
     let user = insert_test_user(&pool).await;
@@ -346,7 +346,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
 async fn api_record_create() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
-    let api_port = config.read().api_port;
+    let api_port = config.read().await.api_port;
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
     println!("Creating token for user");
@@ -431,7 +431,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
 async fn api_record_delete() -> Result<(), GoatNsError> {
     // here we stand up the servers
     let (pool, _servers, config) = start_test_server().await;
-    let api_port = config.read().api_port;
+    let api_port = config.read().await.api_port;
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
     println!("Creating token for user");
