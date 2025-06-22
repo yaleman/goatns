@@ -260,10 +260,9 @@ impl ConfigFile {
                 .add_source(config::Environment::with_prefix("goatns"));
 
             let config = builder.build().map_err(|e| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Couldn't load config from {config_filename}: {e:?}"),
-                )
+                std::io::Error::other(format!(
+                    "Couldn't load config from {config_filename}: {e:?}"
+                ))
             });
 
             match config {
@@ -483,12 +482,8 @@ pub async fn use_flexi_logger(
         true => "debug".to_string(),
         false => config.log_level.to_ascii_lowercase(),
     };
-    let logger = flexi_logger::Logger::try_with_str(log_level).map_err(|e| {
-        std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Failed to start logger! {e:?}"),
-        )
-    })?;
+    let logger = flexi_logger::Logger::try_with_str(log_level)
+        .map_err(|e| std::io::Error::other(format!("Failed to start logger! {e:?}")))?;
 
     logger
         .write_mode(flexi_logger::WriteMode::Direct)
@@ -505,12 +500,7 @@ pub async fn use_flexi_logger(
         }))
         .set_palette("b1;3;2;6;5".to_string())
         .start()
-        .map_err(|e| {
-            std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to start logger! {e:?}"),
-            )
-        })
+        .map_err(|e| std::io::Error::other(format!("Failed to start logger! {e:?}")))
 }
 
 /// For handling either otel or flexi_logger shutdown things
@@ -527,14 +517,14 @@ impl GoatNsLogHandler {
             handle.shutdown();
         }
         if self.otel_enabled {
-            self.provider.as_ref().map(|provider| {
+            if let Some(provider) = self.provider.as_ref() {
                 if let Err(err) = provider.force_flush() {
                     eprintln!("Failed to flush OpenTelemetry provider: {err}");
                 };
                 if let Err(err) = provider.shutdown() {
                     eprintln!("Failed to shutdown OpenTelemetry provider: {err}");
                 };
-            });
+            }
             eprintln!("Logging pipeline completed shutdown");
         }
     }
