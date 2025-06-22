@@ -638,6 +638,6 @@ pub fn router() -> Router<GoatState> {
         .route("/", get(settings))
         .route("/api_tokens", get(api_tokens_get))
         .route("/api_tokens", post(api_tokens_post))
-        .route("/api_tokens/delete/:id", get(api_tokens_delete_get))
-        .route("/api_tokens/delete/:id", post(api_tokens_delete_post))
+        .route("/api_tokens/delete/{id}", get(api_tokens_delete_get))
+        .route("/api_tokens/delete/{id}", post(api_tokens_delete_post))
 }

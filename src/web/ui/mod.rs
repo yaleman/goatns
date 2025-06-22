@@ -202,7 +202,7 @@ pub(crate) async fn dashboard(
 pub fn new() -> Router<GoatState> {
     Router::new()
         .route("/", get(dashboard))
-        .route("/zones/:id", get(zone_view))
+        .route("/zones/{id}", get(zone_view))
         .route("/zones/list", get(zones_list))
         .route("/zones/new", post(zones::zones_new_post))
         .route("/profile", get(profile::user_profile_get))

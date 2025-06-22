@@ -175,7 +175,7 @@ pub fn router() -> Router<GoatState> {
         .route("/", get(dashboard))
         .route("/reports/unowned_records", get(report_unowned_records))
         .route(
-            "/zones/assign_ownership/:id",
+            "/zones/assign_ownership/{id}",
             get(assign_zone_ownership).post(assign_zone_ownership),
         )
 }
