@@ -4,6 +4,7 @@ use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
 use flexi_logger::{DeferredNow, LoggerHandle};
 use gethostname::gethostname;
+use opentelemetry_sdk::trace::SdkTracerProvider;
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -198,7 +199,7 @@ impl ConfigFile {
             ));
         };
 
-        config.commit();
+        let _ = config.commit().await;
         match errors.is_empty() {
             true => Ok(()),
             false => Err(errors),
@@ -516,6 +517,7 @@ pub async fn use_flexi_logger(
 pub struct GoatNsLogHandler {
     loghandle: Option<LoggerHandle>,
     otel_enabled: bool,
+    provider: Option<SdkTracerProvider>,
 }
 
 impl GoatNsLogHandler {
@@ -525,7 +527,14 @@ impl GoatNsLogHandler {
             handle.shutdown();
         }
         if self.otel_enabled {
-            opentelemetry::global::shutdown_tracer_provider();
+            self.provider.as_ref().map(|provider| {
+                if let Err(err) = provider.force_flush() {
+                    eprintln!("Failed to flush OpenTelemetry provider: {err}");
+                };
+                if let Err(err) = provider.shutdown() {
+                    eprintln!("Failed to shutdown OpenTelemetry provider: {err}");
+                };
+            });
             eprintln!("Logging pipeline completed shutdown");
         }
     }
@@ -536,6 +545,7 @@ impl From<LoggerHandle> for GoatNsLogHandler {
         Self {
             loghandle: Some(handle),
             otel_enabled: false,
+            provider: None,
         }
     }
 }
@@ -553,9 +563,10 @@ pub async fn setup_logging(
     .map_err(|err| {
         GoatNsError::StartupError(format!("Failed to initialize OpenTelemetry tracing: {err}"))
     })
-    .map(|_| GoatNsLogHandler {
+    .map(|provider| GoatNsLogHandler {
         loghandle: None,
         otel_enabled: true,
+        provider,
     })
 }
 

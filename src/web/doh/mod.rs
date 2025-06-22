@@ -1,4 +1,3 @@
-use askama_axum::IntoResponse;
 use axum::body::{Body, Bytes};
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};

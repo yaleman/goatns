@@ -1047,16 +1047,16 @@ impl DBEntity for FileZoneRecord {
             .fetch_optional(&mut *txn).await?;
 
         let mut args = SqliteArguments::default();
-        args.add(self.zoneid);
-        args.add(record_name);
-        args.add(self.ttl);
-        args.add(RecordType::from(self.rrtype.clone()));
-        args.add(self.class);
-        args.add(self.clone().rdata);
+        args.add(self.zoneid)?;
+        args.add(record_name)?;
+        args.add(self.ttl)?;
+        args.add(RecordType::from(self.rrtype.clone()))?;
+        args.add(self.class)?;
+        args.add(self.clone().rdata)?;
 
         if let Some(er) = &existing_record {
             let id: i64 = er.get("id");
-            args.add(id);
+            args.add(id)?;
         }
 
         let query = match existing_record {

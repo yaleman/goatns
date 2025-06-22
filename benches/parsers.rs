@@ -1,4 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion}; // ,Bencher
+use criterion::{criterion_group, criterion_main, Criterion};
+use std::hint::black_box; // ,Bencher
 
 // use std::process::Termination;
 use goatns::get_question_qname;

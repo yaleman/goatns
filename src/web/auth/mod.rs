@@ -24,12 +24,14 @@ use openidconnect::{
     AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
 };
 use serde::Deserialize;
+use sqlx::SqlitePool;
 use tower_sessions::cookie::time::Duration;
-use tower_sessions::{session_store::ExpiredDeletion, sqlx::SqlitePool, SqliteStore};
+use tower_sessions::session_store::ExpiredDeletion;
 
 // pub(crate) mod sessionstore;
 pub mod traits;
 use tower_sessions::{Expiry, Session, SessionManagerLayer};
+use tower_sessions_sqlx_store::SqliteStore;
 use tracing::{debug, error, info, instrument, trace};
 use traits::*;
 

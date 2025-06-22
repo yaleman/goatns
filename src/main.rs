@@ -33,6 +33,7 @@ async fn run() -> Result<(), GoatNsError> {
             "{}",
             config
                 .read()
+                .await
                 .as_json_pretty()
                 .expect("Failed to serialize config!")
         );
@@ -62,12 +63,12 @@ async fn run() -> Result<(), GoatNsError> {
         });
     };
 
-    info!("Configuration: {}", *config.read());
+    info!("Configuration: {}", *config.read().await);
 
     let (agent_tx, datastore_sender, datastore_receiver) = start_channels();
 
     // start up the DB
-    let connpool: SqlitePool = db::get_conn(config.read())
+    let connpool: SqlitePool = db::get_conn(config.read().await)
         .await
         .map_err(|err| GoatNsError::StartupError(format!("DB Setup failed: {:?}", err)))?;
 
@@ -78,13 +79,13 @@ async fn run() -> Result<(), GoatNsError> {
     // we only run the cron if the server is going to be running
 
     let cron_db_cleanup_timer = match cli.command {
-        goatns::cli::Commands::Server { .. } => {
-            Some(Duration::from_secs(config.read().sql_db_cleanup_seconds))
-        }
+        goatns::cli::Commands::Server { .. } => Some(Duration::from_secs(
+            config.read().await.sql_db_cleanup_seconds,
+        )),
         _ => None,
     };
 
-    let hostname = config.read().hostname.clone();
+    let hostname = config.read().await.hostname.clone();
 
     let datastore_manager = tokio::spawn(datastore::manager(
         datastore_receiver,

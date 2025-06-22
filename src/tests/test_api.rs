@@ -38,7 +38,7 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
 
     let mut config_tx = config.write().await;
     config_tx.api_port = port;
-    config_tx.commit();
+    config_tx.commit().await;
 
     // println!("Starting channels");
     let (agent_sender, datastore_tx, datastore_rx) = crate::utils::start_channels();
