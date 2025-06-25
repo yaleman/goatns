@@ -167,7 +167,6 @@ pub async fn check_logged_in(session: &mut Session, path: Uri, state: GoatState)
                 )]))
             })?;
         debug!("Not-logged-in-user tried to log in, how rude!");
-        // TODO: this should redirect to the current page
         return Err(Urls::Login.redirect());
     }
     debug!("session ok!");
