@@ -119,7 +119,7 @@ just doc_fix        # Fix markdown formatting
 - Uses strict Clippy linting (see `clippy.toml`)
 - Forbids unsafe code and unwrap/expect usage outside tests
 - Requires documentation for public APIs
-- Follows Rust 2021 edition standards
+- Follows Rust 2024 edition standards
 
 ### Database Workflow
 The application uses Sea-ORM for database operations with automatic migrations. The database schema is defined in `src/db/entities/` with models for users, zones, records, sessions, and API tokens.
