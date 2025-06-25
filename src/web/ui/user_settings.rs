@@ -164,6 +164,7 @@ pub async fn api_tokens_get(
     let user = check_logged_in(
         &mut session,
         Uri::from_static(Urls::SettingsApiTokens.as_ref()),
+        state.clone(),
     )
     .await?;
 
@@ -335,6 +336,7 @@ pub async fn api_tokens_post(
     let user = check_logged_in(
         &mut session,
         Uri::from_static(Urls::SettingsApiTokens.as_ref()),
+        state.clone(),
     )
     .await?;
 
@@ -522,6 +524,7 @@ pub async fn api_tokens_delete_get(
     let user = check_logged_in(
         &mut session,
         Uri::from_static(Urls::SettingsApiTokens.as_ref()),
+        state.clone(),
     )
     .await?;
 
@@ -583,7 +586,7 @@ pub async fn api_tokens_delete_post(
     OriginalUri(path): OriginalUri,
     Form(form): Form<ApiTokenDeleteForm>,
 ) -> Result<Html<String>, Redirect> {
-    let user: User = check_logged_in(&mut session, path).await?;
+    let user: User = check_logged_in(&mut session, path, state.clone()).await?;
 
     if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
         // TODO: redirect to the start
