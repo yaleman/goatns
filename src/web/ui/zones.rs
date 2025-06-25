@@ -30,7 +30,7 @@ pub(crate) async fn zones_new_post(
 ) -> Result<Redirect, Redirect> {
     debug!("Received new zone form: name={:?}", form.name);
 
-    let user: User = check_logged_in(&mut session, path).await?;
+    let user: User = check_logged_in(&mut session, path, state.clone()).await?;
 
     let userid = match user.id {
         Some(id) => id,

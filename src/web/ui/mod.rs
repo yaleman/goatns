@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::datastore::Command;
-use crate::db::User;
+use crate::db::{DBEntity, User};
 use crate::web::utils::Urls;
 use crate::zones::FileZone;
 use askama::Template;
@@ -51,7 +51,7 @@ pub(crate) async fn zones_list(
     OriginalUri(path): OriginalUri,
     Query(query): Query<ViewZonesQueryString>,
 ) -> Result<TemplateViewZones, impl IntoResponse> {
-    let user = check_logged_in(&mut session, path)
+    let user = check_logged_in(&mut session, path, state.clone())
         .await
         .map_err(|err| err.into_response())?;
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
@@ -101,7 +101,7 @@ pub(crate) async fn zone_view(
     State(state): State<GoatState>,
     mut session: Session,
 ) -> Result<TemplateViewZone, impl IntoResponse> {
-    let user = check_logged_in(&mut session, path)
+    let user = check_logged_in(&mut session, path, state.clone())
         .await
         .map_err(|err| err.into_response())?;
 
@@ -142,7 +142,7 @@ pub(crate) async fn zone_view(
     })
 }
 
-pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, Redirect> {
+pub async fn check_logged_in(session: &mut Session, path: Uri, state: GoatState) -> Result<User, Redirect> {
     let authref: Option<String> = session
         .get("authref")
         .await
@@ -172,13 +172,36 @@ pub async fn check_logged_in(session: &mut Session, path: Uri) -> Result<User, R
     }
     debug!("session ok!");
 
-    let user = match session.get("user").await.unwrap_or(None) {
+    let user: User = match session.get("user").await.unwrap_or(None) {
         Some(val) => val,
         None => return Err(Urls::Login.redirect()),
     };
 
-    // TODO: check the database to make sure they're actually legit and not disabled and blah
-    Ok(user)
+    // Check the database to make sure they're actually legit and not disabled
+    if let Some(user_id) = user.id {
+        let pool = state.read().await.connpool.clone();
+        match User::get(&pool, user_id).await {
+            Ok(db_user) => {
+                if db_user.disabled {
+                    debug!("User {} is disabled, clearing session", user_id);
+                    session.clear().await;
+                    Err(Urls::Login.redirect())
+                } else {
+                    // Return the user from the database to ensure we have fresh data
+                    Ok(*db_user)
+                }
+            }
+            Err(err) => {
+                debug!("Failed to validate user {} from database: {err:?}", user_id);
+                session.clear().await;
+                Err(Urls::Login.redirect())
+            }
+        }
+    } else {
+        debug!("User has no ID, clearing session");
+        session.clear().await;
+        Err(Urls::Login.redirect())
+    }
 }
 
 #[derive(Template, WebTemplate)]
@@ -189,10 +212,11 @@ pub(crate) struct DashboardTemplate /*<'a>*/ {
 }
 
 pub(crate) async fn dashboard(
+    State(state): State<GoatState>,
     mut session: Session,
     OriginalUri(path): OriginalUri,
 ) -> Result<DashboardTemplate, Redirect> {
-    let user = check_logged_in(&mut session, path).await?;
+    let user = check_logged_in(&mut session, path, state).await?;
 
     Ok(DashboardTemplate {
         user_is_admin: user.admin,
