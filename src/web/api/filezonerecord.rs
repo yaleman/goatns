@@ -1,7 +1,6 @@
-use crate::db::{DBEntity, User, ZoneOwnership};
+use crate::db::{DBEntity, ZoneOwnership};
 use crate::error_result_json;
 use crate::zones::FileZoneRecord;
-use goatns_macros::check_api_auth;
 use tower_sessions::Session;
 use tracing::debug;
 
@@ -25,7 +24,7 @@ pub(crate) async fn api_create(
     session: Session,
     Json(record): Json<FileZoneRecord>,
 ) -> Result<Json<Box<FileZoneRecord>>, (StatusCode, Json<ErrorResult>)> {
-    check_api_auth!();
+    let user = check_api_auth(&session).await?;
 
     let user_id = match user.id {
         Some(val) => val,
@@ -80,7 +79,7 @@ pub(crate) async fn api_update(
     session: Session,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
-    check_api_auth!();
+    let user = check_api_auth(&session).await?;
 
     let record: FileZoneRecord = match serde_json::from_value(payload) {
         Ok(val) => val,
@@ -141,7 +140,7 @@ pub(crate) async fn api_get(
     session: Session,
     Path(id): Path<i64>,
 ) -> Result<Json<Box<FileZoneRecord>>, (StatusCode, Json<ErrorResult>)> {
-    check_api_auth!();
+    check_api_auth(&session).await?;
 
     let pool = state.connpool().await;
     let res = match FileZoneRecord::get(&pool, id).await {
@@ -162,7 +161,7 @@ pub(crate) async fn api_delete(
     session: Session,
     Path(id): Path<i64>,
 ) -> Result<(), (StatusCode, Json<ErrorResult>)> {
-    check_api_auth!();
+    let user = check_api_auth(&session).await?;
 
     let mut txn = state.connpool().await.begin().await.map_err(|_| {
         (
