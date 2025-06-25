@@ -434,7 +434,12 @@ pub async fn login(
                     .into_response());
             };
 
-            Ok(Urls::Dashboard.redirect().into_response())
+            // Check if there's a stored redirect path from before authentication
+            let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
+            match redirect {
+                Some(destination) => Ok(Redirect::to(&destination).into_response()),
+                None => Ok(Urls::Dashboard.redirect().into_response()),
+            }
         }
         Err(error) => match error {
             ParserError::Redirect { content } => Ok(content.into_response()),
@@ -497,6 +502,7 @@ pub struct SignupForm {
 /// /auth/signup
 pub async fn signup(
     State(mut state): State<GoatState>,
+    session: Session,
     Form(form): Form<SignupForm>,
 ) -> Result<Response, Redirect> {
     debug!("Dumping form: {form:?}");
@@ -543,7 +549,14 @@ pub async fn signup(
                 admin: false,
             };
             match user.save(&state.connpool().await).await {
-                Ok(_) => Ok(Urls::Dashboard.redirect().into_response()),
+                Ok(_) => {
+                    // Check if there's a stored redirect path from before authentication
+                    let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
+                    match redirect {
+                        Some(destination) => Ok(Redirect::to(&destination).into_response()),
+                        None => Ok(Urls::Dashboard.redirect().into_response()),
+                    }
+                },
                 Err(error) => {
                     debug!("Failed to save new user signup... oh no! {error:?}");
                     // TODO: throw an error page on this one
