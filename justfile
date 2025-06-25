@@ -70,7 +70,7 @@ codespell:
 
 # Ask the clip for the judgement
 clippy:
-    cargo clippy --all-features
+    cargo clippy --all-features --all-targets
 
 test:
     cargo test
