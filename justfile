@@ -96,7 +96,7 @@ semgrep:
 doc:
 	cargo doc --document-private-items
 
-# Run cargo tarpaulin
+# Run coverage analysis with tarpaulin (HTML output)
 coverage:
     cargo tarpaulin --out Html
     @echo "Coverage file at file://$(PWD)/tarpaulin-report.html"
@@ -128,3 +128,52 @@ trivy_image:
 # Run trivy on the repo
 trivy_repo:
     trivy repo $(pwd) --skip-dirs 'target/**' --skip-files .envrc -d
+
+# Build release binaries
+build:
+    cargo build --release
+
+# Vendor dependencies
+vendor:
+    cargo vendor
+
+# Run cargo outdated and cargo audit
+prep: codespell
+    cargo outdated -R
+    cargo audit
+
+
+# Run the container with config mount
+run_container:
+    docker run \
+        --rm -it \
+        --mount "type=bind,src=${HOME}/.config/goatns.json,target=/goatns.json" \
+        goatns/server:latest
+
+# Build the book and organize docs (alternative to simple book command)
+build_book: doc
+    mdbook build docs
+    mv ./docs/book/ ./target/docs/
+    mkdir -p ./target/docs/rustdoc/
+    mv ./target/doc/* ./target/docs/rustdoc/
+
+# Format docs and check them
+book_format:
+    find . -type f \
+        -not -path './target/*' \
+        -not -path '*/.venv/*' \
+        -name \*.md \
+        -exec deno fmt --check --options-line-width=100 {} +
+
+# Fix docs formatting
+book_format_fix:
+    find . -type f \
+        -not -path './target/*' \
+        -not -path '*/.venv/*' \
+        -name \*.md \
+        -exec deno fmt --options-line-width=100 {} +
+
+# Remove the docs directory contents
+clean_book:
+    rm -rf ./target/docs/*
+
