@@ -147,3 +147,7 @@ The DNS protocol implementation is custom-built using the `packed_struct` crate 
 - Commit messages should be clear and descriptive
 - Include all related files in the commit (source code, tests, documentation)
 - Never leave uncommitted changes when a task is complete
+
+## Git Commit Guidelines
+
+- **DO NOT mention that tests pass or that CLAUDE.md was updated in commit messages**
