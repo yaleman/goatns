@@ -127,6 +127,13 @@ The application uses Sea-ORM for database operations with automatic migrations. 
 ### DNS Protocol Implementation
 The DNS protocol implementation is custom-built using the `packed_struct` crate for efficient binary serialization. Key structures are defined in `src/lib.rs` including `Header`, `Question`, and `ResourceRecord`.
 
+## Code Patterns and Best Practices
+
+### General Guidelines
+- Don't use `expect` unless in tests
+  - Prefer proper error handling with `Result` and `?` operator
+  - Handle potential failures gracefully
+
 ## Task Completion Requirements
 
 **CRITICAL:** All tasks and sub-tasks must follow this completion workflow:
