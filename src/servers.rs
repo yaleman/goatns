@@ -16,10 +16,10 @@ use crate::config::ConfigFile;
 use crate::datastore::Command;
 use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
 use crate::error::GoatNsError;
-use crate::reply::{reply_any, reply_builder, reply_nxdomain, Reply};
+use crate::reply::{Reply, reply_any, reply_builder, reply_nxdomain};
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::zones::ZoneRecord;
-use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
+use crate::{HEADER_BYTES, Header, OpCode, Question, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
 pub(crate) enum ChaosResult {
     Refused(Reply),
@@ -197,14 +197,13 @@ pub async fn tcp_conn_handler(
                 return Ok(());
             }
         };
-        if len > 0 {
-            debug!("Read {:?} bytes from TCP stream", len);
-        }
+        trace!("Read {:?} bytes from TCP stream", len);
     }
-    // TODO: why are we hexdumping this?
-    if let Err(err) = crate::utils::hexdump(&buf) {
-        error!("Failed to hexdump buffer: {:?}", err);
-    };
+    if capture_packets {
+        if let Err(err) = crate::utils::hexdump(&buf) {
+            error!("Failed to hexdump buffer: {:?}", err);
+        };
+    }
     // the first two bytes of a tcp query is the message length
     // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
 
