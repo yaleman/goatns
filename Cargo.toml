@@ -2,7 +2,7 @@
 name = "goatns"
 version = "0.6.0"
 categories = ["network-programming"]
-edition = "2021"
+edition = "2024"
 include = [
   "src/**/*",
   "LICENSE.md",
