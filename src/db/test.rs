@@ -374,3 +374,136 @@ async fn load_then_export() -> Result<(), GoatNsError> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_zone_ownership_get_by_name() -> Result<(), GoatNsError> {
+    // Set up the database
+    let pool = test_get_sqlite_memory().await;
+    start_db(&pool).await?;
+    
+    // Create a test user
+    let user = User {
+        username: "testuser".to_string(),
+        email: "test@example.com".to_string(),
+        disabled: false,
+        ..User::default()
+    };
+    let saved_user = user.save(&pool).await?;
+    let user_id = saved_user.id.expect("User should have an ID");
+    
+    // Create a test zone
+    let zone = FileZone {
+        name: "example.com".to_string(),
+        rname: "admin.example.com".to_string(),
+        serial: 1,
+        refresh: 3600,
+        retry: 1800,
+        expire: 604800,
+        minimum: 86400,
+        ..FileZone::default()
+    };
+    let saved_zone = zone.save(&pool).await?;
+    let zone_id = saved_zone.id.expect("Zone should have an ID");
+    
+    // Create zone ownership
+    let ownership = ZoneOwnership {
+        id: None,
+        userid: user_id,
+        zoneid: zone_id,
+    };
+    ownership.save(&pool).await?;
+    
+    // Test get_by_name
+    let mut conn = pool.begin().await?;
+    let found_ownership = ZoneOwnership::get_by_name(&mut conn, "example.com").await?;
+    
+    assert!(found_ownership.is_some());
+    let ownership_record = found_ownership.unwrap();
+    assert_eq!(ownership_record.userid, user_id);
+    assert_eq!(ownership_record.zoneid, zone_id);
+    
+    // Test with non-existent zone
+    let not_found = ZoneOwnership::get_by_name(&mut conn, "nonexistent.com").await?;
+    assert!(not_found.is_none());
+    
+    conn.commit().await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_zone_ownership_get_all_by_name() -> Result<(), GoatNsError> {
+    // Set up the database
+    let pool = test_get_sqlite_memory().await;
+    start_db(&pool).await?;
+    
+    // Create test users
+    let user1 = User {
+        username: "testuser1".to_string(),
+        email: "test1@example.com".to_string(),
+        disabled: false,
+        ..User::default()
+    };
+    let saved_user1 = user1.save(&pool).await?;
+    let user1_id = saved_user1.id.expect("User should have an ID");
+    
+    let user2 = User {
+        username: "testuser2".to_string(),
+        email: "test2@example.com".to_string(),
+        disabled: false,
+        ..User::default()
+    };
+    let saved_user2 = user2.save(&pool).await?;
+    let user2_id = saved_user2.id.expect("User should have an ID");
+    
+    // Create a test zone
+    let zone = FileZone {
+        name: "shared.com".to_string(),
+        rname: "admin.shared.com".to_string(),
+        serial: 1,
+        refresh: 3600,
+        retry: 1800,
+        expire: 604800,
+        minimum: 86400,
+        ..FileZone::default()
+    };
+    let saved_zone = zone.save(&pool).await?;
+    let zone_id = saved_zone.id.expect("Zone should have an ID");
+    
+    // Create multiple zone ownerships for the same zone
+    let ownership1 = ZoneOwnership {
+        id: None,
+        userid: user1_id,
+        zoneid: zone_id,
+    };
+    ownership1.save(&pool).await?;
+    
+    let ownership2 = ZoneOwnership {
+        id: None,
+        userid: user2_id,
+        zoneid: zone_id,
+    };
+    ownership2.save(&pool).await?;
+    
+    // Test get_all_by_name
+    let mut conn = pool.begin().await?;
+    let all_ownerships = ZoneOwnership::get_all_by_name(&mut conn, "shared.com").await?;
+    
+    assert_eq!(all_ownerships.len(), 2);
+    
+    // Verify both users are in the ownership list
+    let user_ids: Vec<i64> = all_ownerships.iter().map(|o| o.userid).collect();
+    assert!(user_ids.contains(&user1_id));
+    assert!(user_ids.contains(&user2_id));
+    
+    // All should have the same zone ID
+    for ownership in &all_ownerships {
+        assert_eq!(ownership.zoneid, zone_id);
+    }
+    
+    // Test with non-existent zone
+    let empty_result = ZoneOwnership::get_all_by_name(&mut conn, "nonexistent.com").await?;
+    assert!(empty_result.is_empty());
+    
+    conn.commit().await?;
+    Ok(())
+}
