@@ -124,7 +124,7 @@ pub(crate) async fn zone_view(
             None => {
                 return Err((
                     axum::http::StatusCode::NOT_FOUND,
-                    format!("Zone '{}' not found", name_or_id),
+                    format!("Zone '{name_or_id}' not found"),
                 )
                     .into_response())
             }

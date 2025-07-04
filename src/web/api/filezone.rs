@@ -276,7 +276,7 @@ pub(crate) async fn api_delete(
     match ZoneOwnership::get_ownership_by_userid(&mut txn, &userid, &id).await {
         Ok(None) => {
             return error_result_json!(
-                format!("Zone ID {} not found", id).as_str(),
+                format!("Zone ID {id} not found").as_str(),
                 StatusCode::NOT_FOUND
             )
         }
@@ -363,7 +363,7 @@ pub(crate) async fn api_get(
         Err(err) => {
             error!("Couldn't get zone id {}: error: {:?}", id, err);
             return error_result_json!(
-                format!("Couldn't get zone id {}", id).as_ref(),
+                format!("Couldn't get zone id {id}").as_ref(),
                 StatusCode::INTERNAL_SERVER_ERROR
             );
         }

@@ -236,7 +236,7 @@ pub async fn build(
     );
 
     #[cfg(test)]
-    println!("{}", startup_message);
+    println!("{startup_message}");
     info!("{}", startup_message);
     Ok(res)
 }

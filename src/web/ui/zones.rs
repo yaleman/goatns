@@ -134,7 +134,7 @@ pub(crate) async fn zones_new_post(
             info!("Zone {} created successfully", form.name);
             if let Some(id) = zone.id {
                 debug!("Redirecting to /ui/zones/{}", id);
-                Ok(Redirect::to(&format!("/ui/zones/{}", id)))
+                Ok(Redirect::to(&format!("/ui/zones/{id}")))
             } else {
                 error!("Redirecting to /ui/zones because zone didn't have an ID?");
                 Err(Urls::ZonesList.redirect())

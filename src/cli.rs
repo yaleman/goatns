@@ -135,9 +135,7 @@ pub async fn export_zone_file(
         }
         Some(zone) => serde_json::to_string_pretty(&zone).map_err(|err| {
             format!(
-                "Failed to serialize zone {zone_name} to json: {err:?}",
-                zone_name = zone_name,
-                err = err
+                "Failed to serialize zone {zone_name} to json: {err:?}"
             )
         })?,
     };

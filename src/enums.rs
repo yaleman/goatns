@@ -373,16 +373,13 @@ impl std::fmt::Display for ContactDetails {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ContactDetails::Mastodon { server, contact } => f.write_fmt(format_args!(
-                r#"<a href="https://{}/@{}">{}</a>"#,
-                server, contact, contact
+                r#"<a href="https://{server}/@{contact}">{contact}</a>"#
             )),
             ContactDetails::Email { contact } => f.write_fmt(format_args!(
-                r#"<a href="mailto:{}">{}</a>"#,
-                contact, contact
+                r#"<a href="mailto:{contact}">{contact}</a>"#
             )),
             ContactDetails::Twitter { contact } => f.write_fmt(format_args!(
-                r#"<a href="https://twitter.com/{}">{}</a>"#,
-                contact, contact
+                r#"<a href="https://twitter.com/{contact}">{contact}</a>"#
             )),
             ContactDetails::None => f.write_str(""),
         }
@@ -394,14 +391,14 @@ impl ContactDetails {
         match self {
             ContactDetails::Mastodon { server, contact } => (
                 contact.to_owned(),
-                format!("https://{}/@{}", server, contact),
+                format!("https://{server}/@{contact}"),
             ),
             ContactDetails::Email { contact } => {
-                (contact.to_owned(), format!("mailto:{}", contact))
+                (contact.to_owned(), format!("mailto:{contact}"))
             }
             ContactDetails::Twitter { contact } => (
                 contact.to_owned(),
-                format!("https://twitter.com/{}", contact),
+                format!("https://twitter.com/{contact}"),
             ),
             ContactDetails::None => ("".to_string(), "".to_string()),
         }
@@ -465,8 +462,7 @@ impl TryFrom<String> for ContactDetails {
                     },
                     &_ => {
                         Err(ContactDetailsDeserializerError::WrongContactType(format!(
-                                "Contact type ({}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon",
-                                contact_type
+                                "Contact type ({contact_type}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon"
                                 ) ))
                     }
                 }

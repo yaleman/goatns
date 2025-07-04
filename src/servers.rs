@@ -420,7 +420,7 @@ pub async fn parse_query(
         Ok(value) => value,
         Err(error) => {
             // can't return a servfail if we can't unpack the header, they're probably doing something bad.
-            return Err(format!("Failed to parse header: {:?}", error));
+            return Err(format!("Failed to parse header: {error:?}"));
         }
     };
     trace!("Buffer length: {}", len);

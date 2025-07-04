@@ -412,8 +412,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                 let split_bit: Vec<&str> = record.rdata.split(' ').collect();
                 if split_bit.len() != 2 {
                     return Err(GoatNsError::Generic(format!(
-                        "While trying to parse MX record, got '{:?}' which is wrong.",
-                        split_bit
+                        "While trying to parse MX record, got '{split_bit:?}' which is wrong."
                     )));
                 };
                 let pref = match u16::from_str(split_bit[0]) {
@@ -442,8 +441,7 @@ impl TryFrom<FileZoneRecord> for InternalResourceRecord {
                 let split_bit: Vec<&str> = record.rdata.split(' ').collect();
                 if split_bit.len() < 3 {
                     return Err(GoatNsError::Generic(format!(
-                        "While trying to parse CAA record, got '{:?}' which is wrong.",
-                        split_bit
+                        "While trying to parse CAA record, got '{split_bit:?}' which is wrong."
                     )));
                 };
                 let flag = match u8::from_str(split_bit[0]) {
@@ -965,7 +963,7 @@ mod tests {
         debug!("conversion: {:?}", converted);
         let rr: InternalResourceRecord = match fzr.try_into() {
             Ok(value) => value,
-            Err(error) => panic!("Failed to get resource record: {:?}", error),
+            Err(error) => panic!("Failed to get resource record: {error:?}"),
         };
 
         debug!("fzr->rr = {rr:?}");

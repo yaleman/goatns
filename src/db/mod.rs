@@ -267,7 +267,7 @@ impl ZoneOwnership {
         let mut txn = pool.begin().await?;
         
         // First get the user to return it
-        let user = User::get_with_txn(&mut *txn, &userid).await?;
+        let user = User::get_with_txn(&mut txn, &userid).await?;
         
         // Delete all ownership records for this user
         sqlx::query("DELETE FROM ownership WHERE userid = ?")
@@ -410,9 +410,8 @@ pub async fn get_records(
     let query = format!(
         "SELECT
         record_id, zoneid, name, rclass, rrtype, rdata, ttl
-        FROM {}
-        WHERE name = ? AND rrtype = ? AND rclass = ?",
-        SQL_VIEW_RECORDS
+        FROM {SQL_VIEW_RECORDS}
+        WHERE name = ? AND rrtype = ? AND rclass = ?"
     );
 
     let res = sqlx::query(&query)
@@ -945,7 +944,7 @@ impl DBEntity for FileZoneRecord {
         debug!("Ensuring DB Records view exists");
         // this view lets us query based on the full name
         sqlx::query(
-        &format!("CREATE VIEW IF NOT EXISTS {} ( record_id, zoneid, rrtype, rclass, rdata, name, ttl ) as
+        &format!("CREATE VIEW IF NOT EXISTS {SQL_VIEW_RECORDS} ( record_id, zoneid, rrtype, rclass, rdata, name, ttl ) as
         SELECT records.id as record_id, zones.id as zoneid, records.rrtype, records.rclass ,records.rdata,
         CASE
             WHEN records.name is NULL OR length(records.name) == 0 THEN zones.name
@@ -955,7 +954,7 @@ impl DBEntity for FileZoneRecord {
             WHEN records.ttl > zones.minimum THEN records.ttl
             ELSE records.ttl
         END AS ttl
-        from records, zones where records.zoneid = zones.id", SQL_VIEW_RECORDS)
+        from records, zones where records.zoneid = zones.id")
     ).execute(&mut *tx).await?;
         tx.commit().await?;
         Ok(())
@@ -993,8 +992,7 @@ impl DBEntity for FileZoneRecord {
         name: &str,
     ) -> Result<Vec<Box<Self>>, GoatNsError> {
         let res = sqlx::query(&format!(
-            "select * from {} where name = ?",
-            SQL_VIEW_RECORDS
+            "select * from {SQL_VIEW_RECORDS} where name = ?"
         ))
         .bind(name)
         .fetch_all(txn)
@@ -1970,8 +1968,7 @@ pub async fn get_all_fzr_by_name(
     rrtype: u16,
 ) -> Result<Vec<FileZoneRecord>, GoatNsError> {
     let res = sqlx::query(&format!(
-        "select *, record_id as id from {} where name = ? AND rrtype = ?",
-        SQL_VIEW_RECORDS
+        "select *, record_id as id from {SQL_VIEW_RECORDS} where name = ? AND rrtype = ?"
     ))
     .bind(name)
     .bind(rrtype)

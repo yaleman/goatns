@@ -91,7 +91,7 @@ impl From<GoatNsError> for std::io::Error {
             GoatNsError::FileError(err) => std::io::Error::other(err),
             GoatNsError::EmptyFile => std::io::Error::other("Empty file"),
             GoatNsError::SendError(err) => std::io::Error::other(err),
-            _ => std::io::Error::other(format!("{:?}", error)),
+            _ => std::io::Error::other(format!("{error:?}")),
         }
     }
 }

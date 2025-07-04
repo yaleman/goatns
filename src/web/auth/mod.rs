@@ -217,8 +217,7 @@ pub async fn parse_state_code(
 
     let http_client = get_http_client().map_err(|err| ParserError::ErrorMessage {
         content: format!(
-            "Failed to build reqwest client to query OIDC token response: {:?}",
-            err
+            "Failed to build reqwest client to query OIDC token response: {err:?}"
         ),
     })?;
 
@@ -473,7 +472,7 @@ pub async fn build_auth_stores(
     let session_store = SqliteStore::new(connpool)
         .with_table_name("sessions")
         .map_err(|err| {
-            GoatNsError::StartupError(format!("Failed to initialize session store: {}", err))
+            GoatNsError::StartupError(format!("Failed to initialize session store: {err}"))
         })?;
 
     session_store.migrate().await?;

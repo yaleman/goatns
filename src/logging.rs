@@ -23,8 +23,7 @@ pub(crate) fn build_loglevel_filter_layer(log_level: &str) -> EnvFilter {
     let filter_string = format!(
         // `otel::tracing` should be a level info to emit opentelemetry trace & span
         // `otel::setup` set to debug to log detected resources, configuration read and inferred
-        "{},otel::tracing=debug,otel=debug,h2=error,hyper=warn,hyper_util=warn,tower=error,tonic=error",
-        log_level
+        "{log_level},otel::tracing=debug,otel=debug,h2=error,hyper=warn,hyper_util=warn,tower=error,tonic=error"
     );
 
     // Build filter directly from the configured string, ignoring environment variable

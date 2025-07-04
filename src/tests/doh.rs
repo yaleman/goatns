@@ -63,7 +63,7 @@ async fn test_doh_get_json() -> Result<(), ()> {
         res.status(),
         reqwest::StatusCode::from_u16(200).expect("Failed to parse status")
     );
-    eprintln!("{:?}", res);
+    eprintln!("{res:?}");
     eprintln!("{:?}", res.bytes().await);
 
     // TODO: finish this

@@ -1,11 +1,11 @@
 use crate::config::ConfigFile;
 use crate::db::test::test_get_sqlite_memory;
-use crate::db::{start_db, DBEntity, User, UserAuthToken, ZoneOwnership};
+use crate::db::{DBEntity, User, UserAuthToken, ZoneOwnership, start_db};
 use crate::enums::RecordType;
 use crate::error::GoatNsError;
 use crate::servers::{self, Servers};
 use crate::web::api::auth::AuthPayload;
-use crate::web::utils::{create_api_token, ApiToken};
+use crate::web::utils::{ApiToken, create_api_token};
 use crate::zones::{FileZone, FileZoneRecord};
 use concread::cowcell::asynch::CowCell;
 use sqlx::SqlitePool;
@@ -120,7 +120,6 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
     let (pool, _servers, config) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
-    // let apiserver = servers.apiserver.unwrap();
 
     let user = insert_test_user(&pool).await;
     println!("api_zone_create Created user... {user:?}");
@@ -149,7 +148,7 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
         .send()
         .await
         .expect("Failed to log in with token");
-    println!("{:?}", res);
+    println!("{res:?}");
     assert_eq!(res.status(), 200);
     println!("api_zone_create => Token login success!");
 
@@ -191,7 +190,6 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     let (pool, _servers, config) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
-    // let apiserver = servers.apiserver.unwrap();
 
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
@@ -220,7 +218,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
         .send()
         .await
         .expect("Failed to log in with token");
-    println!("{:?}", res);
+    println!("{res:?}");
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
 
@@ -267,7 +265,6 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
     let (pool, _servers, config) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
-    // let apiserver = servers.apiserver.unwrap();
 
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
@@ -296,7 +293,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
         .send()
         .await
         .expect("Failed to log in with token");
-    println!("{:?}", res);
+    println!("{res:?}");
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
 
@@ -373,7 +370,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
         .send()
         .await
         .expect("Failed to log in with token");
-    println!("{:?}", res);
+    println!("{res:?}");
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
 
@@ -467,7 +464,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
             ));
         }
     };
-    println!("{:?}", res);
+    println!("{res:?}");
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
 
