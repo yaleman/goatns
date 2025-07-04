@@ -1,10 +1,13 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with
+code in this repository.
 
 ## Project Overview
 
-GoatNS is an authoritative DNS server written in Rust with the following key features:
+GoatNS is an authoritative DNS server written in Rust with the following key
+features:
+
 - DNS over UDP/TCP on standard ports
 - DNS over HTTPS (RFC8484) on `/dns-query`
 - Web API and UI for zone management
@@ -15,6 +18,7 @@ GoatNS is an authoritative DNS server written in Rust with the following key fea
 ## Development Commands
 
 ### Building and Testing
+
 ```bash
 # Build release binary
 cargo build --release
@@ -33,6 +37,7 @@ just doc_check    # Documentation formatting check
 ```
 
 ### Running the Server
+
 ```bash
 # Run in development mode
 just run
@@ -45,6 +50,7 @@ just run_container
 ```
 
 ### Documentation
+
 ```bash
 # Build rust documentation
 cargo doc --document-private-items
@@ -56,6 +62,7 @@ cd docs && mdbook serve
 ```
 
 ### Code Quality
+
 ```bash
 # Run security analysis
 just semgrep
@@ -72,6 +79,7 @@ just doc_fix        # Fix markdown formatting
 ### Core Components
 
 **DNS Processing Pipeline:**
+
 - `src/main.rs` - Entry point and server orchestration
 - `src/servers.rs` - UDP/TCP DNS server implementations
 - `src/reply.rs` - DNS response generation
@@ -79,11 +87,13 @@ just doc_fix        # Fix markdown formatting
 - `src/packet_dumper.rs` - Network packet debugging
 
 **Data Storage:**
+
 - `src/datastore.rs` - Main data management layer with concurrent access
 - `src/db/` - Database entities and migrations using Sea-ORM
 - `src/zones.rs` - Zone file parsing and management
 
 **Web Interface:**
+
 - `src/web/` - Axum-based HTTP server
 - `src/web/api/` - REST API endpoints for zone management
 - `src/web/ui/` - HTML templates and user interface
@@ -91,12 +101,14 @@ just doc_fix        # Fix markdown formatting
 - `templates/` - Askama HTML templates
 
 **Configuration and Utilities:**
+
 - `src/config.rs` - Configuration file handling (JSON format)
 - `src/cli.rs` - Command-line interface using clap
 - `src/enums.rs` - DNS protocol enums and constants
 - `src/utils.rs` - Shared utilities and channel management
 
 ### Key Libraries
+
 - **Networking:** tokio for async I/O, axum for HTTP
 - **DNS:** Custom implementation using packed_struct for protocol handling
 - **Database:** Sea-ORM with SQLite backend
@@ -104,11 +116,13 @@ just doc_fix        # Fix markdown formatting
 - **Authentication:** OAuth2/OIDC support via openidconnect crate
 
 ### Testing Structure
+
 - `src/tests/` - Integration and unit tests
 - `benches/` - Performance benchmarks
 - Test configuration examples in `examples/test_config/`
 
 ### Configuration
+
 - Main config: `goatns.example.json` (example configuration)
 - Zone files: JSON format (see `zones.json`, `hello.goat.json`)
 - Database: SQLite with automatic migrations
@@ -116,20 +130,28 @@ just doc_fix        # Fix markdown formatting
 ## Development Notes
 
 ### Code Style
+
 - Uses strict Clippy linting (see `clippy.toml`)
 - Forbids unsafe code and unwrap/expect usage outside tests
 - Requires documentation for public APIs
 - Follows Rust 2024 edition standards
 
 ### Database Workflow
-The application uses Sea-ORM for database operations with automatic migrations. The database schema is defined in `src/db/entities/` with models for users, zones, records, sessions, and API tokens.
+
+The application uses Sea-ORM for database operations with automatic migrations.
+The database schema is defined in `src/db/entities/` with models for users,
+zones, records, sessions, and API tokens.
 
 ### DNS Protocol Implementation
-The DNS protocol implementation is custom-built using the `packed_struct` crate for efficient binary serialization. Key structures are defined in `src/lib.rs` including `Header`, `Question`, and `ResourceRecord`.
+
+The DNS protocol implementation is custom-built using the `packed_struct` crate
+for efficient binary serialization. Key structures are defined in `src/lib.rs`
+including `Header`, `Question`, and `ResourceRecord`.
 
 ## Code Patterns and Best Practices
 
 ### General Guidelines
+
 - Don't use `expect` unless in tests
   - Prefer proper error handling with `Result` and `?` operator
   - Handle potential failures gracefully
@@ -138,15 +160,18 @@ The DNS protocol implementation is custom-built using the `packed_struct` crate 
 
 **CRITICAL:** All tasks and sub-tasks must follow this completion workflow:
 
-1. **Quality Gate:** Run `just check` and ensure ALL tests pass without warnings or errors
-2. **Git Commit:** Create a git commit for the completed work
-3. **Documentation:** Update this CLAUDE.md file if any design or implementation changes were made
+1. **Quality Gate:** Run `just check` and ensure ALL tests pass without warnings
+   or errors
+2. **Documentation:** Update this CLAUDE.md file if any design or implementation
+   changes were made
+3. **Git Commit:** Create a git commit for the completed work
 
 **No task is considered complete until:**
 
 - `just check` passes completely (includes clippy, codespell, tests, doc checks)
+- CLAUDE.md is updated if architecture, design, or implementation patterns
+  changed
 - Changes are committed to git
-- CLAUDE.md is updated if architecture, design, or implementation patterns changed
 
 **Commit Requirements:**
 
@@ -157,4 +182,5 @@ The DNS protocol implementation is custom-built using the `packed_struct` crate 
 
 ## Git Commit Guidelines
 
-- **DO NOT mention that tests pass or that CLAUDE.md was updated in commit messages**
+- **DO NOT mention that tests pass or that CLAUDE.md was updated in commit
+  messages**
