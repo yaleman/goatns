@@ -20,11 +20,11 @@ async fn run() -> Result<(), GoatNsError> {
     let cli = Cli::parse();
 
     let config = ConfigFile::try_as_cowcell(cli.config())
-        .map_err(|err| GoatNsError::StartupError(format!("Config loading failed! {:?}", err)))?;
+        .map_err(|err| GoatNsError::StartupError(format!("Config loading failed! {err:?}")))?;
 
     let logger = setup_logging(config.read().await, cli.debug())
         .await
-        .map_err(|err| GoatNsError::StartupError(format!("Log setup failed! {:?}", err)))?;
+        .map_err(|err| GoatNsError::StartupError(format!("Log setup failed! {err:?}")))?;
 
     let config_result = ConfigFile::check_config(config.write().await).await;
 
@@ -70,7 +70,7 @@ async fn run() -> Result<(), GoatNsError> {
     // start up the DB
     let connpool: SqlitePool = db::get_conn(config.read().await)
         .await
-        .map_err(|err| GoatNsError::StartupError(format!("DB Setup failed: {:?}", err)))?;
+        .map_err(|err| GoatNsError::StartupError(format!("DB Setup failed: {err:?}")))?;
 
     db::start_db(&connpool).await?;
 

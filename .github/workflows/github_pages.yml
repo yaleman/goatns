@@ -28,13 +28,17 @@ jobs:
         with:
           deno-version: v1.x
 
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Install protoc
         run: sudo apt-get install -y protobuf-compiler
+
       - name: Test document formatting
-        run: |
-          make book/format
-      - name: Make all the books
-        run: make book
+        run: just book_format
+
+      - name: Build all the books
+        run: just build_book
   deploy_book:
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'main' }}

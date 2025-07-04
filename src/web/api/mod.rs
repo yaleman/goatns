@@ -1,9 +1,13 @@
 use super::*;
+use crate::db::User;
 use crate::zones::FileZone;
 use axum::extract::Path;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::routing::{delete, post, put};
 use axum::Json;
+use tower_sessions::Session;
+use tracing::debug;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -100,6 +104,28 @@ impl Default for GoatNSVersion {
 
 pub async fn version_get() -> Json<GoatNSVersion> {
     Json::from(GoatNSVersion::default())
+}
+
+/// Check API authentication by extracting user from session
+/// Returns the authenticated user or an error response
+pub async fn check_api_auth(session: &Session) -> Result<User, (StatusCode, Json<ErrorResult>)> {
+    match session.get("user").await {
+        Ok(Some(user)) => Ok(user),
+        Ok(None) => {
+            #[cfg(test)]
+            println!("User not found in API call");
+            #[cfg(not(test))]
+            debug!("User not found in API call");
+            error_result_json!("", StatusCode::FORBIDDEN)
+        }
+        Err(err) => {
+            #[cfg(test)]
+            println!("Session error in API call: {err:?}");
+            #[cfg(not(test))]
+            debug!("Session error in API call: {err:?}");
+            error_result_json!("Session error", StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 pub fn new() -> Router<GoatState> {

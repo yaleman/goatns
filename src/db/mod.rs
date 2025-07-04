@@ -262,12 +262,29 @@ impl ZoneOwnership {
             .await?;
         Ok(())
     }
-    #[allow(dead_code, unused_variables)]
-    pub async fn delete_for_user(self, pool: &SqlitePool) -> Result<User, GoatNsError> {
-        // TODO: test user delete
-        // TODO: delete all ownership records
-        error!("Unimplemented: ZoneOwnership::delete_for_user");
-        Err(sqlx::Error::RowNotFound.into())
+    /// Delete all ownership records for a specific user and return the user
+    pub async fn delete_for_user(userid: i64, pool: &SqlitePool) -> Result<User, GoatNsError> {
+        let mut txn = pool.begin().await?;
+        
+        // First get the user to return it
+        let user = User::get_with_txn(&mut txn, &userid).await?;
+        
+        // Delete all ownership records for this user
+        sqlx::query("DELETE FROM ownership WHERE userid = ?")
+            .bind(userid)
+            .execute(&mut *txn)
+            .await?;
+            
+        txn.commit().await?;
+        Ok(*user)
+    }
+    
+    /// Delete all ownership records for all users (utility method)
+    pub async fn delete_all(pool: &SqlitePool) -> Result<u64, GoatNsError> {
+        let result = sqlx::query("DELETE FROM ownership")
+            .execute(&mut *pool.acquire().await?)
+            .await?;
+        Ok(result.rows_affected())
     }
 
     // get the thing by the other thing
@@ -393,9 +410,8 @@ pub async fn get_records(
     let query = format!(
         "SELECT
         record_id, zoneid, name, rclass, rrtype, rdata, ttl
-        FROM {}
-        WHERE name = ? AND rrtype = ? AND rclass = ?",
-        SQL_VIEW_RECORDS
+        FROM {SQL_VIEW_RECORDS}
+        WHERE name = ? AND rrtype = ? AND rclass = ?"
     );
 
     let res = sqlx::query(&query)
@@ -928,7 +944,7 @@ impl DBEntity for FileZoneRecord {
         debug!("Ensuring DB Records view exists");
         // this view lets us query based on the full name
         sqlx::query(
-        &format!("CREATE VIEW IF NOT EXISTS {} ( record_id, zoneid, rrtype, rclass, rdata, name, ttl ) as
+        &format!("CREATE VIEW IF NOT EXISTS {SQL_VIEW_RECORDS} ( record_id, zoneid, rrtype, rclass, rdata, name, ttl ) as
         SELECT records.id as record_id, zones.id as zoneid, records.rrtype, records.rclass ,records.rdata,
         CASE
             WHEN records.name is NULL OR length(records.name) == 0 THEN zones.name
@@ -938,7 +954,7 @@ impl DBEntity for FileZoneRecord {
             WHEN records.ttl > zones.minimum THEN records.ttl
             ELSE records.ttl
         END AS ttl
-        from records, zones where records.zoneid = zones.id", SQL_VIEW_RECORDS)
+        from records, zones where records.zoneid = zones.id")
     ).execute(&mut *tx).await?;
         tx.commit().await?;
         Ok(())
@@ -976,8 +992,7 @@ impl DBEntity for FileZoneRecord {
         name: &str,
     ) -> Result<Vec<Box<Self>>, GoatNsError> {
         let res = sqlx::query(&format!(
-            "select * from {} where name = ?",
-            SQL_VIEW_RECORDS
+            "select * from {SQL_VIEW_RECORDS} where name = ?"
         ))
         .bind(name)
         .fetch_all(txn)
@@ -1208,17 +1223,56 @@ impl DBEntity for ZoneOwnership {
     }
 
     async fn get_by_name<'t>(
-        _txn: &mut SqliteConnection,
-        _name: &str,
+        txn: &mut SqliteConnection,
+        name: &str,
     ) -> Result<Option<Box<Self>>, GoatNsError> {
-        // TODO implement ZoneOwnership get_by_name which gets by zone name
-        unimplemented!("Not applicable for this!");
+        let result = sqlx::query(
+            "SELECT ownership.id, ownership.zoneid, ownership.userid 
+             FROM ownership 
+             JOIN zones ON ownership.zoneid = zones.id 
+             WHERE zones.name = ? 
+             LIMIT 1"
+        )
+        .bind(name)
+        .fetch_optional(txn)
+        .await?;
+
+        match result {
+            Some(row) => {
+                let ownership = ZoneOwnership {
+                    id: Some(row.get(0)),
+                    zoneid: row.get(1), 
+                    userid: row.get(2),
+                };
+                Ok(Some(Box::new(ownership)))
+            }
+            None => Ok(None),
+        }
     }
     async fn get_all_by_name<'t>(
-        _txn: &mut SqliteConnection,
-        _name: &str,
+        txn: &mut SqliteConnection,
+        name: &str,
     ) -> Result<Vec<Box<Self>>, GoatNsError> {
-        unimplemented!()
+        let rows = sqlx::query(
+            "SELECT ownership.id, ownership.zoneid, ownership.userid 
+             FROM ownership 
+             JOIN zones ON ownership.zoneid = zones.id 
+             WHERE zones.name = ?"
+        )
+        .bind(name)
+        .fetch_all(txn)
+        .await?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            let ownership = ZoneOwnership {
+                id: Some(row.get(0)),
+                zoneid: row.get(1),
+                userid: row.get(2),
+            };
+            results.push(Box::new(ownership));
+        }
+        Ok(results)
     }
     /// Get an ownership record by its id
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, GoatNsError> {
@@ -1354,10 +1408,18 @@ impl DBEntity for User {
         Ok(Box::new(res))
     }
     async fn get_with_txn<'t>(
-        _txn: &mut SqliteConnection,
-        _id: &i64,
+        txn: &mut SqliteConnection,
+        id: &i64,
     ) -> Result<Box<Self>, GoatNsError> {
-        unimplemented!()
+        let res: User = sqlx::query(&format!(
+            "SELECT id, displayname, username, email, disabled, authref, admin from {} where id = ?",
+            Self::TABLE
+        ))
+        .bind(id)
+        .fetch_one(txn)
+        .await?
+        .into();
+        Ok(Box::new(res))
     }
     async fn get_by_name<'t>(
         txn: &mut SqliteConnection,
@@ -1455,13 +1517,20 @@ impl DBEntity for User {
     }
 
     /// delete the entity from the database
-    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
-        todo!()
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
+        let mut txn = pool.begin().await?;
+        self.delete_with_txn(&mut txn).await?;
+        txn.commit().await?;
+        Ok(())
     }
 
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(&self, _txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
-        todo!();
+    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
+        sqlx::query(&format!("DELETE FROM {} WHERE id = ?", Self::TABLE))
+            .bind(self.id)
+            .execute(txn)
+            .await?;
+        Ok(())
     }
 
     fn json(&self) -> Result<String, String>
@@ -1899,8 +1968,7 @@ pub async fn get_all_fzr_by_name(
     rrtype: u16,
 ) -> Result<Vec<FileZoneRecord>, GoatNsError> {
     let res = sqlx::query(&format!(
-        "select *, record_id as id from {} where name = ? AND rrtype = ?",
-        SQL_VIEW_RECORDS
+        "select *, record_id as id from {SQL_VIEW_RECORDS} where name = ? AND rrtype = ?"
     ))
     .bind(name)
     .bind(rrtype)

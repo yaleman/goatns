@@ -141,8 +141,7 @@ pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, GoatNsError> {
         Ok(value) => value,
         Err(error) => {
             return Err(GoatNsError::FileError(format!(
-                "Failed to open zone file: {:?}",
-                error
+                "Failed to open zone file: {error:?}"
             )));
         }
     };
@@ -152,7 +151,7 @@ pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, GoatNsError> {
     let jsonstruct: FileZone = match json5::from_str(&buf) {
         Ok(value) => value,
         Err(error) => {
-            let emsg = format!("Failed to read JSON file: {:?}", error);
+            let emsg = format!("Failed to read JSON file: {error:?}");
             error!("{}", emsg);
             return Err(GoatNsError::FileError(emsg));
         }
@@ -167,8 +166,7 @@ pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, GoatNsError> {
         Ok(value) => value,
         Err(error) => {
             return Err(GoatNsError::FileError(format!(
-                "Failed to open zone file: {:?}",
-                error
+                "Failed to open zone file: {error:?}"
             )));
         }
     };

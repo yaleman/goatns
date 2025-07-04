@@ -2,7 +2,7 @@
 name = "goatns-macros"
 version = "0.0.1"
 categories = ["network-programming"]
-edition = "2021"
+edition = "2024"
 keywords = ["macros"]
 license = "MIT"
 readme = "README.md"

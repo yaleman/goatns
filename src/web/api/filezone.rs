@@ -1,14 +1,12 @@
 use super::*;
 use crate::db::DBEntity;
 
-use crate::db::User;
 use crate::db::ZoneOwnership;
 use crate::error_result_json;
 use crate::utils::check_valid_tld;
 use crate::zones::FileZone;
 use axum::extract::Path;
 use axum::Json;
-use goatns_macros::check_api_auth;
 use serde::Deserialize;
 use serde::Serialize;
 use tower_sessions::Session;
@@ -32,7 +30,7 @@ pub(crate) async fn api_create(
     session: Session,
     Json(zone): Json<FileZone>,
 ) -> Result<Json<Box<FileZone>>, (StatusCode, Json<ErrorResult>)> {
-    check_api_auth!();
+    let user = check_api_auth(&session).await?;
 
     if !check_valid_tld(&zone.name, &state.read().await.config.allowed_tlds) {
         return error_result_json!("Invalid TLD for this system", StatusCode::BAD_REQUEST);
@@ -178,7 +176,7 @@ pub(crate) async fn api_update(
     session: Session,
     Json(zone): Json<FileZone>,
 ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
-    check_api_auth!();
+    let user = check_api_auth(&session).await?;
 
     let zone_id = match zone.id {
         Some(val) => val,
@@ -257,7 +255,7 @@ pub(crate) async fn api_delete(
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
     // let id = id;
 
-    check_api_auth!();
+    let user = check_api_auth(&session).await?;
 
     let mut txn = match state.connpool().await.begin().await {
         Ok(val) => val,
@@ -278,7 +276,7 @@ pub(crate) async fn api_delete(
     match ZoneOwnership::get_ownership_by_userid(&mut txn, &userid, &id).await {
         Ok(None) => {
             return error_result_json!(
-                format!("Zone ID {} not found", id).as_str(),
+                format!("Zone ID {id} not found").as_str(),
                 StatusCode::NOT_FOUND
             )
         }
@@ -330,7 +328,7 @@ pub(crate) async fn api_get(
     session: Session,
     Path(id): Path<i64>,
 ) -> Result<Json<Box<FileZone>>, (StatusCode, Json<ErrorResult>)> {
-    check_api_auth!();
+    let user = check_api_auth(&session).await?;
 
     let mut txn = match state.connpool().await.begin().await {
         Ok(val) => val,
@@ -365,7 +363,7 @@ pub(crate) async fn api_get(
         Err(err) => {
             error!("Couldn't get zone id {}: error: {:?}", id, err);
             return error_result_json!(
-                format!("Couldn't get zone id {}", id).as_ref(),
+                format!("Couldn't get zone id {id}").as_ref(),
                 StatusCode::INTERNAL_SERVER_ERROR
             );
         }

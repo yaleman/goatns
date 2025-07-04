@@ -9,8 +9,8 @@ use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::io::ErrorKind;
-use std::net::IpAddr;
 use std::net::SocketAddr;
+use ipnet::IpNet;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{error, trace};
@@ -27,9 +27,8 @@ pub struct IPAllowList {
     // pub version: Vec<IpAddr>,
     /// IPs allowed to make AXFR requests
     // pub axfr: Vec<IpNet>,
-    // TODO: Change shutdown from IpAddr to ipnet
-    /// A list of allowed IPs which can send a "shutdown CH" request
-    pub shutdown: Vec<IpAddr>,
+    /// A list of allowed IP networks which can send a "shutdown CH" request
+    pub shutdown: Vec<IpNet>,
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Clone, Serialize)]
@@ -127,7 +126,7 @@ impl ConfigFile {
     pub fn api_listener_address(&self) -> Result<SocketAddr, GoatNsError> {
         Ok(SocketAddr::new(
             self.address.parse().map_err(|err| {
-                GoatNsError::StartupError(format!("Failed to parse IP {:?}", err))
+                GoatNsError::StartupError(format!("Failed to parse IP {err:?}"))
             })?,
             self.api_port,
         ))
@@ -267,7 +266,7 @@ impl ConfigFile {
 
             match config {
                 Ok(config) => {
-                    eprintln!("Successfully loaded config from: {}", config_filename);
+                    eprintln!("Successfully loaded config from: {config_filename}");
                     return Ok(ConfigFile::from(config));
                 }
                 Err(err) => eprintln!("{err:?}"),
@@ -366,8 +365,8 @@ impl From<Config> for ConfigFile {
             None => {
                 // if they haven't set it in config, build it automagically
                 let baseurl = match api_port {
-                    443 => format!("https://{}", hostname),
-                    _ => format!("https://{}:{}", hostname, api_port),
+                    443 => format!("https://{hostname}"),
+                    _ => format!("https://{hostname}:{api_port}"),
                 };
                 #[allow(clippy::expect_used)]
                 let mut url =
@@ -389,7 +388,7 @@ impl From<Config> for ConfigFile {
                 .unwrap_or(Self::default().otel_endpoint);
         }
         #[cfg(debug_assertions)]
-        eprintln!("Using OpenTelemetry endpoint: {:?}", otel_endpoint);
+        eprintln!("Using OpenTelemetry endpoint: {otel_endpoint:?}");
 
         ConfigFile {
             hostname,

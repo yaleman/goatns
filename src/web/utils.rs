@@ -107,7 +107,7 @@ pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) ->
     debug!("Done hashing password");
 
     let token_key = Alphanumeric.sample_string(&mut rand::rng(), 12);
-    let token_key = format!("GA{}", token_key);
+    let token_key = format!("GA{token_key}");
     ApiToken {
         token_key,
         token_secret,

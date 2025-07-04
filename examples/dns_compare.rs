@@ -161,7 +161,7 @@ pub async fn main() {
 
     // filter for DNS packets on the specified port.
     let filter = format!("port {}", cli.port);
-    eprintln!("Filter: {}", filter);
+    eprintln!("Filter: {filter}");
     cap.filter(&filter, true).expect("Failed to build filter");
 
     while let Ok(packet) = cap.next_packet() {
@@ -228,7 +228,7 @@ pub async fn main() {
                     // eprintln!("No data in TCP packet");
                     continue;
                 }
-                println!("TCP Packet: {:?}", tcp_packet);
+                println!("TCP Packet: {tcp_packet:?}");
                 println!("{:x?}", &tcp_slice);
 
                 (tcp_packet.source_port, tcp_packet.dest_port)
@@ -252,11 +252,11 @@ pub async fn main() {
         let dns_header = match goatns::Header::unpack(dns_header) {
             Ok(val) => val,
             Err(err) => {
-                eprintln!("Failed to parse DNS header: {:?}", err);
+                eprintln!("Failed to parse DNS header: {err:?}");
                 continue;
             }
         };
-        println!("DNS Header: {:?}", dns_header);
+        println!("DNS Header: {dns_header:?}");
 
         println!("\n\n");
 

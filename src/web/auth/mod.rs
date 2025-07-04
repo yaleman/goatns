@@ -217,8 +217,7 @@ pub async fn parse_state_code(
 
     let http_client = get_http_client().map_err(|err| ParserError::ErrorMessage {
         content: format!(
-            "Failed to build reqwest client to query OIDC token response: {:?}",
-            err
+            "Failed to build reqwest client to query OIDC token response: {err:?}"
         ),
     })?;
 
@@ -434,7 +433,12 @@ pub async fn login(
                     .into_response());
             };
 
-            Ok(Urls::Dashboard.redirect().into_response())
+            // Check if there's a stored redirect path from before authentication
+            let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
+            match redirect {
+                Some(destination) => Ok(Redirect::to(&destination).into_response()),
+                None => Ok(Urls::Dashboard.redirect().into_response()),
+            }
         }
         Err(error) => match error {
             ParserError::Redirect { content } => Ok(content.into_response()),
@@ -468,7 +472,7 @@ pub async fn build_auth_stores(
     let session_store = SqliteStore::new(connpool)
         .with_table_name("sessions")
         .map_err(|err| {
-            GoatNsError::StartupError(format!("Failed to initialize session store: {}", err))
+            GoatNsError::StartupError(format!("Failed to initialize session store: {err}"))
         })?;
 
     session_store.migrate().await?;
@@ -497,6 +501,7 @@ pub struct SignupForm {
 /// /auth/signup
 pub async fn signup(
     State(mut state): State<GoatState>,
+    session: Session,
     Form(form): Form<SignupForm>,
 ) -> Result<Response, Redirect> {
     debug!("Dumping form: {form:?}");
@@ -543,7 +548,14 @@ pub async fn signup(
                 admin: false,
             };
             match user.save(&state.connpool().await).await {
-                Ok(_) => Ok(Urls::Dashboard.redirect().into_response()),
+                Ok(_) => {
+                    // Check if there's a stored redirect path from before authentication
+                    let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
+                    match redirect {
+                        Some(destination) => Ok(Redirect::to(&destination).into_response()),
+                        None => Ok(Urls::Dashboard.redirect().into_response()),
+                    }
+                },
                 Err(error) => {
                     debug!("Failed to save new user signup... oh no! {error:?}");
                     // TODO: throw an error page on this one

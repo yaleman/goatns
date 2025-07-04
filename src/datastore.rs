@@ -269,7 +269,7 @@ async fn handle_get_zone(
     drop(txn);
 
     tx.send(zone).map_err(|e| {
-        GoatNsError::SendError(format!("Failed to send response on tokio channel: {:?}", e))
+        GoatNsError::SendError(format!("Failed to send response on tokio channel: {e:?}"))
     })
 }
 
@@ -287,7 +287,7 @@ async fn handle_get_zone_names(
 
     debug!("handle_get_zone_names: {zones:?}");
     tx.send(zones).map_err(|e| {
-        GoatNsError::SendError(format!("Failed to send response on tokio channel: {:?}", e))
+        GoatNsError::SendError(format!("Failed to send response on tokio channel: {e:?}"))
     })
 }
 

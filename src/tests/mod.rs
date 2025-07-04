@@ -16,7 +16,7 @@ use crate::resourcerecord::{InternalResourceRecord, LocRecord, NameAsBytes};
 use crate::tests::test_harness::*;
 
 use crate::utils::name_as_bytes;
-use crate::{get_question_qname, PacketType, Question};
+use crate::{PacketType, Question, get_question_qname};
 use ipnet::IpNet;
 use packed_struct::prelude::*;
 use std::net::IpAddr;
@@ -66,9 +66,9 @@ async fn test_name_as_bytes_compressed() {
 
 #[tokio::test]
 async fn test_build_iana_org_a_reply() {
+    use crate::Header;
     use crate::reply::Reply;
     use crate::resourcerecord::InternalResourceRecord;
-    use crate::Header;
 
     let header = Header {
         id: 41840,
@@ -153,7 +153,7 @@ async fn test_build_iana_org_a_reply() {
 async fn test_cloudflare_soa_reply() {
     use crate::reply::Reply;
     use crate::resourcerecord::DomainName;
-    use crate::{Header, HEADER_BYTES};
+    use crate::{HEADER_BYTES, Header};
     test_logging().await;
 
     //     /*
@@ -307,8 +307,8 @@ async fn test_cloudflare_soa_reply() {
 
 #[tokio::test]
 async fn build_ackcdn_allzeros() {
-    use crate::reply::Reply;
     use crate::Header;
+    use crate::reply::Reply;
 
     let header = Header {
         id: 0x3DE1,
@@ -339,24 +339,10 @@ async fn build_ackcdn_allzeros() {
         .len();
     debug!("question byte length: {}", question_length);
 
-    // let rdata = IpAddr::try_from("0.0.0.0");
-    // let rdata: Ipv4Addr = "0.0.0.0".parse().unwrap();
-    // let rdata: u32 = rdata.into();
-    // let rdata = rdata.octets();
-    // let rdlength: u16 = rdata.len() as u16;
-
     let answers = vec![crate::resourcerecord::InternalResourceRecord::A {
-        // name: vec![0xc0, 0x0c],
-        // name: "ackcdn.com".as_bytes().to_vec(),
-        // record_type: crate::RecordType::A,
-        // class: crate::RecordClass::Internet,
         ttl: 2u32,
         address: 0u32,
-
         rclass: crate::RecordClass::Internet,
-        // rdlength,
-        // rdata: rdata.into(),
-        // compression: true,
     }];
 
     let reply = Reply {
@@ -647,7 +633,7 @@ fn test_get_question_qname() {
     assert!(get_question_qname(&[23, 0]).is_err());
 
     let sample_data = vec![7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0];
-    eprintln!("{:?}", sample_data);
+    eprintln!("{sample_data:?}");
     let result = get_question_qname(&sample_data);
     assert_eq!(
         result,

@@ -41,9 +41,9 @@ pub(crate) struct ZoneRecord {
     zoneid: u32,
 }
 
-#[instrument(level = "info", skip(session))]
-pub(crate) async fn dashboard(mut session: Session) -> Result<AdminUITemplate, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
+#[instrument(level = "info", skip(state, session))]
+pub(crate) async fn dashboard(State(state): State<GoatState>, mut session: Session) -> Result<AdminUITemplate, Redirect> {
+    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref()), state.clone()).await?;
 
     Ok(AdminUITemplate {
         user_is_admin: user.admin,
@@ -54,7 +54,7 @@ pub(crate) async fn report_unowned_records(
     mut session: Session,
     State(state): State<GoatState>,
 ) -> Result<AdminReportUnownedRecords, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
+    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref()), state.clone()).await?;
 
     let mut pool = state.read().await.connpool.acquire().await.map_err(|err| {
         error!("Failed to get DB connection: {err:?}");
@@ -121,7 +121,7 @@ pub(crate) async fn assign_zone_ownership(
     Path(id): Path<i64>,
     Form(form): Form<AssignOwnershipForm>,
 ) -> Result<AssignOwnershipTemplate, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
+    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref()), state.clone()).await?;
 
     let mut txn = state.read().await.connpool.begin().await.map_err(|err| {
         error!("Failed to start transaction: {err:?}");

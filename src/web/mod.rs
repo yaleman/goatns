@@ -13,7 +13,6 @@ use crate::error::GoatNsError;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
 use axum::extract::FromRef;
-use axum::http::StatusCode;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
 use axum::Router;
@@ -237,7 +236,7 @@ pub async fn build(
     );
 
     #[cfg(test)]
-    println!("{}", startup_message);
+    println!("{startup_message}");
     info!("{}", startup_message);
     Ok(res)
 }

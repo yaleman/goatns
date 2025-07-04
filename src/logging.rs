@@ -3,12 +3,12 @@
 use std::{env, time::Duration};
 
 use init_tracing_opentelemetry::tracing_subscriber_ext;
-use opentelemetry::{global, trace::TracerProvider as _, KeyValue};
+use opentelemetry::{KeyValue, global, trace::TracerProvider as _};
 
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
-    trace::{Sampler, SdkTracerProvider},
     Resource,
+    trace::{Sampler, SdkTracerProvider},
 };
 
 use opentelemetry_semantic_conventions::attribute::SERVICE_VERSION;
@@ -20,17 +20,14 @@ use tracing_subscriber::{layer::SubscriberExt, registry::LookupSpan};
 #[allow(dead_code)]
 pub(crate) fn build_loglevel_filter_layer(log_level: &str) -> EnvFilter {
     // filter what is output on log (fmt)
-    // std::env::set_var("RUST_LOG", "warn,otel::tracing=info,otel=debug");
-    std::env::set_var(
-        "RUST_LOG",
-        format!(
-            // `otel::tracing` should be a level info to emit opentelemetry trace & span
-            // `otel::setup` set to debug to log detected resources, configuration read and inferred
-            "{},otel::tracing=debug,otel=debug,h2=error,hyper=warn,hyper_util=warn,tower=error,tonic=error",
-            log_level
-        ),
+    let filter_string = format!(
+        // `otel::tracing` should be a level info to emit opentelemetry trace & span
+        // `otel::setup` set to debug to log detected resources, configuration read and inferred
+        "{log_level},otel::tracing=debug,otel=debug,h2=error,hyper=warn,hyper_util=warn,tower=error,tonic=error"
     );
-    EnvFilter::from_default_env()
+
+    // Build filter directly from the configured string, ignoring environment variable
+    EnvFilter::builder().parse_lossy(filter_string)
 }
 
 /// Tweaked version of what ships with tracing_subscriber

@@ -16,10 +16,10 @@ use crate::config::ConfigFile;
 use crate::datastore::Command;
 use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
 use crate::error::GoatNsError;
-use crate::reply::{reply_any, reply_builder, reply_nxdomain, Reply};
+use crate::reply::{Reply, reply_any, reply_builder, reply_nxdomain};
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::zones::ZoneRecord;
-use crate::{Header, OpCode, Question, HEADER_BYTES, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
+use crate::{HEADER_BYTES, Header, OpCode, Question, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
 pub(crate) enum ChaosResult {
     Refused(Reply),
@@ -197,14 +197,13 @@ pub async fn tcp_conn_handler(
                 return Ok(());
             }
         };
-        if len > 0 {
-            debug!("Read {:?} bytes from TCP stream", len);
-        }
+        trace!("Read {:?} bytes from TCP stream", len);
     }
-    // TODO: why are we hexdumping this?
-    if let Err(err) = crate::utils::hexdump(&buf) {
-        error!("Failed to hexdump buffer: {:?}", err);
-    };
+    if capture_packets {
+        if let Err(err) = crate::utils::hexdump(&buf) {
+            error!("Failed to hexdump buffer: {:?}", err);
+        };
+    }
     // the first two bytes of a tcp query is the message length
     // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
 
@@ -348,7 +347,7 @@ pub async fn tcp_server(
             }
         };
 
-        let allowed_shutdown = shutdown_ip_address_list.contains(&addr.ip());
+        let allowed_shutdown = shutdown_ip_address_list.iter().any(|net| net.contains(&addr.ip()));
         debug!("TCP connection from {:?}", addr);
         let loop_tx = tx.clone();
         let loop_agent_tx = agent_tx.clone();
@@ -421,7 +420,7 @@ pub async fn parse_query(
         Ok(value) => value,
         Err(error) => {
             // can't return a servfail if we can't unpack the header, they're probably doing something bad.
-            return Err(format!("Failed to parse header: {:?}", error));
+            return Err(format!("Failed to parse header: {error:?}"));
         }
     };
     trace!("Buffer length: {}", len);

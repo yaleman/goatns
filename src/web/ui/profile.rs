@@ -20,13 +20,13 @@ pub(crate) struct UserProfilePage {
 }
 
 pub(crate) async fn user_profile_get(
-    State(_state): State<GoatState>,
+    State(state): State<GoatState>,
     mut session: Session,
     OriginalUri(path): OriginalUri,
 ) -> Result<UserProfilePage, Redirect> {
     // check_logged_in!(state, session, path);
 
-    let user: User = check_logged_in(&mut session, path).await?;
+    let user: User = check_logged_in(&mut session, path, state).await?;
     Ok(UserProfilePage {
         user_is_admin: user.admin,
         user,
