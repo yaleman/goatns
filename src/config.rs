@@ -9,8 +9,8 @@ use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::io::ErrorKind;
-use std::net::IpAddr;
 use std::net::SocketAddr;
+use ipnet::IpNet;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{error, trace};
@@ -27,9 +27,8 @@ pub struct IPAllowList {
     // pub version: Vec<IpAddr>,
     /// IPs allowed to make AXFR requests
     // pub axfr: Vec<IpNet>,
-    // TODO: Change shutdown from IpAddr to ipnet
-    /// A list of allowed IPs which can send a "shutdown CH" request
-    pub shutdown: Vec<IpAddr>,
+    /// A list of allowed IP networks which can send a "shutdown CH" request
+    pub shutdown: Vec<IpNet>,
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Clone, Serialize)]

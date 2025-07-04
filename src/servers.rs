@@ -347,7 +347,7 @@ pub async fn tcp_server(
             }
         };
 
-        let allowed_shutdown = shutdown_ip_address_list.contains(&addr.ip());
+        let allowed_shutdown = shutdown_ip_address_list.iter().any(|net| net.contains(&addr.ip()));
         debug!("TCP connection from {:?}", addr);
         let loop_tx = tx.clone();
         let loop_agent_tx = agent_tx.clone();
