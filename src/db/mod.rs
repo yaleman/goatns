@@ -262,12 +262,29 @@ impl ZoneOwnership {
             .await?;
         Ok(())
     }
-    #[allow(dead_code, unused_variables)]
-    pub async fn delete_for_user(self, pool: &SqlitePool) -> Result<User, GoatNsError> {
-        // TODO: test user delete
-        // TODO: delete all ownership records
-        error!("Unimplemented: ZoneOwnership::delete_for_user");
-        Err(sqlx::Error::RowNotFound.into())
+    /// Delete all ownership records for a specific user and return the user
+    pub async fn delete_for_user(userid: i64, pool: &SqlitePool) -> Result<User, GoatNsError> {
+        let mut txn = pool.begin().await?;
+        
+        // First get the user to return it
+        let user = User::get_with_txn(&mut *txn, &userid).await?;
+        
+        // Delete all ownership records for this user
+        sqlx::query("DELETE FROM ownership WHERE userid = ?")
+            .bind(userid)
+            .execute(&mut *txn)
+            .await?;
+            
+        txn.commit().await?;
+        Ok(*user)
+    }
+    
+    /// Delete all ownership records for all users (utility method)
+    pub async fn delete_all(pool: &SqlitePool) -> Result<u64, GoatNsError> {
+        let result = sqlx::query("DELETE FROM ownership")
+            .execute(&mut *pool.acquire().await?)
+            .await?;
+        Ok(result.rows_affected())
     }
 
     // get the thing by the other thing
@@ -1393,10 +1410,18 @@ impl DBEntity for User {
         Ok(Box::new(res))
     }
     async fn get_with_txn<'t>(
-        _txn: &mut SqliteConnection,
-        _id: &i64,
+        txn: &mut SqliteConnection,
+        id: &i64,
     ) -> Result<Box<Self>, GoatNsError> {
-        unimplemented!()
+        let res: User = sqlx::query(&format!(
+            "SELECT id, displayname, username, email, disabled, authref, admin from {} where id = ?",
+            Self::TABLE
+        ))
+        .bind(id)
+        .fetch_one(txn)
+        .await?
+        .into();
+        Ok(Box::new(res))
     }
     async fn get_by_name<'t>(
         txn: &mut SqliteConnection,
@@ -1494,13 +1519,20 @@ impl DBEntity for User {
     }
 
     /// delete the entity from the database
-    async fn delete(&self, _pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
-        todo!()
+    async fn delete(&self, pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
+        let mut txn = pool.begin().await?;
+        self.delete_with_txn(&mut txn).await?;
+        txn.commit().await?;
+        Ok(())
     }
 
     /// delete the entity from the database, but you're in a transaction
-    async fn delete_with_txn(&self, _txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
-        todo!();
+    async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
+        sqlx::query(&format!("DELETE FROM {} WHERE id = ?", Self::TABLE))
+            .bind(self.id)
+            .execute(txn)
+            .await?;
+        Ok(())
     }
 
     fn json(&self) -> Result<String, String>
