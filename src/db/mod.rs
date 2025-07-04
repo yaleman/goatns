@@ -1208,17 +1208,56 @@ impl DBEntity for ZoneOwnership {
     }
 
     async fn get_by_name<'t>(
-        _txn: &mut SqliteConnection,
-        _name: &str,
+        txn: &mut SqliteConnection,
+        name: &str,
     ) -> Result<Option<Box<Self>>, GoatNsError> {
-        // TODO implement ZoneOwnership get_by_name which gets by zone name
-        unimplemented!("Not applicable for this!");
+        let result = sqlx::query(
+            "SELECT ownership.id, ownership.zoneid, ownership.userid 
+             FROM ownership 
+             JOIN zones ON ownership.zoneid = zones.id 
+             WHERE zones.name = ? 
+             LIMIT 1"
+        )
+        .bind(name)
+        .fetch_optional(txn)
+        .await?;
+
+        match result {
+            Some(row) => {
+                let ownership = ZoneOwnership {
+                    id: Some(row.get(0)),
+                    zoneid: row.get(1), 
+                    userid: row.get(2),
+                };
+                Ok(Some(Box::new(ownership)))
+            }
+            None => Ok(None),
+        }
     }
     async fn get_all_by_name<'t>(
-        _txn: &mut SqliteConnection,
-        _name: &str,
+        txn: &mut SqliteConnection,
+        name: &str,
     ) -> Result<Vec<Box<Self>>, GoatNsError> {
-        unimplemented!()
+        let rows = sqlx::query(
+            "SELECT ownership.id, ownership.zoneid, ownership.userid 
+             FROM ownership 
+             JOIN zones ON ownership.zoneid = zones.id 
+             WHERE zones.name = ?"
+        )
+        .bind(name)
+        .fetch_all(txn)
+        .await?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            let ownership = ZoneOwnership {
+                id: Some(row.get(0)),
+                zoneid: row.get(1),
+                userid: row.get(2),
+            };
+            results.push(Box::new(ownership));
+        }
+        Ok(results)
     }
     /// Get an ownership record by its id
     async fn get_all_user(pool: &Pool<Sqlite>, id: i64) -> Result<Vec<Arc<Self>>, GoatNsError> {
