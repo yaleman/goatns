@@ -432,12 +432,12 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
     match result {
         Ok(_) => panic!("Expected duplicate record creation to fail"),
         Err(GoatNsError::Generic(msg)) => {
-            eprintln!("Got expected duplicate record error: {}", msg);
+            eprintln!("Got expected duplicate record error: {msg}");
             assert!(msg.contains("Record with same zone, name, type, and class already exists"));
         }
         Err(GoatNsError::SqlxError(sqlx::Error::Database(db_err))) => {
             // Verify it's a unique constraint violation
-            eprintln!("Database error: {:?}", db_err);
+            eprintln!("Database error: {db_err:?}");
             eprintln!("Error code: {:?}", db_err.code());
             eprintln!("Error constraint: {:?}", db_err.constraint());
 
@@ -452,7 +452,7 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
             );
         }
         Err(other_err) => {
-            panic!("Expected duplicate record error, got: {:?}", other_err);
+            panic!("Expected duplicate record error, got: {other_err:?}");
         }
     }
 
@@ -485,11 +485,11 @@ async fn test_record_requires_zone_id() -> Result<(), GoatNsError> {
     match result {
         Ok(_) => panic!("Expected record creation without zone ID to fail"),
         Err(GoatNsError::Generic(msg)) => {
-            eprintln!("Got expected validation error: {}", msg);
+            eprintln!("Got expected validation error: {msg}");
             assert!(msg.contains("Record must have a valid zone ID"));
         }
         Err(other_err) => {
-            panic!("Expected validation error, got: {:?}", other_err);
+            panic!("Expected validation error, got: {other_err:?}");
         }
     }
 
@@ -543,11 +543,11 @@ async fn test_record_requires_name() -> Result<(), GoatNsError> {
     match result {
         Ok(_) => panic!("Expected record creation with empty name to fail"),
         Err(GoatNsError::Generic(msg)) => {
-            eprintln!("Got expected validation error: {}", msg);
+            eprintln!("Got expected validation error: {msg}");
             assert!(msg.contains("Record name cannot be empty"));
         }
         Err(other_err) => {
-            panic!("Expected validation error, got: {:?}", other_err);
+            panic!("Expected validation error, got: {other_err:?}");
         }
     }
 
