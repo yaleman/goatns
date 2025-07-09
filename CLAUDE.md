@@ -160,17 +160,14 @@ including `Header`, `Question`, and `ResourceRecord`.
 
 **CRITICAL:** All tasks and sub-tasks must follow this completion workflow:
 
-1. **Quality Gate:** Run `just check` and ensure ALL tests pass without warnings
-   or errors
-2. **Documentation:** Update this CLAUDE.md file if any design or implementation
-   changes were made
+1. **Quality Gate:** Run `just check` and ensure ALL tests pass without warnings or errors
+2. **Documentation:** Update this CLAUDE.md file if any design or implementation changes were made
 3. **Git Commit:** Create a git commit for the completed work
 
 **No task is considered complete until:**
 
 - `just check` passes completely (includes clippy, codespell, tests, doc checks)
-- CLAUDE.md is updated if architecture, design, or implementation patterns
-  changed
+- CLAUDE.md is updated if architecture, design, or implementation patterns changed
 - Changes are committed to git
 
 **Commit Requirements:**
@@ -182,5 +179,4 @@ including `Header`, `Question`, and `ResourceRecord`.
 
 ## Git Commit Guidelines
 
-- **DO NOT mention that tests pass or that CLAUDE.md was updated in commit
-  messages**
+- **DO NOT mention that tests pass or that CLAUDE.md was updated in commit messages**
