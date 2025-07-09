@@ -208,10 +208,11 @@ async fn test_all_db_things() -> Result<(), GoatNsError> {
         rdata: "test txt".to_string(),
     };
     println!("rec to create: {rec_to_create:?}");
-    if let Err(err) = rec_to_create.save(&pool).await {
-        panic!("{err:?}");
-    };
-    if let Err(err) = rec_to_create.save(&pool).await {
+    let saved_record = rec_to_create.save(&pool).await?;
+    println!("Saved record: {saved_record:?}");
+    
+    // Saving the same record object again should work (it has an ID now so it's an update)
+    if let Err(err) = saved_record.save(&pool).await {
         panic!("{err:?}");
     };
     // rec_to_create.save(&pool).await?;
@@ -414,26 +415,57 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
     let _saved_record1 = record1.save_with_txn(&mut txn).await?;
     txn.commit().await?;
 
-    // Try to create a duplicate record (same name, type, class in same zone)
+    // Try to create a record with same name, type, class but different rdata (should succeed in DNS)
     let record2 = FileZoneRecord {
         id: None,
         zoneid: Some(zone_id),
         name: "www".to_string(),
         rrtype: "A".to_string(),
         class: crate::enums::RecordClass::Internet,
-        rdata: "192.168.1.2".to_string(), // Different data but same key fields
+        rdata: "192.168.1.2".to_string(), // Different data - this should be allowed
         ttl: 300,
     };
 
     let mut txn = pool.begin().await?;
     let result = record2.save_with_txn(&mut txn).await;
 
+    // This should succeed (different rdata values are allowed)
+    match result {
+        Ok(saved_record) => {
+            eprintln!("Successfully created record with different rdata: {saved_record:?}");
+            assert_eq!(saved_record.rdata, "192.168.1.2");
+            txn.commit().await?;
+        }
+        Err(err) => {
+            let _ = txn.rollback().await;
+            panic!("Expected record creation with different rdata to succeed, got: {err:?}");
+        }
+    }
+
+    // Now try to create a truly duplicate record (same name, type, class, AND rdata)
+    let record3 = FileZoneRecord {
+        id: None,
+        zoneid: Some(zone_id),
+        name: "www".to_string(),
+        rrtype: "A".to_string(),
+        class: crate::enums::RecordClass::Internet,
+        rdata: "192.168.1.2".to_string(), // Same data as record2 - this should fail
+        ttl: 300,
+    };
+
+    let mut txn = pool.begin().await?;
+    let result = record3.save_with_txn(&mut txn).await;
+
     // This should fail with a duplicate record error
     match result {
-        Ok(_) => panic!("Expected duplicate record creation to fail"),
+        Ok(_) => {
+            let _ = txn.rollback().await;
+            panic!("Expected duplicate record creation to fail");
+        }
         Err(GoatNsError::Generic(msg)) => {
             eprintln!("Got expected duplicate record error: {msg}");
-            assert!(msg.contains("Record with same zone, name, type, and class already exists"));
+            assert!(msg.contains("Record with same zone, name, type, class, and rdata already exists"));
+            let _ = txn.rollback().await;
         }
         Err(GoatNsError::SqlxError(sqlx::Error::Database(db_err))) => {
             // Verify it's a unique constraint violation
@@ -450,14 +482,13 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
                 is_constraint_violation,
                 "Expected unique constraint violation"
             );
+            let _ = txn.rollback().await;
         }
         Err(other_err) => {
+            let _ = txn.rollback().await;
             panic!("Expected duplicate record error, got: {other_err:?}");
         }
     }
-
-    // Clean up the transaction
-    let _ = txn.rollback().await;
 
     Ok(())
 }
@@ -525,11 +556,11 @@ async fn test_record_requires_name() -> Result<(), GoatNsError> {
         .id
         .ok_or_else(|| GoatNsError::Generic("Zone should have an ID".to_string()))?;
 
-    // Try to create a record with empty name
+    // Try to create a record with empty name (now allowed for apex records)
     let record = FileZoneRecord {
         id: None,
         zoneid: Some(zone_id),
-        name: "".to_string(), // Empty name should cause an error
+        name: "".to_string(), // Empty name is now allowed for apex records
         rrtype: "A".to_string(),
         class: crate::enums::RecordClass::Internet,
         rdata: "192.168.1.1".to_string(),
@@ -539,15 +570,14 @@ async fn test_record_requires_name() -> Result<(), GoatNsError> {
     let mut txn = pool.begin().await?;
     let result = record.save_with_txn(&mut txn).await;
 
-    // This should fail with a validation error
+    // This should now succeed (empty names are allowed for apex records)
     match result {
-        Ok(_) => panic!("Expected record creation with empty name to fail"),
-        Err(GoatNsError::Generic(msg)) => {
-            eprintln!("Got expected validation error: {msg}");
-            assert!(msg.contains("Record name cannot be empty"));
+        Ok(saved_record) => {
+            eprintln!("Successfully created record with empty name: {saved_record:?}");
+            assert_eq!(saved_record.name, "");
         }
-        Err(other_err) => {
-            panic!("Expected validation error, got: {other_err:?}");
+        Err(err) => {
+            panic!("Expected record creation with empty name to succeed, got: {err:?}");
         }
     }
 

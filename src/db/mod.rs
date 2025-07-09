@@ -1046,12 +1046,7 @@ impl DBEntity for FileZoneRecord {
             .zoneid
             .ok_or_else(|| GoatNsError::Generic("Record must have a valid zone ID".to_string()))?;
 
-        // Validate that record name is not empty
-        if self.name.is_empty() {
-            return Err(GoatNsError::Generic(
-                "Record name cannot be empty".to_string(),
-            ));
-        }
+        // Note: Empty names are allowed for apex records (converted from "@" in zone files)
 
         let record_name = Some(self.to_owned().name);
         #[cfg(test)]
@@ -1063,15 +1058,16 @@ impl DBEntity for FileZoneRecord {
         // For new records (id is None), check if a record with same zone/name/type/class exists
         let existing_record = match self.id {
             None => {
-                // Check for duplicates by key fields only (not including id)
+                // Check for duplicates by key fields including rdata (DNS allows multiple records with same name/type/class but different rdata)
                 sqlx::query(
                     "SELECT id, zoneid, name, ttl, rrtype, rclass, rdata from records WHERE
-            zoneid = ? AND name = ? AND rrtype = ? AND rclass = ? LIMIT 1",
+            zoneid = ? AND name = ? AND rrtype = ? AND rclass = ? AND rdata = ? LIMIT 1",
                 )
                 .bind(zone_id)
                 .bind(&record_name)
                 .bind(RecordType::from(self.rrtype.clone()))
                 .bind(self.class)
+                .bind(self.rdata.to_string())
                 .fetch_optional(&mut *txn)
                 .await?
             }
@@ -1111,7 +1107,7 @@ impl DBEntity for FileZoneRecord {
                 if self.id.is_none() {
                     let existing_id: i64 = existing.get("id");
                     return Err(GoatNsError::Generic(
-                        format!("Record with same zone, name, type, and class already exists (id: {existing_id})")
+                        format!("Record with same zone, name, type, class, and rdata already exists (id: {existing_id})")
                     ));
                 }
 
