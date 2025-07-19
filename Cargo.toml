@@ -56,7 +56,7 @@ gethostname = "1.0.2"
 goat-lib = { path = "goat-lib" }
 goatns-macros = { path = "./goatns-macros" }
 hex = "0.4.3"
-init-tracing-opentelemetry = { version = "0.29.0", features = [
+init-tracing-opentelemetry = { version = "0.30.0", features = [
   "tracing_subscriber_ext",
 ] }
 ipnet = { version = "2.11.0", features = ["json", "serde"] }
