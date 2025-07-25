@@ -32,7 +32,7 @@ opt-level = 3
 [dependencies]
 argon2 = "0.5"
 askama = { version = "0.14.0" }
-askama_web = { version = "0.14.4", features = ["axum-0.8"] }
+askama_web = { version = "0.14.5", features = ["axum-0.8"] }
 async-trait = "0.1.88"
 axum = { workspace = true, features = ["http2", "original-uri", "macros"] }
 axum-csp = "0.0.10"
@@ -70,7 +70,7 @@ opentelemetry-otlp = { version = "0.30.0", features = ["http-proto"] }
 opentelemetry-semantic-conventions = "0.30.0"
 opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio"] }
 packed_struct = { version = "0.10.1", features = ["byte_types_256"] }
-rand = "0.9.1"
+rand = "0.9.2"
 rand_core = { version = "0.9", features = ["std"] }
 regex = { workspace = true }
 reqwest = { version = "0.12.22", features = [
@@ -81,7 +81,7 @@ reqwest = { version = "0.12.22", features = [
 ], default-features = false }
 rmp-serde = "1.3.0"
 rustls = { version = "0.23.29" }
-sea-orm = { version = "1.1.13", features = [
+sea-orm = { version = "1.1.14", features = [
   "runtime-tokio-rustls", # this is why we have multiple rustls
   "sqlx-sqlite",
   "with-chrono",
@@ -90,7 +90,7 @@ sea-orm = { version = "1.1.13", features = [
   "debug-print",
   "mock",
 ] }
-sea-orm-migration = { version = "1.1.13", features = [
+sea-orm-migration = { version = "1.1.14", features = [
   "sqlx-sqlite",
   "with-chrono",
   "with-json",
@@ -99,7 +99,7 @@ sea-orm-migration = { version = "1.1.13", features = [
 serde = { version = "1.0.219", features = ["derive"] }
 serde_bytes = "0.11.17"
 serde_derive = "1.0.219"
-serde_json = "1.0.140"
+serde_json = "1.0.141"
 sha2 = { version = "0.10.9", features = ["asm", "asm-aarch64"] }
 shellexpand = "3.1.1"
 sqlx = { version = "0.8.6", features = [
@@ -140,8 +140,8 @@ syn = "2.0.104"
 
 [dev-dependencies]
 console-subscriber = "0.4.1"
-criterion = "^0.6"
-pcap = { version = "2.2.0", features = ["tokio"] }
+criterion = "^0.7"
+pcap = { version = "2.3.0", features = ["tokio"] }
 scopeguard = "1.2.0"
 tracing-subscriber = "0.3.19"
 trust-dns-resolver = { version = "0.23.2", features = [
