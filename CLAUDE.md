@@ -184,3 +184,8 @@ including `Header`, `Question`, and `ResourceRecord`.
 
 - **DO NOT mention that tests pass or that CLAUDE.md was updated in commit
   messages**
+
+## Code Quality Principles
+
+- **Error Handling Principle:**
+  - NEVER use expect or unwrap in production code

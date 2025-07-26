@@ -1,8 +1,8 @@
 use axum::http::header::ACCEPT;
 use packed_struct::PackedStruct;
 
-use crate::db::test::test_example_com_zone;
 use crate::db::DBEntity;
+use crate::db::test::test_example_com_zone;
 use crate::enums::RecordClass;
 use crate::tests::test_api::insert_test_user;
 use crate::tests::test_api::start_test_server;
@@ -65,37 +65,79 @@ async fn test_doh_get_json() -> Result<(), ()> {
         reqwest::StatusCode::from_u16(200).expect("Failed to parse status")
     );
     eprintln!("{res:?}");
-    
+
     // Parse the JSON response
     let response_text = res.text().await.expect("Failed to get response text");
     eprintln!("Response body: {response_text}");
-    
-    let json_response: serde_json::Value = serde_json::from_str(&response_text)
-        .expect("Failed to parse JSON response");
-    
+
+    let json_response: serde_json::Value =
+        serde_json::from_str(&response_text).expect("Failed to parse JSON response");
+
     // Validate the JSON structure matches RFC 8427 (DNS Queries over HTTPS)
-    assert!(json_response.get("status").is_some(), "JSON response should have status field");
-    assert!(json_response.get("Question").is_some(), "JSON response should have Question field");
-    assert!(json_response.get("Answer").is_some(), "JSON response should have Answer field");
-    
+    assert!(
+        json_response.get("status").is_some(),
+        "JSON response should have status field"
+    );
+    assert!(
+        json_response.get("Question").is_some(),
+        "JSON response should have Question field"
+    );
+    assert!(
+        json_response.get("Answer").is_some(),
+        "JSON response should have Answer field"
+    );
+
     // Validate the status is NoError (0)
-    assert_eq!(json_response["status"].as_u64().expect("status field should be numeric"), 0, "status should be NoError (0)");
-    
+    assert_eq!(
+        json_response["status"]
+            .as_u64()
+            .expect("status field should be numeric"),
+        0,
+        "status should be NoError (0)"
+    );
+
     // Validate the question
     let question = &json_response["Question"][0];
-    assert_eq!(question["name"].as_str().expect("question name should be string"), "test.example.com");
-    assert_eq!(question["type"].as_u64().expect("question type should be numeric"), 1); // A record type
-    
+    assert_eq!(
+        question["name"]
+            .as_str()
+            .expect("question name should be string"),
+        "test.example.com"
+    );
+    assert_eq!(
+        question["type"]
+            .as_u64()
+            .expect("question type should be numeric"),
+        1
+    ); // A record type
+
     // Validate the answer
-    let answers = json_response["Answer"].as_array().expect("Answer field should be array");
+    let answers = json_response["Answer"]
+        .as_array()
+        .expect("Answer field should be array");
     assert_eq!(answers.len(), 1, "Should have exactly one answer");
-    
+
     let answer = &answers[0];
-    assert_eq!(answer["name"].as_str().expect("answer name should be string"), "test.example.com");
-    assert_eq!(answer["type"].as_u64().expect("answer type should be numeric"), 1); // A record type
+    assert_eq!(
+        answer["name"]
+            .as_str()
+            .expect("answer name should be string"),
+        "test.example.com"
+    );
+    assert_eq!(
+        answer["type"]
+            .as_u64()
+            .expect("answer type should be numeric"),
+        1
+    ); // A record type
     assert_eq!(answer["TTL"].as_u64().expect("TTL should be numeric"), 1); // TTL from test record
-    assert_eq!(answer["data"].as_str().expect("answer data should be string"), "1.2.3.4"); // IP from test record
-    
+    assert_eq!(
+        answer["data"]
+            .as_str()
+            .expect("answer data should be string"),
+        "1.2.3.4"
+    ); // IP from test record
+
     Ok(())
 }
 
@@ -304,21 +346,35 @@ async fn test_doh_post_raw_dns() -> Result<(), ()> {
     eprintln!("Response length: {}", response_bytes.len());
 
     // Validate that we got a valid DNS response
-    assert!(response_bytes.len() >= 12, "Response should be at least 12 bytes (DNS header)");
+    assert!(
+        response_bytes.len() >= 12,
+        "Response should be at least 12 bytes (DNS header)"
+    );
 
     // Parse the DNS header from response
     let header_bytes: [u8; 12] = response_bytes[0..12]
         .try_into()
         .expect("slice with incorrect length");
-    let response_header = crate::Header::unpack(&header_bytes)
-        .expect("Failed to parse response header");
+    let response_header =
+        crate::Header::unpack(&header_bytes).expect("Failed to parse response header");
 
     eprintln!("Response header: {response_header:?}");
 
     // Validate response header
-    assert_eq!(response_header.id, 1234, "Response ID should match request ID");
-    assert_eq!(response_header.qr, crate::enums::PacketType::Answer, "Should be a response");
-    assert_eq!(response_header.rcode, crate::enums::Rcode::NoError, "Should be NoError");
+    assert_eq!(
+        response_header.id, 1234,
+        "Response ID should match request ID"
+    );
+    assert_eq!(
+        response_header.qr,
+        crate::enums::PacketType::Answer,
+        "Should be a response"
+    );
+    assert_eq!(
+        response_header.rcode,
+        crate::enums::Rcode::NoError,
+        "Should be NoError"
+    );
     assert_eq!(response_header.qdcount, 1, "Should have one question");
     assert_eq!(response_header.ancount, 1, "Should have one answer");
 
@@ -363,18 +419,30 @@ async fn test_doh_nxdomain_response() -> Result<(), ()> {
 
     let response_text = res.text().await.expect("Failed to get response text");
     eprintln!("NXDOMAIN response: {response_text}");
-    let json_response: serde_json::Value = serde_json::from_str(&response_text)
-        .expect("Failed to parse JSON response");
+    let json_response: serde_json::Value =
+        serde_json::from_str(&response_text).expect("Failed to parse JSON response");
 
     // For a non-existent record, we should either get NXDOMAIN (status 3) or NoError with no answers
-    let status = json_response["status"].as_u64().expect("status field should be numeric");
-    assert!(status == 0 || status == 3, "status should be NoError (0) or NXDOMAIN (3), got {status}");
+    let status = json_response["status"]
+        .as_u64()
+        .expect("status field should be numeric");
+    assert!(
+        status == 0 || status == 3,
+        "status should be NoError (0) or NXDOMAIN (3), got {status}"
+    );
 
     // Should have question but no answers
-    assert!(json_response.get("Question").is_some(), "Should have question");
+    assert!(
+        json_response.get("Question").is_some(),
+        "Should have question"
+    );
     let empty_vec = vec![];
     let answers = json_response["Answer"].as_array().unwrap_or(&empty_vec);
-    assert_eq!(answers.len(), 0, "Should have no answers for non-existent record");
+    assert_eq!(
+        answers.len(),
+        0,
+        "Should have no answers for non-existent record"
+    );
 
     Ok(())
 }
@@ -444,24 +512,44 @@ async fn test_doh_multiple_records() -> Result<(), ()> {
     );
 
     let response_text = res.text().await.expect("Failed to get response text");
-    let json_response: serde_json::Value = serde_json::from_str(&response_text)
-        .expect("Failed to parse JSON response");
+    let json_response: serde_json::Value =
+        serde_json::from_str(&response_text).expect("Failed to parse JSON response");
 
     // Should get NoError
-    assert_eq!(json_response["status"].as_u64().expect("status field should be numeric"), 0, "status should be NoError (0)");
+    assert_eq!(
+        json_response["status"]
+            .as_u64()
+            .expect("status field should be numeric"),
+        0,
+        "status should be NoError (0)"
+    );
 
     // Should have multiple answers
-    let answers = json_response["Answer"].as_array().expect("Answer field should be array");
+    let answers = json_response["Answer"]
+        .as_array()
+        .expect("Answer field should be array");
     assert_eq!(answers.len(), 3, "Should have three answers");
 
     // Verify all answers are for the correct name and type
     for answer in answers {
-        assert_eq!(answer["name"].as_str().expect("answer name should be string"), "multi-test.example.com");
-        assert_eq!(answer["type"].as_u64().expect("answer type should be numeric"), 1); // A record
+        assert_eq!(
+            answer["name"]
+                .as_str()
+                .expect("answer name should be string"),
+            "multi-test.example.com"
+        );
+        assert_eq!(
+            answer["type"]
+                .as_u64()
+                .expect("answer type should be numeric"),
+            1
+        ); // A record
         assert_eq!(answer["TTL"].as_u64().expect("TTL should be numeric"), 600);
-        
+
         // Check that the IP is one of our expected values
-        let ip = answer["data"].as_str().expect("answer data should be string");
+        let ip = answer["data"]
+            .as_str()
+            .expect("answer data should be string");
         assert!(
             ["10.0.0.1", "10.0.0.2", "10.0.0.3"].contains(&ip),
             "IP should be one of the test IPs, got {ip}"
@@ -503,7 +591,13 @@ async fn test_doh_query_parameter_validation() -> Result<(), ()> {
 
     // Current implementation might accept missing name and default to something reasonable
     // or return an error - both are acceptable behaviors for this test
-    eprintln!("Missing name parameter response: {} - {}", res.status(), res.text().await.unwrap_or_else(|_| "Failed to read response text".to_string()));
+    eprintln!(
+        "Missing name parameter response: {} - {}",
+        res.status(),
+        res.text()
+            .await
+            .unwrap_or_else(|_| "Failed to read response text".to_string())
+    );
 
     // Test invalid record type - should handle gracefully
     let res = client
@@ -585,15 +679,27 @@ async fn test_doh_different_record_types() -> Result<(), ()> {
         .expect("Failed to send request");
 
     assert_eq!(res.status(), reqwest::StatusCode::OK);
-    
-    let response_text = res.text().await.expect("Failed to get response text");
-    let json_response: serde_json::Value = serde_json::from_str(&response_text)
-        .expect("Failed to parse JSON response");
 
-    assert_eq!(json_response["status"].as_u64().expect("status field should be numeric"), 0);
-    let answers = json_response["Answer"].as_array().expect("Answer field should be array");
+    let response_text = res.text().await.expect("Failed to get response text");
+    let json_response: serde_json::Value =
+        serde_json::from_str(&response_text).expect("Failed to parse JSON response");
+
+    assert_eq!(
+        json_response["status"]
+            .as_u64()
+            .expect("status field should be numeric"),
+        0
+    );
+    let answers = json_response["Answer"]
+        .as_array()
+        .expect("Answer field should be array");
     assert!(!answers.is_empty(), "Should have TXT record answer");
-    assert_eq!(answers[0]["type"].as_u64().expect("answer type should be numeric"), 16); // TXT record type
+    assert_eq!(
+        answers[0]["type"]
+            .as_u64()
+            .expect("answer type should be numeric"),
+        16
+    ); // TXT record type
 
     // Test CNAME record
     let res = client
@@ -606,15 +712,27 @@ async fn test_doh_different_record_types() -> Result<(), ()> {
         .expect("Failed to send request");
 
     assert_eq!(res.status(), reqwest::StatusCode::OK);
-    
-    let response_text = res.text().await.expect("Failed to get response text");
-    let json_response: serde_json::Value = serde_json::from_str(&response_text)
-        .expect("Failed to parse JSON response");
 
-    assert_eq!(json_response["status"].as_u64().expect("status field should be numeric"), 0);
-    let answers = json_response["Answer"].as_array().expect("Answer field should be array");
+    let response_text = res.text().await.expect("Failed to get response text");
+    let json_response: serde_json::Value =
+        serde_json::from_str(&response_text).expect("Failed to parse JSON response");
+
+    assert_eq!(
+        json_response["status"]
+            .as_u64()
+            .expect("status field should be numeric"),
+        0
+    );
+    let answers = json_response["Answer"]
+        .as_array()
+        .expect("Answer field should be array");
     assert!(!answers.is_empty(), "Should have CNAME record answer");
-    assert_eq!(answers[0]["type"].as_u64().expect("answer type should be numeric"), 5); // CNAME record type
+    assert_eq!(
+        answers[0]["type"]
+            .as_u64()
+            .expect("answer type should be numeric"),
+        5
+    ); // CNAME record type
 
     Ok(())
 }

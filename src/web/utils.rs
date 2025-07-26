@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::SaltString;
+use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use axum::http::StatusCode;
 use axum::response::Redirect;
@@ -139,5 +139,8 @@ pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result
 }
 
 pub async fn handler_404() -> (StatusCode, &'static str) {
-    (StatusCode::NOT_FOUND, "<h1>Oh no!</h1><p>You've found a 404, try <a href='#' onclick='history.back();'>going back</a> or <a href='/'>home!</a></p>")
+    (
+        StatusCode::NOT_FOUND,
+        "<h1>Oh no!</h1><p>You've found a 404, try <a href='#' onclick='history.back();'>going back</a> or <a href='/'>home!</a></p>",
+    )
 }

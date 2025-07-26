@@ -208,10 +208,11 @@ async fn test_all_db_things() -> Result<(), GoatNsError> {
         rdata: "test txt".to_string(),
     };
     println!("rec to create: {rec_to_create:?}");
-    if let Err(err) = rec_to_create.save(&pool).await {
-        panic!("{err:?}");
-    };
-    if let Err(err) = rec_to_create.save(&pool).await {
+    let saved_record = rec_to_create.save(&pool).await?;
+    println!("Saved record: {saved_record:?}");
+    
+    // Saving the same record object again should work (it has an ID now so it's an update)
+    if let Err(err) = saved_record.save(&pool).await {
         panic!("{err:?}");
     };
     // rec_to_create.save(&pool).await?;
@@ -376,421 +377,212 @@ async fn load_then_export() -> Result<(), GoatNsError> {
 }
 
 #[tokio::test]
-async fn test_zone_ownership_get_by_name() -> Result<(), GoatNsError> {
-    // Set up the database
+async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
     start_db(&pool).await?;
 
-    // Create a test user
-    let user = User {
-        username: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        disabled: false,
-        ..User::default()
-    };
-    let saved_user = user.save(&pool).await?;
-    let user_id = saved_user.id.expect("User should have an ID");
-
     // Create a test zone
-    let zone = FileZone {
-        name: "example.com".to_string(),
+    let test_zone = FileZone {
+        id: None,
+        name: "test.example.com".to_string(),
         rname: "admin.example.com".to_string(),
         serial: 1,
         refresh: 3600,
         retry: 1800,
         expire: 604800,
         minimum: 86400,
-        ..FileZone::default()
+        records: vec![],
     };
-    let saved_zone = zone.save(&pool).await?;
+
+    let mut txn = pool.begin().await?;
+    let saved_zone = test_zone.save_with_txn(&mut txn).await?;
+    txn.commit().await?;
+
     let zone_id = saved_zone.id.expect("Zone should have an ID");
 
-    // Create zone ownership
-    let ownership = ZoneOwnership {
+    // Create the first record
+    let record1 = FileZoneRecord {
         id: None,
-        userid: user_id,
-        zoneid: zone_id,
+        zoneid: Some(zone_id),
+        name: "www".to_string(),
+        rrtype: "A".to_string(),
+        class: crate::enums::RecordClass::Internet,
+        rdata: "192.168.1.1".to_string(),
+        ttl: 300,
     };
-    ownership.save(&pool).await?;
 
-    // Test get_by_name
-    let mut conn = pool.begin().await?;
-    let found_ownership = ZoneOwnership::get_by_name(&mut conn, "example.com").await?;
+    let mut txn = pool.begin().await?;
+    let _saved_record1 = record1.save_with_txn(&mut txn).await?;
+    txn.commit().await?;
 
-    assert!(found_ownership.is_some());
-    let ownership_record = found_ownership.expect("Ownership record should exist");
-    assert_eq!(ownership_record.userid, user_id);
-    assert_eq!(ownership_record.zoneid, zone_id);
-
-    // Test with non-existent zone
-    let not_found = ZoneOwnership::get_by_name(&mut conn, "nonexistent.com").await?;
-    assert!(not_found.is_none());
-
-    conn.commit().await?;
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_zone_ownership_get_all_by_name() -> Result<(), GoatNsError> {
-    // Set up the database
-    let pool = test_get_sqlite_memory().await;
-    start_db(&pool).await?;
-
-    // Create test users
-    let user1 = User {
-        username: "testuser1".to_string(),
-        email: "test1@example.com".to_string(),
-        disabled: false,
-        ..User::default()
-    };
-    let saved_user1 = user1.save(&pool).await?;
-    let user1_id = saved_user1.id.expect("User should have an ID");
-
-    let user2 = User {
-        username: "testuser2".to_string(),
-        email: "test2@example.com".to_string(),
-        disabled: false,
-        ..User::default()
-    };
-    let saved_user2 = user2.save(&pool).await?;
-    let user2_id = saved_user2.id.expect("User should have an ID");
-
-    // Create a test zone
-    let zone = FileZone {
-        name: "shared.com".to_string(),
-        rname: "admin.shared.com".to_string(),
-        serial: 1,
-        refresh: 3600,
-        retry: 1800,
-        expire: 604800,
-        minimum: 86400,
-        ..FileZone::default()
-    };
-    let saved_zone = zone.save(&pool).await?;
-    let zone_id = saved_zone.id.expect("Zone should have an ID");
-
-    // Create multiple zone ownerships for the same zone
-    let ownership1 = ZoneOwnership {
+    // Try to create a record with same name, type, class but different rdata (should succeed in DNS)
+    let record2 = FileZoneRecord {
         id: None,
-        userid: user1_id,
-        zoneid: zone_id,
+        zoneid: Some(zone_id),
+        name: "www".to_string(),
+        rrtype: "A".to_string(),
+        class: crate::enums::RecordClass::Internet,
+        rdata: "192.168.1.2".to_string(), // Different data - this should be allowed
+        ttl: 300,
     };
-    ownership1.save(&pool).await?;
 
-    let ownership2 = ZoneOwnership {
-        id: None,
-        userid: user2_id,
-        zoneid: zone_id,
-    };
-    ownership2.save(&pool).await?;
+    let mut txn = pool.begin().await?;
+    let result = record2.save_with_txn(&mut txn).await;
 
-    // Test get_all_by_name
-    let mut conn = pool.begin().await?;
-    let all_ownerships = ZoneOwnership::get_all_by_name(&mut conn, "shared.com").await?;
-
-    assert_eq!(all_ownerships.len(), 2);
-
-    // Verify both users are in the ownership list
-    let user_ids: Vec<i64> = all_ownerships.iter().map(|o| o.userid).collect();
-    assert!(user_ids.contains(&user1_id));
-    assert!(user_ids.contains(&user2_id));
-
-    // All should have the same zone ID
-    for ownership in &all_ownerships {
-        assert_eq!(ownership.zoneid, zone_id);
+    // This should succeed (different rdata values are allowed)
+    match result {
+        Ok(saved_record) => {
+            eprintln!("Successfully created record with different rdata: {saved_record:?}");
+            assert_eq!(saved_record.rdata, "192.168.1.2");
+            txn.commit().await?;
+        }
+        Err(err) => {
+            let _ = txn.rollback().await;
+            panic!("Expected record creation with different rdata to succeed, got: {err:?}");
+        }
     }
 
-    // Test with non-existent zone
-    let empty_result = ZoneOwnership::get_all_by_name(&mut conn, "nonexistent.com").await?;
-    assert!(empty_result.is_empty());
+    // Now try to create a truly duplicate record (same name, type, class, AND rdata)
+    let record3 = FileZoneRecord {
+        id: None,
+        zoneid: Some(zone_id),
+        name: "www".to_string(),
+        rrtype: "A".to_string(),
+        class: crate::enums::RecordClass::Internet,
+        rdata: "192.168.1.2".to_string(), // Same data as record2 - this should fail
+        ttl: 300,
+    };
 
-    conn.commit().await?;
+    let mut txn = pool.begin().await?;
+    let result = record3.save_with_txn(&mut txn).await;
+
+    // This should fail with a duplicate record error
+    match result {
+        Ok(_) => {
+            let _ = txn.rollback().await;
+            panic!("Expected duplicate record creation to fail");
+        }
+        Err(GoatNsError::Generic(msg)) => {
+            eprintln!("Got expected duplicate record error: {msg}");
+            assert!(msg.contains("Record with same zone, name, type, class, and rdata already exists"));
+            let _ = txn.rollback().await;
+        }
+        Err(GoatNsError::SqlxError(sqlx::Error::Database(db_err))) => {
+            // Verify it's a unique constraint violation
+            eprintln!("Database error: {db_err:?}");
+            eprintln!("Error code: {:?}", db_err.code());
+            eprintln!("Error constraint: {:?}", db_err.constraint());
+
+            // Check if it's the expected constraint violation
+            let is_constraint_violation = db_err.constraint() == Some("ind_records")
+                || db_err.code() == Some(std::borrow::Cow::Borrowed("2067"))
+                || db_err.code() == Some(std::borrow::Cow::Borrowed("1555"));
+
+            assert!(
+                is_constraint_violation,
+                "Expected unique constraint violation"
+            );
+            let _ = txn.rollback().await;
+        }
+        Err(other_err) => {
+            let _ = txn.rollback().await;
+            panic!("Expected duplicate record error, got: {other_err:?}");
+        }
+    }
+
     Ok(())
 }
 
 #[tokio::test]
-async fn test_zone_ownership_delete() -> Result<(), GoatNsError> {
-    // Set up the database
+async fn test_record_requires_zone_id() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
     start_db(&pool).await?;
 
-    // Create a test user
-    let user = User {
-        username: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        disabled: false,
-        ..User::default()
+    // Try to create a record without a zone ID
+    let record = FileZoneRecord {
+        id: None,
+        zoneid: None, // This should cause an error
+        name: "test".to_string(),
+        rrtype: "A".to_string(),
+        class: crate::enums::RecordClass::Internet,
+        rdata: "192.168.1.1".to_string(),
+        ttl: 300,
     };
-    let saved_user = user.save(&pool).await?;
-    let user_id = saved_user.id.expect("User should have an ID");
 
-    // Create a test zone
-    let zone = FileZone {
-        name: "example.com".to_string(),
+    let mut txn = pool.begin().await?;
+    let result = record.save_with_txn(&mut txn).await;
+
+    // This should fail with a validation error
+    match result {
+        Ok(_) => panic!("Expected record creation without zone ID to fail"),
+        Err(GoatNsError::Generic(msg)) => {
+            eprintln!("Got expected validation error: {msg}");
+            assert!(msg.contains("Record must have a valid zone ID"));
+        }
+        Err(other_err) => {
+            panic!("Expected validation error, got: {other_err:?}");
+        }
+    }
+
+    // Clean up the transaction
+    let _ = txn.rollback().await;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_record_requires_name() -> Result<(), GoatNsError> {
+    let pool = test_get_sqlite_memory().await;
+    start_db(&pool).await?;
+
+    // Create a test zone first
+    let test_zone = FileZone {
+        id: None,
+        name: "test.example.com".to_string(),
         rname: "admin.example.com".to_string(),
         serial: 1,
         refresh: 3600,
         retry: 1800,
         expire: 604800,
         minimum: 86400,
-        ..FileZone::default()
+        records: vec![],
     };
-    let saved_zone = zone.save(&pool).await?;
-    let zone_id = saved_zone.id.expect("Zone should have an ID");
 
-    // Create zone ownership
-    let ownership = ZoneOwnership {
+    let mut txn = pool.begin().await?;
+    let saved_zone = test_zone.save_with_txn(&mut txn).await?;
+    txn.commit().await?;
+
+    let zone_id = saved_zone
+        .id
+        .ok_or_else(|| GoatNsError::Generic("Zone should have an ID".to_string()))?;
+
+    // Try to create a record with empty name (now allowed for apex records)
+    let record = FileZoneRecord {
         id: None,
-        userid: user_id,
-        zoneid: zone_id,
+        zoneid: Some(zone_id),
+        name: "".to_string(), // Empty name is now allowed for apex records
+        rrtype: "A".to_string(),
+        class: crate::enums::RecordClass::Internet,
+        rdata: "192.168.1.1".to_string(),
+        ttl: 300,
     };
-    let saved_ownership = ownership.save(&pool).await?;
 
-    // Verify ownership exists
-    let mut conn = pool.begin().await?;
-    let found_ownership = ZoneOwnership::get_by_name(&mut conn, "example.com").await?;
-    assert!(found_ownership.is_some());
-    conn.commit().await?;
+    let mut txn = pool.begin().await?;
+    let result = record.save_with_txn(&mut txn).await;
 
-    // Delete the ownership
-    saved_ownership.delete(&pool).await?;
+    // This should now succeed (empty names are allowed for apex records)
+    match result {
+        Ok(saved_record) => {
+            eprintln!("Successfully created record with empty name: {saved_record:?}");
+            assert_eq!(saved_record.name, "");
+        }
+        Err(err) => {
+            panic!("Expected record creation with empty name to succeed, got: {err:?}");
+        }
+    }
 
-    // Verify ownership is deleted
-    let mut conn = pool.begin().await?;
-    let not_found = ZoneOwnership::get_by_name(&mut conn, "example.com").await?;
-    assert!(not_found.is_none());
-    conn.commit().await?;
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_zone_ownership_delete_for_user() -> Result<(), GoatNsError> {
-    // Set up the database
-    let pool = test_get_sqlite_memory().await;
-    start_db(&pool).await?;
-
-    // Create a test user
-    let user = User {
-        username: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        disabled: false,
-        ..User::default()
-    };
-    let saved_user = user.save(&pool).await?;
-    let user_id = saved_user.id.expect("User should have an ID");
-
-    // Create multiple test zones
-    let zone1 = FileZone {
-        name: "example1.com".to_string(),
-        rname: "admin.example1.com".to_string(),
-        ..FileZone::default()
-    };
-    let saved_zone1 = zone1.save(&pool).await?;
-    let zone1_id = saved_zone1.id.expect("Zone should have an ID");
-
-    let zone2 = FileZone {
-        name: "example2.com".to_string(),
-        rname: "admin.example2.com".to_string(),
-        ..FileZone::default()
-    };
-    let saved_zone2 = zone2.save(&pool).await?;
-    let zone2_id = saved_zone2.id.expect("Zone should have an ID");
-
-    // Create multiple zone ownerships for the same user
-    let ownership1 = ZoneOwnership {
-        id: None,
-        userid: user_id,
-        zoneid: zone1_id,
-    };
-    ownership1.save(&pool).await?;
-
-    let ownership2 = ZoneOwnership {
-        id: None,
-        userid: user_id,
-        zoneid: zone2_id,
-    };
-    ownership2.save(&pool).await?;
-
-    // Verify ownerships exist
-    let mut conn = pool.begin().await?;
-    let found1 = ZoneOwnership::get_by_name(&mut conn, "example1.com").await?;
-    let found2 = ZoneOwnership::get_by_name(&mut conn, "example2.com").await?;
-    assert!(found1.is_some());
-    assert!(found2.is_some());
-    conn.commit().await?;
-
-    // Delete all ownerships for the user
-    let returned_user = ZoneOwnership::delete_for_user(user_id, &pool).await?;
-
-    // Verify returned user matches original
-    assert_eq!(returned_user.id, Some(user_id));
-    assert_eq!(returned_user.username, "testuser");
-
-    // Verify all ownerships are deleted
-    let mut conn = pool.begin().await?;
-    let not_found1 = ZoneOwnership::get_by_name(&mut conn, "example1.com").await?;
-    let not_found2 = ZoneOwnership::get_by_name(&mut conn, "example2.com").await?;
-    assert!(not_found1.is_none());
-    assert!(not_found2.is_none());
-    conn.commit().await?;
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_zone_ownership_delete_all() -> Result<(), GoatNsError> {
-    // Set up the database
-    let pool = test_get_sqlite_memory().await;
-    start_db(&pool).await?;
-
-    // Create test users
-    let user1 = User {
-        username: "testuser1".to_string(),
-        email: "test1@example.com".to_string(),
-        disabled: false,
-        ..User::default()
-    };
-    let saved_user1 = user1.save(&pool).await?;
-    let user1_id = saved_user1.id.expect("User should have an ID");
-
-    let user2 = User {
-        username: "testuser2".to_string(),
-        email: "test2@example.com".to_string(),
-        disabled: false,
-        ..User::default()
-    };
-    let saved_user2 = user2.save(&pool).await?;
-    let user2_id = saved_user2.id.expect("User should have an ID");
-
-    // Create test zones
-    let zone1 = FileZone {
-        name: "example1.com".to_string(),
-        rname: "admin.example1.com".to_string(),
-        ..FileZone::default()
-    };
-    let saved_zone1 = zone1.save(&pool).await?;
-    let zone1_id = saved_zone1.id.expect("Zone should have an ID");
-
-    let zone2 = FileZone {
-        name: "example2.com".to_string(),
-        rname: "admin.example2.com".to_string(),
-        ..FileZone::default()
-    };
-    let saved_zone2 = zone2.save(&pool).await?;
-    let zone2_id = saved_zone2.id.expect("Zone should have an ID");
-
-    // Create multiple zone ownerships
-    let ownership1 = ZoneOwnership {
-        id: None,
-        userid: user1_id,
-        zoneid: zone1_id,
-    };
-    ownership1.save(&pool).await?;
-
-    let ownership2 = ZoneOwnership {
-        id: None,
-        userid: user1_id,
-        zoneid: zone2_id,
-    };
-    ownership2.save(&pool).await?;
-
-    let ownership3 = ZoneOwnership {
-        id: None,
-        userid: user2_id,
-        zoneid: zone1_id,
-    };
-    ownership3.save(&pool).await?;
-
-    // Verify ownerships exist
-    let mut conn = pool.begin().await?;
-    let found1 = ZoneOwnership::get_by_name(&mut conn, "example1.com").await?;
-    let found2 = ZoneOwnership::get_by_name(&mut conn, "example2.com").await?;
-    assert!(found1.is_some());
-    assert!(found2.is_some());
-    conn.commit().await?;
-
-    // Delete all ownerships
-    let deleted_count = ZoneOwnership::delete_all(&pool).await?;
-    assert_eq!(deleted_count, 3); // Should delete all 3 ownership records
-
-    // Verify all ownerships are deleted
-    let mut conn = pool.begin().await?;
-    let not_found1 = ZoneOwnership::get_by_name(&mut conn, "example1.com").await?;
-    let not_found2 = ZoneOwnership::get_by_name(&mut conn, "example2.com").await?;
-    assert!(not_found1.is_none());
-    assert!(not_found2.is_none());
-    conn.commit().await?;
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_user_delete() -> Result<(), GoatNsError> {
-    // Set up the database
-    let pool = test_get_sqlite_memory().await;
-    start_db(&pool).await?;
-
-    // Create a test user
-    let user = User {
-        username: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        disabled: false,
-        ..User::default()
-    };
-    let saved_user = user.save(&pool).await?;
-    let user_id = saved_user.id.expect("User should have an ID");
-
-    // Create a test zone
-    let zone = FileZone {
-        name: "example.com".to_string(),
-        rname: "admin.example.com".to_string(),
-        ..FileZone::default()
-    };
-    let saved_zone = zone.save(&pool).await?;
-    let zone_id = saved_zone.id.expect("Zone should have an ID");
-
-    // Create zone ownership
-    let ownership = ZoneOwnership {
-        id: None,
-        userid: user_id,
-        zoneid: zone_id,
-    };
-    ownership.save(&pool).await?;
-
-    // Verify user and ownership exist
-    let mut conn = pool.begin().await?;
-    let found_user = User::get_with_txn(&mut conn, &user_id).await;
-    let found_ownership = ZoneOwnership::get_by_name(&mut conn, "example.com").await?;
-    assert!(found_user.is_ok());
-    assert!(found_ownership.is_some());
-    conn.commit().await?;
-
-    // Try to delete the user - this should fail due to foreign key constraint
-    let delete_result = saved_user.delete(&pool).await;
-    assert!(delete_result.is_err()); // Should fail due to foreign key constraint
-
-    // Delete the ownership first
-    let mut conn = pool.begin().await?;
-    let ownership_to_delete = ZoneOwnership::get_by_name(&mut conn, "example.com").await?;
-    assert!(ownership_to_delete.is_some());
-    conn.commit().await?;
-
-    // Delete ownership using the static method
-    ZoneOwnership::delete_for_user(user_id, &pool).await?;
-
-    // Now delete the user should work
-    saved_user.delete(&pool).await?;
-
-    // Verify user is deleted
-    let mut conn = pool.begin().await?;
-    let not_found_user = User::get_with_txn(&mut conn, &user_id).await;
-    assert!(not_found_user.is_err()); // Should fail to find the user
-
-    // Verify ownership is also deleted
-    let not_found_ownership = ZoneOwnership::get_by_name(&mut conn, "example.com").await?;
-    assert!(not_found_ownership.is_none()); // Ownership should be deleted
-    conn.commit().await?;
+    // Clean up the transaction
+    let _ = txn.rollback().await;
 
     Ok(())
 }

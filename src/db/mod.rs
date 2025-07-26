@@ -1040,29 +1040,55 @@ impl DBEntity for FileZoneRecord {
         #[cfg(test)]
         eprintln!("Starting save_with_txn for {self:?}");
         trace!("Starting save_with_txn for {self:?}");
-        let record_name = match self.name.len() {
-            0 => None,
-            _ => Some(self.to_owned().name),
-        };
+
+        // Validate that zoneid is present - records must belong to a zone
+        let zone_id = self
+            .zoneid
+            .ok_or_else(|| GoatNsError::Generic("Record must have a valid zone ID".to_string()))?;
+
+        // Note: Empty names are allowed for apex records (converted from "@" in zone files)
+
+        let record_name = Some(self.to_owned().name);
         #[cfg(test)]
         eprintln!(
             "save_with_txn rtype: {} => {}",
             self.rrtype.clone(),
             RecordType::from(self.rrtype.clone())
         );
-        let existing_record = sqlx::query("SELECT id, zoneid, name, ttl, rrtype, rclass, rdata from records WHERE
-        id = ? AND  zoneid = ? AND  name = ? AND  ttl = ? AND  rrtype = ? AND  rclass = ? AND rdata = ? LIMIT 1")
-            .bind(self.id) // TODO id could be a none, which would work out bad
-            .bind(self.zoneid) // TODO zoneid could be a none, which would work out bad
-            .bind(&record_name)
-            .bind(self.ttl)
-            .bind(RecordType::from(self.rrtype.clone()))
-            .bind(self.class)
-            .bind(self.rdata.to_string())
-            .fetch_optional(&mut *txn).await?;
+        // For new records (id is None), check if a record with same zone/name/type/class exists
+        let existing_record = match self.id {
+            None => {
+                // Check for duplicates by key fields including rdata (DNS allows multiple records with same name/type/class but different rdata)
+                sqlx::query(
+                    "SELECT id, zoneid, name, ttl, rrtype, rclass, rdata from records WHERE
+            zoneid = ? AND name = ? AND rrtype = ? AND rclass = ? AND rdata = ? LIMIT 1",
+                )
+                .bind(zone_id)
+                .bind(&record_name)
+                .bind(RecordType::from(self.rrtype.clone()))
+                .bind(self.class)
+                .bind(self.rdata.to_string())
+                .fetch_optional(&mut *txn)
+                .await?
+            }
+            Some(record_id) => {
+                // For existing records, check by exact match including id
+
+                sqlx::query("SELECT id, zoneid, name, ttl, rrtype, rclass, rdata from records WHERE
+            id = ? AND  zoneid = ? AND  name = ? AND  ttl = ? AND  rrtype = ? AND  rclass = ? AND rdata = ? LIMIT 1")
+                .bind(record_id)
+                .bind(zone_id)
+                .bind(&record_name)
+                .bind(self.ttl)
+                .bind(RecordType::from(self.rrtype.clone()))
+                .bind(self.class)
+                .bind(self.rdata.to_string())
+                .fetch_optional(&mut *txn).await?
+            }
+        };
 
         let mut args = SqliteArguments::default();
-        args.add(self.zoneid)?;
+        args.add(zone_id)?;
         args.add(record_name)?;
         args.add(self.ttl)?;
         args.add(RecordType::from(self.rrtype.clone()))?;
@@ -1075,7 +1101,16 @@ impl DBEntity for FileZoneRecord {
         }
 
         let query = match existing_record {
-            Some(_) => {
+            Some(existing) => {
+                // If this is a new record (id is None) but we found an existing record with same key fields,
+                // this is a duplicate attempt
+                if self.id.is_none() {
+                    let existing_id: i64 = existing.get("id");
+                    return Err(GoatNsError::Generic(
+                        format!("Record with same zone, name, type, class, and rdata already exists (id: {existing_id})")
+                    ));
+                }
+
                 #[cfg(test)]
                 eprintln!("Found an existing record while saving!");
                 sqlx::query_with(
@@ -1092,7 +1127,7 @@ impl DBEntity for FileZoneRecord {
                                 ",
                 )
                 .bind(id)
-                .bind(self.zoneid)
+                .bind(zone_id)
                 .bind(self.name.clone())
                 .bind(self.ttl)
                 .bind(RecordType::from(self.rrtype.clone()))
@@ -1103,7 +1138,7 @@ impl DBEntity for FileZoneRecord {
                                         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                                     ",
                 )
-                .bind(self.zoneid)
+                .bind(zone_id)
                 .bind(self.name.clone())
                 .bind(self.ttl)
                 .bind(RecordType::from(self.rrtype.clone()))

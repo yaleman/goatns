@@ -6,11 +6,11 @@ use crate::web::utils::Urls;
 use crate::zones::FileZone;
 use askama::Template;
 use askama_web::WebTemplate;
+use axum::Router;
 use axum::extract::{OriginalUri, Path, Query, State};
 use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
-use axum::Router;
 use serde::Deserialize;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument, trace};
@@ -126,7 +126,7 @@ pub(crate) async fn zone_view(
                     axum::http::StatusCode::NOT_FOUND,
                     format!("Zone '{name_or_id}' not found"),
                 )
-                    .into_response())
+                    .into_response());
             }
         },
         Err(err) => {
@@ -142,7 +142,11 @@ pub(crate) async fn zone_view(
     })
 }
 
-pub async fn check_logged_in(session: &mut Session, path: Uri, state: GoatState) -> Result<User, Redirect> {
+pub async fn check_logged_in(
+    session: &mut Session,
+    path: Uri,
+    state: GoatState,
+) -> Result<User, Redirect> {
     let authref: Option<String> = session
         .get("authref")
         .await

@@ -57,7 +57,50 @@ pub(crate) async fn api_create(
     match record.save_with_txn(&mut txn).await {
         Err(err) => {
             eprintln!("Error saving record: {err:?}");
-            // TODO: this needs to handle index conflicts
+            
+            // Check if this is a duplicate record error or validation error
+            match &err {
+                crate::error::GoatNsError::Generic(msg) => {
+                    if msg.contains("Record with same zone, name, type, and class already exists") {
+                        return error_result_json!(
+                            "A record with the same name, type, and class already exists in this zone",
+                            StatusCode::CONFLICT
+                        );
+                    }
+                    if msg.contains("Record must have a valid zone ID") {
+                        return error_result_json!(
+                            "Record must have a valid zone ID",
+                            StatusCode::BAD_REQUEST
+                        );
+                    }
+                    if msg.contains("Record name cannot be empty") {
+                        return error_result_json!(
+                            "Record name cannot be empty",
+                            StatusCode::BAD_REQUEST
+                        );
+                    }
+                }
+                crate::error::GoatNsError::SqlxError(sqlx::Error::Database(db_err)) => {
+                    if let Some(constraint) = db_err.constraint() {
+                        if constraint == "ind_records" {
+                            return error_result_json!(
+                                "A record with the same name, type, and class already exists in this zone",
+                                StatusCode::CONFLICT
+                            );
+                        }
+                    }
+                    // Check for unique constraint error codes
+                    if db_err.code() == Some(std::borrow::Cow::Borrowed("2067")) || 
+                       db_err.code() == Some(std::borrow::Cow::Borrowed("1555")) {
+                        return error_result_json!(
+                            "A record with the same name, type, and class already exists in this zone",
+                            StatusCode::CONFLICT
+                        );
+                    }
+                }
+                _ => {}
+            }
+            
             error_result_json!("Error saving record", StatusCode::BAD_REQUEST)
         }
         Ok(val) => {

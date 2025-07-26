@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
+use axum::Form;
 use axum::extract::{OriginalUri, State};
 use axum::response::Redirect;
-use axum::Form;
 use goat_lib::validators::dns_name;
 use serde::Deserialize;
 use tower_sessions::Session;
@@ -12,9 +12,9 @@ use tracing::{debug, error, info};
 
 use crate::datastore::Command;
 use crate::db::User;
+use crate::web::GoatState;
 use crate::web::ui::check_logged_in;
 use crate::web::utils::Urls;
-use crate::web::GoatState;
 use crate::zones::FileZone;
 
 #[derive(Deserialize, Debug)]
@@ -133,8 +133,8 @@ pub(crate) async fn zones_new_post(
         Ok(zone) => {
             info!("Zone {} created successfully", form.name);
             if let Some(id) = zone.id {
-                debug!("Redirecting to /ui/zones/{}", id);
-                Ok(Redirect::to(&format!("/ui/zones/{id}")))
+                debug!("Redirecting to /ui/zones/{id}");
+                Ok(Redirect::to(&format!("/ui/zones/{id}",)))
             } else {
                 error!("Redirecting to /ui/zones because zone didn't have an ID?");
                 Err(Urls::ZonesList.redirect())
