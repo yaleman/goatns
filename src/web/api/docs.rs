@@ -27,6 +27,7 @@ use crate::RecordClass;
 #[allow(dead_code)]
 pub(crate) struct ApiDoc;
 
+#[allow(dead_code)]
 pub(crate) struct SecurityAddon;
 
 impl Modify for SecurityAddon {
