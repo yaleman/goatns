@@ -20,7 +20,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install protoc
         run: sudo apt-get install -y protobuf-compiler
       - name: Build Release

@@ -16,7 +16,7 @@ jobs:
     if: (github.actor != 'dependabot[bot]')
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: extractions/setup-just@v3
         with:
           just-version: 1.5.0  # optional semver specification, otherwise latest
