@@ -1,4 +1,4 @@
-FROM debian:latest AS builder
+FROM debian:12 AS builder
 
 ARG GITHUB_SHA="$(git rev-parse HEAD)"
 
@@ -24,7 +24,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN mv /root/.cargo/bin/* /usr/local/bin/
 # do the build bits
 ENV CC="/usr/bin/clang"
-RUN cargo build --release --bin goatns
+RUN cargo build --quiet --release --bin goatns
 RUN chmod +x /goatns/target/release/goatns
 
 FROM gcr.io/distroless/cc-debian12 AS goatns
