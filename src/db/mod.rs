@@ -265,20 +265,20 @@ impl ZoneOwnership {
     /// Delete all ownership records for a specific user and return the user
     pub async fn delete_for_user(userid: i64, pool: &SqlitePool) -> Result<User, GoatNsError> {
         let mut txn = pool.begin().await?;
-        
+
         // First get the user to return it
         let user = User::get_with_txn(&mut txn, &userid).await?;
-        
+
         // Delete all ownership records for this user
         sqlx::query("DELETE FROM ownership WHERE userid = ?")
             .bind(userid)
             .execute(&mut *txn)
             .await?;
-            
+
         txn.commit().await?;
         Ok(*user)
     }
-    
+
     /// Delete all ownership records for all users (utility method)
     pub async fn delete_all(pool: &SqlitePool) -> Result<u64, GoatNsError> {
         let result = sqlx::query("DELETE FROM ownership")
@@ -569,7 +569,7 @@ pub trait DBEntity: Send {
 
     /// save the entity to the database, but you're in a transaction
     async fn save_with_txn<'t>(&self, txn: &mut SqliteConnection)
-        -> Result<Box<Self>, GoatNsError>;
+    -> Result<Box<Self>, GoatNsError>;
     /// create from scratch
     async fn create_with_txn<'t>(
         &self,
@@ -602,9 +602,9 @@ impl DBEntity for FileZone {
         let mut tx = pool.begin().await?;
 
         debug!("Ensuring DB Zones table exists");
-        sqlx::query(
+        sqlx::query(&format!(
             r#"CREATE TABLE IF NOT EXISTS
-            zones (
+            {} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 rname TEXT NOT NULL,
@@ -614,7 +614,8 @@ impl DBEntity for FileZone {
                 expire INTEGER NOT NULL,
                 minimum INTEGER NOT NULL
             )"#,
-        )
+            Self::TABLE
+        ))
         .execute(&mut *tx)
         .await?;
 
@@ -915,9 +916,9 @@ impl DBEntity for FileZoneRecord {
 
         let mut tx = pool.begin().await?;
 
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS
-        records (
+        sqlx::query(&format!(
+            r#"CREATE TABLE IF NOT EXISTS
+        {} (
             id      INTEGER PRIMARY KEY AUTOINCREMENT ,
             zoneid  INTEGER NOT NULL,
             name    TEXT, /* this can be null for apex records */
@@ -926,8 +927,9 @@ impl DBEntity for FileZoneRecord {
             rclass  INTEGER NOT NULL,
             rdata   TEXT NOT NULL,
             FOREIGN KEY(zoneid) REFERENCES zones(id)
-        )",
-        )
+        )"#,
+            Self::TABLE
+        ))
         .execute(&mut *tx)
         .await?;
         debug!("Ensuring DB Records index exists");
@@ -991,12 +993,10 @@ impl DBEntity for FileZoneRecord {
         txn: &mut SqliteConnection,
         name: &str,
     ) -> Result<Vec<Box<Self>>, GoatNsError> {
-        let res = sqlx::query(&format!(
-            "select * from {SQL_VIEW_RECORDS} where name = ?"
-        ))
-        .bind(name)
-        .fetch_all(txn)
-        .await?;
+        let res = sqlx::query(&format!("select * from {SQL_VIEW_RECORDS} where name = ?"))
+            .bind(name)
+            .fetch_all(txn)
+            .await?;
         let res = res
             .into_iter()
             .filter_map(|r| match FileZoneRecord::try_from(r) {
@@ -1106,9 +1106,9 @@ impl DBEntity for FileZoneRecord {
                 // this is a duplicate attempt
                 if self.id.is_none() {
                     let existing_id: i64 = existing.get("id");
-                    return Err(GoatNsError::Generic(
-                        format!("Record with same zone, name, type, class, and rdata already exists (id: {existing_id})")
-                    ));
+                    return Err(GoatNsError::Generic(format!(
+                        "Record with same zone, name, type, class, and rdata already exists (id: {existing_id})"
+                    )));
                 }
 
                 #[cfg(test)]
@@ -1266,7 +1266,7 @@ impl DBEntity for ZoneOwnership {
              FROM ownership 
              JOIN zones ON ownership.zoneid = zones.id 
              WHERE zones.name = ? 
-             LIMIT 1"
+             LIMIT 1",
         )
         .bind(name)
         .fetch_optional(txn)
@@ -1276,7 +1276,7 @@ impl DBEntity for ZoneOwnership {
             Some(row) => {
                 let ownership = ZoneOwnership {
                     id: Some(row.get(0)),
-                    zoneid: row.get(1), 
+                    zoneid: row.get(1),
                     userid: row.get(2),
                 };
                 Ok(Some(Box::new(ownership)))
@@ -1292,7 +1292,7 @@ impl DBEntity for ZoneOwnership {
             "SELECT ownership.id, ownership.zoneid, ownership.userid 
              FROM ownership 
              JOIN zones ON ownership.zoneid = zones.id 
-             WHERE zones.name = ?"
+             WHERE zones.name = ?",
         )
         .bind(name)
         .fetch_all(txn)
@@ -1537,7 +1537,10 @@ impl DBEntity for User {
         &self,
         txn: &mut SqliteConnection,
     ) -> Result<Box<Self>, GoatNsError> {
-        let query = format!("UPDATE {} set displayname = ?, username = ?, email = ?, disabled = ?, authref = ?, admin = ? WHERE id = ?", Self::TABLE);
+        let query = format!(
+            "UPDATE {} set displayname = ?, username = ?, email = ?, disabled = ?, authref = ?, admin = ? WHERE id = ?",
+            Self::TABLE
+        );
         sqlx::query(&query)
             .bind(&self.displayname)
             .bind(&self.username)
@@ -1704,7 +1707,10 @@ impl DBEntity for UserAuthToken {
                     .await?;
                 }
                 if !found_tokenkey {
-                    info!("Adding the tokenkey column to the {} table, this will drop the contents of the API tokens table, because of the format change.", Self::TABLE);
+                    info!(
+                        "Adding the tokenkey column to the {} table, this will drop the contents of the API tokens table, because of the format change.",
+                        Self::TABLE
+                    );
 
                     match dialoguer::Confirm::new()
                         .with_prompt("Please confirm that you want to take this action")
