@@ -13,6 +13,7 @@ use tracing::{debug, trace};
 use crate::db::TokenSearchRow;
 
 /// URLs for the web interface
+#[derive(Copy, Clone)]
 pub(crate) enum Urls {
     /// Home page
     Home,
@@ -46,12 +47,12 @@ impl AsRef<str> for Urls {
 
 impl Urls {
     /// Get the URL for the given enum
-    pub fn redirect(&self) -> Redirect {
+    pub fn redirect(self) -> Redirect {
         Redirect::to(self.as_ref())
     }
 
     /// Redirect to a url with query params
-    pub fn redirect_with_query(&self, query: HashMap<impl ToString, impl ToString>) -> Redirect {
+    pub fn redirect_with_query(self, query: HashMap<impl ToString, impl ToString>) -> Redirect {
         if query.is_empty() {
             return self.redirect();
         }

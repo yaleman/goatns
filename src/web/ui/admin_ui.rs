@@ -1,6 +1,6 @@
 use crate::db::{DBEntity, User, ZoneOwnership};
-use crate::web::utils::Urls;
 use crate::web::GoatState;
+use crate::web::utils::Urls;
 use crate::zones::FileZone;
 use askama::Template;
 use askama_web::WebTemplate;
@@ -42,8 +42,16 @@ pub(crate) struct ZoneRecord {
 }
 
 #[instrument(level = "info", skip(state, session))]
-pub(crate) async fn dashboard(State(state): State<GoatState>, mut session: Session) -> Result<AdminUITemplate, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref()), state.clone()).await?;
+pub(crate) async fn dashboard(
+    State(state): State<GoatState>,
+    mut session: Session,
+) -> Result<AdminUITemplate, Redirect> {
+    let user = check_logged_in(
+        &mut session,
+        Uri::from_static(Urls::Home.as_ref()),
+        state.clone(),
+    )
+    .await?;
 
     Ok(AdminUITemplate {
         user_is_admin: user.admin,
@@ -54,7 +62,12 @@ pub(crate) async fn report_unowned_records(
     mut session: Session,
     State(state): State<GoatState>,
 ) -> Result<AdminReportUnownedRecords, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref()), state.clone()).await?;
+    let user = check_logged_in(
+        &mut session,
+        Uri::from_static(Urls::Home.as_ref()),
+        state.clone(),
+    )
+    .await?;
 
     let mut pool = state.read().await.connpool.acquire().await.map_err(|err| {
         error!("Failed to get DB connection: {err:?}");
@@ -109,19 +122,25 @@ pub(crate) struct AssignOwnershipTemplate {
     user: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub(crate) struct AssignOwnershipForm {
     // userid: Option<i64>,
     username: Option<String>,
 }
 
+#[instrument(level = "info", skip(session, state))]
 pub(crate) async fn assign_zone_ownership(
     mut session: Session,
     State(state): State<GoatState>,
     Path(id): Path<i64>,
     Form(form): Form<AssignOwnershipForm>,
 ) -> Result<AssignOwnershipTemplate, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref()), state.clone()).await?;
+    let user = check_logged_in(
+        &mut session,
+        Uri::from_static(Urls::Home.as_ref()),
+        state.clone(),
+    )
+    .await?;
 
     let mut txn = state.read().await.connpool.begin().await.map_err(|err| {
         error!("Failed to start transaction: {err:?}");
@@ -156,9 +175,20 @@ pub(crate) async fn assign_zone_ownership(
                 .await
                 .map_err(|err| {
                     error!("Failed to insert zone ownership: {err:?}");
-                    Redirect::to(Urls::Admin.as_ref())
+                    Urls::Admin.redirect_with_query(
+                        [("message", format!("Failed to assign ownership: {err:?}"))]
+                            .into_iter()
+                            .collect(),
+                    )
                 })?;
-                return Err(Redirect::to(Urls::Admin.as_ref()));
+                return Err(Urls::Admin.redirect_with_query(
+                    [(
+                        "message",
+                        format!("Ownership assigned to {}", user.displayname),
+                    )]
+                    .into_iter()
+                    .collect(),
+                ));
             }
         }
     }
