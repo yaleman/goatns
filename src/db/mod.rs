@@ -546,6 +546,25 @@ pub async fn export_zone_json(pool: &SqlitePool, id: i64) -> Result<String, Stri
 pub trait DBEntity: Send {
     const TABLE: &'static str;
 
+    fn columns() -> Vec<(&'static str, &'static str)> {
+        Vec::new()
+    }
+
+    fn column_names() -> Vec<String> {
+        Self::columns()
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect()
+    }
+
+    fn column_definitions() -> String {
+        Self::columns()
+            .iter()
+            .map(|(name, dtype)| format!("{} {}", name, dtype))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
     async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError>;
 
     /// Get the entity
@@ -1399,21 +1418,27 @@ impl From<SqliteRow> for ZoneOwnership {
 #[async_trait]
 impl DBEntity for User {
     const TABLE: &'static str = "users";
+    fn columns() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("id", "INTEGER PRIMARY KEY NOT NULL"),
+            ("displayname", "TEXT NOT NULL"),
+            ("username", "TEXT NOT NULL"),
+            ("email", "TEXT NOT NULL"),
+            ("disabled", "BOOL NOT NULL"),
+            ("authref", "TEXT"),
+            ("admin", "BOOL DEFAULT 0"),
+        ]
+    }
 
     async fn create_table(pool: &SqlitePool) -> Result<(), GoatNsError> {
         debug!("Ensuring DB Users table exists");
         sqlx::query(&format!(
             r#"CREATE TABLE IF NOT EXISTS
         {} (
-            id  INTEGER PRIMARY KEY NOT NULL,
-            displayname TEXT NOT NULL,
-            username TEXT NOT NULL,
-            email TEXT NOT NULL,
-            disabled BOOL NOT NULL,
-            authref TEXT,
-            admin BOOL DEFAULT 0
+        {}
         )"#,
-            Self::TABLE
+            Self::TABLE,
+            Self::column_definitions()
         ))
         .execute(&mut *pool.acquire().await?)
         .await?;
@@ -1433,7 +1458,8 @@ impl DBEntity for User {
         let mut conn = pool.acquire().await?;
 
         let res: User = sqlx::query(&format!(
-            "SELECT id, displayname, username, email, disabled from {} where id = ?",
+            "SELECT {} from {} where id = ?",
+            Self::column_names().join(", "),
             Self::TABLE
         ))
         .bind(id)
@@ -1447,7 +1473,8 @@ impl DBEntity for User {
         id: &i64,
     ) -> Result<Box<Self>, GoatNsError> {
         let res: User = sqlx::query(&format!(
-            "SELECT id, displayname, username, email, disabled, authref, admin from {} where id = ?",
+            "SELECT {} from {} where id = ?",
+            Self::column_names().join(", "),
             Self::TABLE
         ))
         .bind(id)
@@ -1461,7 +1488,8 @@ impl DBEntity for User {
         name: &str,
     ) -> Result<Option<Box<Self>>, GoatNsError> {
         let res = sqlx::query(&format!(
-            "SELECT id, displayname, username, email, disabled, authref, admin from {} where username = ?",
+            "SELECT {} from {} where username = ?",
+            Self::column_names().join(", "),
             Self::TABLE
         ))
         .bind(name)
