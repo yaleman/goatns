@@ -16,6 +16,7 @@ pub struct Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+#[allow(dead_code)] // because clippy and auto-generated code
 pub enum Relation {
     #[sea_orm(has_many = "super::ownership::Entity")]
     Ownership,

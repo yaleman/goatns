@@ -4,6 +4,7 @@ use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "zones")]
+#[allow(dead_code)] // because clippy and auto-generated code
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: u64,

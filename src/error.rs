@@ -51,8 +51,8 @@ impl From<reqwest::Error> for GoatNsError {
     }
 }
 
-impl From<Box<(dyn std::error::Error + Send + Sync + 'static)>> for GoatNsError {
-    fn from(error: Box<(dyn std::error::Error + Send + Sync + 'static)>) -> Self {
+impl From<Box<dyn std::error::Error + Send + Sync + 'static>> for GoatNsError {
+    fn from(error: Box<dyn std::error::Error + Send + Sync + 'static>) -> Self {
         GoatNsError::Generic(error.to_string())
     }
 }
