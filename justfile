@@ -70,15 +70,15 @@ codespell:
 
 # Ask the clip for the judgement
 clippy:
-	cargo clippy --all-features --all-targets
+	cargo clippy --all-features --all-targets --quiet
 
 test:
-	cargo test
+	cargo test --quiet
 
 # Things to do before a release
 release_prep: check doc semgrep
 	cargo deny check
-	cargo build --release
+	cargo build --release --quiet
 
 # Semgrep things
 semgrep:
@@ -132,7 +132,7 @@ trivy_repo:
 
 # Build release binaries
 build:
-	cargo build --release
+	cargo build --quiet --release
 
 # Vendor dependencies
 vendor:
