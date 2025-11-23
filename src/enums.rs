@@ -355,18 +355,13 @@ impl From<bool> for PacketType {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub enum ContactDetails {
     Mastodon { contact: String, server: String },
     Email { contact: String },
     Twitter { contact: String },
+    #[default]
     None,
-}
-
-impl Default for ContactDetails {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 impl std::fmt::Display for ContactDetails {
