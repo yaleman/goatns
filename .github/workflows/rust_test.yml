@@ -19,7 +19,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Generate certs
         run: ./insecure_generate_tls.sh
       - name: Install linux dependencies

@@ -259,8 +259,9 @@ impl ApiTokenLifetime {
 }
 
 /// WHere are they in their token-creation-lifecycle?
-#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Default)]
 pub enum ApiTokenCreatePageState {
+    #[default]
     Start,
     Generating,
     Finished,
@@ -275,12 +276,6 @@ impl Display for ApiTokenCreatePageState {
             ApiTokenCreatePageState::Finished => f.write_fmt(format_args!("Finished")),
             ApiTokenCreatePageState::Error => f.write_fmt(format_args!("Error")),
         }
-    }
-}
-
-impl Default for ApiTokenCreatePageState {
-    fn default() -> Self {
-        Self::Start
     }
 }
 
