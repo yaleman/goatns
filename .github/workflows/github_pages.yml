@@ -15,28 +15,17 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          clean: false
-      - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v2
-        with:
-          mdbook-version: 'latest'
       - name: Setup deno
         # Documentation: https://github.com/denoland/setup-deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
-
+          deno-version: v2.x
       - name: Install just
         uses: extractions/setup-just@v3
-
       - name: Install protoc
         run: sudo apt-get install -y protobuf-compiler
-
       - name: Test document formatting
         run: just book_format
-
       - name: Build all the books
         run: just build_book
   deploy_book:
