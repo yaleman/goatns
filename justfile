@@ -153,7 +153,10 @@ run_container:
 
 # Build the book and organize docs (alternative to simple book command)
 build_book: doc
-	mdbook build docs
+	docker run --rm \
+		--mount "type=bind,src=$(pwd)/docs,target=/book" \
+		--mount "type=bind,src=$(pwd)/README.md,target=/README.md" \
+		ghcr.io/peaceiris/mdbook:v0.5.0 build
 	mv ./docs/book/ ./target/docs/
 	mkdir -p ./target/docs/rustdoc/
 	mv ./target/doc/* ./target/docs/rustdoc/
