@@ -133,7 +133,7 @@ utoipa-axum = "0.2.0"
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 
 [workspace.dependencies]
-axum = "^0.8.7"
+axum = "^0.8.8"
 proc-macro2 = "1.0.103"
 regex = "1.12.2"
 syn = "2.0.111"
