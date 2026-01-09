@@ -134,9 +134,9 @@ utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 
 [workspace.dependencies]
 axum = "^0.8.8"
-proc-macro2 = "1.0.104"
+proc-macro2 = "1.0.105"
 regex = "1.12.2"
-syn = "2.0.112"
+syn = "2.0.114"
 
 [dev-dependencies]
 console-subscriber = "0.4.1"
