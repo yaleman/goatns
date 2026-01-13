@@ -74,7 +74,7 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     .expect("Failed to start API server");
 
     println!("Building server struct");
-    (
+    let res = (
         pool,
         crate::servers::Servers::build(agent_sender)
             .with_apiserver(apiserver)
@@ -82,7 +82,9 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
             .with_udpserver(udpserver)
             .with_tcpserver(tcpserver),
         config,
-    )
+    );
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    res
 }
 
 pub async fn insert_test_user(pool: &SqlitePool) -> Box<User> {
