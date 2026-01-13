@@ -64,7 +64,7 @@ mod tests {
         .await
         .expect("Failed to build API server");
 
-        println!("Building server struct");
+        println!("Building test run server struct");
         let _ = crate::servers::Servers::build(agent_sender)
             .with_datastore(datastore_manager)
             .with_udpserver(udpserver)

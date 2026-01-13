@@ -77,8 +77,8 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     (
         pool,
         crate::servers::Servers::build(agent_sender)
-            .with_datastore(datastore_manager)
             .with_apiserver(apiserver)
+            .with_datastore(datastore_manager)
             .with_udpserver(udpserver)
             .with_tcpserver(tcpserver),
         config,
