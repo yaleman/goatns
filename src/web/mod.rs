@@ -210,7 +210,7 @@ pub async fn build(
     let router = router.route("/status", get(generic::status));
 
     let router = match check_static_dir_exists(&config.static_path(), &config) {
-        true => router.nest_service("/static", ServeDir::new(&config.static_path())),
+        true => router.nest_service("/static", ServeDir::new(config.static_path())),
         false => {
             warn!(
                 static_path = %config.static_path().display(),

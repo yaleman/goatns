@@ -157,7 +157,7 @@ impl ConfigFile {
             "tls config: cert={:?} key={:?}",
             self.api_tls_cert, self.api_tls_key
         );
-        RustlsConfig::from_pem_file(self.api_tls_cert.clone(), self.api_tls_key.clone())
+        RustlsConfig::from_pem_file(&self.api_tls_cert, &self.api_tls_key)
             .await
             .map_err(|e| format!("Failed to load TLS config: {e:?}"))
     }
