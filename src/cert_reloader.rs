@@ -57,6 +57,8 @@ pub async fn cert_reloader(
                 current_api_tls_cert_hash = api_tls_cert_hash;
                 current_api_tls_key_hash = api_tls_key_hash;
             }
+        } else {
+            debug!("No TLS certificate updates detected.");
         }
     }
 }
