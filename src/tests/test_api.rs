@@ -62,9 +62,16 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     ));
 
     println!("Starting API Server on port {port}");
-    let apiserver = crate::web::build(datastore_tx.clone(), config.read().await, pool.clone())
-        .await
-        .expect("Failed to start API server");
+    let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
+
+    let apiserver = crate::web::build(
+        datastore_tx.clone(),
+        apiserver_rx,
+        config.read().await,
+        pool.clone(),
+    )
+    .await
+    .expect("Failed to start API server");
 
     println!("Building server struct");
     (

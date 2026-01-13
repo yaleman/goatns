@@ -29,6 +29,7 @@ use std::str::from_utf8;
 use tracing::instrument;
 use tracing::trace;
 
+pub mod cert_reloader;
 pub mod cli;
 /// Configuration handling for the server
 pub mod config;
@@ -245,7 +246,9 @@ pub fn get_question_qname(input_val: &[u8]) -> Result<Vec<u8>, String> {
             // we got to the end
             break;
         } else if label_len > 63 {
-            return Err(format!("Label length provided was {label_len}, needs to be <=63 while parsing {input_val:?}"));
+            return Err(format!(
+                "Label length provided was {label_len}, needs to be <=63 while parsing {input_val:?}"
+            ));
         }
         if buf.len() < label_len + 1 {
             return Err(format!(

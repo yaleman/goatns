@@ -100,6 +100,9 @@ pub struct ConfigFile {
     // pub disable_oauth2: bool,
     /// If you want to export traces to an OTLP endpoint, set this to the endpoint
     pub otel_endpoint: Option<String>,
+
+    /// Interval in seconds to check for certificate changes and reload them, if None defaults to 300 seconds
+    pub cert_reload_interval_seconds: Option<u64>,
 }
 
 fn generate_cookie_secret() -> String {
@@ -321,6 +324,7 @@ impl Default for ConfigFile {
             // #[cfg(any(test, debug_assertions))]
             // disable_oauth2: false,
             otel_endpoint: None,
+            cert_reload_interval_seconds: Some(300),
         }
     }
 }
@@ -464,6 +468,9 @@ impl From<Config> for ConfigFile {
             //     .get("disable_oauth2")
             //     .unwrap_or(Self::default().disable_oauth2),
             otel_endpoint,
+            cert_reload_interval_seconds: config
+                .get("cert_reload_interval_seconds")
+                .unwrap_or(Self::default().cert_reload_interval_seconds),
         }
     }
 }
