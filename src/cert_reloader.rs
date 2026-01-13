@@ -1,19 +1,18 @@
 use std::path::PathBuf;
 
 use concread::cowcell::asynch::CowCellReadTxn;
+use sha2::{Digest, Sha256};
+use tokio::fs::File;
+use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::Sender;
 use tracing::error;
 
 use crate::{config::ConfigFile, error::GoatNsError, web::ServerCommand};
 
 async fn hash_file(path: &PathBuf) -> Result<Vec<u8>, GoatNsError> {
-    use sha2::{Digest, Sha256};
-    use tokio::fs::File;
-    use tokio::io::AsyncReadExt;
-
     let mut file = File::open(&path).await?;
     let mut hasher = Sha256::new();
-    let mut buffer = [0u8; 1024];
+    let mut buffer = [0u8; 4096];
 
     loop {
         let n = file.read(&mut buffer).await?;
