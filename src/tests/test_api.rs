@@ -62,20 +62,29 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
     ));
 
     println!("Starting API Server on port {port}");
-    let apiserver = crate::web::build(datastore_tx.clone(), config.read().await, pool.clone())
-        .await
-        .expect("Failed to start API server");
+    let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
+
+    let apiserver = crate::web::build(
+        datastore_tx.clone(),
+        apiserver_rx,
+        config.read().await,
+        pool.clone(),
+    )
+    .await
+    .expect("Failed to start API server");
 
     println!("Building server struct");
-    (
+    let res = (
         pool,
         crate::servers::Servers::build(agent_sender)
-            .with_datastore(datastore_manager)
             .with_apiserver(apiserver)
+            .with_datastore(datastore_manager)
             .with_udpserver(udpserver)
             .with_tcpserver(tcpserver),
         config,
-    )
+    );
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    res
 }
 
 pub async fn insert_test_user(pool: &SqlitePool) -> Box<User> {

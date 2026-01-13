@@ -3,8 +3,8 @@ mod tests {
 
     use std::env;
     use std::net::*;
-    use trust_dns_resolver::config::*;
     use trust_dns_resolver::AsyncResolver;
+    use trust_dns_resolver::config::*;
 
     use crate::servers::udp_server;
     use crate::tests::utils::wait_for_server;
@@ -54,12 +54,17 @@ mod tests {
         ));
 
         println!("Starting API Server");
-        let apiserver =
-            crate::web::build(datastore_tx.clone(), config.read().await, connpool.clone())
-                .await
-                .expect("Failed to build API server");
+        let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
+        let apiserver = crate::web::build(
+            datastore_tx.clone(),
+            apiserver_rx,
+            config.read().await,
+            connpool.clone(),
+        )
+        .await
+        .expect("Failed to build API server");
 
-        println!("Building server struct");
+        println!("Building test run server struct");
         let _ = crate::servers::Servers::build(agent_sender)
             .with_datastore(datastore_manager)
             .with_udpserver(udpserver)

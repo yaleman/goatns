@@ -12,15 +12,16 @@ use crate::error::GoatNsError;
 // TODO: return the API docs use crate::web::api::docs::ApiDoc;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
+use axum::Router;
 use axum::extract::FromRef;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
-use axum::Router;
 use axum_csp::CspUrlMatcher;
 #[cfg(not(test))]
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use chrono::{DateTime, NaiveDateTime, TimeDelta, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
+
 use oauth2::{ClientId, ClientSecret};
 use openidconnect::Nonce;
 use regex::RegexSet;
@@ -29,13 +30,13 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, mpsc::Receiver};
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
-use tracing::{debug, error, info, trace};
-use utils::{handler_404, Urls};
+use tracing::{debug, error, info, trace, warn};
+use utils::{Urls, handler_404};
 
 use self::auth::CustomProviderMetadata;
 
@@ -156,15 +157,11 @@ fn check_static_dir_exists(static_dir: &PathBuf, config: &ConfigFile) -> bool {
     false
 }
 
-pub async fn build(
+async fn build_router(
     tx: Sender<datastore::Command>,
     config: CowCellReadTxn<ConfigFile>,
     connpool: SqlitePool,
-) -> Result<JoinHandle<Result<(), std::io::Error>>, GoatNsError> {
-    let static_dir: PathBuf = shellexpand::tilde(&config.api_static_dir)
-        .to_string()
-        .into();
-
+) -> Result<Router, GoatNsError> {
     let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await?;
 
     let csp_matchers = vec![CspUrlMatcher::default_self(
@@ -174,9 +171,11 @@ pub async fn build(
     )];
 
     // we set this to an hour ago so it forces update on startup
-    #[allow(clippy::expect_used)]
-    let oidc_config_updated = Utc::now() - TimeDelta::try_hours(1).expect("how did this fail?");
-    // let config_clone: ConfigFile = ConfigFile::from(&config);
+    let oidc_config_updated = Utc::now()
+        - TimeDelta::try_hours(1).ok_or(GoatNsError::StartupError(
+            "Failed to create TimeDelta for OIDC config update".to_string(),
+        ))?;
+
     let state = Arc::new(RwLock::new(GoatChildState {
         tx,
         connpool,
@@ -213,26 +212,70 @@ pub async fn build(
 
     let router = router.route("/status", get(generic::status));
 
-    let router = match check_static_dir_exists(&static_dir, &config) {
-        true => router.nest_service("/static", ServeDir::new(&static_dir)),
-        false => router,
+    let router = match check_static_dir_exists(&config.static_path(), &config) {
+        true => router.nest_service("/static", ServeDir::new(config.static_path())),
+        false => {
+            warn!(
+                static_path = %config.static_path().display(),
+                "Static path doesn't exist, disabling static file serving."
+            );
+            router
+        }
     };
-    let router = router.layer(CompressionLayer::new()).fallback(handler_404);
+    Ok(router.layer(CompressionLayer::new()).fallback(handler_404))
+}
 
-    let tls_config = config
-        .get_tls_config()
-        .await
-        .map_err(GoatNsError::StartupError)?;
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum ServerCommand {
+    ReloadTls,
+    ShutDown,
+}
 
-    let res: JoinHandle<Result<(), std::io::Error>> = tokio::spawn(
-        axum_server::bind_rustls(config.api_listener_address()?, tls_config)
-            .serve(router.into_make_service()),
-    );
+pub async fn build(
+    tx: Sender<datastore::Command>,
+    rx: Receiver<ServerCommand>,
+    config: CowCellReadTxn<ConfigFile>,
+    connpool: SqlitePool,
+) -> Result<JoinHandle<Result<(), std::io::Error>>, GoatNsError> {
+    let router = build_router(tx, config.clone(), connpool).await?;
+    let listener_address = config.api_listener_address()?;
+    let hostname = config.hostname.clone();
+    let api_port = config.api_port;
+    let mut rx = rx;
+
+    let loop_config = config.clone();
+    let res: JoinHandle<Result<(), std::io::Error>> = tokio::spawn(async move {
+        loop {
+            let tls_config = loop_config
+                .get_tls_config()
+                .await
+                .map_err(GoatNsError::StartupError)?;
+            tokio::select! {
+                Some(action) = rx.recv() => {
+                    match action {
+                        ServerCommand::ReloadTls => {
+                            info!("Reloading TLS configuration.");
+                            continue;
+                        }
+                        ServerCommand::ShutDown => {
+                            info!("Shutting down web server.");
+                            return Ok(());
+                        }
+                    }
+                }
+                res = axum_server::bind_rustls(loop_config.api_listener_address()?, tls_config)
+                    .serve(router.clone().into_make_service()) => {
+                        if let Err(err) = res {
+                            error!("Web server error: {}", err);
+                            return Err(err);
+                        }
+                    }
+            }
+        }
+    });
     let startup_message = format!(
         "Started Web server on https://{} / https://{}:{}",
-        config.api_listener_address()?,
-        config.hostname,
-        config.api_port
+        listener_address, hostname, api_port
     );
 
     #[cfg(test)]

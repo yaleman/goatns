@@ -1,5 +1,5 @@
 use clap::Parser;
-use goatns::cli::{add_admin_user, default_config, export_zone_file, import_zones, Cli, Commands};
+use goatns::cli::{Cli, Commands, add_admin_user, default_config, export_zone_file, import_zones};
 use goatns::enums::SystemState;
 use goatns::error::GoatNsError;
 use goatns::utils::start_channels;
@@ -8,7 +8,7 @@ use std::io;
 use std::time::Duration;
 use tracing::{debug, error, info};
 
-use goatns::config::{setup_logging, ConfigFile};
+use goatns::config::{ConfigFile, setup_logging};
 use goatns::datastore;
 use goatns::db;
 use goatns::servers;
@@ -145,12 +145,20 @@ async fn run() -> Result<(), GoatNsError> {
             agent_tx.clone(),
         ));
 
+        let (apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
+
         let apiserver = goatns::web::build(
             datastore_sender.clone(),
+            apiserver_rx,
             config.read().await,
             connpool.clone(),
         )
         .await?;
+
+        let _cert_reloader = tokio::spawn(goatns::cert_reloader::cert_reloader(
+            config.read().await,
+            apiserver_tx.clone(),
+        ));
 
         let servers = servers::Servers::build(agent_tx)
             .with_datastore(datastore_manager)
