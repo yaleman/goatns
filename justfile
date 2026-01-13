@@ -157,7 +157,9 @@ build_book: doc
 		--mount "type=bind,src=$(pwd)/docs,target=/book" \
 		--mount "type=bind,src=$(pwd)/README.md,target=/README.md" \
 		ghcr.io/peaceiris/mdbook:v0.5.0 build
-	mkdir ./target/
+	mkdir -p ./target/
+	sudo chown -R $(whoami) ./target/
+	sudo chown -R $(whoami) ./docs/
 	mv ./docs/book/ ./target/docs/
 	mkdir -p ./target/docs/rustdoc/
 	mv ./target/doc/* ./target/docs/rustdoc/
