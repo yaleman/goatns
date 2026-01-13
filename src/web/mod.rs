@@ -12,10 +12,10 @@ use crate::error::GoatNsError;
 // TODO: return the API docs use crate::web::api::docs::ApiDoc;
 use crate::web::middleware::csp;
 use async_trait::async_trait;
+use axum::Router;
 use axum::extract::FromRef;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
-use axum::Router;
 use axum_csp::CspUrlMatcher;
 #[cfg(not(test))]
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
@@ -28,14 +28,14 @@ use sqlx::{Pool, Sqlite, SqlitePool};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::Sender;
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
-use tracing::{debug, error, info, trace};
-use utils::{handler_404, Urls};
+use tracing::{debug, error, info, trace, warn};
+use utils::{Urls, handler_404};
 
 use self::auth::CustomProviderMetadata;
 
@@ -161,10 +161,6 @@ pub async fn build(
     config: CowCellReadTxn<ConfigFile>,
     connpool: SqlitePool,
 ) -> Result<JoinHandle<Result<(), std::io::Error>>, GoatNsError> {
-    let static_dir: PathBuf = shellexpand::tilde(&config.api_static_dir)
-        .to_string()
-        .into();
-
     let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await?;
 
     let csp_matchers = vec![CspUrlMatcher::default_self(
@@ -213,9 +209,15 @@ pub async fn build(
 
     let router = router.route("/status", get(generic::status));
 
-    let router = match check_static_dir_exists(&static_dir, &config) {
-        true => router.nest_service("/static", ServeDir::new(&static_dir)),
-        false => router,
+    let router = match check_static_dir_exists(&config.static_path(), &config) {
+        true => router.nest_service("/static", ServeDir::new(&config.static_path())),
+        false => {
+            warn!(
+                static_path = %config.static_path().display(),
+                "Static path doesn't exist, disabling static file serving."
+            );
+            router
+        }
     };
     let router = router.layer(CompressionLayer::new()).fallback(handler_404);
 

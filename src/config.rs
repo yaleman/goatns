@@ -4,13 +4,13 @@ use config::{Config, File};
 use flexi_logger::filter::{LogLineFilter, LogLineWriter};
 use flexi_logger::{DeferredNow, LoggerHandle};
 use gethostname::gethostname;
+use ipnet::IpNet;
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
-use ipnet::IpNet;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{error, trace};
@@ -125,9 +125,9 @@ impl ConfigFile {
     /// get a string version of the listener address
     pub fn api_listener_address(&self) -> Result<SocketAddr, GoatNsError> {
         Ok(SocketAddr::new(
-            self.address.parse().map_err(|err| {
-                GoatNsError::StartupError(format!("Failed to parse IP {err:?}"))
-            })?,
+            self.address
+                .parse()
+                .map_err(|err| GoatNsError::StartupError(format!("Failed to parse IP {err:?}")))?,
             self.api_port,
         ))
     }
@@ -147,12 +147,15 @@ impl ConfigFile {
         .expect("Failed to generate a status URL!")
     }
 
+    pub fn static_path(&self) -> PathBuf {
+        shellexpand::tilde(&self.api_static_dir).to_string().into()
+    }
+
     /// Get the TLS config for the API server
     pub async fn get_tls_config(&self) -> Result<RustlsConfig, String> {
         trace!(
             "tls config: cert={:?} key={:?}",
-            self.api_tls_cert,
-            self.api_tls_key
+            self.api_tls_cert, self.api_tls_key
         );
         RustlsConfig::from_pem_file(self.api_tls_cert.clone(), self.api_tls_key.clone())
             .await
