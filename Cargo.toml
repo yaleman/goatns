@@ -1,6 +1,6 @@
 [package]
 name = "goatns"
-version = "0.6.0"
+version = "0.6.1"
 categories = ["network-programming"]
 edition = "2024"
 include = [
