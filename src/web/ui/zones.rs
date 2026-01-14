@@ -6,11 +6,13 @@ use axum::Form;
 use axum::extract::{OriginalUri, State};
 use axum::response::Redirect;
 use goat_lib::validators::dns_name;
+use sea_orm::ActiveValue::NotSet;
 use serde::Deserialize;
 use tower_sessions::Session;
 use tracing::{debug, error, info};
 
 use crate::datastore::Command;
+use crate::db::entities;
 use crate::web::GoatState;
 use crate::web::ui::check_logged_in;
 use crate::web::utils::Urls;
@@ -90,16 +92,15 @@ pub(crate) async fn zones_new_post(
         )])));
     }
 
-    let zone = FileZone {
-        id: None,
-        name: form.name.clone(),
-        records: vec![],
-        rname: user.email.replace("@", "."),
-        serial: 0,
-        refresh: Default::default(),
-        retry: Default::default(),
-        expire: Default::default(),
-        minimum: Default::default(),
+    let zone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set(form.name.clone()),
+        rname: Set(user.email.replace("@", ".")),
+        serial: Set(0),
+        refresh: NotSet,
+        retry: NotSet,
+        expire: NotSet,
+        minimum: NotSet,
     };
 
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();

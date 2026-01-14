@@ -1,6 +1,7 @@
 use super::*;
 use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::Set;
+use sea_orm::IntoActiveModel;
 use sea_orm::ModelTrait;
 
 use sea_orm::TransactionTrait;
@@ -152,61 +153,65 @@ pub(crate) async fn api_create(
     Ok(Json(zone.into()))
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone)]
+struct ZoneUpdate {
+    pub id: Uuid,
+    pub rname: Option<String>,
+    pub serial: Option<u32>,
+    pub refresh: Option<u32>,
+    pub retry: Option<u32>,
+    pub expire: Option<u32>,
+    pub minimum: Option<u32>,
+}
+
 pub(crate) async fn api_zone_update(
     State(state): State<GoatState>,
     session: Session,
-    Json(zone): Json<ApiZoneResponse>,
+    Json(zone_form): Json<ZoneUpdate>,
 ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
 
-    let zone_id = match zone.id {
-        Some(val) => val,
-        None => {
-            return error_result_json!("No zone ID specified", StatusCode::BAD_REQUEST);
-        }
-    };
-    if !check_valid_tld(&zone.name, &state.read().await.config.allowed_tlds) {
-        return error_result_json!("Invalid TLD for this system", StatusCode::BAD_REQUEST);
-    }
-
-    // get a db transaction
-    let connpool = state.connpool().await.clone();
-    // TODO getting a transaction might fail
-    let mut txn = match connpool.begin().await {
-        Ok(val) => val,
-        Err(err) => {
-            error!("failed to get connection to the database: {err:?}");
-            return error_result_json!(
+    let mut txn = state.get_db_txn().await.map_err(|err| {
+        error!("failed to get connection to the database: {err:?}");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json::from(ErrorResult::from(
                 "Failed to get a connection to the database!",
-                StatusCode::INTERNAL_SERVER_ERROR
-            );
-        }
-    };
+            )),
+        )
+    })?;
 
-    let user_id = match user.id {
-        Some(val) => val,
-        None => {
-            error!("User id not found in session, something went wrong");
-            return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
-        }
+    let Some(user_id) = user.id else {
+        error!("User id not found in session, something went wrong");
+        return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
     };
 
     // check the user owns the zone
-    if let Err(err) = entities::ownership::Entity::find()
+    let Some((_ownership, Some(zone))) = entities::ownership::Entity::find()
         .filter(
             entities::ownership::Column::Userid
                 .eq(user_id)
-                .and(entities::ownership::Column::Zoneid.eq(zone_id)),
+                .and(entities::ownership::Column::Zoneid.eq(zone.id)),
         )
+        .find_also_related(entities::zones::Entity)
         .one(&mut txn)
         .await
-    {
-        // TODO: make this a better log
-        println!("Failed to validate user owns zone: {err:?}");
+        .map_err(|err| {
+            // TODO: make this a better log
+            println!("Failed to validate user owns zone: {err:?}");
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(ErrorResult {
+                    message: "".to_string(),
+                }),
+            )
+        })?
+    else {
+        error!("User {} does not own zone {}", user_id, zone.id);
         return Err((
             StatusCode::UNAUTHORIZED,
             Json(ErrorResult {
-                message: "".to_string(),
+                message: "You do not own this zone".to_string(),
             }),
         ));
     };
@@ -214,27 +219,55 @@ pub(crate) async fn api_zone_update(
 
     // save the zone data
 
-    if let Err(err) = zone.save_with_txn(&mut txn).await {
-        // TODO: make this a better log
-        println!("Failed to save zone: {err:?}");
-        return Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResult {
-                message: "failed to save zone".to_string(),
-            }),
-        ));
-    };
-    if let Err(err) = txn.commit().await {
-        // TODO: make this a better log
-        println!("Failed to commit transaction while saving zone: {err:?}");
-        return Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResult {
-                message: "failed to save zone".to_string(),
-            }),
-        ));
-    };
-    Ok(Json("success".to_string()))
+    let mut zone = zone.into_active_model();
+
+    if let Some(rname) = zone_form.rname {
+        zone.rname.set_if_not_equals(rname);
+    }
+    if let Some(serial) = zone_form.serial {
+        zone.serial.set_if_not_equals(serial);
+    }
+    if let Some(refresh) = zone_form.refresh {
+        zone.refresh.set_if_not_equals(refresh);
+    }
+    if let Some(retry) = zone_form.retry {
+        zone.retry.set_if_not_equals(retry);
+    }
+    if let Some(expire) = zone_form.expire {
+        zone.expire.set_if_not_equals(expire);
+    }
+    if let Some(minimum) = zone_form.minimum {
+        zone.minimum.set_if_not_equals(minimum);
+    }
+
+    if zone.is_changed() {
+        println!("Zone has changes, updating...");
+        if let Err(err) = zone.save(&mut txn).await {
+            // TODO: make this a better log
+            error!("Failed to save zone: {err:?}");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResult {
+                    message: "failed to save zone".to_string(),
+                }),
+            ));
+        };
+        if let Err(err) = txn.commit().await {
+            // TODO: make this a better log
+            error!("Failed to commit transaction while saving zone: {err:?}");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResult {
+                    message: "failed to save zone".to_string(),
+                }),
+            ))
+        } else {
+            Ok(Json("success".to_string()))
+        }
+    } else {
+        debug!("Zone has no changes, skipping update...");
+        Ok(Json("success".to_string()))
+    }
 }
 
 pub(crate) async fn api_zone_delete(
