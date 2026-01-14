@@ -47,6 +47,7 @@ use self::auth::CustomProviderMetadata;
 pub(crate) use askama::Template;
 pub(crate) use askama_web::WebTemplate;
 
+pub mod constants;
 #[macro_use]
 pub mod macros;
 
@@ -66,7 +67,7 @@ pub const STATUS_OK: &str = "Ok";
 
 #[async_trait]
 pub trait GoatStateTrait {
-    async fn connpool(&self) -> Arc<DatabaseConnection>;
+    async fn connpool(&self) -> DatabaseConnection;
     async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata);
     async fn pop_verifier<'life0>(&'life0 mut self, csrftoken: String) -> Option<(String, Nonce)>;
     async fn oauth2_client_id(&self) -> ClientId;
@@ -78,7 +79,7 @@ pub trait GoatStateTrait {
 #[async_trait]
 impl GoatStateTrait for GoatState {
     /// Get an sqlite connection pool
-    async fn connpool(&self) -> Arc<DatabaseConnection> {
+    async fn connpool(&self) -> DatabaseConnection {
         self.read().await.db.clone()
     }
     async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata) {
@@ -174,7 +175,7 @@ async fn build_router(
     config: CowCellReadTxn<ConfigFile>,
     connpool: DatabaseConnection,
 ) -> Result<Router, GoatNsError> {
-    let session_layer = auth::build_auth_stores(config.clone(), connpool).await?;
+    let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await?;
 
     let csp_matchers = vec![CspUrlMatcher::default_self(
         RegexSet::new([r"^(/|/ui)"]).map_err(|err| {

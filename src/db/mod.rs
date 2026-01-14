@@ -10,10 +10,26 @@ use tokio::time;
 use tracing::*;
 
 pub(crate) mod entities;
+pub mod migrations;
 #[cfg(test)]
 pub mod test;
 
-const SQL_VIEW_RECORDS: &str = "records_merged";
+// const SQL_VIEW_RECORDS: &str = "records_merged";
+
+async fn get_conn_inner(
+    db_url: &str,
+    log_sql_statements: bool,
+) -> Result<DatabaseConnection, GoatNsError> {
+    debug!("Opening Database: {db_url}");
+    let mut opt = ConnectOptions::new(db_url);
+
+    opt.connect_timeout(Duration::from_secs(3))
+        .acquire_timeout(Duration::from_secs(5))
+        .idle_timeout(Duration::from_secs(1))
+        .max_lifetime(Duration::from_secs(30))
+        .sqlx_logging(log_sql_statements);
+    Database::connect(opt).await.map_err(GoatNsError::from)
+}
 
 /// Setup the database connection and pool
 pub async fn get_conn(
@@ -22,22 +38,33 @@ pub async fn get_conn(
     let db_path: &str = &shellexpand::full(&config_reader.sqlite_path)
         .map_err(|err| GoatNsError::StartupError(err.to_string()))?;
     let db_url = format!("sqlite://{db_path}?mode=rwc");
-    debug!("Opening Database: {db_url}");
-    let mut opt = ConnectOptions::new(db_url);
-
-    opt.connect_timeout(Duration::from_secs(3))
-        .acquire_timeout(Duration::from_secs(5))
-        .idle_timeout(Duration::from_secs(1))
-        .max_lifetime(Duration::from_secs(30))
-        .sqlx_logging(config_reader.sql_log_statements);
-    Database::connect(opt).await.map_err(GoatNsError::from)
+    get_conn_inner(&db_url, config_reader.sql_log_statements).await
 }
 
 /// Do the basic setup and checks (if we write any)
-pub async fn start_db(_pool: &DatabaseConnection) -> Result<(), GoatNsError> {
-    // TODO: migrations
+#[cfg(not(test))] // so we don't use it for tests, we should be using test_get_sqlite_memory
+pub async fn start_db(pool: &DatabaseConnection) -> Result<(), GoatNsError> {
+    use sea_orm_migration::MigratorTrait;
+    // Run ALL the migrations
+    crate::db::migrations::Migrator::up(pool, None).await?;
     info!("Completed DB Startup!");
     Ok(())
+}
+
+#[cfg(test)]
+/// Get a sqlite pool with a memory-only database
+pub async fn test_get_sqlite_memory() -> DatabaseConnection {
+    let db = get_conn_inner("sqlite::memory:", false)
+        .await
+        .expect("Failed to connect to sqlite memory");
+    use crate::db::migrations::Migrator;
+    use sea_orm_migration::prelude::*;
+
+    // Apply all pending migrations
+    Migrator::up(&db, None)
+        .await
+        .expect("failed to run migrations");
+    db
 }
 
 // #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -143,7 +170,7 @@ pub async fn start_db(_pool: &DatabaseConnection) -> Result<(), GoatNsError> {
 //         pool: &mut DatabaseConnection,
 //         tokenkey: &str,
 //     ) -> Result<TokenSearchRow, GoatNsError> {
-//         let mut txn = pool.begin().await?;
+//         let txn = pool.begin().await?;
 //         let res: TokenSearchRow = sqlx::query_as(
 //             "SELECT users.id as userid, users.displayname,  users.username, users.authref, users.email, users.disabled, users.authref, users.admin, tokenhash, tokenkey
 //             FROM user_tokens, users
@@ -202,17 +229,17 @@ pub struct TokenSearchRow {
 //         userid: u64,
 //         pool: &DatabaseConnection,
 //     ) -> Result<entities::users::Model, GoatNsError> {
-//         let mut txn = pool.begin().await?;
+//         let txn = pool.begin().await?;
 
 //         // First get the user to return it
 //         let user = entities::users::Entity::find_by_id(userid)
-//             .one(&mut txn)
+//             .one(&txn)
 //             .await?
 //             .ok_or(GoatNsError::NotFound)?;
 
 //         let res = entities::ownership::Entity::delete_many()
 //             .filter(entities::ownership::Column::Userid.eq(userid))
-//             .exec(&mut txn)
+//             .exec(&txn)
 //             .await?;
 
 //         txn.commit().await?;
@@ -592,8 +619,8 @@ pub struct TokenSearchRow {
 
 // //     /// Get by id
 // //     async fn get(pool: &DatabaseConnection, id: i64) -> Result<Box<Self>, GoatNsError> {
-// //         let mut txn = pool.begin().await?;
-// //         Self::get_with_txn(&mut txn, &id).await
+// //         let txn = pool.begin().await?;
+// //         Self::get_with_txn(&txn, &id).await
 // //     }
 
 // //     async fn get_with_txn<'t>(
@@ -662,8 +689,8 @@ pub struct TokenSearchRow {
 
 // //     /// save the entity to the database
 // //     async fn save(&self, pool: &DatabaseConnection) -> Result<Box<Self>, GoatNsError> {
-// //         let mut txn = pool.begin().await?;
-// //         let res = self.save_with_txn(&mut txn).await?;
+// //         let txn = pool.begin().await?;
+// //         let res = self.save_with_txn(&txn).await?;
 // //         txn.commit().await?;
 // //         // TODO: this needs to include the id
 // //         Ok(res)
@@ -815,8 +842,8 @@ pub struct TokenSearchRow {
 // //     }
 // //     /// delete the entity from the database
 // //     async fn delete(&self, pool: &DatabaseConnection) -> Result<(), GoatNsError> {
-// //         let mut txn = pool.begin().await?;
-// //         self.delete_with_txn(&mut txn).await?;
+// //         let txn = pool.begin().await?;
+// //         self.delete_with_txn(&txn).await?;
 // //         txn.commit().await?;
 // //         Ok(())
 // //     }
@@ -976,8 +1003,8 @@ pub struct TokenSearchRow {
 // //     async fn save(&self, pool: &DatabaseConnection) -> Result<Box<Self>, GoatNsError> {
 // //         #[cfg(test)]
 // //         eprintln!("Starting save");
-// //         let mut txn = pool.begin().await?;
-// //         let res = &self.save_with_txn(&mut txn).await?;
+// //         let txn = pool.begin().await?;
+// //         let res = &self.save_with_txn(&txn).await?;
 // //         match txn.commit().await {
 // //             Err(err) => {
 // //                 eprintln!("Failed to commit transaction: {err:?}");
@@ -1128,8 +1155,8 @@ pub struct TokenSearchRow {
 // //         Err(sqlx::Error::RowNotFound.into())
 // //     }
 // //     async fn delete(&self, pool: &DatabaseConnection) -> Result<(), GoatNsError> {
-// //         let mut txn = pool.begin().await?;
-// //         self.delete_with_txn(&mut txn).await
+// //         let txn = pool.begin().await?;
+// //         self.delete_with_txn(&txn).await
 // //     }
 
 // //     async fn delete_with_txn(&self, txn: &mut SqliteConnection) -> Result<(), GoatNsError> {
@@ -1281,7 +1308,7 @@ pub struct TokenSearchRow {
 
 // //     /// save the entity to the database
 // //     async fn save(&self, pool: &DatabaseConnection) -> Result<Box<Self>, GoatNsError> {
-// //         let mut txn = pool.begin().await?;
+// //         let txn = pool.begin().await?;
 // //         let res = self.save_with_txn(&txn).await?;
 // //         txn.commit().await?;
 // //         Ok(res)
@@ -1463,8 +1490,8 @@ pub struct TokenSearchRow {
 
 // //     /// save the entity to the database
 // //     async fn save(&self, pool: &DatabaseConnection) -> Result<Box<Self>, GoatNsError> {
-// //         let mut txn = pool.begin().await?;
-// //         let res = self.save_with_txn(&mut txn).await?;
+// //         let txn = pool.begin().await?;
+// //         let res = self.save_with_txn(&txn).await?;
 // //         txn.commit().await?;
 // //         Ok(res)
 // //     }
@@ -1526,8 +1553,8 @@ pub struct TokenSearchRow {
 
 // //     /// delete the entity from the database
 // //     async fn delete(&self, pool: &DatabaseConnection) -> Result<(), GoatNsError> {
-// //         let mut txn = pool.begin().await?;
-// //         self.delete_with_txn(&mut txn).await?;
+// //         let txn = pool.begin().await?;
+// //         self.delete_with_txn(&txn).await?;
 // //         txn.commit().await?;
 // //         Ok(())
 // //     }
@@ -1799,8 +1826,8 @@ pub struct TokenSearchRow {
 
 // //     /// save the entity to the database
 // //     async fn save(&self, pool: &DatabaseConnection) -> Result<Box<Self>, GoatNsError> {
-// //         let mut txn = pool.begin().await?;
-// //         let res = self.save_with_txn(&mut txn).await?;
+// //         let txn = pool.begin().await?;
+// //         let res = self.save_with_txn(&txn).await?;
 // //         txn.commit().await?;
 // //         Ok(res)
 // //     }
@@ -1852,8 +1879,8 @@ pub struct TokenSearchRow {
 
 // //     /// delete the entity from the database
 // //     async fn delete(&self, pool: &DatabaseConnection) -> Result<(), GoatNsError> {
-// //         let mut txn = pool.begin().await?;
-// //         self.delete_with_txn(&mut txn).await?;
+// //         let txn = pool.begin().await?;
+// //         self.delete_with_txn(&txn).await?;
 // //         txn.commit().await?;
 // //         Ok(())
 // //     }

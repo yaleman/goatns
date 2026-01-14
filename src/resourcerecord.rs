@@ -358,7 +358,7 @@ impl TryFrom<entities::records::Model> for InternalResourceRecord {
             )));
         };
 
-        match RecordType::from(&(record.rrtype as u16)) {
+        match RecordType::from(&record.rrtype) {
             RecordType::A => {
                 let address: u32 = match std::net::Ipv4Addr::from_str(&record.rdata) {
                     Ok(value) => value.into(),
@@ -373,7 +373,7 @@ impl TryFrom<entities::records::Model> for InternalResourceRecord {
                 Ok(InternalResourceRecord::A {
                     address,
                     ttl: record.ttl.unwrap_or(0),
-                    rclass: RecordClass::from(&(record.rclass as u16)),
+                    rclass: RecordClass::from(&record.rclass),
                 })
             }
             RecordType::AAAA => {

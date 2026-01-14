@@ -92,7 +92,7 @@ pub fn create_api_token(
     api_cookie_secret: &[u8],
     lifetime: i32,
     userid: Uuid,
-) -> entities::user_tokens::ActiveModel {
+) -> (String, entities::user_tokens::ActiveModel) {
     let issued = Utc::now();
     let expiry = match lifetime {
         -1 => None,
@@ -118,15 +118,18 @@ pub fn create_api_token(
     let password_hash_string = password_hash.to_string();
     debug!("Done hashing password");
 
-    entities::user_tokens::ActiveModel {
-        id: NotSet,
-        key: Set(generate_token_key()),
-        hash: Set(password_hash_string),
-        issued: Set(issued),
-        expiry: Set(expiry),
-        name: NotSet,
-        userid: Set(userid),
-    }
+    (
+        token_secret,
+        entities::user_tokens::ActiveModel {
+            id: NotSet,
+            key: Set(generate_token_key()),
+            hash: Set(password_hash_string),
+            issued: Set(issued),
+            expiry: Set(expiry),
+            name: Set("test token".to_string()),
+            userid: Set(userid),
+        },
+    )
 }
 
 /// validate an API token matches our thingamajig

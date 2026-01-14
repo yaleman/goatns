@@ -57,6 +57,22 @@ where
     }
 }
 
+#[cfg(test)]
+pub async fn test_logging() {
+    use crate::config::{ConfigFile, setup_logging};
+
+    let config = ConfigFile {
+        log_level: "trace".to_string(),
+        ..ConfigFile::default()
+    };
+
+    let _ = setup_logging(
+        concread::cowcell::asynch::CowCell::new(config).read().await,
+        false,
+    )
+    .await;
+}
+
 #[allow(dead_code)]
 pub(crate) fn init_otel_subscribers(
     otel_endpoint: Option<String>,

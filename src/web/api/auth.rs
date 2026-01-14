@@ -7,6 +7,7 @@ use tracing::{debug, error, info};
 use utoipa::ToSchema;
 
 use crate::db::entities;
+use crate::web::constants::SESSION_USER_KEY;
 use crate::web::utils::validate_api_token;
 use crate::web::{GoatState, GoatStateTrait};
 
@@ -48,10 +49,19 @@ pub async fn api_token_login(
     println!("Got login payload: {payload:?}");
     #[cfg(not(test))]
     debug!("Got login payload: {payload:?}");
+    let txn = state.get_db_txn().await.map_err(|err| {
+        error!("Failed to get DB transaction: {err:?}");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(AuthResponse::from(
+                "Failed to get DB transaction".to_string(),
+            )),
+        )
+    })?;
     let (token, user) = match entities::user_tokens::Entity::find()
         .filter(entities::user_tokens::Column::Key.eq(&payload.token_key))
         .find_also_related(entities::users::Entity)
-        .one(&*state.connpool().await)
+        .one(&txn)
         .await
     {
         Ok(Some((token, Some(user)))) => (token, user),
@@ -98,12 +108,9 @@ pub async fn api_token_login(
     match validate_api_token(&token, &payload.token_secret) {
         Ok(_) => {
             println!("Successfully validated token on login");
-            // TODO: work out what we want to store here
-            let session_user = session.insert("user", &user.id).await;
-            let session_authref = session.insert("authref", &user.authref).await;
-            let session_signin = session.insert("signed_in", true).await;
+            let session_user = session.insert(SESSION_USER_KEY, &user).await;
 
-            if session_authref.is_err() | session_user.is_err() | session_signin.is_err() {
+            if session_user.is_err() {
                 session.flush().await.map_err(|err| {
                     error!("Failed to flush session: {err:?}");
                     (

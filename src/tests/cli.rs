@@ -1,8 +1,6 @@
-use sea_orm::ActiveModelTrait;
+use super::prelude::*;
 
 use crate::cli::{default_config, export_zone_file};
-use crate::config::test_logging;
-use crate::db::test::test_example_com_zone;
 
 #[test]
 fn test_default_config_serialization() {

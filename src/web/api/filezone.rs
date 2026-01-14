@@ -4,8 +4,6 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::IntoActiveModel;
 use sea_orm::ModelTrait;
 
-use sea_orm::TransactionTrait;
-
 use crate::db::entities;
 use crate::error_result_json;
 use crate::utils::check_valid_tld;
@@ -51,7 +49,7 @@ impl From<entities::zones::Model> for ApiZoneResponse {
         (status = OK, description = "Success", body = str, content_type = "text/plain")
     )
 )]
-#[axum::debug_handler]
+
 pub(crate) async fn api_create(
     State(state): State<GoatState>,
     session: Session,
@@ -64,7 +62,7 @@ pub(crate) async fn api_create(
     }
 
     // check to see if the zone exists
-    let mut txn = state.get_db_txn().await.map_err(|err| {
+    let txn = state.get_db_txn().await.map_err(|err| {
         error!("failed to get connection to the database: {err:?}");
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -76,7 +74,7 @@ pub(crate) async fn api_create(
 
     match entities::zones::Entity::find()
         .filter(entities::zones::Column::Name.eq(&zone.name))
-        .one(&mut txn)
+        .one(&txn)
         .await
     {
         Ok(Some(_)) => {
@@ -100,7 +98,7 @@ pub(crate) async fn api_create(
 
     let zone: entities::zones::ActiveModel = zone.into();
 
-    let zone = zone.clone().insert(&mut txn).await.map_err(|err| {
+    let zone = zone.clone().insert(&txn).await.map_err(|err| {
         debug!(
             "Couldn't create zone  {}, something went wrong during save: {err:?}",
             zone.name.as_ref()
@@ -130,7 +128,7 @@ pub(crate) async fn api_create(
         zoneid: Set(zone.id),
     };
 
-    if let Err(err) = ownership.clone().insert(&mut txn).await {
+    if let Err(err) = ownership.clone().insert(&txn).await {
         debug!("Couldn't store zone ownership {ownership:?}, something went wrong: {err:?}");
         return error_result_json!(
             "Server error creating zone ownership, contact the admins!",
@@ -154,7 +152,7 @@ pub(crate) async fn api_create(
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-struct ZoneUpdate {
+pub(crate) struct ZoneUpdate {
     pub id: Uuid,
     pub rname: Option<String>,
     pub serial: Option<u32>,
@@ -171,7 +169,7 @@ pub(crate) async fn api_zone_update(
 ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
 
-    let mut txn = state.get_db_txn().await.map_err(|err| {
+    let txn = state.get_db_txn().await.map_err(|err| {
         error!("failed to get connection to the database: {err:?}");
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -191,10 +189,10 @@ pub(crate) async fn api_zone_update(
         .filter(
             entities::ownership::Column::Userid
                 .eq(user_id)
-                .and(entities::ownership::Column::Zoneid.eq(zone.id)),
+                .and(entities::ownership::Column::Zoneid.eq(zone_form.id)),
         )
         .find_also_related(entities::zones::Entity)
-        .one(&mut txn)
+        .one(&txn)
         .await
         .map_err(|err| {
             // TODO: make this a better log
@@ -207,7 +205,7 @@ pub(crate) async fn api_zone_update(
             )
         })?
     else {
-        error!("User {} does not own zone {}", user_id, zone.id);
+        error!("User {} does not own zone {}", user_id, zone_form.id);
         return Err((
             StatusCode::UNAUTHORIZED,
             Json(ErrorResult {
@@ -242,7 +240,7 @@ pub(crate) async fn api_zone_update(
 
     if zone.is_changed() {
         println!("Zone has changes, updating...");
-        if let Err(err) = zone.save(&mut txn).await {
+        if let Err(err) = zone.save(&txn).await {
             // TODO: make this a better log
             error!("Failed to save zone: {err:?}");
             return Err((
@@ -279,7 +277,7 @@ pub(crate) async fn api_zone_delete(
 
     let user = check_api_auth(&session).await?;
 
-    let mut txn = state.get_db_txn().await.map_err(|err| {
+    let txn = state.get_db_txn().await.map_err(|err| {
         error!("Error getting txn: {err:?}");
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -295,19 +293,19 @@ pub(crate) async fn api_zone_delete(
         }
     };
 
-    let (ownership, Some(zone)) = match entities::ownership::Entity::find_by_id(id)
+    let zone = match entities::ownership::Entity::find_by_id(id)
         .filter(entities::ownership::Column::Userid.eq(userid))
         .find_also_related(entities::zones::Entity)
-        .one(&mut txn)
+        .one(&txn)
         .await
     {
-        Ok(None) => {
+        Ok(Some((_, None))) | Ok(None) => {
             return error_result_json!(
                 format!("Zone ID {id} not found").as_str(),
                 StatusCode::NOT_FOUND
             );
         }
-        Ok(Some(val)) => val,
+        Ok(Some((_ownership, Some(zone)))) => zone,
         Err(err) => {
             error!(
                 "Failed to get zone ownership for zoneid={}: error: {:?}",
@@ -317,7 +315,7 @@ pub(crate) async fn api_zone_delete(
         }
     };
 
-    zone.delete(&mut txn).await.map_err(|err| {
+    zone.delete(&txn).await.map_err(|err| {
         error!(
             "Failed to delete Zone during api_delete zoneid={} error=\"{err:?}\"",
             id
@@ -348,7 +346,7 @@ pub(crate) async fn api_get(
 ) -> Result<Json<ApiZoneResponse>, (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
 
-    let mut txn = state.get_db_txn().await.map_err(|err| {
+    let txn = state.get_db_txn().await.map_err(|err| {
         error!("Error getting txn: {err:?}");
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -362,8 +360,8 @@ pub(crate) async fn api_get(
                 .eq(user.id)
                 .and(entities::ownership::Column::Zoneid.eq(id)),
         )
-        .find_with_linked(entities::zones::Entity)
-        .all(&mut txn)
+        .find_also_related(entities::zones::Entity)
+        .one(&txn)
         .await
         .map_err(|err| {
             error!("Error checking ownership: {err:?}");
@@ -373,17 +371,28 @@ pub(crate) async fn api_get(
             )
         })?;
 
-    debug!("Searching for zone id {id:?}");
-    let zone = match FileZone::get(&state.connpool().await, id).await {
-        Ok(val) => val,
-        Err(err) => {
-            error!("Couldn't get zone id {}: error: {:?}", id, err);
-            return error_result_json!(
-                format!("Couldn't get zone id {id}").as_ref(),
-                StatusCode::INTERNAL_SERVER_ERROR
-            );
+    let zone = match data {
+        Some((_, Some(zone))) => zone,
+        _ => {
+            error!("Zone ID {} not found for user {:?}", id, user.id);
+            return error_result_json!("Zone not found", StatusCode::NOT_FOUND);
         }
     };
 
-    Ok(Json::from(zone))
+    let records = zone
+        .find_related(entities::records::Entity)
+        .all(&txn)
+        .await
+        .map_err(|err| {
+            error!("Error getting records for zone {}: {err:?}", zone.name);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Internal server error")),
+            )
+        })?;
+
+    Ok(Json::from(ApiZoneResponse {
+        zone: zone.clone(),
+        records,
+    }))
 }

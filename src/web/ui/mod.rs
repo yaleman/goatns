@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::datastore::Command;
 use crate::db::entities;
-use crate::web::GoatStateTrait;
 use crate::web::api::filezone::ApiZoneResponse;
+use crate::web::constants::{SESSION_REDIRECT_KEY, SESSION_USER_KEY};
 use crate::web::utils::Urls;
 use askama::Template;
 use askama_web::WebTemplate;
@@ -12,7 +12,6 @@ use axum::extract::{OriginalUri, Path, Query, State};
 use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
-use sea_orm::EntityTrait;
 use serde::Deserialize;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument, trace};
@@ -54,7 +53,7 @@ pub(crate) async fn zones_list(
     OriginalUri(path): OriginalUri,
     Query(query): Query<ViewZonesQueryString>,
 ) -> Result<TemplateViewZones, impl IntoResponse> {
-    let user = check_logged_in(&mut session, path, state.clone())
+    let user = check_logged_in(&mut session, path)
         .await
         .map_err(|err| err.into_response())?;
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
@@ -104,7 +103,7 @@ pub(crate) async fn zone_view(
     State(state): State<GoatState>,
     mut session: Session,
 ) -> Result<TemplateViewZone, impl IntoResponse> {
-    let user = check_logged_in(&mut session, path, state.clone())
+    let user = check_logged_in(&mut session, path)
         .await
         .map_err(|err| err.into_response())?;
 
@@ -127,7 +126,7 @@ pub(crate) async fn zone_view(
             None => {
                 return Err((
                     axum::http::StatusCode::NOT_FOUND,
-                    format!("Zone '{name_or_id}' not found"),
+                    format!("Zone '{id}' not found"),
                 )
                     .into_response());
             }
@@ -140,7 +139,7 @@ pub(crate) async fn zone_view(
 
     trace!("Returning zone: {zone:?}");
     Ok(TemplateViewZone {
-        zone,
+        zone: zone.into(),
         user_is_admin: user.admin,
     })
 }
@@ -148,10 +147,9 @@ pub(crate) async fn zone_view(
 pub async fn check_logged_in(
     session: &mut Session,
     path: Uri,
-    state: GoatState,
 ) -> Result<entities::users::Model, Redirect> {
-    let authref: Option<String> = session
-        .get("authref")
+    let user: Option<entities::users::Model> = session
+        .get(SESSION_USER_KEY)
         .await
         .map_err(|_e| Urls::Login.redirect())?;
 
@@ -160,64 +158,34 @@ pub async fn check_logged_in(
             .map(|v| v.to_string())
             .unwrap_or("/".to_string()),
     );
-    if authref.is_none() {
-        session.clear().await;
-
-        session
-            .insert("redirect", redirect_path)
-            .await
-            .map_err(|e| {
-                debug!("Couldn't store redirect for user: {e:?}");
-                Urls::Home.redirect_with_query(HashMap::from([(
-                    "error",
-                    "An error storing your session occurred!",
-                )]))
-            })?;
-        debug!("Not-logged-in-user tried to log in, how rude!");
-        return Err(Urls::Login.redirect());
-    }
-    debug!("session ok!");
-
-    let user_id = match session.get("user_id").await.unwrap_or(None) {
-        Some(val) => val,
-        None => return Err(Urls::Login.redirect()),
-    };
-    let txn = state.get_db_txn().await.map_err(|err| {
-        debug!("Failed to get DB transaction: {err:?}");
-        Urls::Login.redirect()
-    })?;
-    let user = entities::users::Entity::find_by_id(user_id)
-        .one(&txn)
-        .await
-        .map_err(|err| {
-            debug!("Failed to get user {} from database: {err:?}", user_id);
-            Urls::Login.redirect()
-        })?;
 
     // Check the database to make sure they're actually legit and not disabled
-    if let Some(user) = user {
-        let pool = state.read().await.db.clone();
-        match User::get(&pool, user_id).await {
-            Ok(db_user) => {
-                if db_user.disabled {
-                    debug!("User {} is disabled, clearing session", user_id);
-                    session.clear().await;
-                    Err(Urls::Login.redirect())
-                } else {
-                    // Return the user from the database to ensure we have fresh data
-                    Ok(*db_user)
-                }
-            }
-            Err(err) => {
-                debug!("Failed to validate user {} from database: {err:?}", user_id);
+    match user {
+        Some(user) => {
+            if user.disabled {
+                debug!("User {} is disabled, clearing session", user.id);
                 session.clear().await;
                 Err(Urls::Login.redirect())
+            } else {
+                Ok(user)
             }
         }
-    } else {
-        debug!("User has no ID, clearing session");
-        session.clear().await;
-        Err(Urls::Login.redirect())
+        None => {
+            session.clear().await;
+
+            session
+                .insert(SESSION_REDIRECT_KEY, redirect_path)
+                .await
+                .map_err(|e| {
+                    debug!("Couldn't store redirect for user: {e:?}");
+                    Urls::Home.redirect_with_query(HashMap::from([(
+                        "error",
+                        "An error storing your session occurred!",
+                    )]))
+                })?;
+            debug!("Not-logged-in-user tried to log in, how rude!");
+            Err(Urls::Login.redirect())
+        }
     }
 }
 
@@ -229,11 +197,11 @@ pub(crate) struct DashboardTemplate /*<'a>*/ {
 }
 
 pub(crate) async fn dashboard(
-    State(state): State<GoatState>,
+    // State(state): State<GoatState>,
     mut session: Session,
     OriginalUri(path): OriginalUri,
 ) -> Result<DashboardTemplate, Redirect> {
-    let user = check_logged_in(&mut session, path, state).await?;
+    let user = check_logged_in(&mut session, path).await?;
 
     Ok(DashboardTemplate {
         user_is_admin: user.admin,

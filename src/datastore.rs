@@ -137,14 +137,14 @@ async fn handle_soa_query(
     conn: &DatabaseConnection,
     name: &[u8],
 ) -> Result<Option<InternalResourceRecord>, GoatNsError> {
-    let mut txn = conn.begin().await?;
+    let txn = conn.begin().await?;
 
     let name = from_utf8(name)?;
 
     // get the zone
     match entities::zones::Entity::find()
         .filter(entities::zones::Column::Name.eq(name.to_string()))
-        .one(&mut txn)
+        .one(&txn)
         .await?
     {
         Some(zone) => {
@@ -256,10 +256,10 @@ pub async fn handle_import_file(
         debug!("Starting import process");
     }
 
-    let mut txn = pool.begin().await?;
+    let txn = pool.begin().await?;
     for zone in zones {
         let zone_name = zone.name.as_ref().to_string();
-        if let Err(err) = zone.update(&mut txn).await {
+        if let Err(err) = zone.update(&txn).await {
             error!("Failed to import zone {:?}: {err:?}", zone_name);
         } else {
             info!("Imported {}", zone_name);
@@ -302,10 +302,10 @@ async fn handle_get_zone_names(
     offset: u64,
     limit: u64,
 ) -> Result<(), GoatNsError> {
-    let mut txn = pool.begin().await?;
+    let txn = pool.begin().await?;
 
     let results = entities::users::Entity::find_by_id(user_id)
-        .one(&mut txn)
+        .one(&txn)
         .await?;
 
     let zones = match results {
@@ -315,7 +315,7 @@ async fn handle_get_zone_names(
                 .find_related(entities::ownership::Entity)
                 .offset(Some(offset))
                 .limit(Some(limit))
-                .all(&mut txn)
+                .all(&txn)
                 .await?;
             let ownership_ids = ownerships
                 .into_iter()
@@ -323,7 +323,7 @@ async fn handle_get_zone_names(
                 .collect::<Vec<Uuid>>();
             entities::zones::Entity::find()
                 .filter(entities::zones::Column::Id.is_in(ownership_ids))
-                .all(&mut txn)
+                .all(&txn)
                 .await?
         }
     };

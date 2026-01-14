@@ -4,14 +4,15 @@ mod db;
 mod doh;
 mod e2e_test;
 mod enums;
+pub(crate) mod prelude;
 mod resourcerecord;
 mod test_api;
 pub mod test_harness;
 mod utils;
 
-use crate::config::test_logging;
-use crate::db::test::test_get_sqlite_memory;
 use crate::db::*;
+use prelude::*;
+
 use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::{InternalResourceRecord, LocRecord, NameAsBytes};
 use crate::tests::test_harness::*;
@@ -56,7 +57,7 @@ fn test_resourcerecord_short_name_to_bytes() {
 }
 #[tokio::test]
 async fn test_name_as_bytes_compressed() {
-    let _ = test_logging().await;
+    test_logging().await;
     let rdata = "cheese.hello.world".as_bytes();
     let compress_ref = "zing.hello.world".as_bytes().to_vec();
     assert_eq!(
@@ -668,7 +669,6 @@ async fn test_normalize_ttls() {
     // use crate::zones::FileZoneRecord;
     let pool = test_get_sqlite_memory().await;
 
-    start_db(&pool).await.expect("failed to start DB");
     import_test_zone_file(&pool)
         .await
         .expect("failed to import test zone file");
@@ -714,7 +714,6 @@ async fn test_dont_normalize_ttls() {
     // use crate::zones::FileZoneRecord;
     let pool = test_get_sqlite_memory().await;
 
-    start_db(&pool).await.expect("Failed to start DB");
     import_test_zone_file(&pool)
         .await
         .expect("Failed to import zone file");

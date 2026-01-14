@@ -6,7 +6,7 @@ use crate::RecordClass;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        super::auth::login,
+        super::auth::api_token_login,
         super::filezonerecord::api_create,
     ),
     components(

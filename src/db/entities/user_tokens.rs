@@ -8,8 +8,8 @@ use crate::error::GoatNsError;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "user_tokens")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub id: u64,
+    #[sea_orm(primary_key, auto_increment = true)]
+    pub id: i64,
     pub name: String,
     pub issued: chrono::DateTime<Utc>,
     pub expiry: Option<chrono::DateTime<Utc>>,

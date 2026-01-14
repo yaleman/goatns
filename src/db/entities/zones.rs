@@ -14,7 +14,7 @@ use crate::{
 #[sea_orm(table_name = "zones")]
 #[allow(dead_code)] // because clippy and auto-generated code
 pub struct Model {
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = false, default = Uuid::now_v7())]
     pub id: Uuid,
     pub name: String,
     pub rname: String,
@@ -57,8 +57,6 @@ impl Related<super::records::Entity> for Entity {
     }
 }
 
-impl ActiveModelBehavior for ActiveModel {}
-
 impl Model {
     pub fn get_soa_record(&self, server_hostname: &str) -> InternalResourceRecord {
         InternalResourceRecord::SOA {
@@ -92,5 +90,14 @@ impl From<ZoneForm> for ActiveModel {
             res.id = sea_orm::ActiveValue::Set(id);
         };
         res
+    }
+}
+
+impl ActiveModelBehavior for ActiveModel {
+    fn new() -> Self {
+        Self {
+            id: Set(Uuid::now_v7()),
+            ..ActiveModelTrait::default()
+        }
     }
 }

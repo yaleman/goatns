@@ -1,10 +1,8 @@
-use sea_orm::ActiveValue::{NotSet, Set};
+use crate::tests::prelude::*;
+
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter,
 };
-use uuid::Uuid;
-
-use super::*;
 
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
@@ -12,8 +10,6 @@ use crate::error::GoatNsError;
 #[tokio::test]
 async fn create_user() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
-
-    start_db(&pool).await?;
 
     let user = entities::users::ActiveModel {
         id: NotSet,
@@ -34,7 +30,7 @@ async fn create_user() -> Result<(), GoatNsError> {
 
     println!("Updating user to disable second time");
     let res = user.save(&pool).await;
-    assert!(!res.is_err());
+    assert!(res.is_ok());
 
     Ok(())
 }
@@ -73,7 +69,6 @@ pub async fn test_create_example_com_records(
 #[tokio::test]
 async fn test_get_zone_records() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
-    start_db(&pool).await?;
     let zone = test_create_example_com_zone(&pool)
         .await
         .expect("Failed to create example.com zone");
@@ -90,29 +85,10 @@ async fn test_get_zone_records() -> Result<(), GoatNsError> {
     Ok(())
 }
 
-/// Checks that the table create process works and is idempotent
-// #[tokio::test]
-// async fn test_db_create_table_zones() -> Result<(), GoatNsError> {
-//     let pool = test_get_sqlite_memory().await;
-//     FileZone::create_table(&pool).await?;
-//     FileZone::create_table(&pool).await?;
-//     FileZone::create_table(&pool).await
-// }
-
-/// Checks that the table create process works and is idempotent
-// #[tokio::test]
-// async fn test_db_create_table_records() -> Result<(), GoatNsError> {
-//     let pool = test_get_sqlite_memory().await;
-//     println!("Creating Records Table");
-//     FileZoneRecord::create_table(&pool).await?;
-//     FileZoneRecord::create_table(&pool).await?;
-//     FileZoneRecord::create_table(&pool).await
-// }
-
 /// An example zone for testing
 pub fn test_example_com_zone() -> entities::zones::ActiveModel {
     entities::zones::ActiveModel {
-        id: Set(Uuid::new_v4()),
+        id: Set(Uuid::now_v7()),
         name: Set(String::from("example.com")),
         rname: Set(String::from("billy.example.com")),
         serial: Set(0),
@@ -122,20 +98,10 @@ pub fn test_example_com_zone() -> entities::zones::ActiveModel {
         minimum: Set(0),
     }
 }
-
-/// Get a sqlite pool with a memory-only database
-pub async fn test_get_sqlite_memory() -> DatabaseConnection {
-    sea_orm::Database::connect("sqlite::memory:")
-        .await
-        .expect("Failed to connect to sqlite memory")
-}
-
 /// A whole lotta tests
 #[tokio::test]
 async fn test_db_create_records() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
-
-    start_db(&pool).await?;
 
     println!("Creating Zone");
     let zone = test_example_com_zone()
@@ -196,7 +162,7 @@ async fn test_all_db_things() -> Result<(), GoatNsError> {
         id: NotSet,
         name: Set("foo".to_string()),
         ttl: Set(Some(123)),
-        zoneid: Set(Uuid::new_v4()),
+        zoneid: Set(Uuid::now_v7()),
         rrtype: Set(RecordType::TXT.into()),
         rclass: Set(RecordClass::Internet.into()),
         rdata: Set("test txt".to_string()),
@@ -240,8 +206,6 @@ async fn test_create_example_com_zone(
 #[tokio::test]
 async fn test_export_zone() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
-    eprintln!("Setting up DB");
-    start_db(&pool).await?;
     eprintln!("Setting up example zone");
     let zone = test_create_example_com_zone(&pool).await?;
 
@@ -279,8 +243,6 @@ async fn load_then_export() -> Result<(), GoatNsError> {
     use tokio::io::AsyncReadExt;
     // set up the DB
     let pool = test_get_sqlite_memory().await;
-    eprintln!("Setting up DB");
-    start_db(&pool).await?;
 
     let example_zone_file = std::path::Path::new(&"./examples/test_config/single-zone.json");
 
@@ -325,7 +287,6 @@ async fn load_then_export() -> Result<(), GoatNsError> {
 #[tokio::test]
 async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
-    start_db(&pool).await?;
 
     // Create a test zone
     let test_zone = entities::zones::ActiveModel {
@@ -389,7 +350,6 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
 #[tokio::test]
 async fn test_record_requires_name() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
-    start_db(&pool).await?;
 
     // Create a test zone first
     let test_zone = entities::zones::ActiveModel {

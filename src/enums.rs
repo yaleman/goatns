@@ -122,15 +122,15 @@ pub enum RecordType {
     InvalidType,
 }
 
-impl Into<sea_orm::Value> for RecordType {
-    fn into(self) -> sea_orm::Value {
-        sea_orm::Value::from(self as u16)
+impl From<RecordType> for sea_orm::Value {
+    fn from(value: RecordType) -> Self {
+        Self::from(value as u16)
     }
 }
 
-impl Into<u16> for RecordType {
-    fn into(self) -> u16 {
-        self as u16
+impl From<RecordType> for u16 {
+    fn from(value: RecordType) -> Self {
+        value as u16
     }
 }
 
@@ -312,9 +312,9 @@ impl Display for RecordClass {
     }
 }
 
-impl Into<u16> for RecordClass {
-    fn into(self) -> u16 {
-        self as u16
+impl From<RecordClass> for u16 {
+    fn from(val: RecordClass) -> u16 {
+        val as u16
     }
 }
 

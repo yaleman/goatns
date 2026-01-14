@@ -69,7 +69,7 @@ pub struct ConfigFile {
     pub api_static_dir: String,
     /// Secret for cookie storage - it'll randomly generate on startup by default
     #[serde(default = "generate_cookie_secret", skip_serializing)]
-    api_cookie_secret: String,
+    pub api_cookie_secret: String,
     /// OAuth2 Resource server name
     pub oauth2_client_id: String,
     /// If your instance is behind a proxy/load balancer/whatever, you need to specify this, eg `https://example.com:12345`
@@ -117,7 +117,10 @@ impl ConfigFile {
 
     /// Get a bindable SocketAddr for use in the DNS listeners
     pub fn dns_listener_address(&self) -> Result<SocketAddr, Option<String>> {
+        #[cfg(not(test))]
         let listen_addr = format!("{}:{}", &self.address, &self.port);
+        #[cfg(test)]
+        let listen_addr = "127.0.0.1:0".to_string();
 
         listen_addr.parse::<SocketAddr>().map_err(|e| {
             error!("Failed to parse address: {e:?}");
@@ -579,16 +582,6 @@ pub async fn setup_logging(
         otel_enabled: true,
         provider,
     })
-}
-
-#[cfg(test)]
-pub async fn test_logging() {
-    let config = ConfigFile {
-        log_level: "trace".to_string(),
-        ..ConfigFile::default()
-    };
-
-    let _ = setup_logging(CowCell::new(config).read().await, false).await;
 }
 
 /// A filter for log lines

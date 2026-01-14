@@ -4,6 +4,7 @@ use crate::config::ConfigFile;
 use crate::db::entities;
 use crate::error::GoatNsError;
 use crate::web::GoatStateTrait;
+use crate::web::constants::SESSION_USER_KEY;
 use crate::web::utils::Urls;
 use askama::Template;
 use askama_web::WebTemplate;
@@ -23,10 +24,13 @@ use openidconnect::{
 use openidconnect::{
     ClaimsVerificationError, EmptyAdditionalClaims, IdTokenClaims, TokenResponse, core::*,
 };
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
+};
 use serde::Deserialize;
 use tower_sessions::cookie::time::Duration;
 use tower_sessions::session_store::ExpiredDeletion;
+use uuid::Uuid;
 
 // pub(crate) mod sessionstore;
 pub mod traits;
@@ -311,12 +315,11 @@ pub async fn login(
             // check if they're in the database
 
             let email = claims.get_email().map_err(|err| err.into_response())?;
-
-            let mut dbuser = match entities::users::Entity::find()
+            let dbuser = entities::users::Entity::find()
                 .filter(entities::users::Column::Authref.eq(claims.subject().to_string()))
                 .one(&state.read().await.db.clone())
-                .await
-            {
+                .await;
+            let dbuser = match dbuser {
                 Ok(Some(user)) => user,
                 Ok(None) => {
                     if !state.read().await.config.user_auto_provisioning {
@@ -386,36 +389,27 @@ pub async fn login(
                         claims_email, dbuser.email
                     );
 
-                    dbuser.email = claims_email;
-                    let db_txn = state
+                    let txn = state
                         .get_db_txn()
                         .await
                         .map_err(|_| Urls::Home.redirect().into_response())?;
 
-                    if let Err(err) = dbuser.update_with_txn(&mut db_txn).await {
+                    let mut user_active: entities::users::ActiveModel = dbuser.clone().into();
+                    user_active.email = Set(claims_email);
+
+                    if let Err(err) = user_active.update(&txn).await {
                         error!("Failed to update user email: {err:?}");
                         return Err(Urls::Home.redirect().into_response());
                         // TODO: this probably... should be handled as a better error?
                     }
-                    if let Err(err) = db_txn.commit().await {
+                    if let Err(err) = txn.commit().await {
                         error!("Failed to commit user email update: {err:?}");
                         return Err(Urls::Home.redirect().into_response());
                     };
                 }
             }
 
-            if session
-                .insert("authref", claims.subject().to_string())
-                .await
-                .is_err()
-            {
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to store session details",
-                )
-                    .into_response());
-            };
-            if session.insert("user", dbuser).await.is_err() {
+            if session.insert(SESSION_USER_KEY, dbuser).await.is_err() {
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to store session details",
@@ -535,16 +529,16 @@ pub async fn signup(
         },
         Ok(claims) => {
             debug!("Verified claims in signup form: {claims:?}");
-            let user = User {
-                id: None,
-                displayname: claims.get_displayname(),
-                username: claims.get_username(),
-                email: claims.get_email()?,
-                disabled: false,
-                authref: Some(claims.subject().to_string()),
-                admin: false,
+            let user = entities::users::ActiveModel {
+                id: Set(Uuid::now_v7()),
+                displayname: Set(claims.get_displayname()),
+                username: Set(claims.get_username()),
+                email: Set(claims.get_email()?),
+                disabled: Set(false),
+                authref: Set(Some(claims.subject().to_string())),
+                admin: Set(false),
             };
-            match user.save(&state.connpool().await).await {
+            match user.insert(&state.read().await.db).await {
                 Ok(_) => {
                     // Check if there's a stored redirect path from before authentication
                     let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);

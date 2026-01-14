@@ -1,12 +1,13 @@
+use super::prelude::*;
+
 use std::str::from_utf8;
+use std::thread::sleep;
+use std::time::Duration;
 
 use url::Url;
 
-use crate::config::test_logging;
 use crate::resourcerecord::NameAsBytes;
 use crate::utils::{check_valid_tld, find_tail_match, loc_size_to_u8, name_as_bytes};
-use std::thread::sleep;
-use std::time::Duration;
 
 /// Test function to keep checking the server for startup
 #[cfg(test)]

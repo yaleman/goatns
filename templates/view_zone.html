@@ -34,8 +34,8 @@
         <tr>
             <td class="col-9 text-truncate">{{record.name}}</td>
             <td class="col-1">{{record.rrtype}}</td>
-            <td class="col-1">{{record.ttl.map(String::from).unwrap_or("Default")}}</td>
-            <td class="col-1">{{record.class}}</td>
+            <td class="col-1">{{record.ttl.unwrap_or(0)}}</td>
+            <td class="col-1">{{record.rclass}}</td>
         </tr>
         {% endfor %}
     </table>

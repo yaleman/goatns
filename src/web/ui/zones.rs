@@ -6,7 +6,7 @@ use axum::Form;
 use axum::extract::{OriginalUri, State};
 use axum::response::Redirect;
 use goat_lib::validators::dns_name;
-use sea_orm::ActiveValue::NotSet;
+use sea_orm::ActiveValue::{NotSet, Set};
 use serde::Deserialize;
 use tower_sessions::Session;
 use tracing::{debug, error, info};
@@ -30,7 +30,7 @@ pub(crate) async fn zones_new_post(
 ) -> Result<Redirect, Redirect> {
     debug!("Received new zone form: name={:?}", form.name);
 
-    let user = check_logged_in(&mut session, path, state.clone()).await?;
+    let user = check_logged_in(&mut session, path).await?;
 
     // validate the zone is valid
     if form.name.is_empty() {

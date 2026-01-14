@@ -7,7 +7,7 @@ pub fn check_api_auth(_item: TokenStream) -> TokenStream {
     r#"
     use tracing::debug;
 
-    let user = match session.get("user").await.expect("This shouldn't happen!") {
+    let user = match session.get(crate::constants::SESSION_USER_KEY).await? {
         Some(val) => val,
         None => {
             #[cfg(test)]

@@ -8,9 +8,10 @@ use axum::http::Uri;
 use axum::response::Redirect;
 use axum::routing::get;
 use axum::{Form, Router};
-use sea_orm::EntityTrait;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QuerySelect,
+};
 use serde::Deserialize;
-use sqlx::Row;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument};
 use uuid::Uuid;
@@ -42,17 +43,9 @@ pub(crate) struct ZoneRecord {
     zoneid: u32,
 }
 
-#[instrument(level = "info", skip(state, session))]
-pub(crate) async fn dashboard(
-    State(state): State<GoatState>,
-    mut session: Session,
-) -> Result<AdminUITemplate, Redirect> {
-    let user = check_logged_in(
-        &mut session,
-        Uri::from_static(Urls::Home.as_ref()),
-        state.clone(),
-    )
-    .await?;
+#[instrument(level = "info", skip_all)]
+pub(crate) async fn dashboard(mut session: Session) -> Result<AdminUITemplate, Redirect> {
+    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 
     Ok(AdminUITemplate {
         user_is_admin: user.admin,
@@ -63,56 +56,39 @@ pub(crate) async fn report_unowned_records(
     mut session: Session,
     State(state): State<GoatState>,
 ) -> Result<AdminReportUnownedRecords, Redirect> {
-    let user = check_logged_in(
-        &mut session,
-        Uri::from_static(Urls::Home.as_ref()),
-        state.clone(),
-    )
-    .await?;
+    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 
     let txn = state.get_db_txn().await.map_err(|err| {
         error!("Failed to get DB connection: {err:?}");
         Redirect::to(Urls::Dashboard.as_ref())
     })?;
 
-    // let rows = match txn
-    //     .execute(Statement::from_string(
-    //         txn.get_database_backend(),
-    //         "select records_merged.record_id as id, records_merged.* from records_merged
-    //     left join ownership
-    //     ON records_merged.record_id = ownership.id
-    //     where ownership.id is NULL",
-    //     ))
-    //     .await
-    // {
-    //     Ok(val) => {
-    //         debug!("Got the rows!");
-    //         val.into()
-    //     }
-    //     Err(err) => {
-    //         error!("Failed to query records from DB: {err:?}");
-    //         vec![]
-    //     }
-    // };
+    // Get all zone IDs that have ownership records
+    let owned_zone_ids: Vec<Uuid> = entities::ownership::Entity::find()
+        .select_only()
+        .column(entities::ownership::Column::Zoneid)
+        .into_tuple()
+        .all(&txn)
+        .await
+        .map_err(|err| {
+            error!("Failed to query ownership: {err:?}");
+            Redirect::to(Urls::Admin.as_ref())
+        })?;
 
-    debug!("starting to do the rows!");
-
-    let records: Vec<ZoneRecord> = rows
-        .iter()
-        .map(|r| ZoneRecord {
-            id: r.get("id"),
-            name: r.get("name"),
-            zoneid: r.get("zoneid"),
-        })
-        .collect();
+    // Get zones that don't have ownership records
+    let unowned_zones = entities::zones::Entity::find()
+        .filter(entities::zones::Column::Id.is_not_in(owned_zone_ids))
+        .all(&txn)
+        .await
+        .map_err(|err| {
+            error!("Failed to get unowned zones: {err:?}");
+            Redirect::to(Urls::Admin.as_ref())
+        })?;
 
     Ok(AdminReportUnownedRecords {
         user_is_admin: user.admin,
-        records,
-        zones: FileZone::get_unowned(&mut txn).await.map_err(|err| {
-            error!("Failed to get unowned zones: {err:?}");
-            Redirect::to(Urls::Admin.as_ref())
-        })?,
+        records: vec![], // Records report not currently implemented
+        zones: unowned_zones,
     })
 }
 
@@ -120,7 +96,7 @@ pub(crate) async fn report_unowned_records(
 #[template(path = "admin_ownership_template.html")]
 pub(crate) struct AssignOwnershipTemplate {
     user_is_admin: bool,
-    zone: ZoneRecord,
+    zone: entities::zones::Model,
     user: Option<String>,
 }
 
@@ -137,17 +113,15 @@ pub(crate) async fn assign_zone_ownership(
     Path(id): Path<Uuid>,
     Form(form): Form<AssignOwnershipForm>,
 ) -> Result<AssignOwnershipTemplate, Redirect> {
-    let user = check_logged_in(
-        &mut session,
-        Uri::from_static(Urls::Home.as_ref()),
-        state.clone(),
-    )
-    .await?;
+    let current_user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
 
-    let mut txn = state.get_db_txn().await?;
+    let txn = state.get_db_txn().await.map_err(|err| {
+        error!("Failed to get DB transaction: {err:?}");
+        Redirect::to(Urls::Admin.as_ref())
+    })?;
 
     let zone = entities::zones::Entity::find_by_id(id)
-        .one(&mut txn)
+        .one(&txn)
         .await
         .map_err(|err| {
             error!("Failed to get zone by ID: {err:?}");
@@ -160,45 +134,50 @@ pub(crate) async fn assign_zone_ownership(
 
     if let Some(username) = form.username.as_ref() {
         debug!("Got a username in the form!");
-        let user = User::get_by_name(&mut txn, username.as_str())
+        let target_user = entities::users::Entity::find()
+            .filter(entities::users::Column::Username.eq(username.as_str()))
+            .one(&txn)
             .await
             .map_err(|err| {
                 error!("Failed to get user by name: {err:?}");
                 Redirect::to(Urls::Admin.as_ref())
             })?;
-        drop(txn);
-        if let Some(user) = user {
-            if let (Some(userid), Some(zoneid)) = (user.id, zone.id) {
-                // woo we found a valid user!
-                ZoneOwnership {
-                    id: None,
-                    zoneid,
-                    userid,
-                }
-                .save(&state.read().await.db)
-                .await
-                .map_err(|err| {
-                    error!("Failed to insert zone ownership: {err:?}");
-                    Urls::Admin.redirect_with_query(
-                        [("message", format!("Failed to assign ownership: {err:?}"))]
-                            .into_iter()
-                            .collect(),
-                    )
-                })?;
-                return Err(Urls::Admin.redirect_with_query(
-                    [(
-                        "message",
-                        format!("Ownership assigned to {}", user.displayname),
-                    )]
-                    .into_iter()
-                    .collect(),
-                ));
-            }
+
+        if let Some(target_user) = target_user {
+            // Create ownership record
+            let ownership = entities::ownership::ActiveModel {
+                id: sea_orm::ActiveValue::NotSet,
+                zoneid: Set(zone.id),
+                userid: Set(target_user.id),
+            };
+
+            ownership.insert(&txn).await.map_err(|err| {
+                error!("Failed to insert zone ownership: {err:?}");
+                Urls::Admin.redirect_with_query(
+                    [("message", format!("Failed to assign ownership: {err:?}"))]
+                        .into_iter()
+                        .collect(),
+                )
+            })?;
+
+            txn.commit().await.map_err(|err| {
+                error!("Failed to commit transaction: {err:?}");
+                Urls::Admin.redirect()
+            })?;
+
+            return Err(Urls::Admin.redirect_with_query(
+                [(
+                    "message",
+                    format!("Ownership assigned to {}", target_user.displayname),
+                )]
+                .into_iter()
+                .collect(),
+            ));
         }
     }
 
     Ok(AssignOwnershipTemplate {
-        user_is_admin: user.admin,
+        user_is_admin: current_user.admin,
         zone,
         user: form.username,
     })

@@ -1,3 +1,5 @@
+use crate::web::constants::SESSION_USER_KEY;
+
 use super::*;
 use axum::Json;
 use axum::extract::Path;
@@ -108,7 +110,7 @@ pub struct UserAuthResult {
 pub async fn check_api_auth(
     session: &Session,
 ) -> Result<UserAuthResult, (StatusCode, Json<ErrorResult>)> {
-    match session.get("user").await {
+    match session.get(SESSION_USER_KEY).await {
         Ok(Some(user)) => Ok(user),
         Ok(None) => {
             #[cfg(test)]
@@ -118,9 +120,6 @@ pub async fn check_api_auth(
             error_result_json!("", StatusCode::FORBIDDEN)
         }
         Err(err) => {
-            #[cfg(test)]
-            println!("Session error in API call: {err:?}");
-            #[cfg(not(test))]
             debug!("Session error in API call: {err:?}");
             error_result_json!("Session error", StatusCode::INTERNAL_SERVER_ERROR)
         }

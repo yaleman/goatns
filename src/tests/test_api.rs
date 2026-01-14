@@ -1,17 +1,12 @@
+use super::prelude::*;
+
 use crate::config::ConfigFile;
-use crate::db::test::test_get_sqlite_memory;
-use crate::db::{entities, start_db};
-use crate::enums::{RecordClass, RecordType};
-use crate::error::GoatNsError;
 use crate::servers::{self, Servers};
 use crate::web::api::auth::AuthPayload;
 use crate::web::api::filezonerecord::{ZoneForm, ZoneRecordForm};
 use crate::web::utils::create_api_token;
 use concread::cowcell::asynch::CowCell;
-use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, DatabaseConnection};
 use tokio::net::TcpStream;
-use uuid::Uuid;
 
 pub async fn is_free_port(port: u16) -> bool {
     TcpStream::connect(("127.0.0.1", port)).await.is_err()
@@ -19,9 +14,8 @@ pub async fn is_free_port(port: u16) -> bool {
 
 pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<ConfigFile>) {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    test_logging().await;
     let pool = test_get_sqlite_memory().await;
-
-    start_db(&pool).await.expect("failed to start DB");
 
     let config = crate::config::ConfigFile::try_as_cowcell(Some(
         "./examples/test_config/goatns-test.json".to_string(),
@@ -92,7 +86,7 @@ pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<Config
 
 pub async fn insert_test_user(pool: &DatabaseConnection) -> entities::users::Model {
     entities::users::ActiveModel {
-        id: Set(Uuid::new_v4()),
+        id: Set(Uuid::now_v7()),
         displayname: Set("Example user".to_string()),
         username: Set("example".to_string()),
         email: Set("example@hello.goat".to_string()),
@@ -111,8 +105,7 @@ async fn insert_test_user_api_token(
     userid: Uuid,
 ) -> Result<(entities::user_tokens::Model, String), GoatNsError> {
     println!("creating test token for user {userid:?}");
-    let token_secret = "lols".to_string();
-    let token = create_api_token(token_secret.as_bytes(), 900, userid);
+    let (token_secret, token) = create_api_token("lols".as_bytes(), 900, userid);
 
     let res = token.insert(db).await.map_err(GoatNsError::from)?;
     Ok((res, token_secret))
@@ -218,7 +211,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
             token_key: token.key,
-            token_secret: token_secret,
+            token_secret,
         })
         .send()
         .await
@@ -226,7 +219,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     println!("{res:?}");
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
-    let zone_id = Uuid::new_v4();
+    let zone_id = Uuid::now_v7();
     let newzone = ZoneForm {
         id: Some(zone_id),
         name: "example.goat".to_string(),
@@ -304,7 +297,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
     println!("=> Token login success!");
 
     let newzone = entities::zones::ActiveModel {
-        id: NotSet,
+        id: Set(Uuid::now_v7()),
         name: Set("example.goat".to_string()),
         rname: Set("bob@example.goat".to_string()),
         serial: Set(12345),
@@ -312,13 +305,12 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(1111),
         retry: Set(1234234),
-        ..Default::default()
     };
     println!("Saving zone");
     let newzone = newzone.insert(&pool).await?;
     println!("Saving zone ownership");
     let _zo = entities::ownership::ActiveModel {
-        id: NotSet,
+        id: Set(Uuid::now_v7()),
         userid: Set(user.id),
         zoneid: Set(newzone.id),
     }
@@ -480,7 +472,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
     println!("=> Token login success!");
 
     let zone = entities::zones::ActiveModel {
-        id: Set(Uuid::new_v4()),
+        id: Set(Uuid::now_v7()),
         name: Set("example.goat".to_string()),
         rname: Set("bob@example.goat".to_string()),
         serial: Set(12345),
@@ -508,7 +500,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
         id: NotSet,
         rclass: Set(RecordClass::Internet.into()),
         name: Set("doggo".to_string()),
-        zoneid: Set(Uuid::new_v4()),
+        zoneid: Set(Uuid::now_v7()),
         rrtype: Set(RecordType::A.into()),
         ttl: Set(Some(33)),
         rdata: Set("1.2.3.4".to_string()),

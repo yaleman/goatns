@@ -6,8 +6,8 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(table_name = "sessions")]
 #[allow(dead_code)] // because clippy and auto-generated code
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub id: String,
+    #[sea_orm(primary_key, auto_increment = true)]
+    pub id: u64,
     pub data: Vec<u8>,
     pub expiry_date: i32,
 }
