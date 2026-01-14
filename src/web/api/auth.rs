@@ -1,13 +1,14 @@
 use axum::http::StatusCode;
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
 use tracing::{debug, error, info};
 use utoipa::ToSchema;
 
-use crate::db::User;
+use crate::db::entities;
 use crate::web::utils::validate_api_token;
-use crate::web::GoatState;
+use crate::web::{GoatState, GoatStateTrait};
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct AuthPayload {
@@ -38,7 +39,7 @@ impl From<String> for AuthResponse {
     ),
     tag = "Authentication",
 )]
-pub async fn login(
+pub async fn api_token_login(
     State(state): State<GoatState>,
     session: Session,
     payload: Json<AuthPayload>,
@@ -47,9 +48,33 @@ pub async fn login(
     println!("Got login payload: {payload:?}");
     #[cfg(not(test))]
     debug!("Got login payload: {payload:?}");
-    let mut pool = state.read().await.connpool.clone();
-    let token = match User::get_token(&mut pool, &payload.token_key).await {
-        Ok(val) => val,
+    let (token, user) = match entities::user_tokens::Entity::find()
+        .filter(entities::user_tokens::Column::Key.eq(&payload.token_key))
+        .find_also_related(entities::users::Entity)
+        .one(&*state.connpool().await)
+        .await
+    {
+        Ok(Some((token, Some(user)))) => (token, user),
+        Ok(Some((_, None))) => {
+            info!(
+                "action=api_login tokenkey={} result=failure reason=\"no user found for token\"",
+                payload.token_key
+            );
+            let resp = AuthResponse {
+                message: "token not found".to_string(),
+            };
+            return Err((StatusCode::UNAUTHORIZED, Json(resp)));
+        }
+        Ok(None) => {
+            info!(
+                "action=api_login tokenkey={} result=failure reason=\"no token found\"",
+                payload.token_key
+            );
+            let resp = AuthResponse {
+                message: "token not found".to_string(),
+            };
+            return Err((StatusCode::UNAUTHORIZED, Json(resp)));
+        }
         Err(err) => {
             info!(
                 "action=api_login tokenkey={} result=failure reason=\"no token found\"",
@@ -73,8 +98,9 @@ pub async fn login(
     match validate_api_token(&token, &payload.token_secret) {
         Ok(_) => {
             println!("Successfully validated token on login");
-            let session_user = session.insert("user", &token.user).await;
-            let session_authref = session.insert("authref", token.user.authref).await;
+            // TODO: work out what we want to store here
+            let session_user = session.insert("user", &user.id).await;
+            let session_authref = session.insert("authref", &user.authref).await;
             let session_signin = session.insert("signed_in", true).await;
 
             if session_authref.is_err() | session_user.is_err() | session_signin.is_err() {
@@ -85,7 +111,10 @@ pub async fn login(
                         Json(AuthResponse::from("Failed to flush session!".to_string())),
                     )
                 })?;
-                info!("action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"", payload.token_key);
+                info!(
+                    "action=api_login tokenkey={} result=failure reason=\"failed to store session for user\"",
+                    payload.token_key
+                );
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(AuthResponse {
@@ -112,11 +141,9 @@ pub async fn login(
             #[cfg(test)]
             println!("Failed to validate token! {err:?}");
             error!(
-        "action=api_login username={} userid={} tokenkey=\"{:?}\" result=failure reason=\"failed to match token: {err:?}\"",
-        token.user.username,
-        token.user.id.map(|id| id.to_string()).unwrap_or("<unknown user id>".to_string()),
-        payload.token_key,
-        );
+                "action=api_login username={} userid={} tokenkey=\"{:?}\" result=failure reason=\"failed to match token: {err:?}\"",
+                user.username, user.id, payload.token_key,
+            );
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(AuthResponse {

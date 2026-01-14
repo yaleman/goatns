@@ -673,9 +673,9 @@ async fn test_normalize_ttls() {
         .await
         .expect("failed to import test zone file");
 
-    let response = get_records(
+    let response = entities::records::Entity::get_records(
         &pool,
-        "ttltest.hello.goat".to_string(),
+        "ttltest.hello.goat",
         RecordType::A,
         RecordClass::Internet,
         true,
@@ -695,9 +695,9 @@ async fn test_normalize_ttls() {
     let mut found_records: Vec<u32> = vec![];
     for record in response {
         println!("found record {record:?}");
-        if let InternalResourceRecord::A { ttl, .. } = record {
-            if !found_records.contains(&ttl) {
-                found_records.push(ttl);
+        if record.rrtype == RecordType::A as u16 {
+            if !found_records.contains(&record.ttl.unwrap_or(0)) {
+                found_records.push(record.ttl.unwrap_or(0));
             }
         } else {
             println!("We found a record that wasn't an A record, that's cool I guess?")
@@ -719,9 +719,9 @@ async fn test_dont_normalize_ttls() {
         .await
         .expect("Failed to import zone file");
 
-    let response = get_records(
+    let response = entities::records::Entity::get_records(
         &pool,
-        "ttltest.hello.goat".to_string(),
+        "ttltest.hello.goat",
         RecordType::A,
         RecordClass::Internet,
         false,
@@ -737,9 +737,9 @@ async fn test_dont_normalize_ttls() {
     let mut found_records: Vec<u32> = vec![];
     for record in response {
         println!("found record {record:?}");
-        if let InternalResourceRecord::A { ttl, .. } = record {
-            if !found_records.contains(&ttl) {
-                found_records.push(ttl);
+        if record.rrtype == RecordType::A as u16 {
+            if !found_records.contains(&record.ttl.unwrap_or(0)) {
+                found_records.push(record.ttl.unwrap_or(0));
             }
         } else {
             println!("We found a record that wasn't an A record, that's cool I guess?")

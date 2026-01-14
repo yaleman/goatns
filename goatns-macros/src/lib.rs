@@ -7,7 +7,7 @@ pub fn check_api_auth(_item: TokenStream) -> TokenStream {
     r#"
     use tracing::debug;
 
-    let user: User = match session.get("user").await.expect("This shouldn't happen!") {
+    let user = match session.get("user").await.expect("This shouldn't happen!") {
         Some(val) => val,
         None => {
             #[cfg(test)]

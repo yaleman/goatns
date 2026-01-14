@@ -5,12 +5,12 @@
 <h3>Reports - Unowned Zones</h3>
 
 <table>
-<thead>
-    <th>&nbsp;</th>
-</thead>
+    <thead>
+        <th>&nbsp;</th>
+    </thead>
     {% for zone in zones %}
     <tr>
-        <td><a href="{{Urls::Admin.as_ref()}}/zones/assign_ownership/{{zone.id.unwrap_or(-1)}}">{{zone.name}}</a></td>
+        <td><a href="{{Urls::Admin.as_ref()}}/zones/assign_ownership/{{zone.id}}">{{zone.name}}</a></td>
     </tr>
     {% endfor %}
 </table>
@@ -18,9 +18,9 @@
 <h3>Reports - Unowned Records</h3>
 
 <table>
-<thead>
-    <th>&nbsp;</th>
-</thead>
+    <thead>
+        <th>&nbsp;</th>
+    </thead>
     {% for record in records %}
     <tr>
         <td><a href="/ui/records/{{record.id}}">{{record.name}}</a></td>

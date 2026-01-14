@@ -1,16 +1,19 @@
-use std::str::from_utf8;
-use std::sync::Arc;
-use std::time::Duration;
-
-use crate::db::{self, DBEntity, User, ZoneOwnership};
+use crate::db::{cron_db_cleanup, entities};
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
 use crate::resourcerecord::InternalResourceRecord;
-use crate::zones::{FileZone, ZoneRecord};
-use sqlx::{Pool, Sqlite};
+use crate::zones::ZoneRecord;
+use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter,
+    QuerySelect, TransactionTrait,
+};
+use std::str::from_utf8;
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tracing::{debug, error, info, instrument, warn};
+use uuid::Uuid;
 
 type Responder<T> = oneshot::Sender<T>;
 
@@ -31,22 +34,22 @@ pub enum Command {
     /// Query a zone from the database
     GetZone {
         /// If you know the ID supply it
-        id: Option<i64>,
+        id: Option<Uuid>,
         /// If you know the name supply it
         name: Option<String>,
         /// The response channel
-        resp: Responder<Option<FileZone>>,
+        resp: Responder<Option<entities::zones::Model>>,
     },
     /// Query a list of zones from the database
     GetZoneNames {
         /// Filter by user
-        user: User,
+        user_id: Uuid,
         /// The offset to start at
-        offset: i64,
+        offset: u64,
         /// The number of records to return
-        limit: i64,
+        limit: u64,
         /// The response channel
-        resp: Responder<Vec<FileZone>>,
+        resp: Responder<Vec<entities::zones::Model>>,
     },
     /// Import a file directly into the database
     ImportFile {
@@ -62,13 +65,13 @@ pub enum Command {
     /// Create a new zone
     CreateZone {
         /// Zone data
-        zone: FileZone,
+        zone: entities::zones::ActiveModel,
 
         /// Zone ownership
-        userid: i64,
+        userid: Uuid,
 
         /// The response channel
-        resp: Responder<FileZone>,
+        resp: Responder<entities::zones::Model>,
     },
     /// Delete a zone
     DeleteZone,
@@ -92,7 +95,7 @@ pub enum Command {
     /// Get a user
     GetUser {
         /// Database ID if you have it
-        id: Option<i64>,
+        id: Option<Uuid>,
         /// username if you have it
         username: Option<String>,
         /// The response channel
@@ -105,33 +108,33 @@ pub enum Command {
         /// Zone ID
         zoneid: i64,
         /// User ID (db ID)
-        userid: Option<i64>,
+        userid: Option<Uuid>,
         /// The response channel
         resp: Responder<()>,
     },
     /// Get ownership of a zone, or zones for a user
     GetOwnership {
         /// Zone ID
-        zoneid: Option<i64>,
+        zoneid: Option<Uuid>,
         /// User ID
-        userid: Option<i64>,
+        userid: Option<Uuid>,
         /// The response channel
-        resp: Responder<Vec<Arc<ZoneOwnership>>>,
+        resp: Responder<Vec<entities::ownership::Model>>,
     },
     /// Create ownership of a zone
     PostOwnership {
         /// Zone ID
-        zoneid: i64,
+        zoneid: Uuid,
         /// User ID
-        userid: i64,
+        userid: Uuid,
         /// The response channel
-        resp: Responder<ZoneOwnership>,
+        resp: Responder<entities::ownership::Model>,
     },
 }
 
 async fn handle_soa_query(
     server_hostname: &str,
-    conn: &Pool<Sqlite>,
+    conn: &DatabaseConnection,
     name: &[u8],
 ) -> Result<Option<InternalResourceRecord>, GoatNsError> {
     let mut txn = conn.begin().await?;
@@ -139,7 +142,11 @@ async fn handle_soa_query(
     let name = from_utf8(name)?;
 
     // get the zone
-    match FileZone::get_by_name(&mut txn, name).await? {
+    match entities::zones::Entity::find()
+        .filter(entities::zones::Column::Name.eq(name.to_string()))
+        .one(&mut txn)
+        .await?
+    {
         Some(zone) => {
             // get the SOA record
             let soa = zone.get_soa_record(server_hostname);
@@ -155,7 +162,7 @@ async fn handle_soa_query(
 async fn handle_get_command(
     server_hostname: &str,
     // database pool
-    conn: &Pool<Sqlite>,
+    conn: &DatabaseConnection,
     // this is the result from the things in memory
     // zone_get: Option<&ZoneRecord>,
     name: Vec<u8>,
@@ -191,8 +198,12 @@ async fn handle_get_command(
             }
         }
     } else {
-        match db::get_records(conn, db_name.to_string(), rrtype, rclass, true).await {
-            Ok(value) => zr.typerecords.extend(value),
+        match entities::records::Entity::get_records(conn, db_name, rrtype, rclass, true).await {
+            Ok(value) => zr.typerecords.extend(
+                value
+                    .into_iter()
+                    .filter_map(|rec| InternalResourceRecord::try_from(rec).ok()),
+            ),
             Err(err) => {
                 error!("Failed to query db: {err:?}")
             }
@@ -224,14 +235,17 @@ async fn handle_get_command(
 /// Import a file directly into the database. Normally, you shouldn't use this directly, call it through calls to the datastore.
 #[instrument(level = "info", skip(pool))]
 pub async fn handle_import_file(
-    pool: &Pool<Sqlite>,
+    pool: &DatabaseConnection,
     filename: String,
     zone_name: Option<String>,
 ) -> Result<(), GoatNsError> {
-    let zones: Vec<FileZone> = crate::zones::load_zones(&filename)?;
+    let zones: Vec<entities::zones::ActiveModel> = crate::zones::load_zones(&filename)?;
 
     let zones = match zone_name {
-        Some(name) => zones.into_iter().filter(|z| z.name == name).collect(),
+        Some(name) => zones
+            .into_iter()
+            .filter(|z| z.name.as_ref() == &name)
+            .collect(),
         None => zones,
     };
 
@@ -244,11 +258,12 @@ pub async fn handle_import_file(
 
     let mut txn = pool.begin().await?;
     for zone in zones {
-        let _saved_zone = zone
-            .save_with_txn(&mut txn)
-            .await
-            .inspect_err(|err| error!("Failed to save zone {}: {err:?}", zone.name))?;
-        info!("Imported {}", zone.name);
+        let zone_name = zone.name.as_ref().to_string();
+        if let Err(err) = zone.update(&mut txn).await {
+            error!("Failed to import zone {:?}: {err:?}", zone_name);
+        } else {
+            info!("Imported {}", zone_name);
+        }
     }
     txn.commit()
         .await
@@ -258,15 +273,22 @@ pub async fn handle_import_file(
 }
 
 #[instrument(level = "debug", skip(tx, pool))]
+/// find a zone by id or name
 async fn handle_get_zone(
-    tx: oneshot::Sender<Option<FileZone>>,
-    pool: &Pool<Sqlite>,
-    id: Option<i64>,
+    tx: oneshot::Sender<Option<entities::zones::Model>>,
+    pool: DatabaseConnection,
+    id: Option<Uuid>,
     name: Option<String>,
 ) -> Result<(), GoatNsError> {
-    let mut txn = pool.begin().await?;
-    let zone = crate::db::get_zone_with_txn(&mut txn, id, name).await?;
-    drop(txn);
+    let mut zone_query = match id {
+        None => entities::zones::Entity::find(),
+        Some(id) => entities::zones::Entity::find_by_id(id),
+    };
+
+    if let Some(name) = name {
+        zone_query = zone_query.filter(entities::zones::Column::Name.eq(name));
+    }
+    let zone = zone_query.one(&pool).await?;
 
     tx.send(zone).map_err(|e| {
         GoatNsError::SendError(format!("Failed to send response on tokio channel: {e:?}"))
@@ -274,18 +296,38 @@ async fn handle_get_zone(
 }
 
 async fn handle_get_zone_names(
-    user: User,
-    tx: oneshot::Sender<Vec<FileZone>>,
-    pool: &Pool<Sqlite>,
-    offset: i64,
-    limit: i64,
+    user_id: Uuid,
+    tx: oneshot::Sender<Vec<entities::zones::Model>>,
+    pool: DatabaseConnection,
+    offset: u64,
+    limit: u64,
 ) -> Result<(), GoatNsError> {
     let mut txn = pool.begin().await?;
 
-    debug!("handle_get_zone_names: user={user:?}");
-    let zones = user.get_zones_for_user(&mut txn, offset, limit).await?;
+    let results = entities::users::Entity::find_by_id(user_id)
+        .one(&mut txn)
+        .await?;
 
-    debug!("handle_get_zone_names: {zones:?}");
+    let zones = match results {
+        None => Vec::new(),
+        Some(user) => {
+            let ownerships = user
+                .find_related(entities::ownership::Entity)
+                .offset(Some(offset))
+                .limit(Some(limit))
+                .all(&mut txn)
+                .await?;
+            let ownership_ids = ownerships
+                .into_iter()
+                .map(|o| o.zoneid)
+                .collect::<Vec<Uuid>>();
+            entities::zones::Entity::find()
+                .filter(entities::zones::Column::Id.is_in(ownership_ids))
+                .all(&mut txn)
+                .await?
+        }
+    };
+
     tx.send(zones).map_err(|e| {
         GoatNsError::SendError(format!("Failed to send response on tokio channel: {e:?}"))
     })
@@ -295,7 +337,7 @@ async fn handle_get_zone_names(
 pub(crate) async fn handle_message(
     server_hostname: &str,
     cmd: Command,
-    connpool: &Pool<Sqlite>,
+    connpool: DatabaseConnection,
 ) -> Result<(), String> {
     match cmd {
         Command::GetZone { id, name, resp } => {
@@ -306,11 +348,11 @@ pub(crate) async fn handle_message(
         }
         Command::GetZoneNames {
             resp,
-            user,
+            user_id,
             offset,
             limit,
         } => {
-            let res = handle_get_zone_names(user, resp, connpool, offset, limit).await;
+            let res = handle_get_zone_names(user_id, resp, connpool, offset, limit).await;
             if let Err(e) = res {
                 error!("{e:?}")
             };
@@ -326,7 +368,7 @@ pub(crate) async fn handle_message(
             resp,
             zone_name,
         } => {
-            handle_import_file(connpool, filename, zone_name)
+            handle_import_file(&connpool, filename, zone_name)
                 .await
                 .map_err(|e| format!("{e:?}"))?;
             match resp.send(()) {
@@ -344,34 +386,41 @@ pub(crate) async fn handle_message(
             resp,
         } => {
             let res =
-                handle_get_command(server_hostname, connpool, name, rrtype, rclass, resp).await;
+                handle_get_command(server_hostname, &connpool, name, rrtype, rclass, resp).await;
             if let Err(e) = res {
                 error!("{e:?}")
             };
         }
-        Command::CreateZone { zone, userid, resp } => {
-            match zone.save(connpool).await {
-                Ok(zone) => {
+        Command::CreateZone {
+            zone,
+            userid: _,
+            resp: _,
+        } => {
+            let zone_cloned = zone.clone();
+            match zone.update(&connpool).await {
+                Ok(_zone) => {
                     // TODO: create the ownership
-                    if let Some(zoneid) = zone.id {
-                        ZoneOwnership {
-                            id: None,
-                            userid,
-                            zoneid,
-                        }
-                        .save(connpool)
-                        .await
-                        .map_err(|e| format!("{e:?}"))?;
-                    }
+                    todo!();
+                    //     entities::ownership::ActiveModel {
+                    //         id: NotSet,
+                    //         userid: Set(userid),
+                    //         zoneid: Set(userid),
+                    //     }
+                    //     .insert(connpool)
+                    //     .await
+                    //     .map_err(|e| format!("{e:?}"))?;
+                    // }
 
-                    if let Err(err) = resp.send(*zone.clone()) {
-                        error!("Failed to send message back to caller after creating zone {zone:?}: {err:?}");
-                    } else {
-                        info!("Created zone: {:?}", zone);
-                    }
+                    // if let Err(err) = resp.send(*zone.clone()) {
+                    //     error!(
+                    //         "Failed to send message back to caller after creating zone {zone:?}: {err:?}"
+                    //     );
+                    // } else {
+                    //     info!("Created zone: {:?}", zone);
+                    // }
                 }
                 Err(err) => {
-                    error!("Failed to create zone: {zone:?} {err:?}");
+                    error!("Failed to create zone: {zone_cloned:?} {err:?}");
                 }
             };
         }
@@ -388,15 +437,16 @@ pub(crate) async fn handle_message(
             disabled,
             resp,
         } => {
-            let new_user = User {
-                username: username.clone(),
-                authref: Some(authref.clone()),
-                admin,
-                disabled,
+            let new_user = entities::users::ActiveModel {
+                id: NotSet,
+                username: Set(username.clone()),
+                authref: Set(Some(authref.clone())),
+                admin: Set(admin),
+                disabled: Set(disabled),
                 ..Default::default()
             };
             debug!("Creating: {new_user:?}");
-            let res = match new_user.save(connpool).await {
+            let res = match new_user.insert(&connpool).await {
                 Ok(_) => true,
                 Err(error) => {
                     error!("Failed to create {username}: {error:?}");
@@ -417,7 +467,11 @@ pub(crate) async fn handle_message(
             resp,
         } => {
             if let Some(userid) = userid {
-                match ZoneOwnership::get_all_user(connpool, userid).await {
+                match entities::ownership::Entity::find()
+                    .filter(entities::ownership::Column::Userid.eq(userid))
+                    .all(&connpool)
+                    .await
+                {
                     Ok(zone) => {
                         if let Err(err) = resp.send(zone) {
                             error!("Failed to send zone_ownership response: {err:?}")
@@ -442,16 +496,16 @@ pub(crate) async fn handle_message(
 pub async fn manager(
     mut rx: mpsc::Receiver<crate::datastore::Command>,
     server_hostname: String,
-    connpool: Pool<Sqlite>,
+    connpool: DatabaseConnection,
     cron_db_cleanup_timer: Option<Duration>,
 ) -> Result<(), String> {
     if let Some(timer) = cron_db_cleanup_timer {
         debug!("Spawning DB cron cleanup task");
-        tokio::spawn(db::cron_db_cleanup(connpool.clone(), timer, None));
+        tokio::spawn(cron_db_cleanup(connpool.clone(), timer, None));
     }
 
     while let Some(cmd) = rx.recv().await {
-        if handle_message(&server_hostname, cmd, &connpool)
+        if handle_message(&server_hostname, cmd, connpool.clone())
             .await
             .is_err()
         {

@@ -1,10 +1,10 @@
 use super::GoatState;
-use crate::config::ConfigFile;
-use crate::db::{DBEntity, User};
-use crate::error::GoatNsError;
-use crate::web::utils::Urls;
-use crate::web::GoatStateTrait;
 use crate::COOKIE_NAME;
+use crate::config::ConfigFile;
+use crate::db::entities;
+use crate::error::GoatNsError;
+use crate::web::GoatStateTrait;
+use crate::web::utils::Urls;
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::extract::{Query, State};
@@ -18,13 +18,13 @@ use oauth2::{PkceCodeChallenge, PkceCodeVerifier, RedirectUrl};
 
 use openidconnect::EmptyAdditionalProviderMetadata;
 use openidconnect::{
-    core::*, ClaimsVerificationError, EmptyAdditionalClaims, IdTokenClaims, TokenResponse,
-};
-use openidconnect::{
     AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
 };
+use openidconnect::{
+    ClaimsVerificationError, EmptyAdditionalClaims, IdTokenClaims, TokenResponse, core::*,
+};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::Deserialize;
-use sqlx::SqlitePool;
 use tower_sessions::cookie::time::Duration;
 use tower_sessions::session_store::ExpiredDeletion;
 
@@ -216,9 +216,7 @@ pub async fn parse_state_code(
     assert_eq!(verifier_copy.secret(), pkce_verifier.secret());
 
     let http_client = get_http_client().map_err(|err| ParserError::ErrorMessage {
-        content: format!(
-            "Failed to build reqwest client to query OIDC token response: {err:?}"
-        ),
+        content: format!("Failed to build reqwest client to query OIDC token response: {err:?}"),
     })?;
 
     // Now you can exchange it for an access token and ID token.
@@ -241,7 +239,7 @@ pub async fn parse_state_code(
         None => {
             return Err(ParserError::ErrorMessage {
                 content: "couldn't parse token".to_string(),
-            })
+            });
         }
     };
     trace!("id_token: {id_token:?}");
@@ -314,7 +312,9 @@ pub async fn login(
 
             let email = claims.get_email().map_err(|err| err.into_response())?;
 
-            let mut dbuser = match User::get_by_subject(&state.connpool().await, claims.subject())
+            let mut dbuser = match entities::users::Entity::find()
+                .filter(entities::users::Column::Authref.eq(claims.subject().to_string()))
+                .one(&state.read().await.db.clone())
                 .await
             {
                 Ok(Some(user)) => user,
@@ -387,14 +387,11 @@ pub async fn login(
                     );
 
                     dbuser.email = claims_email;
-                    let mut db_txn = match state.connpool().await.begin().await {
-                        Ok(val) => val,
-                        Err(err) => {
-                            error!("Failed to start transaction to store user: {err:?}");
-                            return Err(Urls::Home.redirect().into_response());
-                            // TODO: this probably... should be handled as a better error?
-                        }
-                    };
+                    let db_txn = state
+                        .get_db_txn()
+                        .await
+                        .map_err(|_| Urls::Home.redirect().into_response())?;
+
                     if let Err(err) = dbuser.update_with_txn(&mut db_txn).await {
                         error!("Failed to update user email: {err:?}");
                         return Err(Urls::Home.redirect().into_response());
@@ -467,9 +464,9 @@ pub async fn logout(session: Session) -> Result<Redirect, (axum::http::StatusCod
 
 pub async fn build_auth_stores(
     config: CowCellReadTxn<ConfigFile>,
-    connpool: SqlitePool,
+    connpool: DatabaseConnection,
 ) -> Result<SessionManagerLayer<SqliteStore>, GoatNsError> {
-    let session_store = SqliteStore::new(connpool)
+    let session_store = SqliteStore::new(connpool.get_sqlite_connection_pool().clone())
         .with_table_name("sessions")
         .map_err(|err| {
             GoatNsError::StartupError(format!("Failed to initialize session store: {err}"))
@@ -555,7 +552,7 @@ pub async fn signup(
                         Some(destination) => Ok(Redirect::to(&destination).into_response()),
                         None => Ok(Urls::Dashboard.redirect().into_response()),
                     }
-                },
+                }
                 Err(error) => {
                     debug!("Failed to save new user signup... oh no! {error:?}");
                     // TODO: throw an error page on this one

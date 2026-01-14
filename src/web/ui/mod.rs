@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use crate::datastore::Command;
-use crate::db::{DBEntity, User};
+use crate::db::entities;
+use crate::web::GoatStateTrait;
+use crate::web::api::filezone::ApiZoneResponse;
 use crate::web::utils::Urls;
-use crate::zones::FileZone;
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::Router;
@@ -11,9 +12,11 @@ use axum::extract::{OriginalUri, Path, Query, State};
 use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
+use sea_orm::EntityTrait;
 use serde::Deserialize;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument, trace};
+use uuid::Uuid;
 
 use super::GoatState;
 
@@ -25,7 +28,7 @@ mod zones;
 #[derive(Template, WebTemplate)]
 #[template(path = "view_zones.html")]
 pub(crate) struct TemplateViewZones {
-    zones: Vec<FileZone>,
+    zones: Vec<entities::zones::Model>,
     pub user_is_admin: bool,
     message: Option<String>,
     error: Option<String>,
@@ -34,7 +37,7 @@ pub(crate) struct TemplateViewZones {
 #[derive(Template, WebTemplate)]
 #[template(path = "view_zone.html")]
 pub(crate) struct TemplateViewZone {
-    zone: FileZone,
+    zone: ApiZoneResponse,
     pub user_is_admin: bool,
 }
 
@@ -66,7 +69,7 @@ pub(crate) async fn zones_list(
         .tx
         .send(Command::GetZoneNames {
             resp: os_tx,
-            user: user.clone(),
+            user_id: user.id,
             offset,
             limit,
         })
@@ -97,7 +100,7 @@ pub(crate) async fn zones_list(
 #[instrument(level = "debug", skip(state))]
 pub(crate) async fn zone_view(
     OriginalUri(path): OriginalUri,
-    Path(name_or_id): Path<i64>,
+    Path(id): Path<Uuid>,
     State(state): State<GoatState>,
     mut session: Session,
 ) -> Result<TemplateViewZone, impl IntoResponse> {
@@ -108,7 +111,7 @@ pub(crate) async fn zone_view(
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let cmd = Command::GetZone {
         resp: os_tx,
-        id: Some(name_or_id),
+        id: Some(id),
         name: None,
     };
     debug!("{cmd:?}");
@@ -146,7 +149,7 @@ pub async fn check_logged_in(
     session: &mut Session,
     path: Uri,
     state: GoatState,
-) -> Result<User, Redirect> {
+) -> Result<entities::users::Model, Redirect> {
     let authref: Option<String> = session
         .get("authref")
         .await
@@ -175,14 +178,25 @@ pub async fn check_logged_in(
     }
     debug!("session ok!");
 
-    let user: User = match session.get("user").await.unwrap_or(None) {
+    let user_id = match session.get("user_id").await.unwrap_or(None) {
         Some(val) => val,
         None => return Err(Urls::Login.redirect()),
     };
+    let txn = state.get_db_txn().await.map_err(|err| {
+        debug!("Failed to get DB transaction: {err:?}");
+        Urls::Login.redirect()
+    })?;
+    let user = entities::users::Entity::find_by_id(user_id)
+        .one(&txn)
+        .await
+        .map_err(|err| {
+            debug!("Failed to get user {} from database: {err:?}", user_id);
+            Urls::Login.redirect()
+        })?;
 
     // Check the database to make sure they're actually legit and not disabled
-    if let Some(user_id) = user.id {
-        let pool = state.read().await.connpool.clone();
+    if let Some(user) = user {
+        let pool = state.read().await.db.clone();
         match User::get(&pool, user_id).await {
             Ok(db_user) => {
                 if db_user.disabled {

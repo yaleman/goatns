@@ -26,6 +26,7 @@ pub enum GoatNsError {
     Generic(String),
     Regex(String),
     InvalidValue(String),
+    NotFound,
 }
 
 impl From<regex::Error> for GoatNsError {

@@ -1,7 +1,7 @@
-use crate::db::{DBEntity, User};
+use crate::db::{DBEntity, entities};
 use crate::error::GoatNsError;
 use crate::web::ui::check_logged_in;
-use crate::web::utils::{create_api_token, Urls};
+use crate::web::utils::{Urls, create_api_token};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -19,12 +19,12 @@ use axum::http::Uri;
 use chrono::{DateTime, TimeDelta, Utc};
 use enum_iterator::Sequence;
 use oauth2::CsrfToken;
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
 use tracing::{debug, error, info, trace};
 
-use crate::db::UserAuthToken;
-use crate::web::GoatState;
+use crate::web::{GoatState, GoatStateTrait};
 
 static SESSION_CSRFTOKEN_FIELD: &str = "api_token_csrf_token";
 
@@ -76,7 +76,9 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
     };
 
     if user_input != csrf_token {
-        debug!("Session and form CSRF token failed to match! user={user_input} <> session={csrf_token}");
+        debug!(
+            "Session and form CSRF token failed to match! user={user_input} <> session={csrf_token}"
+        );
         return false;
     }
 
@@ -138,7 +140,7 @@ async fn store_api_csrf_token(
         None => {
             return Err(GoatNsError::Csrf(
                 "Failed to calculate CSRF expiry!".to_string(),
-            ))
+            ));
         }
     };
     let csrf_expiry: DateTime<Utc> = Utc::now() + delta_time;
@@ -192,17 +194,9 @@ pub async fn api_tokens_get(
         }
     };
 
-    let user_id = match user.id {
-        Some(val) => val,
-        None => {
-            debug!("Couldn't get user id from session store");
-            return Err(Urls::Dashboard.redirect());
-        }
-    };
-
-    let tokens = match UserAuthToken::get_all_user(&state.read().await.connpool, user_id).await {
+    let tokens = match UserAuthToken::get_all_user(&state.read().await.db, user.id).await {
         Err(error) => {
-            error!("Failed to pull tokens for user {:#?}: {error:?}", user_id);
+            error!("Failed to pull tokens for user {:#?}: {error:?}", user.id);
             vec![]
         }
         Ok(val) => val,
@@ -381,15 +375,7 @@ pub async fn api_tokens_post(
             let lifetime: i32 = form.lifetime.unwrap_or(ApiTokenLifetime::EightHours).into();
             // get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
 
-            let userid: i64 = match user.id {
-                Some(val) => val,
-                None => {
-                    error!("Failed to get user id from session store");
-                    return Err(Urls::SettingsApiTokens.redirect());
-                }
-            };
-
-            let api_token = create_api_token(api_cookie_secret, lifetime, userid);
+            let api_token = create_api_token(api_cookie_secret, lifetime, user.id);
 
             let name = match form.token_name {
                 Some(val) => val,
@@ -406,13 +392,13 @@ pub async fn api_tokens_post(
                 name,
                 issued: api_token.issued,
                 expiry: api_token.expiry,
-                userid,
+                userid: user.id,
                 tokenkey: api_token.token_key.to_owned(),
                 tokenhash: api_token.token_hash,
             };
             trace!("Starting to store token in the DB, grabbing transaction...");
 
-            let mut txn = match state_reader.connpool.begin().await {
+            let mut txn = match state_reader.db.begin().await {
                 Ok(val) => val,
                 Err(error) => {
                     error!("Failed to pick up a txn for api token storage: {error:?}");
@@ -540,25 +526,17 @@ pub async fn api_tokens_delete_get(
     };
 
     let state_reader = state.read().await;
-    let pool = state_reader.connpool.clone();
+    let pool = state_reader.db.clone();
     let uat = match UserAuthToken::get(&pool, id).await {
         Err(err) => {
             debug!("Requested delete for token: {err:?}");
             return Err(Urls::SettingsApiTokens.redirect());
         }
         Ok(res) => {
-            let user_id = match user.id {
-                Some(val) => val,
-                None => {
-                    debug!("Couldn't get user id from session store");
-                    return Err(Urls::Dashboard.redirect());
-                }
-            };
-
-            if res.userid != user_id {
+            if res.userid != user.id {
                 debug!(
                     "You can't delete another user's tokens! uid={} token.userid={}",
-                    user_id, res.userid
+                    user.id, res.userid
                 );
                 return Err(Urls::SettingsApiTokens.redirect());
             };
@@ -581,7 +559,7 @@ pub async fn api_tokens_delete_post(
     OriginalUri(path): OriginalUri,
     Form(form): Form<ApiTokenDeleteForm>,
 ) -> Result<Html<String>, Redirect> {
-    let user: User = check_logged_in(&mut session, path, state.clone()).await?;
+    let user = check_logged_in(&mut session, path, state.clone()).await?;
 
     if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
         // TODO: redirect to the start
@@ -591,37 +569,40 @@ pub async fn api_tokens_delete_post(
 
     debug!("Deleting token from Form: {form:?}");
 
-    let pool = state.read().await.connpool.clone();
+    let mut pool = state.get_db_txn().await?;
 
-    let user_id = match user.id {
-        Some(val) => val,
-        None => {
-            debug!("Couldn't get user id from session store");
-            return Err(Urls::Dashboard.redirect());
-        }
-    };
+    let token = entities::user_tokens::Entity::find()
+        .filter(
+            entities::user_tokens::Column::Id
+                .eq(form.id)
+                .and(entities::user_tokens::Column::Userid.eq(user.id)),
+        )
+        .one(&mut pool)
+        .await?;
 
-    let uat = match UserAuthToken::get(&pool, form.id).await {
-        Err(err) => {
-            debug!("Requested delete for existing token: {err:?}");
-            return Err(Urls::SettingsApiTokens.redirect());
-        }
-        Ok(res) => {
-            if res.userid != user_id {
-                debug!(
-                    "You can't delete another user's tokens! uid={} token.userid={}",
-                    user_id, res.userid
-                );
-                return Err(Urls::SettingsApiTokens.redirect());
-            };
+    let res = token.delete(&mut pool).await?;
 
-            res
-        }
-    };
+    // // let uat = match UserAuthToken::get(&pool, form.id).await {
+    // //     Err(err) => {
+    // //         debug!("Requested delete for existing token: {err:?}");
+    // //         return Err(Urls::SettingsApiTokens.redirect());
+    // //     }
+    // //     Ok(res) => {
+    // //         if res.userid != user.id {
+    // //             debug!(
+    // //                 "You can't delete another user's tokens! uid={} token.userid={}",
+    // //                 user.id, res.userid
+    // //             );
+    // //             return Err(Urls::SettingsApiTokens.redirect());
+    // //         };
 
-    if let Err(error) = uat.delete(&pool).await {
-        debug!("Failed to delete token {:?}: {error:?}", uat.id);
-    };
+    // //         res
+    // //     }
+    // // };
+
+    // if let Err(error) = uat.delete(&pool).await {
+    //     debug!("Failed to delete token {:?}: {error:?}", uat.id);
+    // };
 
     info!(
         "id={} action=api_token_delete token_id={}",

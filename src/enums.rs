@@ -1,7 +1,7 @@
 use crate::resourcerecord::InternalResourceRecord;
 use enum_iterator::Sequence;
 use packed_struct::prelude::*;
-use serde::{de, Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer, de};
 use std::fmt::Display;
 use utoipa::ToSchema;
 
@@ -80,7 +80,9 @@ pub enum Rcode {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence, sqlx::Type)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Sequence, sqlx::Type, Deserialize, Serialize, ToSchema,
+)]
 /// RRType, eg A, NS, MX, etc
 #[sqlx(type_name = "INTEGER")]
 #[repr(i64)]
@@ -118,6 +120,18 @@ pub enum RecordType {
     /// Certification Authority Restriction - <https://www.rfc-editor.org/rfc/rfc6844.txt>
     CAA = 257,
     InvalidType,
+}
+
+impl Into<sea_orm::Value> for RecordType {
+    fn into(self) -> sea_orm::Value {
+        sea_orm::Value::from(self as u16)
+    }
+}
+
+impl Into<u16> for RecordType {
+    fn into(self) -> u16 {
+        self as u16
+    }
 }
 
 impl From<&u16> for RecordType {
@@ -298,6 +312,12 @@ impl Display for RecordClass {
     }
 }
 
+impl Into<u16> for RecordClass {
+    fn into(self) -> u16 {
+        self as u16
+    }
+}
+
 impl<'de> de::Deserialize<'de> for RecordClass {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -357,9 +377,16 @@ impl From<bool> for PacketType {
 
 #[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub enum ContactDetails {
-    Mastodon { contact: String, server: String },
-    Email { contact: String },
-    Twitter { contact: String },
+    Mastodon {
+        contact: String,
+        server: String,
+    },
+    Email {
+        contact: String,
+    },
+    Twitter {
+        contact: String,
+    },
     #[default]
     None,
 }
@@ -370,9 +397,9 @@ impl std::fmt::Display for ContactDetails {
             ContactDetails::Mastodon { server, contact } => f.write_fmt(format_args!(
                 r#"<a href="https://{server}/@{contact}">{contact}</a>"#
             )),
-            ContactDetails::Email { contact } => f.write_fmt(format_args!(
-                r#"<a href="mailto:{contact}">{contact}</a>"#
-            )),
+            ContactDetails::Email { contact } => {
+                f.write_fmt(format_args!(r#"<a href="mailto:{contact}">{contact}</a>"#))
+            }
             ContactDetails::Twitter { contact } => f.write_fmt(format_args!(
                 r#"<a href="https://twitter.com/{contact}">{contact}</a>"#
             )),
@@ -384,17 +411,13 @@ impl ContactDetails {
     /// returns (username, url)
     pub fn to_html_parts(&self) -> (String, String) {
         match self {
-            ContactDetails::Mastodon { server, contact } => (
-                contact.to_owned(),
-                format!("https://{server}/@{contact}"),
-            ),
-            ContactDetails::Email { contact } => {
-                (contact.to_owned(), format!("mailto:{contact}"))
+            ContactDetails::Mastodon { server, contact } => {
+                (contact.to_owned(), format!("https://{server}/@{contact}"))
             }
-            ContactDetails::Twitter { contact } => (
-                contact.to_owned(),
-                format!("https://twitter.com/{contact}"),
-            ),
+            ContactDetails::Email { contact } => (contact.to_owned(), format!("mailto:{contact}")),
+            ContactDetails::Twitter { contact } => {
+                (contact.to_owned(), format!("https://twitter.com/{contact}"))
+            }
             ContactDetails::None => ("".to_string(), "".to_string()),
         }
     }
@@ -427,47 +450,46 @@ impl TryFrom<String> for ContactDetails {
                     "Mastodon" => {
                         let contact_value = match contact_value.starts_with('@') {
                             false => contact_value,
-                            true => contact_value.trim_start_matches(
-                                '@'
-                            )
+                            true => contact_value.trim_start_matches('@'),
                         };
                         if !contact_value.contains('@') {
-                            Err(ContactDetailsDeserializerError::InputFormatWrong{unexp: contact_value.to_string(),exp: "Input format is wrong please ensure it's in the format Mastodon:username@server for Mastodon",
-                        })
-                        }
-
-                        else {
+                            Err(ContactDetailsDeserializerError::InputFormatWrong {
+                                unexp: contact_value.to_string(),
+                                exp: "Input format is wrong please ensure it's in the format Mastodon:username@server for Mastodon",
+                            })
+                        } else {
                             let mut contact_split = contact_value.split('@');
                             #[allow(clippy::expect_used)]
-                            Ok( Self::Mastodon {
-                                contact: contact_split.next().expect("THe length was checked and then we couldn't get 
-                                it!").to_string(),
-                                server: contact_split.next().expect("THe length was checked and then we couldn't get it!").to_string(),
+                            Ok(Self::Mastodon {
+                                contact: contact_split
+                                    .next()
+                                    .expect(
+                                        "THe length was checked and then we couldn't get 
+                                it!",
+                                    )
+                                    .to_string(),
+                                server: contact_split
+                                    .next()
+                                    .expect("THe length was checked and then we couldn't get it!")
+                                    .to_string(),
                             })
                         }
-
-                    },
-                    "Email" => {
-                        Ok(Self::Email { contact: contact_value.to_string() })
-
-                    },
-                    "Twitter" => {
-                        Ok(Self::Twitter { contact: contact_value.to_string() })
-
-                    },
-                    &_ => {
-                        Err(ContactDetailsDeserializerError::WrongContactType(format!(
-                                "Contact type ({contact_type}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon"
-                                ) ))
                     }
+                    "Email" => Ok(Self::Email {
+                        contact: contact_value.to_string(),
+                    }),
+                    "Twitter" => Ok(Self::Twitter {
+                        contact: contact_value.to_string(),
+                    }),
+                    &_ => Err(ContactDetailsDeserializerError::WrongContactType(format!(
+                        "Contact type ({contact_type}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon"
+                    ))),
                 }
             }
-            _ => {
-                Err(ContactDetailsDeserializerError::InputLengthWrong{
-                    msg: "Length/value of input is wrong. please ensure it's in the format type:username@server (server for Mastodon)",
-                    len: split_value.count(),
-                })
-            }
+            _ => Err(ContactDetailsDeserializerError::InputLengthWrong {
+                msg: "Length/value of input is wrong. please ensure it's in the format type:username@server (server for Mastodon)",
+                len: split_value.count(),
+            }),
         }
     }
 }

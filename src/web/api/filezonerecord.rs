@@ -1,17 +1,60 @@
-use crate::db::{DBEntity, ZoneOwnership};
+use crate::db::entities;
+use crate::enums::{RecordClass, RecordType};
 use crate::error_result_json;
-use crate::zones::FileZoneRecord;
+use crate::web::api::filezone::ApiZoneResponse;
+use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::{ActiveModelTrait, EntityTrait};
 use tower_sessions::Session;
 use tracing::debug;
+use utoipa::ToSchema;
+use uuid::Uuid;
 
 use super::*;
+
+#[derive(Deserialize, Serialize, Debug, ToSchema, Clone)]
+pub struct ZoneForm {
+    pub id: Option<Uuid>,
+    pub name: String,
+    pub rname: String,
+    pub serial: u32,
+    pub refresh: u32,
+    pub retry: u32,
+    pub expire: u32,
+    pub minimum: u32,
+}
+
+#[derive(Deserialize, Serialize, Debug, ToSchema, Clone)]
+pub struct ZoneRecordForm {
+    pub id: Option<Uuid>,
+    pub name: String,
+    pub rclass: RecordClass,
+    pub rrtype: RecordType,
+    pub rdata: String,
+    pub ttl: Option<u32>,
+    pub zoneid: Uuid,
+}
+
+impl From<entities::zones::Model> for ZoneForm {
+    fn from(zone: entities::zones::Model) -> Self {
+        ZoneForm {
+            id: Some(zone.id),
+            name: zone.name,
+            rname: zone.rname,
+            serial: zone.serial,
+            refresh: zone.refresh,
+            retry: zone.retry,
+            expire: zone.expire,
+            minimum: zone.minimum,
+        }
+    }
+}
 
 /// Save the entity to the database
 #[utoipa::path(
     post,
     path = "/api/record",
     operation_id = "record_create",
-    request_body = FileZoneRecord,
+    request_body = ZoneForm,
     responses(
         (status = 200, description = "Successful"),
         (status = 403, description = "Auth failed"),
@@ -19,11 +62,12 @@ use super::*;
     ),
     tag = "Records",
 )]
+
 pub(crate) async fn api_create(
     State(state): State<GoatState>,
     session: Session,
-    Json(record): Json<FileZoneRecord>,
-) -> Result<Json<Box<FileZoneRecord>>, (StatusCode, Json<ErrorResult>)> {
+    Json(record): Json<ZoneForm>,
+) -> Result<Json<entities::zones::Model>, (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
 
     let user_id = match user.id {
@@ -34,30 +78,23 @@ pub(crate) async fn api_create(
         }
     };
 
-    let zone_id = match record.zoneid {
-        Some(val) => val,
-        None => {
-            debug!("No zone id found in record");
-            return error_result_json!("No zone id found in record", StatusCode::BAD_REQUEST);
-        }
-    };
-
-    let mut txn = state.connpool().await.begin().await.map_err(|_| {
+    let txn = state.get_db_txn().await.map_err(|_| {
+        // let txn = state.read().await.db.begin().await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json::from(ErrorResult::from("Database error")),
         )
     })?;
-    debug!("looking for ZO for user: {} zoneid: {}", user_id, zone_id);
-    if let Err(err) = ZoneOwnership::get_ownership_by_userid(&mut txn, &user_id, &zone_id).await {
-        eprintln!("Error getting ownership: {err:?}");
-        return error_result_json!("", StatusCode::UNAUTHORIZED);
-    };
+    debug!(
+        "looking for ZO for user: {} zoneid: {:?}",
+        user_id, record.id
+    );
+    let zone = entities::zones::ActiveModel::from(record);
 
-    match record.save_with_txn(&mut txn).await {
+    match zone.insert(&txn).await.map_err(GoatNsError::from) {
         Err(err) => {
             eprintln!("Error saving record: {err:?}");
-            
+
             // Check if this is a duplicate record error or validation error
             match &err {
                 crate::error::GoatNsError::Generic(msg) => {
@@ -90,8 +127,9 @@ pub(crate) async fn api_create(
                         }
                     }
                     // Check for unique constraint error codes
-                    if db_err.code() == Some(std::borrow::Cow::Borrowed("2067")) || 
-                       db_err.code() == Some(std::borrow::Cow::Borrowed("1555")) {
+                    if db_err.code() == Some(std::borrow::Cow::Borrowed("2067"))
+                        || db_err.code() == Some(std::borrow::Cow::Borrowed("1555"))
+                    {
                         return error_result_json!(
                             "A record with the same name, type, and class already exists in this zone",
                             StatusCode::CONFLICT
@@ -100,7 +138,7 @@ pub(crate) async fn api_create(
                 }
                 _ => {}
             }
-            
+
             error_result_json!("Error saving record", StatusCode::BAD_REQUEST)
         }
         Ok(val) => {
@@ -124,7 +162,7 @@ pub(crate) async fn api_update(
 ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
 
-    let record: FileZoneRecord = match serde_json::from_value(payload) {
+    let record: ZoneForm = match serde_json::from_value(payload) {
         Ok(val) => val,
         Err(err) => {
             eprintln!("Failed to parse object: {err:?}");
@@ -181,73 +219,59 @@ pub(crate) async fn api_update(
 pub(crate) async fn api_get(
     State(state): State<GoatState>,
     session: Session,
-    Path(id): Path<i64>,
-) -> Result<Json<Box<FileZoneRecord>>, (StatusCode, Json<ErrorResult>)> {
+    Path(id): Path<Uuid>,
+) -> Result<Json<entities::records::Model>, (StatusCode, Json<ErrorResult>)> {
     check_api_auth(&session).await?;
 
-    let pool = state.connpool().await;
-    let res = match FileZoneRecord::get(&pool, id).await {
-        Ok(val) => val,
+    match entities::records::Entity::find_by_id(id)
+        .one(&*state.connpool().await)
+        .await
+    {
+        Ok(Some(val)) => Ok(Json(val)),
+        Ok(None) => {
+            return error_result_json!("Record not found", StatusCode::NOT_FOUND);
+        }
         Err(err) => {
             // TODO: this should handle missing OR failures
             eprintln!("Error getting record: {err:?}");
             return error_result_json!("", StatusCode::NOT_FOUND);
         }
-    };
-    Ok(Json(res))
+    }
 }
 
 /// Delete an object
 /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
-pub(crate) async fn api_delete(
+pub(crate) async fn api_delete_zone(
     State(state): State<GoatState>,
     session: Session,
-    Path(id): Path<i64>,
+    Path(zone_id): Path<Uuid>,
 ) -> Result<(), (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
 
-    let mut txn = state.connpool().await.begin().await.map_err(|_| {
+    let mut txn = state.get_db_txn().await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json::from(ErrorResult::from("Database error")),
         )
     })?;
 
-    let record = match FileZoneRecord::get_with_txn(&mut txn, &id).await {
-        Ok(val) => val,
-        Err(err) => {
-            let resmsg = format!("error getting record: {err:?}");
-            return error_result_json!(resmsg.as_str(), StatusCode::UNAUTHORIZED);
-        }
-    };
-    let user_id = match user.id {
-        Some(val) => val,
-        None => {
-            debug!("No user id found in session");
-            return error_result_json!("No user id found in session", StatusCode::UNAUTHORIZED);
-        }
-    };
+    let ownership = entities::ownership::Entity::find()
+        .filter(
+            entities::ownership::Column::Zoneid
+                .eq(zone_id)
+                .and(entities::ownership::Column::Userid.eq(user.id.unwrap())),
+        )
+        .find_also_related(entities::zones::Entity)
+        .all(&mut txn)
+        .await
+        .map_err(|err| {
+            eprintln!("Error checking ownership: {err:?}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?;
 
-    let zone_id = match record.zoneid {
-        Some(val) => val,
-        None => {
-            debug!("No zone id found in record");
-            return error_result_json!("No zone id found in record", StatusCode::BAD_REQUEST);
-        }
-    };
-    if let Err(err) = ZoneOwnership::get_ownership_by_userid(&mut txn, &user_id, &zone_id).await {
-        eprintln!("Error getting ownership: {err:?}");
-        return error_result_json!("no zone ownership found", StatusCode::UNAUTHORIZED);
-    };
-
-    if let Err(err) = record.delete_with_txn(&mut txn).await {
-        // TODO: This error message needs improving
-        eprintln!("error committing transaction! {err:?}");
-        return error_result_json!(
-            "Error deleting record, see the admins",
-            StatusCode::INTERNAL_SERVER_ERROR
-        );
-    }
     if let Err(err) = txn.commit().await {
         // TODO: This error message needs improving
         eprintln!("error committing transaction! {err:?}");

@@ -1,16 +1,15 @@
 use super::*;
-use crate::db::User;
-use crate::zones::FileZone;
+use axum::Json;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::{delete, post, put};
-use axum::Json;
 use tower_sessions::Session;
 use tracing::debug;
 
 use serde::Deserialize;
 use serde::Serialize;
+use uuid::Uuid;
 
 pub mod auth;
 pub(crate) mod docs;
@@ -83,13 +82,6 @@ impl From<&str> for ErrorResult {
 //     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)>;
 // }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct FileZoneResponse {
-    pub message: String,
-    pub zone: Option<FileZone>,
-    pub id: Option<i64>,
-}
-
 #[derive(Serialize)]
 pub struct GoatNSVersion {
     version: String,
@@ -106,9 +98,16 @@ pub async fn version_get() -> Json<GoatNSVersion> {
     Json::from(GoatNSVersion::default())
 }
 
+#[derive(Debug, Serialize, Clone, Deserialize)]
+pub struct UserAuthResult {
+    pub id: Option<Uuid>,
+}
+
 /// Check API authentication by extracting user from session
 /// Returns the authenticated user or an error response
-pub async fn check_api_auth(session: &Session) -> Result<User, (StatusCode, Json<ErrorResult>)> {
+pub async fn check_api_auth(
+    session: &Session,
+) -> Result<UserAuthResult, (StatusCode, Json<ErrorResult>)> {
     match session.get("user").await {
         Ok(Some(user)) => Ok(user),
         Ok(None) => {
@@ -131,12 +130,12 @@ pub async fn check_api_auth(session: &Session) -> Result<User, (StatusCode, Json
 pub fn new() -> Router<GoatState> {
     Router::new()
         .route("/zone", post(filezone::api_create))
-        .route("/zone", put(filezone::api_update))
+        .route("/zone", put(filezone::api_zone_update))
         .route("/zone/{id}", get(filezone::api_get))
-        .route("/zone/{id}", delete(filezone::api_delete))
+        .route("/zone/{id}", delete(filezone::api_zone_delete))
         .route("/record", post(filezonerecord::api_create))
         .route("/record", put(filezonerecord::api_update))
         .route("/record/{id}", get(filezonerecord::api_get))
-        .route("/record/{id}", delete(filezonerecord::api_delete))
-        .route("/login", post(auth::login))
+        .route("/record/{id}", delete(filezonerecord::api_delete_zone))
+        .route("/login", post(auth::api_token_login))
 }

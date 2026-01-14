@@ -1,10 +1,11 @@
+use crate::db::entities;
 use crate::enums::RecordClass;
 use crate::error::GoatNsError;
 use crate::resourcerecord::InternalResourceRecord;
+use sea_orm::ActiveModelTrait;
 use tracing::*;
 
 use serde::{Deserialize, Serialize};
-use sqlx::SqliteConnection;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
@@ -12,69 +13,69 @@ use std::path::Path;
 use std::str::from_utf8;
 use utoipa::ToSchema;
 
-/// A DNS Zone
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(rename(serialize = "UPPERCASE"))]
-pub struct FileZone {
-    /// Database row ID
-    pub id: Option<i64>,
-    /// MNAME The `domain-name` of the name server that was the original or primary source of data for this zone.
-    // #[serde(rename(serialize = "MNAME"))]
-    pub name: String,
-    /// RNAME A `domain-name` which specifies the mailbox of the person responsible for this zone.
-    // #[serde(rename(serialize = "RNAME"), default = "rname_default")]
-    #[serde(default = "rname_default")]
-    pub rname: String,
-    /// SERIAL - The unsigned 32 bit version number of the original copy of the zone.  Zone transfers preserve this value.  This value wraps and should be compared using sequence space arithmetic.
-    #[serde(default)]
-    pub serial: u32,
-    /// REFRESH - A 32 bit time interval before the zone should be refreshed.
-    #[serde(default)]
-    pub refresh: u32,
-    /// RETRY - A 32 bit time interval that should elapse before a failed refresh should be retried.
-    #[serde(default)]
-    pub retry: u32,
-    ///  EXPIRE - A 32 bit time value that specifies the upper limit on the time interval that can elapse before the zone is no longer authoritative.
-    #[serde(default)]
-    pub expire: u32,
-    /// MINIMUM - The unsigned 32 bit minimum TTL field that should be exported with any RR from this zone.
-    #[serde(default)]
-    pub minimum: u32,
-    /// The records associated with this zone
-    pub records: Vec<FileZoneRecord>,
-}
+// /// A DNS Zone
+// #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+// #[serde(rename(serialize = "UPPERCASE"))]
+// pub struct FileZone {
+//     /// Database row ID
+//     pub id: Option<i64>,
+//     /// MNAME The `domain-name` of the name server that was the original or primary source of data for this zone.
+//     // #[serde(rename(serialize = "MNAME"))]
+//     pub name: String,
+//     /// RNAME A `domain-name` which specifies the mailbox of the person responsible for this zone.
+//     // #[serde(rename(serialize = "RNAME"), default = "rname_default")]
+//     #[serde(default = "rname_default")]
+//     pub rname: String,
+//     /// SERIAL - The unsigned 32 bit version number of the original copy of the zone.  Zone transfers preserve this value.  This value wraps and should be compared using sequence space arithmetic.
+//     #[serde(default)]
+//     pub serial: u32,
+//     /// REFRESH - A 32 bit time interval before the zone should be refreshed.
+//     #[serde(default)]
+//     pub refresh: u32,
+//     /// RETRY - A 32 bit time interval that should elapse before a failed refresh should be retried.
+//     #[serde(default)]
+//     pub retry: u32,
+//     ///  EXPIRE - A 32 bit time value that specifies the upper limit on the time interval that can elapse before the zone is no longer authoritative.
+//     #[serde(default)]
+//     pub expire: u32,
+//     /// MINIMUM - The unsigned 32 bit minimum TTL field that should be exported with any RR from this zone.
+//     #[serde(default)]
+//     pub minimum: u32,
+//     /// The records associated with this zone
+//     pub records: Vec<FileZoneRecord>,
+// }
 
-impl FileZone {
-    /// Checks if they're equal, ignores the zone id and records
-    pub fn matching_data(&self, cmp: &FileZone) -> bool {
-        self.expire == cmp.expire
-            && self.minimum == cmp.minimum
-            && self.name == cmp.name
-            && self.refresh == cmp.refresh
-            && self.retry == cmp.retry
-            && self.rname == cmp.rname
-            && self.serial == cmp.serial
-    }
+// impl FileZone {
+//     /// Checks if they're equal, ignores the zone id and records
+//     pub fn matching_data(&self, cmp: &FileZone) -> bool {
+//         self.expire == cmp.expire
+//             && self.minimum == cmp.minimum
+//             && self.name == cmp.name
+//             && self.refresh == cmp.refresh
+//             && self.retry == cmp.retry
+//             && self.rname == cmp.rname
+//             && self.serial == cmp.serial
+//     }
 
-    #[instrument(level = "debug")]
-    pub fn get_soa_record(&self, server_hostname: &str) -> InternalResourceRecord {
-        InternalResourceRecord::SOA {
-            zone: self.name.clone().into(),
-            mname: server_hostname.into(),
-            rname: self.rname.clone().into(),
-            serial: self.serial,
-            refresh: self.refresh,
-            retry: self.retry,
-            expire: self.expire,
-            minimum: self.minimum,
-            rclass: RecordClass::Internet,
-        }
-    }
-}
-/// default RNAME value for FileZone
-pub fn rname_default() -> String {
-    String::from("barry.dot.goat")
-}
+//     #[instrument(level = "debug")]
+//     pub fn get_soa_record(&self, server_hostname: &str) -> InternalResourceRecord {
+//         InternalResourceRecord::SOA {
+//             zone: self.name.clone().into(),
+//             mname: server_hostname.into(),
+//             rname: self.rname.clone().into(),
+//             serial: self.serial,
+//             refresh: self.refresh,
+//             retry: self.retry,
+//             expire: self.expire,
+//             minimum: self.minimum,
+//             rclass: RecordClass::Internet,
+//         }
+//     }
+// }
+// /// default RNAME value for FileZone
+// pub fn rname_default() -> String {
+//     String::from("barry.dot.goat")
+// }
 
 /// A DNS Record from the JSON file
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, ToSchema)]
@@ -115,7 +116,7 @@ impl Display for FileZoneRecord {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 /// A list of records associated with a given name - ie `foo.example.com -> [A { 1.2.3.4}, AAAA { 2000:cafe:beef }` etc
 pub struct ZoneRecord {
     /// the full name including the zone
@@ -161,7 +162,7 @@ pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, GoatNsError> {
 
 /// Loads a zone file
 #[instrument(level = "debug")]
-pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, GoatNsError> {
+pub fn load_zones(filename: &str) -> Result<Vec<entities::zones::ActiveModel>, GoatNsError> {
     let mut file = match File::open(filename) {
         Ok(value) => value,
         Err(err) => {
@@ -174,23 +175,13 @@ pub fn load_zones(filename: &str) -> Result<Vec<FileZone>, GoatNsError> {
     let mut buf: String = String::new();
     file.read_to_string(&mut buf)
         .inspect_err(|err| error!("Failed to read {}: {:?}", filename, err))?;
-    let jsonstruct: Result<Vec<FileZone>, GoatNsError> = json5::from_str(&buf)
-        .map_err(|e| GoatNsError::FileError(format!("Failed to read JSON file: {e:?}")));
-    jsonstruct
-}
+    let jsonblob: Vec<serde_json::Value> =
+        json5::from_str(&buf).map_err(|err| GoatNsError::FileError(err.to_string()))?;
+    let mut zones = Vec::new();
 
-impl FileZone {
-    pub(crate) async fn get_unowned(
-        pool: &mut SqliteConnection,
-    ) -> Result<Vec<FileZone>, GoatNsError> {
-        let rows = sqlx::query(
-            "select * from zones where id not in (select DISTINCT zoneid from ownership)",
-        )
-        .fetch_all(&mut *pool)
-        .await?
-        .into_iter()
-        .map(|row| row.into())
-        .collect();
-        Ok(rows)
+    for zone_json in jsonblob.into_iter() {
+        zones.push(entities::zones::ActiveModel::from_json(zone_json)?);
     }
+
+    Ok(zones)
 }

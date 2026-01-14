@@ -11,11 +11,9 @@ use tower_sessions::Session;
 use tracing::{debug, error, info};
 
 use crate::datastore::Command;
-use crate::db::User;
 use crate::web::GoatState;
 use crate::web::ui::check_logged_in;
 use crate::web::utils::Urls;
-use crate::zones::FileZone;
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct NewZoneForm {
@@ -30,17 +28,7 @@ pub(crate) async fn zones_new_post(
 ) -> Result<Redirect, Redirect> {
     debug!("Received new zone form: name={:?}", form.name);
 
-    let user: User = check_logged_in(&mut session, path, state.clone()).await?;
-
-    let userid = match user.id {
-        Some(id) => id,
-        None => {
-            return Err(Urls::Home.redirect_with_query(HashMap::from([(
-                "error".to_string(),
-                "No user ID found".to_string(),
-            )])));
-        }
-    };
+    let user = check_logged_in(&mut session, path, state.clone()).await?;
 
     // validate the zone is valid
     if form.name.is_empty() {
@@ -117,7 +105,7 @@ pub(crate) async fn zones_new_post(
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let msg = Command::CreateZone {
         zone,
-        userid,
+        userid: user.id,
         resp: os_tx,
     };
 
@@ -132,13 +120,8 @@ pub(crate) async fn zones_new_post(
     match os_rx.await {
         Ok(zone) => {
             info!("Zone {} created successfully", form.name);
-            if let Some(id) = zone.id {
-                debug!("Redirecting to /ui/zones/{id}");
-                Ok(Redirect::to(&format!("/ui/zones/{id}",)))
-            } else {
-                error!("Redirecting to /ui/zones because zone didn't have an ID?");
-                Err(Urls::ZonesList.redirect())
-            }
+            debug!("Redirecting to /ui/zones/{}", zone.id);
+            Ok(Redirect::to(&format!("/ui/zones/{}", zone.id)))
         }
         Err(err) => {
             error!("Error creating zone {}: {:?}", form.name, err);

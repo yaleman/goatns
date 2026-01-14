@@ -1,7 +1,6 @@
-use crate::db::{DBEntity, User, ZoneOwnership};
-use crate::web::GoatState;
+use crate::db::entities;
 use crate::web::utils::Urls;
-use crate::zones::FileZone;
+use crate::web::{GoatState, GoatStateTrait};
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::extract::{Path, State};
@@ -9,10 +8,12 @@ use axum::http::Uri;
 use axum::response::Redirect;
 use axum::routing::get;
 use axum::{Form, Router};
+use sea_orm::EntityTrait;
 use serde::Deserialize;
 use sqlx::Row;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument};
+use uuid::Uuid;
 
 use super::check_logged_in;
 
@@ -30,7 +31,7 @@ pub(crate) struct AdminReportUnownedRecords /*<'a>*/ {
     pub user_is_admin: bool,
     pub records: Vec<ZoneRecord>,
 
-    pub zones: Vec<FileZone>,
+    pub zones: Vec<entities::zones::Model>,
 }
 
 #[allow(dead_code)] // because this is only used in a template
@@ -69,29 +70,30 @@ pub(crate) async fn report_unowned_records(
     )
     .await?;
 
-    let mut pool = state.read().await.connpool.acquire().await.map_err(|err| {
+    let txn = state.get_db_txn().await.map_err(|err| {
         error!("Failed to get DB connection: {err:?}");
         Redirect::to(Urls::Dashboard.as_ref())
     })?;
 
-    let rows = match sqlx::query(
-        "select records_merged.record_id as id, records_merged.* from records_merged
-        left join ownership
-        ON records_merged.record_id = ownership.id
-        where ownership.id is NULL",
-    )
-    .fetch_all(&mut *pool)
-    .await
-    {
-        Ok(val) => {
-            debug!("Got the rows!");
-            val
-        }
-        Err(err) => {
-            error!("Failed to query records from DB: {err:?}");
-            vec![]
-        }
-    };
+    // let rows = match txn
+    //     .execute(Statement::from_string(
+    //         txn.get_database_backend(),
+    //         "select records_merged.record_id as id, records_merged.* from records_merged
+    //     left join ownership
+    //     ON records_merged.record_id = ownership.id
+    //     where ownership.id is NULL",
+    //     ))
+    //     .await
+    // {
+    //     Ok(val) => {
+    //         debug!("Got the rows!");
+    //         val.into()
+    //     }
+    //     Err(err) => {
+    //         error!("Failed to query records from DB: {err:?}");
+    //         vec![]
+    //     }
+    // };
 
     debug!("starting to do the rows!");
 
@@ -107,7 +109,7 @@ pub(crate) async fn report_unowned_records(
     Ok(AdminReportUnownedRecords {
         user_is_admin: user.admin,
         records,
-        zones: FileZone::get_unowned(&mut pool).await.map_err(|err| {
+        zones: FileZone::get_unowned(&mut txn).await.map_err(|err| {
             error!("Failed to get unowned zones: {err:?}");
             Redirect::to(Urls::Admin.as_ref())
         })?,
@@ -118,7 +120,7 @@ pub(crate) async fn report_unowned_records(
 #[template(path = "admin_ownership_template.html")]
 pub(crate) struct AssignOwnershipTemplate {
     user_is_admin: bool,
-    zone: Box<FileZone>,
+    zone: ZoneRecord,
     user: Option<String>,
 }
 
@@ -132,7 +134,7 @@ pub(crate) struct AssignOwnershipForm {
 pub(crate) async fn assign_zone_ownership(
     mut session: Session,
     State(state): State<GoatState>,
-    Path(id): Path<i64>,
+    Path(id): Path<Uuid>,
     Form(form): Form<AssignOwnershipForm>,
 ) -> Result<AssignOwnershipTemplate, Redirect> {
     let user = check_logged_in(
@@ -142,15 +144,17 @@ pub(crate) async fn assign_zone_ownership(
     )
     .await?;
 
-    let mut txn = state.read().await.connpool.begin().await.map_err(|err| {
-        error!("Failed to start transaction: {err:?}");
-        Redirect::to(Urls::Admin.as_ref())
-    })?;
+    let mut txn = state.get_db_txn().await?;
 
-    let zone = FileZone::get(&state.read().await.connpool, id)
+    let zone = entities::zones::Entity::find_by_id(id)
+        .one(&mut txn)
         .await
         .map_err(|err| {
             error!("Failed to get zone by ID: {err:?}");
+            Redirect::to(Urls::Admin.as_ref())
+        })?
+        .ok_or_else(|| {
+            error!("No zone found with ID: {}", id);
             Redirect::to(Urls::Admin.as_ref())
         })?;
 
@@ -171,7 +175,7 @@ pub(crate) async fn assign_zone_ownership(
                     zoneid,
                     userid,
                 }
-                .save(&state.read().await.connpool)
+                .save(&state.read().await.db)
                 .await
                 .map_err(|err| {
                     error!("Failed to insert zone ownership: {err:?}");

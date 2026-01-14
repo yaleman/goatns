@@ -1,12 +1,15 @@
 use axum::http::header::ACCEPT;
 use packed_struct::PackedStruct;
+use sea_orm::ActiveModelTrait;
+use sea_orm::ActiveValue::NotSet;
+use sea_orm::ActiveValue::Set;
 
-use crate::db::DBEntity;
+use crate::db::entities;
 use crate::db::test::test_example_com_zone;
 use crate::enums::RecordClass;
+use crate::enums::RecordType;
 use crate::tests::test_api::insert_test_user;
 use crate::tests::test_api::start_test_server;
-use crate::zones::FileZoneRecord;
 
 #[tokio::test]
 async fn test_doh_get_json() -> Result<(), ()> {
@@ -16,21 +19,21 @@ async fn test_doh_get_json() -> Result<(), ()> {
     let api_port = config.read().await.api_port;
 
     let _user = insert_test_user(&pool).await;
-    test_example_com_zone()
-        .save(&pool)
+    let zone = test_example_com_zone()
+        .insert(&pool)
         .await
         .expect("Failed to save test zone");
 
-    let fzr = FileZoneRecord {
-        zoneid: Some(1),
-        name: "test".to_string(),
-        rrtype: "A".to_string(),
-        id: None,
-        class: RecordClass::Internet,
-        rdata: "1.2.3.4".to_string(),
-        ttl: 1,
+    let fzr = entities::records::ActiveModel {
+        id: NotSet,
+        zoneid: Set(zone.id),
+        name: Set("test".to_string()),
+        rrtype: Set(RecordType::A.into()),
+        rclass: Set(RecordClass::Internet.into()),
+        rdata: Set("1.2.3.4".to_string()),
+        ttl: Set(Some(1)),
     }
-    .save(&pool)
+    .insert(&pool)
     .await
     .expect("Failed to save test record");
 
@@ -259,21 +262,21 @@ async fn test_doh_post_raw_dns() -> Result<(), ()> {
     let api_port = config.read().await.api_port;
 
     let _user = insert_test_user(&pool).await;
-    test_example_com_zone()
-        .save(&pool)
+    let zone = test_example_com_zone()
+        .insert(&pool)
         .await
         .expect("Failed to save test zone");
 
-    let fzr = FileZoneRecord {
-        zoneid: Some(1),
-        name: "post-test".to_string(),
-        rrtype: "A".to_string(),
-        id: None,
-        class: RecordClass::Internet,
-        rdata: "5.6.7.8".to_string(),
-        ttl: 300,
+    let fzr = entities::records::ActiveModel {
+        zoneid: Set(zone.id),
+        name: Set("post-test".to_string()),
+        rrtype: Set(RecordType::A as u16),
+        id: NotSet,
+        rclass: Set(RecordClass::Internet as u16),
+        rdata: Set("5.6.7.8".to_string()),
+        ttl: Set(Some(300)),
     }
-    .save(&pool)
+    .insert(&pool)
     .await
     .expect("Failed to save test record");
 
@@ -455,8 +458,8 @@ async fn test_doh_multiple_records() -> Result<(), ()> {
     let api_port = config.read().await.api_port;
 
     let _user = insert_test_user(&pool).await;
-    test_example_com_zone()
-        .save(&pool)
+    let zone = test_example_com_zone()
+        .insert(&pool)
         .await
         .expect("Failed to save test zone");
 
@@ -468,16 +471,16 @@ async fn test_doh_multiple_records() -> Result<(), ()> {
     ];
 
     for (name, ip) in records {
-        FileZoneRecord {
-            zoneid: Some(1),
-            name: name.to_string(),
-            rrtype: "A".to_string(),
-            id: None,
-            class: RecordClass::Internet,
-            rdata: ip.to_string(),
-            ttl: 600,
+        entities::records::ActiveModel {
+            id: NotSet,
+            zoneid: Set(zone.id),
+            name: Set(name.to_string()),
+            rrtype: Set(RecordType::A.into()),
+            rclass: Set(RecordClass::Internet.into()),
+            rdata: Set(ip.to_string()),
+            ttl: Set(Some(600)),
         }
-        .save(&pool)
+        .insert(&pool)
         .await
         .expect("Failed to save test record");
     }
@@ -626,29 +629,29 @@ async fn test_doh_different_record_types() -> Result<(), ()> {
     let api_port = config.read().await.api_port;
 
     let _user = insert_test_user(&pool).await;
-    test_example_com_zone()
-        .save(&pool)
+    let zone = test_example_com_zone()
+        .insert(&pool)
         .await
         .expect("Failed to save test zone");
 
     // Create different record types
     let records = vec![
-        ("txt-test", "TXT", "\"Hello from TXT record\""),
-        ("cname-test", "CNAME", "target.example.com"),
-        ("mx-test", "MX", "10 mail.example.com"),
+        ("txt-test", RecordType::TXT, "\"Hello from TXT record\""),
+        ("cname-test", RecordType::CNAME, "target.example.com"),
+        ("mx-test", RecordType::MX, "10 mail.example.com"),
     ];
 
     for (name, record_type, rdata) in records {
-        FileZoneRecord {
-            zoneid: Some(1),
-            name: name.to_string(),
-            rrtype: record_type.to_string(),
-            id: None,
-            class: RecordClass::Internet,
-            rdata: rdata.to_string(),
-            ttl: 3600,
+        entities::records::ActiveModel {
+            id: NotSet,
+            zoneid: Set(zone.id),
+            name: Set(name.to_string()),
+            rrtype: Set(record_type.into()),
+            rclass: Set(RecordClass::Internet.into()),
+            rdata: Set(rdata.to_string()),
+            ttl: Set(Some(3600)),
         }
-        .save(&pool)
+        .insert(&pool)
         .await
         .expect("Failed to save test record");
     }

@@ -3,7 +3,7 @@ use goatns::cli::{Cli, Commands, add_admin_user, default_config, export_zone_fil
 use goatns::enums::SystemState;
 use goatns::error::GoatNsError;
 use goatns::utils::start_channels;
-use sqlx::SqlitePool;
+use sea_orm::DatabaseConnection;
 use std::io;
 use std::time::Duration;
 use tracing::{debug, error, info};
@@ -68,7 +68,7 @@ async fn run() -> Result<(), GoatNsError> {
     let (agent_tx, datastore_sender, datastore_receiver) = start_channels();
 
     // start up the DB
-    let connpool: SqlitePool = db::get_conn(config.read().await)
+    let connpool: DatabaseConnection = db::get_conn(config.read().await)
         .await
         .map_err(|err| GoatNsError::StartupError(format!("DB Setup failed: {err:?}")))?;
 

@@ -1,6 +1,7 @@
+use sea_orm::ActiveModelTrait;
+
 use crate::cli::{default_config, export_zone_file};
 use crate::config::test_logging;
-use crate::db::DBEntity;
 use crate::db::test::test_example_com_zone;
 
 #[test]
@@ -18,7 +19,7 @@ async fn test_export_zone_file() {
     let output_filename = tempdir.path().join("zone_export.json");
 
     test_example_com_zone()
-        .save(&db_connection)
+        .insert(&db_connection)
         .await
         .expect("Failed to save test zone");
 

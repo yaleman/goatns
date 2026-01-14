@@ -7,10 +7,12 @@ use axum::http::StatusCode;
 use axum::response::Redirect;
 use chrono::{DateTime, TimeDelta, Utc};
 use rand::distr::{Alphanumeric, SampleString};
+use sea_orm::ActiveValue::{NotSet, Set};
 use sha2::{Digest, Sha256};
 use tracing::{debug, trace};
+use uuid::Uuid;
 
-use crate::db::TokenSearchRow;
+use crate::db::entities;
 
 /// URLs for the web interface
 #[derive(Copy, Clone)]
@@ -80,8 +82,17 @@ pub struct ApiToken {
     pub expiry: Option<DateTime<Utc>>,
 }
 
+pub fn generate_token_key() -> String {
+    let token_key = Alphanumeric.sample_string(&mut rand::rng(), 12);
+    format!("GA{token_key}")
+}
+
 /// Create an API token
-pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) -> ApiToken {
+pub fn create_api_token(
+    api_cookie_secret: &[u8],
+    lifetime: i32,
+    userid: Uuid,
+) -> entities::user_tokens::ActiveModel {
     let issued = Utc::now();
     let expiry = match lifetime {
         -1 => None,
@@ -107,21 +118,24 @@ pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) ->
     let password_hash_string = password_hash.to_string();
     debug!("Done hashing password");
 
-    let token_key = Alphanumeric.sample_string(&mut rand::rng(), 12);
-    let token_key = format!("GA{token_key}");
-    ApiToken {
-        token_key,
-        token_secret,
-        token_hash: password_hash_string,
-        issued,
-        expiry,
+    entities::user_tokens::ActiveModel {
+        id: NotSet,
+        key: Set(generate_token_key()),
+        hash: Set(password_hash_string),
+        issued: Set(issued),
+        expiry: Set(expiry),
+        name: NotSet,
+        userid: Set(userid),
     }
 }
 
 /// validate an API token matches our thingamajig
-pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result<(), String> {
+pub fn validate_api_token(
+    token: &entities::user_tokens::Model,
+    payload_token: &str,
+) -> Result<(), String> {
     let passwordhash =
-        match argon2::PasswordHash::parse(&token.tokenhash, argon2::password_hash::Encoding::B64) {
+        match argon2::PasswordHash::parse(&token.hash, argon2::password_hash::Encoding::B64) {
             Ok(val) => {
                 #[cfg(test)]
                 println!("Hashed payload: {val:?}");
@@ -130,7 +144,7 @@ pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result
             Err(err) => {
                 return Err(format!(
                     "Failed to parse token ({:?}) into hash: {err:?}",
-                    token.tokenhash
+                    token.hash
                 ));
             }
         };

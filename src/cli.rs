@@ -11,7 +11,6 @@ use tracing::{debug, error, info, warn};
 
 use crate::config::ConfigFile;
 use crate::datastore::Command;
-use crate::zones::FileZone;
 
 #[derive(Parser, Clone)]
 pub struct SharedOpts {
@@ -120,11 +119,9 @@ pub async fn export_zone_file(
     };
     debug!("Sent request to datastore");
 
-    let zone: Option<FileZone> = match rx_oneshot.await {
-        Ok(value) => value,
-        Err(err) => return Err(format!("rx from ds failed {err:?}")),
-    };
-    eprintln!("Got filezone: {zone:?}");
+    let zone = rx_oneshot
+        .await
+        .map_err(|err| format!("rx from ds failed {err:?}"))?;
 
     let zone_bytes = match zone {
         None => {
