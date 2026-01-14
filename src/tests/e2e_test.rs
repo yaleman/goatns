@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod tests {
 
+    use hickory_resolver::name_server::TokioConnectionProvider;
+    use hickory_resolver::proto::xfer::Protocol;
+    use hickory_resolver::{Resolver, config::*};
     use std::env;
     use std::net::*;
-    use trust_dns_resolver::AsyncResolver;
-    use trust_dns_resolver::config::*;
 
     use crate::servers::udp_server;
     use crate::tests::utils::wait_for_server;
@@ -81,7 +82,9 @@ mod tests {
             SocketAddr::new(localhost, 15353),
             Protocol::Udp,
         ));
-        let resolver = AsyncResolver::tokio(resolver_config, ResolverOpts::default());
+        let resolver =
+            Resolver::builder_with_config(resolver_config, TokioConnectionProvider::default())
+                .build();
 
         // Lookup the IP addresses associated with a name.
 
@@ -122,7 +125,7 @@ mod tests {
         let response = match resolver
             .lookup(
                 "_mqtt._http.hello.goat",
-                trust_dns_resolver::proto::rr::RecordType::Unknown(
+                hickory_resolver::proto::rr::RecordType::Unknown(
                     crate::enums::RecordType::URI as u16,
                 ),
             )

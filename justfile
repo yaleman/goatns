@@ -1,11 +1,10 @@
 # https://github.com/casey/just
 
 # list things
-default: list
-
-# List the options
-list:
+[private]
+default:
 	just --list
+
 
 # Build the docker image locally using buildx
 docker_buildx:
@@ -72,6 +71,7 @@ codespell:
 clippy:
 	cargo clippy --all-features --all-targets --quiet
 
+# Run the rust tests
 test:
 	cargo test --quiet
 
@@ -82,7 +82,7 @@ release_prep: check doc semgrep
 
 # Semgrep things
 semgrep:
-	semgrep ci --config auto $OUTPUT \
+	semgrep ci --config auto \
 	--exclude-rule "yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha" \
 	--exclude-rule "generic.html-templates.security.var-in-script-tag.var-in-script-tag" \
 	--exclude-rule "javascript.express.security.audit.xss.mustache.var-in-href.var-in-href" \
@@ -94,7 +94,7 @@ semgrep:
 
 # Build the rustdocs
 doc:
-	cargo doc --document-private-items
+	cargo doc --document-private-items --no-deps
 
 # Run coverage analysis with tarpaulin (HTML output)
 coverage:
