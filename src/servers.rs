@@ -411,6 +411,7 @@ pub async fn parse_query(
         crate::packet_dumper::dump_bytes(
             buf[0..len].into(),
             crate::packet_dumper::DumpType::ClientRequest,
+            None,
         )
         .await;
     }
@@ -576,6 +577,7 @@ pub struct Servers {
     pub tcpserver: Option<JoinHandle<Result<(), Error>>>,
     pub apiserver: Option<JoinHandle<Result<(), Error>>>,
     pub agent_tx: broadcast::Sender<AgentState>,
+    pub datastore_tx: Option<mpsc::Sender<crate::datastore::Command>>,
 }
 
 impl Default for Servers {
@@ -587,6 +589,7 @@ impl Default for Servers {
             tcpserver: None,
             apiserver: None,
             agent_tx,
+            datastore_tx: None,
         }
     }
 }
@@ -619,6 +622,12 @@ impl Servers {
     pub fn with_udpserver(self, udpserver: JoinHandle<Result<(), Error>>) -> Self {
         Self {
             udpserver: Some(udpserver),
+            ..self
+        }
+    }
+    pub fn with_datastore_tx(self, datastore_tx: mpsc::Sender<crate::datastore::Command>) -> Self {
+        Self {
+            datastore_tx: Some(datastore_tx),
             ..self
         }
     }

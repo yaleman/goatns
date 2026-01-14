@@ -1,3 +1,4 @@
+mod cli;
 mod config;
 mod db;
 mod doh;

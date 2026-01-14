@@ -90,15 +90,13 @@ impl Cli {
 }
 
 /// Output a default configuration file, based on the [crate::config::ConfigFile] object.
-pub fn default_config() {
+pub fn default_config() -> String {
     let output = match serde_json::to_string_pretty(&ConfigFile::default()) {
         Ok(value) => value,
-        Err(_) => {
-            error!("I don't know how, but we couldn't parse our own config file def.");
-            "".to_string()
-        }
+        Err(_) => "Failed to serialize default config file".to_string(),
     };
     println!("{output}");
+    output
 }
 
 /// Dump a zone to a file
@@ -131,13 +129,10 @@ pub async fn export_zone_file(
     let zone_bytes = match zone {
         None => {
             warn!("Couldn't find the zone {zone_name}");
-            return Ok(());
+            return Err(format!("Zone {zone_name} not found"));
         }
-        Some(zone) => serde_json::to_string_pretty(&zone).map_err(|err| {
-            format!(
-                "Failed to serialize zone {zone_name} to json: {err:?}"
-            )
-        })?,
+        Some(zone) => serde_json::to_string_pretty(&zone)
+            .map_err(|err| format!("Failed to serialize zone {zone_name} to json: {err:?}"))?,
     };
 
     // open the file

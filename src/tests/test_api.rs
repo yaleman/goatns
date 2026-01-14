@@ -80,7 +80,8 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
             .with_apiserver(apiserver)
             .with_datastore(datastore_manager)
             .with_udpserver(udpserver)
-            .with_tcpserver(tcpserver),
+            .with_tcpserver(tcpserver)
+            .with_datastore_tx(datastore_tx),
         config,
     );
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;

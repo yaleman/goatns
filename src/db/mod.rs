@@ -97,21 +97,6 @@ impl Default for User {
 }
 
 impl User {
-    // Query the DB looking for a user
-    // pub async fn get_by_email(pool: &SqlitePool, email: String) -> Result<Self, GoatNsError> {
-    //     let res = sqlx::query(
-    //         "
-    //         select * from users
-    //         where email = ?
-    //         ",
-    //     )
-    //     .bind(email)
-    //     .fetch_one(pool)
-    //     .await?;
-
-    //     Ok(User::from(res))
-    // }
-
     /// Query the DB looking for a user
     pub async fn get_by_subject(
         pool: &SqlitePool,
