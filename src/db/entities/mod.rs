@@ -4,6 +4,7 @@ pub mod prelude;
 
 pub mod ownership;
 pub mod records;
+pub mod records_merged;
 pub mod sessions;
 pub mod user_tokens;
 pub mod users;

@@ -1,3 +1,4 @@
+use crate::db::entities;
 use crate::web::constants::SESSION_USER_KEY;
 
 use super::*;
@@ -5,7 +6,7 @@ use axum::Json;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::routing::{delete, post, put};
+use axum::routing::{post, put};
 use tower_sessions::Session;
 use tracing::debug;
 
@@ -100,27 +101,22 @@ pub async fn version_get() -> Json<GoatNSVersion> {
     Json::from(GoatNSVersion::default())
 }
 
-#[derive(Debug, Serialize, Clone, Deserialize)]
-pub struct UserAuthResult {
-    pub id: Option<Uuid>,
-}
-
 /// Check API authentication by extracting user from session
 /// Returns the authenticated user or an error response
 pub async fn check_api_auth(
     session: &Session,
-) -> Result<UserAuthResult, (StatusCode, Json<ErrorResult>)> {
+) -> Result<entities::users::Model, (StatusCode, Json<ErrorResult>)> {
     match session.get(SESSION_USER_KEY).await {
         Ok(Some(user)) => Ok(user),
         Ok(None) => {
             #[cfg(test)]
-            println!("User not found in API call");
+            error!("User not found in API call");
             #[cfg(not(test))]
-            debug!("User not found in API call");
+            error!("User not found in API call");
             error_result_json!("", StatusCode::FORBIDDEN)
         }
         Err(err) => {
-            debug!("Session error in API call: {err:?}");
+            error!("Session error in API call: {err:?}");
             error_result_json!("Session error", StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -128,13 +124,17 @@ pub async fn check_api_auth(
 
 pub fn new() -> Router<GoatState> {
     Router::new()
-        .route("/zone", post(filezone::api_create))
+        .route("/zone", post(filezone::api_zone_create))
         .route("/zone", put(filezone::api_zone_update))
-        .route("/zone/{id}", get(filezone::api_get))
-        .route("/zone/{id}", delete(filezone::api_zone_delete))
-        .route("/record", post(filezonerecord::api_create))
-        .route("/record", put(filezonerecord::api_update))
-        .route("/record/{id}", get(filezonerecord::api_get))
-        .route("/record/{id}", delete(filezonerecord::api_delete_zone))
+        .route(
+            "/zone/{zone_id}",
+            get(filezone::api_get).delete(filezone::api_zone_delete),
+        )
+        .route("/record", post(filezonerecord::api_record_create))
+        .route("/record", put(filezonerecord::api_record_update))
+        .route(
+            "/record/{record_id}",
+            get(filezonerecord::api_record_get).delete(filezonerecord::api_record_delete),
+        )
         .route("/login", post(auth::api_token_login))
 }

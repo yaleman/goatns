@@ -4,7 +4,7 @@ use crate::config::ConfigFile;
 use crate::db::entities;
 use crate::error::GoatNsError;
 use crate::web::GoatStateTrait;
-use crate::web::constants::SESSION_USER_KEY;
+use crate::web::constants::{SESSION_SIGNED_IN_KEY, SESSION_USER_KEY};
 use crate::web::utils::Urls;
 use askama::Template;
 use askama_web::WebTemplate;
@@ -416,7 +416,7 @@ pub async fn login(
                 )
                     .into_response());
             };
-            if session.insert("signed_in", true).await.is_err() {
+            if session.insert(SESSION_SIGNED_IN_KEY, true).await.is_err() {
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to store session details",

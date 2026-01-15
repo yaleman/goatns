@@ -281,11 +281,12 @@ impl RecordType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence, sqlx::Type, ToSchema)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Sequence, sqlx::Type, ToSchema)]
 #[repr(i64)]
 /// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
     /// IN - Internet
+    #[default]
     Internet = 1,
     /// CS - CSNET class (Obsolete - used only for examples in some obsolete RFCs)
     CsNet = 2,

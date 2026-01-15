@@ -81,6 +81,21 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+        // create the records_merged view
+        manager.get_connection().execute_unprepared(
+            r#"CREATE VIEW IF NOT EXISTS records_merged ( record_id, zoneid, rrtype, rclass, rdata, name, ttl ) as
+        SELECT records.id as record_id, zones.id as zoneid, records.rrtype, records.rclass ,records.rdata,
+        CASE
+            WHEN records.name is NULL OR length(records.name) == 0 THEN zones.name
+            ELSE records.name || '.' || zones.name
+        END AS name,
+        CASE WHEN records.ttl is NULL then zones.minimum
+            WHEN records.ttl > zones.minimum THEN records.ttl
+            ELSE records.ttl
+        END AS ttl
+        from records, zones where records.zoneid = zones.id;"#,
+        ).await?;
+
         Ok(())
     }
 

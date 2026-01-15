@@ -117,10 +117,7 @@ impl ConfigFile {
 
     /// Get a bindable SocketAddr for use in the DNS listeners
     pub fn dns_listener_address(&self) -> Result<SocketAddr, Option<String>> {
-        #[cfg(not(test))]
         let listen_addr = format!("{}:{}", &self.address, &self.port);
-        #[cfg(test)]
-        let listen_addr = "127.0.0.1:0".to_string();
 
         listen_addr.parse::<SocketAddr>().map_err(|e| {
             error!("Failed to parse address: {e:?}");

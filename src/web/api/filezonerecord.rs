@@ -1,6 +1,7 @@
 use crate::db::entities;
 use crate::enums::{RecordClass, RecordType};
 use crate::error_result_json;
+use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
 use tower_sessions::Session;
 use tracing::debug;
@@ -25,6 +26,7 @@ pub struct ZoneForm {
 pub struct ZoneRecordForm {
     pub id: Option<Uuid>,
     pub name: String,
+    #[serde(default = "RecordClass::default")]
     pub rclass: RecordClass,
     pub rrtype: RecordType,
     pub rdata: String,
@@ -47,6 +49,41 @@ impl From<entities::zones::Model> for ZoneForm {
     }
 }
 
+#[derive(Deserialize, Serialize, Debug, ToSchema, Clone)]
+/// Used when parsing a zone json dump because the zoneid's are not known ahead of time
+pub struct ZoneFileRecord {
+    pub id: Option<Uuid>,
+    pub name: Option<String>,
+    #[serde(default = "RecordClass::default")]
+    pub rclass: RecordClass,
+    pub rrtype: RecordType,
+    pub rdata: String,
+    pub ttl: Option<u32>,
+}
+
+impl ZoneFileRecord {
+    pub(crate) fn to_activemodel(&self, zone_id: Uuid) -> entities::records::ActiveModel {
+        let id = match self.id {
+            Some(id) => Set(id),
+            None => NotSet,
+        };
+
+        let name = match &self.name {
+            Some(name) => Set(name.clone()),
+            None => Set(String::from("@")),
+        };
+        entities::records::ActiveModel {
+            id,
+            zoneid: sea_orm::Set(zone_id),
+            name,
+            ttl: sea_orm::Set(self.ttl),
+            rrtype: sea_orm::Set(self.rrtype as u16),
+            rclass: sea_orm::Set(self.rclass as u16),
+            rdata: sea_orm::Set(self.rdata.clone()),
+        }
+    }
+}
+
 /// Save the entity to the database
 #[utoipa::path(
     post,
@@ -61,20 +98,12 @@ impl From<entities::zones::Model> for ZoneForm {
     tag = "Records",
 )]
 
-pub(crate) async fn api_create(
+pub(crate) async fn api_record_create(
     State(state): State<GoatState>,
     session: Session,
-    Json(record): Json<ZoneForm>,
-) -> Result<Json<entities::zones::Model>, (StatusCode, Json<ErrorResult>)> {
+    Json(record_form): Json<ZoneRecordForm>,
+) -> Result<Json<entities::records::Model>, (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
-
-    let user_id = match user.id {
-        Some(val) => val,
-        None => {
-            debug!("No user id found in session");
-            return error_result_json!("No user id found in session", StatusCode::UNAUTHORIZED);
-        }
-    };
 
     let txn = state.get_db_txn().await.map_err(|_| {
         (
@@ -84,11 +113,33 @@ pub(crate) async fn api_create(
     })?;
     debug!(
         "looking for ZO for user: {} zoneid: {:?}",
-        user_id, record.id
+        user.id, record_form.id
     );
-    let zone = entities::zones::ActiveModel::from(record);
+    // check ownership of the zone first
+    let Some(_ownership) =
+        entities::ownership::Entity::find_by_user_and_zone(&txn, user.id, record_form.zoneid)
+            .await
+            .map_err(|err| {
+                error!("Error checking ownership: {err:?}");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json::from(ErrorResult::from("Database error")),
+                )
+            })?
+    else {
+        debug!(
+            "User {:?} does not own zone id {:?}",
+            user.id, record_form.zoneid
+        );
+        return error_result_json!(
+            "Not authorized to create record in this zone",
+            StatusCode::FORBIDDEN
+        );
+    };
 
-    match zone.insert(&txn).await.map_err(GoatNsError::from) {
+    let record = entities::records::ActiveModel::from(record_form);
+
+    match record.insert(&txn).await.map_err(GoatNsError::from) {
         Err(err) => {
             eprintln!("Error saving record: {err:?}");
 
@@ -163,7 +214,7 @@ pub struct ApiRecordUpdate {
 }
 
 /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
-pub(crate) async fn api_update(
+pub(crate) async fn api_record_update(
     State(state): State<GoatState>,
     session: Session,
     Json(payload): Json<ApiRecordUpdate>,
@@ -176,14 +227,6 @@ pub(crate) async fn api_update(
             Json::from(ErrorResult::from("Database error")),
         )
     })?;
-
-    let user_id = match user.id {
-        Some(val) => val,
-        None => {
-            debug!("No user id found in session");
-            return error_result_json!("No user id found in session", StatusCode::UNAUTHORIZED);
-        }
-    };
 
     let record = entities::records::Entity::find_by_id(payload.id)
         .find_also_related(entities::zones::Entity)
@@ -202,7 +245,7 @@ pub(crate) async fn api_update(
         _ => {
             debug!(
                 "Record id {:?} not found or zone missing for user {:?}",
-                payload.id, user_id
+                payload.id, user.id
             );
             return error_result_json!("Record not found", StatusCode::NOT_FOUND);
         }
@@ -213,7 +256,7 @@ pub(crate) async fn api_update(
         .filter(
             entities::ownership::Column::Zoneid
                 .eq(zone.id)
-                .and(entities::ownership::Column::Userid.eq(user_id)),
+                .and(entities::ownership::Column::Userid.eq(user.id)),
         )
         .one(&txn)
         .await
@@ -225,7 +268,7 @@ pub(crate) async fn api_update(
             )
         })?
     else {
-        debug!("User {:?} does not own zone id {:?}", user_id, zone.id);
+        debug!("User {:?} does not own zone id {:?}", user.id, zone.id);
         return error_result_json!(
             "Not authorized to modify this record",
             StatusCode::FORBIDDEN
@@ -258,10 +301,10 @@ pub(crate) async fn api_update(
 
     Ok(Json(res))
 }
-pub(crate) async fn api_get(
+pub(crate) async fn api_record_get(
     State(state): State<GoatState>,
     session: Session,
-    Path(id): Path<Uuid>,
+    Path(record_id): Path<Uuid>,
 ) -> Result<Json<entities::records::Model>, (StatusCode, Json<ErrorResult>)> {
     check_api_auth(&session).await?;
     let txn = state.get_db_txn().await.map_err(|_| {
@@ -271,7 +314,10 @@ pub(crate) async fn api_get(
         )
     })?;
 
-    match entities::records::Entity::find_by_id(id).one(&txn).await {
+    match entities::records::Entity::find_by_id(record_id)
+        .one(&txn)
+        .await
+    {
         Ok(Some(val)) => Ok(Json(val)),
         Ok(None) => {
             error_result_json!("Record not found", StatusCode::NOT_FOUND)
@@ -286,13 +332,13 @@ pub(crate) async fn api_get(
 
 /// Delete an object
 /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
-pub(crate) async fn api_delete_zone(
+pub(crate) async fn api_record_delete(
     State(state): State<GoatState>,
     session: Session,
-    Path(zone_id): Path<Uuid>,
+    Path(record_id): Path<Uuid>,
 ) -> Result<(), (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
-
+    dbg!(&user);
     let txn = state.get_db_txn().await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -300,22 +346,35 @@ pub(crate) async fn api_delete_zone(
         )
     })?;
 
-    let Some(user_id) = user.id else {
-        debug!("No user id found in session");
-        return error_result_json!("No user id found in session", StatusCode::UNAUTHORIZED);
+    let Some(record) = entities::records::Entity::find_by_id(record_id)
+        .one(&txn)
+        .await
+        .map_err(|err| {
+            error!("Error fetching record id {:?}: {err:?}", record_id);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?
+    else {
+        debug!(
+            "Record id {:?} not found for in request from user {}",
+            record_id, user.id
+        );
+        return error_result_json!("Record not found", StatusCode::NOT_FOUND);
     };
 
     let ownership_zone = entities::ownership::Entity::find()
         .filter(
             entities::ownership::Column::Zoneid
-                .eq(zone_id)
-                .and(entities::ownership::Column::Userid.eq(user_id)),
+                .eq(record.zoneid)
+                .and(entities::ownership::Column::Userid.eq(user.id)),
         )
         .find_also_related(entities::zones::Entity)
         .one(&txn)
         .await
         .map_err(|err| {
-            eprintln!("Error checking ownership: {err:?}");
+            error!("Error checking ownership: {err:?}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json::from(ErrorResult::from("Database error")),
@@ -323,12 +382,12 @@ pub(crate) async fn api_delete_zone(
         })?;
 
     let Some((_ownership, Some(zone))) = ownership_zone else {
-        error!("User {:?} does not own zone id {:?}", user.id, zone_id);
+        error!("User {:?} does not own zone id {:?}", user.id, record_id);
         return error_result_json!("Not authorized to delete this zone", StatusCode::FORBIDDEN);
     };
 
     zone.delete(&txn).await.map_err(|err| {
-        eprintln!("Error deleting zone id {:?}: {err:?}", zone_id);
+        error!("Error deleting zone id {:?}: {err:?}", record_id);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json::from(ErrorResult::from("Database error")),

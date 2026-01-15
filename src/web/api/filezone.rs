@@ -50,7 +50,7 @@ impl From<entities::zones::Model> for ApiZoneResponse {
     )
 )]
 
-pub(crate) async fn api_create(
+pub(crate) async fn api_zone_create(
     State(state): State<GoatState>,
     session: Session,
     Json(zone): Json<ZoneForm>,
@@ -100,7 +100,7 @@ pub(crate) async fn api_create(
 
     let zone = zone.clone().insert(&txn).await.map_err(|err| {
         debug!(
-            "Couldn't create zone  {}, something went wrong during save: {err:?}",
+            "Couldn't insert zone {}, something went wrong during save: {err:?}",
             zone.name.as_ref()
         );
         (
@@ -111,20 +111,9 @@ pub(crate) async fn api_create(
         )
     })?;
 
-    let userid = match user.id {
-        Some(val) => val,
-        None => {
-            debug!("User id not found in session, something went wrong");
-            return error_result_json!(
-                "Server error creating zone, contact the admins!",
-                StatusCode::INTERNAL_SERVER_ERROR
-            );
-        }
-    };
-
     let ownership = entities::ownership::ActiveModel {
         id: sea_orm::ActiveValue::NotSet,
-        userid: Set(userid),
+        userid: Set(user.id),
         zoneid: Set(zone.id),
     };
 
@@ -138,7 +127,7 @@ pub(crate) async fn api_create(
 
     if let Err(err) = txn.commit().await {
         debug!(
-            "Couldn't create zone {}, something went wrong committing transaction: {err:?}",
+            "Couldn't commit zone create txn {}, something went wrong committing transaction: {err:?}",
             zone.name
         );
         return error_result_json!(
@@ -179,16 +168,11 @@ pub(crate) async fn api_zone_update(
         )
     })?;
 
-    let Some(user_id) = user.id else {
-        error!("User id not found in session, something went wrong");
-        return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
-    };
-
     // check the user owns the zone
     let Some((_ownership, Some(zone))) = entities::ownership::Entity::find()
         .filter(
             entities::ownership::Column::Userid
-                .eq(user_id)
+                .eq(user.id)
                 .and(entities::ownership::Column::Zoneid.eq(zone_form.id)),
         )
         .find_also_related(entities::zones::Entity)
@@ -205,7 +189,7 @@ pub(crate) async fn api_zone_update(
             )
         })?
     else {
-        error!("User {} does not own zone {}", user_id, zone_form.id);
+        error!("User {} does not own zone {}", user.id, zone_form.id);
         return Err((
             StatusCode::UNAUTHORIZED,
             Json(ErrorResult {
@@ -271,7 +255,7 @@ pub(crate) async fn api_zone_update(
 pub(crate) async fn api_zone_delete(
     State(state): State<GoatState>,
     session: Session,
-    Path(id): Path<Uuid>,
+    Path(zone_id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
     // let id = id;
 
@@ -284,24 +268,29 @@ pub(crate) async fn api_zone_delete(
             Json::from(ErrorResult::from("Internal server error")),
         )
     })?;
-    // get the zoneownership
-    let userid = match user.id {
-        Some(val) => val,
-        None => {
-            error!("User id not found in session, something went wrong");
-            return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
-        }
-    };
 
-    let zone = match entities::ownership::Entity::find_by_id(id)
-        .filter(entities::ownership::Column::Userid.eq(userid))
+    let zone = match entities::ownership::Entity::find()
+        .filter(
+            entities::ownership::Column::Userid
+                .eq(user.id)
+                .and(entities::ownership::Column::Zoneid.eq(zone_id)),
+        )
         .find_also_related(entities::zones::Entity)
         .one(&txn)
         .await
     {
-        Ok(Some((_, None))) | Ok(None) => {
+        // found ownership but not a related zone? weird.
+        Ok(Some((_, None))) => {
+            error!(
+                "Zone ID {} not found but ownership exists for user {:?}",
+                zone_id, user.id
+            );
+            return error_result_json!("Zone not found", StatusCode::NOT_FOUND);
+        }
+        // no ownership, no zone
+        Ok(None) => {
             return error_result_json!(
-                format!("Zone ID {id} not found").as_str(),
+                format!("Zone ID {zone_id} not found").as_str(),
                 StatusCode::NOT_FOUND
             );
         }
@@ -309,7 +298,7 @@ pub(crate) async fn api_zone_delete(
         Err(err) => {
             error!(
                 "Failed to get zone ownership for zoneid={}: error: {:?}",
-                id, err
+                zone_id, err
             );
             return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
         }
@@ -318,7 +307,7 @@ pub(crate) async fn api_zone_delete(
     zone.delete(&txn).await.map_err(|err| {
         error!(
             "Failed to delete Zone during api_delete zoneid={} error=\"{err:?}\"",
-            id
+            zone_id
         );
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -329,7 +318,7 @@ pub(crate) async fn api_zone_delete(
     if let Err(err) = txn.commit().await {
         error!(
             "Failed to commit txn for zone.delete during api_delete zoneid={} error=\"{err:?}\"",
-            id
+            zone_id
         );
         return Err((
             StatusCode::INTERNAL_SERVER_ERROR,

@@ -216,12 +216,12 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
         .send()
         .await
         .expect("Failed to log in with token");
+
     println!("{res:?}");
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
-    let zone_id = Uuid::now_v7();
     let newzone = ZoneForm {
-        id: Some(zone_id),
+        id: None,
         name: "example.goat".to_string(),
         rname: "bob@example.goat".to_string(),
         serial: 12345,
@@ -242,10 +242,18 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     assert_eq!(res.status(), 200);
     let res_content = res.bytes().await;
     println!("content from create: {res_content:?}");
+    let zone: entities::zones::Model = serde_json::from_slice(
+        res_content
+            .as_ref()
+            .expect("Failed to get response content"),
+    )
+    .expect("Failed to parse zone from response");
 
-    println!("Sending zone delete");
+    let url = format!("https://localhost:{api_port}/api/zone/{}", zone.id);
+    println!("Sending zone delete to URL: {url}");
+
     let res = client
-        .delete(format!("https://localhost:{api_port}/api/zone/{zone_id}"))
+        .delete(url)
         .send()
         .await
         .expect("Failed to send delete request");
@@ -472,13 +480,14 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
     println!("=> Token login success!");
 
     let zone = entities::zones::ActiveModel {
-        id: Set(Uuid::now_v7()),
+        id: NotSet,
         name: Set("example.goat".to_string()),
         rname: Set("bob@example.goat".to_string()),
         serial: Set(12345),
         expire: Set(30),
         minimum: Set(1235),
-        ..Default::default()
+        refresh: Set(0),
+        retry: Set(0),
     }
     .insert(&pool)
     .await
@@ -495,12 +504,12 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
         .await
         .expect("failed to save zone ownership");
 
-    println!("creating fzr object in the database");
-    let fzr = entities::records::ActiveModel {
+    println!("creating record object in the database");
+    let zone_record = entities::records::ActiveModel {
         id: NotSet,
         rclass: Set(RecordClass::Internet.into()),
         name: Set("doggo".to_string()),
-        zoneid: Set(Uuid::now_v7()),
+        zoneid: Set(zone.id),
         rrtype: Set(RecordType::A.into()),
         ttl: Set(Some(33)),
         rdata: Set("1.2.3.4".to_string()),
@@ -508,11 +517,14 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
     .insert(&pool)
     .await?;
 
-    println!("{fzr:?}");
+    println!("Record: {zone_record:?}");
 
     println!("Sending record delete");
     let res = client
-        .delete(format!("https://localhost:{api_port}/api/record/3"))
+        .delete(format!(
+            "https://localhost:{api_port}/api/record/{}",
+            zone_record.id
+        ))
         .header("Authorization", format!("Bearer {}", token_secret))
         .send()
         .await

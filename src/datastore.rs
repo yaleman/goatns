@@ -2,7 +2,7 @@ use crate::db::{cron_db_cleanup, entities};
 use crate::enums::{RecordClass, RecordType};
 use crate::error::GoatNsError;
 use crate::resourcerecord::InternalResourceRecord;
-use crate::zones::ZoneRecord;
+use crate::zones::{ZoneFile, ZoneRecord};
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter,
@@ -118,8 +118,8 @@ pub enum Command {
         zoneid: Option<Uuid>,
         /// User ID
         userid: Option<Uuid>,
-        /// The response channel
-        resp: Responder<Vec<entities::ownership::Model>>,
+        /// The response Channel
+        resp: Responder<Vec<entities::zones::Model>>,
     },
     /// Create ownership of a zone
     PostOwnership {
@@ -198,7 +198,9 @@ async fn handle_get_command(
             }
         }
     } else {
-        match entities::records::Entity::get_records(conn, db_name, rrtype, rclass, true).await {
+        match entities::records_merged::Entity::get_records(conn, db_name, rrtype, rclass, true)
+            .await
+        {
             Ok(value) => zr.typerecords.extend(
                 value
                     .into_iter()
@@ -239,15 +241,7 @@ pub async fn handle_import_file(
     filename: String,
     zone_name: Option<String>,
 ) -> Result<(), GoatNsError> {
-    let zones: Vec<entities::zones::ActiveModel> = crate::zones::load_zones(&filename)?;
-
-    let zones = match zone_name {
-        Some(name) => zones
-            .into_iter()
-            .filter(|z| z.name.as_ref() == &name)
-            .collect(),
-        None => zones,
-    };
+    let zones: Vec<ZoneFile> = crate::zones::load_zones(&filename)?;
 
     if zones.is_empty() {
         warn!("No zones to import!");
@@ -256,13 +250,77 @@ pub async fn handle_import_file(
         debug!("Starting import process");
     }
 
+    let zones = if let Some(zone_name) = zone_name {
+        zones
+            .into_iter()
+            .filter(|z| z.zone.name == zone_name)
+            .collect()
+    } else {
+        zones
+    };
+
     let txn = pool.begin().await?;
-    for zone in zones {
-        let zone_name = zone.name.as_ref().to_string();
-        if let Err(err) = zone.update(&txn).await {
-            error!("Failed to import zone {:?}: {err:?}", zone_name);
+    for zonefile in zones {
+        let zone: entities::zones::ActiveModel = zonefile.zone.into();
+        let zone_name = zone.name.clone();
+
+        debug!("Importing zone: {}", zone_name.as_ref());
+        let zone_id = if zone.id.is_not_set() {
+            match zone.insert(&txn).await {
+                Ok(zone_res) => {
+                    info!("Created zone: {:?}", zone_res);
+                    zone_res.id
+                }
+                Err(err) => {
+                    error!("Failed to create zone {}: {:?}", zone_name.as_ref(), err);
+                    continue;
+                }
+            }
         } else {
-            info!("Imported {}", zone_name);
+            match zone.update(&txn).await {
+                Ok(zone_res) => {
+                    info!("Updated zone: {:?}", zone_res);
+                    zone_res.id
+                }
+                Err(err) => {
+                    error!("Failed to update zone {}: {:?}", zone_name.as_ref(), err);
+                    continue;
+                }
+            }
+        };
+        for record in zonefile.records {
+            let record_am: entities::records::ActiveModel = record.to_activemodel(zone_id);
+
+            let record_clone = record_am.clone();
+            if record_am.id.is_unchanged() || record_am.id.is_not_set() {
+                match record_am.insert(&txn).await {
+                    Ok(record_res) => {
+                        debug!("Inserted record: {:?}", record_res);
+                    }
+                    Err(err) => {
+                        error!(
+                            "Failed to insert record {:?} in zone {}: {:?}",
+                            record_clone,
+                            zone_name.as_ref(),
+                            err
+                        );
+                    }
+                }
+            } else {
+                match record_am.update(&txn).await {
+                    Ok(record_res) => {
+                        debug!("Updated record: {:?}", record_res);
+                    }
+                    Err(err) => {
+                        error!(
+                            "Failed to update record {:?} in zone {}: {:?}",
+                            record_clone,
+                            zone_name.as_ref(),
+                            err
+                        );
+                    }
+                }
+            }
         }
     }
     txn.commit()
@@ -462,27 +520,37 @@ pub(crate) async fn handle_message(
         Command::UpdateUser => error!("Unimplemented: Command::PatchUser"),
         Command::DeleteOwnership { .. } => error!("Unimplemented: Command::DeleteOwnership"),
         Command::GetOwnership {
-            zoneid: _,
+            zoneid,
             userid,
             resp,
         } => {
+            let mut query = entities::ownership::Entity::find();
+            if let Some(zoneid) = zoneid {
+                query = query.filter(entities::ownership::Column::Zoneid.eq(zoneid));
+            };
             if let Some(userid) = userid {
-                match entities::ownership::Entity::find()
-                    .filter(entities::ownership::Column::Userid.eq(userid))
-                    .all(&connpool)
-                    .await
-                {
-                    Ok(zone) => {
-                        if let Err(err) = resp.send(zone) {
-                            error!("Failed to send zone_ownership response: {err:?}")
-                        };
-                    }
-                    Err(err) => {
-                        error!("Failed to get all zone_ownership for user {userid}: {err:?}")
+                query = query.filter(entities::ownership::Column::Userid.eq(userid));
+            };
+            match query
+                .find_also_related(entities::zones::Entity)
+                .all(&connpool)
+                .await
+            {
+                Err(err) => {
+                    error!("Failed to get ownership: {err:?}");
+                    if let Err(err) = resp.send(Vec::new()) {
+                        error!("Failed to send response: {err:?}");
                     }
                 }
-            } else {
-                error!("Unmatched arm in getownership")
+                Ok(values) => {
+                    let zones: Vec<entities::zones::Model> = values
+                        .into_iter()
+                        .filter_map(|(_ownership, zone_opt)| zone_opt)
+                        .collect();
+                    if let Err(err) = resp.send(zones) {
+                        error!("Failed to send response: {err:?}");
+                    }
+                }
             }
         }
         Command::PostOwnership { .. } => {

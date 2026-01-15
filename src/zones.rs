@@ -1,7 +1,8 @@
-use crate::db::entities;
 use crate::enums::RecordClass;
 use crate::error::GoatNsError;
 use crate::resourcerecord::InternalResourceRecord;
+use crate::web::api::filezonerecord::ZoneFileRecord;
+use crate::{db::entities, web::api::filezonerecord::ZoneForm};
 use sea_orm::{ActiveModelTrait, ActiveValue::NotSet};
 use tracing::*;
 
@@ -204,9 +205,16 @@ pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, GoatNsError> {
     Ok(jsonstruct)
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct ZoneFile {
+    #[serde(flatten)]
+    pub zone: ZoneForm,
+    pub records: Vec<ZoneFileRecord>,
+}
+
 /// Loads a zone file
 #[instrument(level = "debug")]
-pub fn load_zones(filename: &str) -> Result<Vec<entities::zones::ActiveModel>, GoatNsError> {
+pub fn load_zones(filename: &str) -> Result<Vec<ZoneFile>, GoatNsError> {
     let mut file = match File::open(filename) {
         Ok(value) => value,
         Err(err) => {
@@ -221,10 +229,13 @@ pub fn load_zones(filename: &str) -> Result<Vec<entities::zones::ActiveModel>, G
         .inspect_err(|err| error!("Failed to read {}: {:?}", filename, err))?;
     let jsonblob: Vec<serde_json::Value> =
         json5::from_str(&buf).map_err(|err| GoatNsError::FileError(err.to_string()))?;
-    let mut zones = Vec::new();
+    let mut zones: Vec<ZoneFile> = Vec::new();
 
     for zone_json in jsonblob.into_iter() {
-        zones.push(entities::zones::ActiveModel::from_json(zone_json)?);
+        zones.push(
+            serde_json::from_value(zone_json.clone())
+                .inspect_err(|err| error!(error=?err, zone=?zone_json, "Failed to parse zone"))?,
+        );
     }
 
     Ok(zones)

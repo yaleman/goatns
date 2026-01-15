@@ -23,7 +23,7 @@ use ipnet::IpNet;
 use packed_struct::prelude::*;
 use std::net::IpAddr;
 use std::str::FromStr;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace, warn};
 
 #[test]
 /// test my assumptions about ipnet things
@@ -666,14 +666,14 @@ async fn test_question_from_bytes() {
 #[tokio::test]
 /// this test checks that all TTLs in the record are the same when we set normalise_ttls = true
 async fn test_normalize_ttls() {
-    // use crate::zones::FileZoneRecord;
+    test_logging().await;
     let pool = test_get_sqlite_memory().await;
 
     import_test_zone_file(&pool)
         .await
         .expect("failed to import test zone file");
 
-    let response = entities::records::Entity::get_records(
+    let response = entities::records_merged::Entity::get_records(
         &pool,
         "ttltest.hello.goat",
         RecordType::A,
@@ -683,29 +683,28 @@ async fn test_normalize_ttls() {
     .await
     .expect("Failed to query records");
 
-    print!("Checking that we got three records...");
-    println!("Response:");
+    info!("Checking that we got three records...");
+    info!("Response:");
     for re in response.iter() {
-        println!("{re:?}");
+        info!("{re:?}");
     }
     assert_eq!(response.iter().len(), 3);
-    println!(" OK");
 
     // first we just check we got three records from the db
     let mut found_records: Vec<u32> = vec![];
     for record in response {
-        println!("found record {record:?}");
+        info!("found record {record:?}");
         if record.rrtype == RecordType::A as u16 {
-            if !found_records.contains(&record.ttl.unwrap_or(0)) {
-                found_records.push(record.ttl.unwrap_or(0));
+            if !found_records.contains(&record.ttl) {
+                found_records.push(record.ttl);
             }
         } else {
-            println!("We found a record that wasn't an A record, that's cool I guess?")
+            warn!("We found a record that wasn't an A record, that's cool I guess?")
         }
     }
-    print!("Checking that we found a single ttl...");
+    info!("Checking that we found a single ttl...");
     assert!(found_records.len() == 1);
-    println!(" OK");
+    info!(" OK");
 }
 
 #[tokio::test]
@@ -718,7 +717,7 @@ async fn test_dont_normalize_ttls() {
         .await
         .expect("Failed to import zone file");
 
-    let response = entities::records::Entity::get_records(
+    let response = entities::records_merged::Entity::get_records(
         &pool,
         "ttltest.hello.goat",
         RecordType::A,
@@ -737,8 +736,8 @@ async fn test_dont_normalize_ttls() {
     for record in response {
         println!("found record {record:?}");
         if record.rrtype == RecordType::A as u16 {
-            if !found_records.contains(&record.ttl.unwrap_or(0)) {
-                found_records.push(record.ttl.unwrap_or(0));
+            if !found_records.contains(&record.ttl) {
+                found_records.push(record.ttl);
             }
         } else {
             println!("We found a record that wasn't an A record, that's cool I guess?")

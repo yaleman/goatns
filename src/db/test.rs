@@ -124,7 +124,7 @@ async fn test_db_create_records() -> Result<(), GoatNsError> {
         panic!("{error:?}");
     };
 
-    let res = entities::records::Entity::get_records(
+    let res = entities::records_merged::Entity::get_records(
         &pool,
         "foo",
         RecordType::TXT,
@@ -179,7 +179,7 @@ async fn test_all_db_things() -> Result<(), GoatNsError> {
     // rec_to_create.save(&pool).await?;
 
     println!("Looking for foo.example.com TXT IN");
-    let result = entities::records::Entity::get_records(
+    let result = entities::records_merged::Entity::get_records(
         &pool,
         "foo.example.com",
         RecordType::TXT,

@@ -1,13 +1,13 @@
 use utoipa::{Modify, OpenApi};
 
-use crate::zones::FileZoneRecord;
 use crate::RecordClass;
+use crate::zones::FileZoneRecord;
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
         super::auth::api_token_login,
-        super::filezonerecord::api_create,
+        super::filezonerecord::api_record_create,
     ),
     components(
         schemas(
