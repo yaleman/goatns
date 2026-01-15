@@ -61,8 +61,10 @@ where
 pub async fn test_logging() {
     use crate::config::{ConfigFile, setup_logging};
 
+    let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "trace".to_string());
+
     let config = ConfigFile {
-        log_level: "trace".to_string(),
+        log_level,
         ..ConfigFile::default()
     };
 

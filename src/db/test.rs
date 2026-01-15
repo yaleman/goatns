@@ -164,7 +164,7 @@ async fn test_all_db_things() -> Result<(), GoatNsError> {
         id: NotSet,
         name: Set("foo".to_string()),
         ttl: Set(Some(123)),
-        zoneid: Set(Uuid::now_v7()),
+        zoneid: Set(zone.id),
         rrtype: Set(RecordType::TXT.into()),
         rclass: Set(RecordClass::Internet.into()),
         rdata: Set("test txt".to_string()),

@@ -6,6 +6,7 @@ use crate::web::api::auth::AuthPayload;
 use crate::web::api::filezonerecord::{ZoneForm, ZoneRecordForm};
 use crate::web::utils::create_api_token;
 use concread::cowcell::asynch::CowCell;
+use log::info;
 use tokio::net::TcpStream;
 
 pub async fn is_free_port(port: u16) -> bool {
@@ -57,7 +58,7 @@ pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<Config
         None,
     ));
 
-    println!("Starting API Server on port {port}");
+    info!("Starting API Server on port {port}");
     let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
 
     let apiserver = crate::web::build(

@@ -6,6 +6,7 @@ mod tests {
     use hickory_resolver::{Resolver, config::*};
     use std::env;
     use std::net::*;
+    use tracing::info;
 
     use crate::servers::udp_server;
     use crate::tests::utils::wait_for_server;
@@ -44,7 +45,7 @@ mod tests {
             .await
             .expect("Failed to get connpool");
 
-        println!("Starting datastore");
+        info!("Starting datastore");
 
         // start all the things!
         let datastore_manager = tokio::spawn(crate::datastore::manager(
@@ -54,7 +55,7 @@ mod tests {
             None,
         ));
 
-        println!("Starting API Server");
+        info!("Starting API Server");
         let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
         let apiserver = crate::web::build(
             datastore_tx.clone(),
@@ -65,7 +66,7 @@ mod tests {
         .await
         .expect("Failed to build API server");
 
-        println!("Building test run server struct");
+        info!("Building test run server struct");
         let _ = crate::servers::Servers::build(agent_sender)
             .with_datastore(datastore_manager)
             .with_udpserver(udpserver)
