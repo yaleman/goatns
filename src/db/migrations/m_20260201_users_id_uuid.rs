@@ -34,12 +34,14 @@ impl MigrationTrait for Migration {
                 .await?;
             for row in rows {
                 let old_id: String = row.try_get("", "id")?;
-                let parsed = Uuid::parse_str(&old_id).map_err(|error| {
-                    DbErr::Custom(format!(
-                        "failed to parse users.id '{old_id}' as uuid: {error}"
-                    ))
-                })?;
-                let new_id_bytes = parsed.as_bytes().to_vec();
+                // let parsed = Uuid::parse_str(&old_id).map_err(|error| {
+                //     DbErr::Custom(format!(
+                //         "failed to parse users.id '{old_id}' as uuid: {error}"
+                //     ))
+                // })?;
+                // let new_id_bytes = parsed.as_bytes().to_vec();
+                let new_id = Uuid::now_v7();
+                let new_id_bytes = new_id.as_bytes().to_vec();
                 let stmt = Statement::from_sql_and_values(
                     DbBackend::Sqlite,
                     "INSERT INTO user_id_map (old_id, new_id) VALUES (?, ?);",
@@ -62,6 +64,10 @@ impl MigrationTrait for Migration {
                     WHERE userid IN (SELECT old_id FROM user_id_map);",
                 )
                 .await?;
+            } else {
+                return Err(DbErr::Custom(
+                    "Table user_tokens does not exist!".to_string(),
+                ));
             }
 
             if sqlite_table_exists(db, "ownership").await? {
@@ -71,6 +77,8 @@ impl MigrationTrait for Migration {
                     WHERE userid IN (SELECT old_id FROM user_id_map);",
                 )
                 .await?;
+            } else {
+                return Err(DbErr::Custom("Table ownership does not exist!".to_string()));
             }
 
             db.execute_unprepared("DROP TABLE user_id_map;").await?;
@@ -98,10 +106,7 @@ impl MigrationTrait for Migration {
             let stmt = Statement::from_sql_and_values(
                 DbBackend::Sqlite,
                 "INSERT INTO user_id_map (old_id, new_id) VALUES (?, ?);",
-                vec![
-                    old_id.into(),
-                    Value::Bytes(Some(Box::new(new_id_bytes))),
-                ],
+                vec![old_id.into(), Value::Bytes(Some(Box::new(new_id_bytes)))],
             );
             db.execute(stmt).await?;
         }

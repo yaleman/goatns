@@ -24,7 +24,7 @@ impl MigrationTrait for Migration {
         db.execute_unprepared("DROP VIEW IF EXISTS records_merged;")
             .await?;
 
-        if has_text_uuids {
+        if !zones_id_integer && has_text_uuids {
             convert_text_uuid_column(db, "zones", "id").await?;
             if sqlite_table_exists(db, "records").await? {
                 convert_text_uuid_column(db, "records", "id").await?;
@@ -41,22 +41,22 @@ impl MigrationTrait for Migration {
             db.execute_unprepared("DROP TABLE IF EXISTS zone_id_map;")
                 .await?;
             db.execute_unprepared(
-                "CREATE TABLE zone_id_map (old_id INTEGER PRIMARY KEY, new_id BLOB NOT NULL);",
+                "CREATE TABLE zone_id_map (old_id_text TEXT PRIMARY KEY, new_id BLOB NOT NULL);",
             )
             .await?;
 
             let rows = db
                 .query_all(Statement::from_string(
                     DbBackend::Sqlite,
-                    "SELECT CAST(id AS TEXT) as id_text, typeof(id) as id_type FROM zones;",
+                    "SELECT CAST(id AS TEXT) as id_text FROM zones;",
                 ))
                 .await?;
             for row in rows {
-                let old_id = parse_integer_id_text(&row, "id_text", "id_type", "zones", "id")?;
+                let old_id: String = row.try_get("", "id_text")?;
                 let new_id_bytes = Uuid::now_v7().as_bytes().to_vec();
                 let stmt = Statement::from_sql_and_values(
                     DbBackend::Sqlite,
-                    "INSERT INTO zone_id_map (old_id, new_id) VALUES (?, ?);",
+                    "INSERT INTO zone_id_map (old_id_text, new_id) VALUES (?, ?);",
                     vec![old_id.into(), Value::Bytes(Some(Box::new(new_id_bytes)))],
                 );
                 db.execute(stmt).await?;
@@ -84,7 +84,7 @@ impl MigrationTrait for Migration {
                 SELECT zone_id_map.new_id, zones.name, zones.rname, zones.serial,
                        zones.refresh, zones.retry, zones.expire, zones.minimum
                 FROM zones
-                JOIN zone_id_map ON zone_id_map.old_id = zones.id;",
+                JOIN zone_id_map ON zone_id_map.old_id_text = CAST(zones.id AS TEXT);",
             )
             .await?;
 
@@ -92,22 +92,21 @@ impl MigrationTrait for Migration {
                 db.execute_unprepared("DROP TABLE IF EXISTS record_id_map;")
                     .await?;
                 db.execute_unprepared(
-                    "CREATE TABLE record_id_map (old_id INTEGER PRIMARY KEY, new_id BLOB NOT NULL);",
+                    "CREATE TABLE record_id_map (old_id_text TEXT PRIMARY KEY, new_id BLOB NOT NULL);",
                 )
                 .await?;
                 let rows = db
                     .query_all(Statement::from_string(
                         DbBackend::Sqlite,
-                        "SELECT CAST(id AS TEXT) as id_text, typeof(id) as id_type FROM records;",
+                        "SELECT CAST(id AS TEXT) as id_text FROM records;",
                     ))
                     .await?;
                 for row in rows {
-                    let old_id =
-                        parse_integer_id_text(&row, "id_text", "id_type", "records", "id")?;
+                    let old_id: String = row.try_get("", "id_text")?;
                     let new_id_bytes = Uuid::now_v7().as_bytes().to_vec();
                     let stmt = Statement::from_sql_and_values(
                         DbBackend::Sqlite,
-                        "INSERT INTO record_id_map (old_id, new_id) VALUES (?, ?);",
+                        "INSERT INTO record_id_map (old_id_text, new_id) VALUES (?, ?);",
                         vec![old_id.into(), Value::Bytes(Some(Box::new(new_id_bytes)))],
                     );
                     db.execute(stmt).await?;
@@ -143,12 +142,12 @@ impl MigrationTrait for Migration {
                     )
                     .await?;
                 db.execute_unprepared(
-                    "INSERT INTO records_new (id, zoneid, name, ttl, rrtype, rclass, rdata)
+                "INSERT INTO records_new (id, zoneid, name, ttl, rrtype, rclass, rdata)
                     SELECT record_id_map.new_id, zone_id_map.new_id, records.name, records.ttl,
                            records.rrtype, records.rclass, records.rdata
                     FROM records
-                    JOIN zone_id_map ON zone_id_map.old_id = CAST(records.zoneid AS INTEGER)
-                    JOIN record_id_map ON record_id_map.old_id = CAST(records.id AS INTEGER);",
+                    JOIN zone_id_map ON zone_id_map.old_id_text = CAST(records.zoneid AS TEXT)
+                    JOIN record_id_map ON record_id_map.old_id_text = CAST(records.id AS TEXT);",
                 )
                 .await?;
             }
@@ -157,27 +156,21 @@ impl MigrationTrait for Migration {
                 db.execute_unprepared("DROP TABLE IF EXISTS ownership_id_map;")
                     .await?;
                 db.execute_unprepared(
-                    "CREATE TABLE ownership_id_map (old_id INTEGER PRIMARY KEY, new_id BLOB NOT NULL);",
+                    "CREATE TABLE ownership_id_map (old_id_text TEXT PRIMARY KEY, new_id BLOB NOT NULL);",
                 )
                 .await?;
                 let rows = db
                     .query_all(Statement::from_string(
                         DbBackend::Sqlite,
-                        "SELECT CAST(id AS TEXT) as id_text, typeof(id) as id_type FROM ownership;",
+                        "SELECT CAST(id AS TEXT) as id_text FROM ownership;",
                     ))
                     .await?;
                 for row in rows {
-                    let old_id = parse_integer_id_text(
-                        &row,
-                        "id_text",
-                        "id_type",
-                        "ownership",
-                        "id",
-                    )?;
+                    let old_id: String = row.try_get("", "id_text")?;
                     let new_id_bytes = Uuid::now_v7().as_bytes().to_vec();
                     let stmt = Statement::from_sql_and_values(
                         DbBackend::Sqlite,
-                        "INSERT INTO ownership_id_map (old_id, new_id) VALUES (?, ?);",
+                        "INSERT INTO ownership_id_map (old_id_text, new_id) VALUES (?, ?);",
                         vec![old_id.into(), Value::Bytes(Some(Box::new(new_id_bytes)))],
                     );
                     db.execute(stmt).await?;
@@ -217,11 +210,11 @@ impl MigrationTrait for Migration {
                     )
                     .await?;
                 db.execute_unprepared(
-                    "INSERT INTO ownership_new (id, zoneid, userid)
+                "INSERT INTO ownership_new (id, zoneid, userid)
                     SELECT ownership_id_map.new_id, zone_id_map.new_id, ownership.userid
                     FROM ownership
-                    JOIN zone_id_map ON zone_id_map.old_id = CAST(ownership.zoneid AS INTEGER)
-                    JOIN ownership_id_map ON ownership_id_map.old_id = CAST(ownership.id AS INTEGER);",
+                    JOIN zone_id_map ON zone_id_map.old_id_text = CAST(ownership.zoneid AS TEXT)
+                    JOIN ownership_id_map ON ownership_id_map.old_id_text = CAST(ownership.id AS TEXT);",
                 )
                 .await?;
             }
@@ -372,27 +365,6 @@ async fn recreate_records_view<C: ConnectionTrait>(db: &C) -> Result<(), DbErr> 
     .await?;
 
     Ok(())
-}
-
-fn parse_integer_id_text(
-    row: &sea_orm::QueryResult,
-    id_column: &str,
-    type_column: &str,
-    table: &str,
-    column: &str,
-) -> Result<i64, DbErr> {
-    let id_type: String = row.try_get("", type_column)?;
-    let value: String = row.try_get("", id_column)?;
-    match id_type.as_str() {
-        "integer" | "text" => value.parse::<i64>().map_err(|error| {
-            DbErr::Custom(format!(
-                "failed to parse {table}.{column} '{value}' as integer: {error}"
-            ))
-        }),
-        _ => Err(DbErr::Custom(format!(
-            "unsupported {table}.{column} type '{id_type}' for integer migration"
-        ))),
-    }
 }
 
 async fn text_values<C: ConnectionTrait>(

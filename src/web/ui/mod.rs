@@ -5,6 +5,7 @@ use crate::db::entities;
 use crate::web::api::filezone::ApiZoneResponse;
 use crate::web::constants::{SESSION_REDIRECT_KEY, SESSION_USER_KEY};
 use crate::web::utils::Urls;
+use crate::web::GoatStateTrait;
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::Router;
@@ -13,6 +14,7 @@ use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
 use serde::Deserialize;
+use sea_orm::ModelTrait;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument, trace};
 use uuid::Uuid;
@@ -137,9 +139,22 @@ pub(crate) async fn zone_view(
         }
     };
 
+    let txn = state.get_db_txn().await.map_err(|err| {
+        error!("Failed to begin DB transaction for zone records: {err:?}");
+        Urls::ZonesList.redirect().into_response()
+    })?;
+    let records = zone
+        .find_related(entities::records::Entity)
+        .all(&txn)
+        .await
+        .map_err(|err| {
+            error!("Error getting records for zone {}: {err:?}", zone.name);
+            Urls::ZonesList.redirect().into_response()
+        })?;
+
     trace!("Returning zone: {zone:?}");
     Ok(TemplateViewZone {
-        zone: zone.into(),
+        zone: ApiZoneResponse { zone, records },
         user_is_admin: user.admin,
     })
 }
