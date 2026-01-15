@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::datastore::Command;
 use crate::db::entities;
-use crate::web::api::filezone::ApiZoneResponse;
+use crate::enums::{RecordClass, RecordType};
 use crate::web::constants::{SESSION_REDIRECT_KEY, SESSION_USER_KEY};
 use crate::web::utils::Urls;
 use crate::web::GoatStateTrait;
@@ -38,8 +38,32 @@ pub(crate) struct TemplateViewZones {
 #[derive(Template, WebTemplate)]
 #[template(path = "view_zone.html")]
 pub(crate) struct TemplateViewZone {
-    zone: ApiZoneResponse,
+    zone: entities::zones::Model,
+    records: Vec<UiZoneRecord>,
+    record_type_options: Vec<RecordTypeOption>,
+    record_class_options: Vec<RecordClassOption>,
     pub user_is_admin: bool,
+}
+
+pub(crate) struct UiZoneRecord {
+    id: Uuid,
+    name: String,
+    rrtype: u16,
+    rrtype_text: String,
+    rclass: u16,
+    rclass_text: String,
+    ttl: Option<u32>,
+    rdata: String,
+}
+
+pub(crate) struct RecordTypeOption {
+    value: u16,
+    label: String,
+}
+
+pub(crate) struct RecordClassOption {
+    value: u16,
+    label: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -152,9 +176,76 @@ pub(crate) async fn zone_view(
             Urls::ZonesList.redirect().into_response()
         })?;
 
+    let records = records
+        .into_iter()
+        .map(|record| {
+            let rrtype = RecordType::from(&record.rrtype);
+            let rrtype_text = if rrtype == RecordType::InvalidType {
+                record.rrtype.to_string()
+            } else {
+                rrtype.to_string()
+            };
+            let rclass = RecordClass::from(&record.rclass);
+            let rclass_text = if rclass == RecordClass::InvalidType {
+                record.rclass.to_string()
+            } else {
+                rclass.to_string()
+            };
+
+            UiZoneRecord {
+                id: record.id,
+                name: record.name,
+                rrtype: record.rrtype,
+                rrtype_text,
+                rclass: record.rclass,
+                rclass_text,
+                ttl: record.ttl,
+                rdata: record.rdata,
+            }
+        })
+        .collect();
+
+    let record_type_options = vec![
+        RecordType::A,
+        RecordType::AAAA,
+        RecordType::CAA,
+        RecordType::CNAME,
+        RecordType::HINFO,
+        RecordType::LOC,
+        RecordType::MX,
+        RecordType::NAPTR,
+        RecordType::NS,
+        RecordType::PTR,
+        RecordType::SOA,
+        RecordType::TXT,
+        RecordType::URI,
+    ]
+    .into_iter()
+    .map(|record_type| RecordTypeOption {
+        value: record_type as u16,
+        label: record_type.to_string(),
+    })
+    .collect();
+
+    let record_class_options = vec![
+        RecordClass::Internet,
+        RecordClass::CsNet,
+        RecordClass::Chaos,
+        RecordClass::Hesiod,
+    ]
+    .into_iter()
+    .map(|record_class| RecordClassOption {
+        value: record_class as u16,
+        label: record_class.to_string(),
+    })
+    .collect();
+
     trace!("Returning zone: {zone:?}");
     Ok(TemplateViewZone {
-        zone: ApiZoneResponse { zone, records },
+        zone,
+        records,
+        record_type_options,
+        record_class_options,
         user_is_admin: user.admin,
     })
 }

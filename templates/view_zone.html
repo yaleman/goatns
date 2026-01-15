@@ -5,18 +5,48 @@
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
         <li class="breadcrumb-item"><a href="/ui/zones/list">Zones</a></li>
-        <li class="breadcrumb-item active" aria-current="page">{{zone.zone.name}}</li>
+        <li class="breadcrumb-item active" aria-current="page">{{zone.name}}</li>
     </ol>
 </nav>
 
-<h1>Zone: {{zone.zone.name}}</h1>
-
-<div class="row">
-    <div class="col-2">Responsible Name (RNAME)</div>
-    <div class="col">"{{zone.zone.rname}}"</div>
+<div class="d-flex align-items-center justify-content-between">
+    <h1 class="mb-0">Zone: {{zone.name}}</h1>
+    <button type="button" class="btn btn-outline-primary" id="zoneEditButton">Edit zone</button>
 </div>
 
-{% if zone.records.is_empty() %}
+<div class="card mt-3">
+    <div class="card-body p-3">
+        <div class="row g-2 align-items-center">
+            <div class="col-12 d-flex flex-wrap gap-2">
+                <span class="text-muted">RNAME:</span>
+                <span class="fw-semibold text-truncate">"{{zone.rname}}"</span>
+            </div>
+            <div class="col-12"><hr class="my-1"></div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <span class="text-muted">Serial:</span>
+                <span class="fw-semibold">{{zone.serial}}</span>
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <span class="text-muted">Refresh:</span>
+                <span class="fw-semibold">{{zone.refresh}}</span>
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <span class="text-muted">Retry:</span>
+                <span class="fw-semibold">{{zone.retry}}</span>
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <span class="text-muted">Expire:</span>
+                <span class="fw-semibold">{{zone.expire}}</span>
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <span class="text-muted">Minimum:</span>
+                <span class="fw-semibold">{{zone.minimum}}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if records.is_empty() %}
 <div class="alert alert-warning" role="alert">No zone records found!</div>
 {% else %}
 <div class="table-responsive">
@@ -31,7 +61,7 @@
                 <th></th>
             </tr>
         </thead>
-        {% for record in zone.records %}
+        {% for record in records %}
 
         <tr class="zone-record-row" tabindex="0" role="button"
             data-record-edit="true"
@@ -41,10 +71,10 @@
             data-record-rclass="{{record.rclass}}"
             data-record-ttl="{% if record.ttl.is_some() %}{{record.ttl.unwrap()}}{% endif %}"
             data-record-rdata="{{record.rdata}}">
-            <td class="col-3 text-truncate">{{record.name}}</td>
-            <td class="col-1">{{record.rrtype}}</td>
+            <td class="col-3 text-truncate zone-record-name">{{record.name}}</td>
+            <td class="col-1">{{record.rrtype_text}}</td>
             <td class="col-1">{% if record.ttl.is_some() %}{{record.ttl.unwrap()}}{% endif %}</td>
-            <td class="col-1">{{record.rclass}}</td>
+            <td class="col-1">{{record.rclass_text}}</td>
             <td class="col-5 text-truncate">{{record.rdata}}</td>
             <td class="col-1 text-end">
                 <button type="button" class="btn btn-sm btn-outline-primary">Edit</button>
@@ -72,12 +102,20 @@
                             <input class="form-control" id="zoneRecordEditName" name="name" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label" for="zoneRecordEditType">Type (number)</label>
-                            <input class="form-control" id="zoneRecordEditType" name="rrtype" inputmode="numeric" required>
+                            <label class="form-label" for="zoneRecordEditType">Type</label>
+                            <select class="form-select" id="zoneRecordEditType" name="rrtype" required>
+                                {% for record_type in record_type_options %}
+                                <option value="{{record_type.value}}">{{record_type.label}}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label" for="zoneRecordEditClass">Class (number)</label>
-                            <input class="form-control" id="zoneRecordEditClass" name="rclass" inputmode="numeric" required>
+                            <label class="form-label" for="zoneRecordEditClass">Class</label>
+                            <select class="form-select" id="zoneRecordEditClass" name="rclass" required>
+                                {% for record_class in record_class_options %}
+                                <option value="{{record_class.value}}">{{record_class.label}}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="zoneRecordEditTtl">TTL</label>
@@ -92,6 +130,57 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="zoneRecordEditSave">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="zoneEditModal" tabindex="-1" aria-labelledby="zoneEditLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="zoneEditForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="zoneEditLabel">Edit Zone</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none" id="zoneEditError"></div>
+                    <input type="hidden" id="zoneEditId" name="id" value="{{zone.id}}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="zoneEditName">Zone name</label>
+                            <input class="form-control" id="zoneEditName" name="name" value="{{zone.name}}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="zoneEditRname">Responsible name (RNAME)</label>
+                            <input class="form-control" id="zoneEditRname" name="rname" value="{{zone.rname}}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="zoneEditSerial">Serial</label>
+                            <input class="form-control" id="zoneEditSerial" name="serial" inputmode="numeric" value="{{zone.serial}}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="zoneEditRefresh">Refresh</label>
+                            <input class="form-control" id="zoneEditRefresh" name="refresh" inputmode="numeric" value="{{zone.refresh}}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="zoneEditRetry">Retry</label>
+                            <input class="form-control" id="zoneEditRetry" name="retry" inputmode="numeric" value="{{zone.retry}}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="zoneEditExpire">Expire</label>
+                            <input class="form-control" id="zoneEditExpire" name="expire" inputmode="numeric" value="{{zone.expire}}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="zoneEditMinimum">Minimum</label>
+                            <input class="form-control" id="zoneEditMinimum" name="minimum" inputmode="numeric" value="{{zone.minimum}}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="zoneEditSave">Save changes</button>
                 </div>
             </form>
         </div>
