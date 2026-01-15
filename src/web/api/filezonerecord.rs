@@ -299,6 +299,14 @@ pub(crate) async fn api_record_update(
         )
     })?;
 
+    if let Err(err) = txn.commit().await {
+        error!("Error committing record update for id {:?}: {err:?}", payload.id);
+        return error_result_json!(
+            "Error updating record, see the admins",
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+
     Ok(Json(res))
 }
 pub(crate) async fn api_record_get(

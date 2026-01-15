@@ -27,18 +27,74 @@
                 <th>Type</th>
                 <th>TTL</th>
                 <th>Class</th>
+                <th>Data</th>
+                <th></th>
             </tr>
         </thead>
         {% for record in zone.records %}
 
-        <tr>
-            <td class="col-9 text-truncate">{{record.name}}</td>
+        <tr class="zone-record-row" tabindex="0" role="button"
+            data-record-edit="true"
+            data-record-id="{{record.id}}"
+            data-record-name="{{record.name}}"
+            data-record-rrtype="{{record.rrtype}}"
+            data-record-rclass="{{record.rclass}}"
+            data-record-ttl="{% if record.ttl.is_some() %}{{record.ttl.unwrap()}}{% endif %}"
+            data-record-rdata="{{record.rdata}}">
+            <td class="col-3 text-truncate">{{record.name}}</td>
             <td class="col-1">{{record.rrtype}}</td>
-            <td class="col-1">{{record.ttl.unwrap_or(0)}}</td>
+            <td class="col-1">{% if record.ttl.is_some() %}{{record.ttl.unwrap()}}{% endif %}</td>
             <td class="col-1">{{record.rclass}}</td>
+            <td class="col-5 text-truncate">{{record.rdata}}</td>
+            <td class="col-1 text-end">
+                <button type="button" class="btn btn-sm btn-outline-primary">Edit</button>
+            </td>
         </tr>
         {% endfor %}
     </table>
     {% endif %}
+</div>
+
+<div class="modal fade" id="zoneRecordEditModal" tabindex="-1" aria-labelledby="zoneRecordEditLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="zoneRecordEditForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="zoneRecordEditLabel">Edit Record</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none" id="zoneRecordEditError"></div>
+                    <input type="hidden" id="zoneRecordEditId" name="id">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="zoneRecordEditName">Name</label>
+                            <input class="form-control" id="zoneRecordEditName" name="name" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="zoneRecordEditType">Type (number)</label>
+                            <input class="form-control" id="zoneRecordEditType" name="rrtype" inputmode="numeric" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="zoneRecordEditClass">Class (number)</label>
+                            <input class="form-control" id="zoneRecordEditClass" name="rclass" inputmode="numeric" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="zoneRecordEditTtl">TTL</label>
+                            <input class="form-control" id="zoneRecordEditTtl" name="ttl" inputmode="numeric">
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label" for="zoneRecordEditData">Data</label>
+                            <input class="form-control" id="zoneRecordEditData" name="rdata" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="zoneRecordEditSave">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock content %}

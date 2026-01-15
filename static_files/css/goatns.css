@@ -9,3 +9,7 @@
 .nav-icon {
     height: 1.5em;
 }
+
+.zone-record-row {
+    cursor: pointer;
+}
