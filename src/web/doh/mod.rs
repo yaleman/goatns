@@ -167,6 +167,15 @@ pub(crate) fn response_500() -> Response {
         .into_response()
 }
 
+pub(crate) fn response_400() -> Response {
+    (
+        StatusCode::BAD_REQUEST,
+        [(axum::http::header::CACHE_CONTROL, "max-age=1")],
+        "",
+    )
+        .into_response()
+}
+
 pub async fn handle_get(
     State(state): State<GoatState>,
     headers: HeaderMap,
@@ -202,15 +211,24 @@ pub async fn handle_get(
         id = query.id;
     }
 
+    if qname.is_empty() {
+        return Err(response_400());
+    }
+
+    let rrtype_value = RecordType::from(rrtype.as_str());
+    if rrtype_value == RecordType::InvalidType {
+        return Err(response_400());
+    }
+
     let read_txn = state.get_db_txn().await.map_err(|err| {
         error!("Failed to get DB connection: {err:?}");
         response_500()
     })?;
 
     let records =
-        match entities::records::Entity::find()
-            .filter(entities::records::Column::Name.eq(qname.clone()).and(
-                entities::records::Column::Rrtype.eq(RecordType::from(rrtype.as_str()) as u16),
+        match entities::records_merged::Entity::find()
+            .filter(entities::records_merged::Column::Name.eq(qname.clone()).and(
+                entities::records_merged::Column::Rrtype.eq(rrtype_value as u16),
             ))
             .all(&read_txn)
             .await
@@ -224,8 +242,8 @@ pub async fn handle_get(
 
     trace!("Completed record request...");
 
-    let min_ttl = match records.iter().map(|r| r.ttl).min().flatten() {
-        Some(val) => val.to_owned(),
+    let min_ttl = match records.iter().map(|r| r.ttl).min() {
+        Some(val) => val,
         None => {
             trace!("Failed to get minimum TTL from query, using 1");
             1
@@ -240,7 +258,7 @@ pub async fn handle_get(
                 .map(|rec| JSONRecord {
                     name: rec.name.clone(),
                     qtype: rec.rrtype,
-                    ttl: rec.ttl.unwrap_or(min_ttl),
+                    ttl: rec.ttl,
                     data: Some(rec.rdata.clone()),
                 })
                 .collect();
@@ -255,7 +273,7 @@ pub async fn handle_get(
                 client_dnssec_disable: false,
                 question: vec![JSONQuestion {
                     name: qname,
-                    qtype: RecordType::from(rrtype) as u16,
+                    qtype: rrtype_value as u16,
                 }],
                 ..Default::default()
             };

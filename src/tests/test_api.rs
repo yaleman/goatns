@@ -7,10 +7,21 @@ use crate::web::api::filezonerecord::{ZoneForm, ZoneRecordForm};
 use crate::web::utils::create_api_token;
 use concread::cowcell::asynch::CowCell;
 use log::info;
-use tokio::net::TcpStream;
+use tokio::net::{TcpListener, UdpSocket};
 
 pub async fn is_free_port(port: u16) -> bool {
-    TcpStream::connect(("127.0.0.1", port)).await.is_err()
+    let addr = ("127.0.0.1", port);
+    let tcp_listener = TcpListener::bind(addr).await;
+    if tcp_listener.is_err() {
+        return false;
+    }
+
+    let udp_listener = UdpSocket::bind(addr).await;
+    if udp_listener.is_err() {
+        return false;
+    }
+
+    true
 }
 
 pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<ConfigFile>) {
@@ -25,16 +36,25 @@ pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<Config
 
     use rand::Rng;
     let mut rng = rand::rng();
-    let mut port: u16 = rng.random_range(2000..=65000);
+    let mut api_port: u16 = rng.random_range(2000..=65000);
     loop {
-        if is_free_port(port).await {
+        if is_free_port(api_port).await {
             break;
         }
-        port = rng.random_range(2000..=65000);
+        api_port = rng.random_range(2000..=65000);
+    }
+
+    let mut dns_port: u16 = rng.random_range(2000..=65000);
+    loop {
+        if dns_port != api_port && is_free_port(dns_port).await {
+            break;
+        }
+        dns_port = rng.random_range(2000..=65000);
     }
 
     let mut config_tx = config.write().await;
-    config_tx.api_port = port;
+    config_tx.api_port = api_port;
+    config_tx.port = dns_port;
     config_tx.commit().await;
 
     // println!("Starting channels");
@@ -58,7 +78,7 @@ pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<Config
         None,
     ));
 
-    info!("Starting API Server on port {port}");
+    info!("Starting API Server on port {api_port}");
     let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
 
     let apiserver = crate::web::build(
