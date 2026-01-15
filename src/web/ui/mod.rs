@@ -295,28 +295,17 @@ pub async fn check_logged_in(
     }
 }
 
-#[derive(Template, WebTemplate)]
-#[template(path = "dashboard.html")]
-pub(crate) struct DashboardTemplate /*<'a>*/ {
-    // name: &'a str,
-    pub user_is_admin: bool,
-}
-
-pub(crate) async fn dashboard(
-    // State(state): State<GoatState>,
+pub(crate) async fn dashboard_redirect(
     mut session: Session,
     OriginalUri(path): OriginalUri,
-) -> Result<DashboardTemplate, Redirect> {
-    let user = check_logged_in(&mut session, path).await?;
-
-    Ok(DashboardTemplate {
-        user_is_admin: user.admin,
-    })
+) -> Result<Redirect, Redirect> {
+    check_logged_in(&mut session, path).await?;
+    Ok(Urls::ZonesList.redirect())
 }
 
 pub fn new() -> Router<GoatState> {
     Router::new()
-        .route("/", get(dashboard))
+        .route("/", get(dashboard_redirect))
         .route("/zones/{id}", get(zone_view))
         .route("/zones/list", get(zones_list))
         .route("/zones/new", post(zones::zones_new_post))
