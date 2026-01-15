@@ -18,6 +18,8 @@
 - `just doc` or `just book`: build rustdoc or serve the mdBook locally.
 - `just docker_build`: build the local container image.
 
+`just clippy` needs to pass before you consider any task complete.
+
 ## Coding Style & Naming Conventions
 
 - Rust formatting is enforced via `rustfmt` (4-space indentation, standard Rust style).
