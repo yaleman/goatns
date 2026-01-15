@@ -21,8 +21,6 @@ pub(crate) enum Urls {
     Home,
     /// Login page
     Login,
-    /// User Dashboard
-    Dashboard,
     /// List of zones
     ZonesList,
     /// Admin UI
@@ -39,8 +37,7 @@ impl AsRef<str> for Urls {
             Urls::Home => "/",
             Urls::Login => "/auth/login",
             Urls::Admin => "/ui/admin",
-            Urls::Dashboard => "/ui",
-            Urls::ZonesList => "/ui/zones/list",
+            Urls::ZonesList => "/ui/zones",
             Urls::Settings => "/ui/settings",
             Urls::SettingsApiTokens => "/ui/settings/api_tokens",
         }

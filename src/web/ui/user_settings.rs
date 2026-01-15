@@ -181,22 +181,22 @@ pub async fn api_tokens_get(
         Ok(Some(val)) => val,
         Ok(_) => {
             error!("No new_api_token found in session store");
-            return Err(Urls::Dashboard.redirect());
+            return Err(Urls::ZonesList.redirect());
         }
         Err(err) => {
             error!("Failed to get new_api_token from session store: {err:?}");
-            return Err(Urls::Dashboard.redirect());
+            return Err(Urls::ZonesList.redirect());
         }
     };
     let tokenkey: String = match session.remove("new_api_tokenkey").await {
         Ok(Some(val)) => val,
         Ok(_) => {
             error!("No new_api_tokenkey found in session store");
-            return Err(Urls::Dashboard.redirect());
+            return Err(Urls::ZonesList.redirect());
         }
         Err(err) => {
             error!("Failed to get new_api_tokenkey from session store: {err:?}");
-            return Err(Urls::Dashboard.redirect());
+            return Err(Urls::ZonesList.redirect());
         }
     };
 

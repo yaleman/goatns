@@ -60,7 +60,7 @@ pub(crate) async fn report_unowned_records(
 
     let txn = state.get_db_txn().await.map_err(|err| {
         error!("Failed to get DB connection: {err:?}");
-        Redirect::to(Urls::Dashboard.as_ref())
+        Redirect::to(Urls::ZonesList.as_ref())
     })?;
 
     // Get all zone IDs that have ownership records

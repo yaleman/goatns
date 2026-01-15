@@ -271,7 +271,7 @@ pub async fn login(
     // check if we've got an existing, valid session
     if let Some(signed_in) = session.get("signed_in").await.unwrap_or(Some(false)) {
         if signed_in {
-            return Ok(Urls::Dashboard.redirect().into_response());
+            return Ok(Urls::ZonesList.redirect().into_response());
         }
     }
 
@@ -428,7 +428,7 @@ pub async fn login(
             let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
             match redirect {
                 Some(destination) => Ok(Redirect::to(&destination).into_response()),
-                None => Ok(Urls::Dashboard.redirect().into_response()),
+                None => Ok(Urls::ZonesList.redirect().into_response()),
             }
         }
         Err(error) => match error {
@@ -544,7 +544,7 @@ pub async fn signup(
                     let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
                     match redirect {
                         Some(destination) => Ok(Redirect::to(&destination).into_response()),
-                        None => Ok(Urls::Dashboard.redirect().into_response()),
+                        None => Ok(Urls::ZonesList.redirect().into_response()),
                     }
                 }
                 Err(error) => {

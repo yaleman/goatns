@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use crate::datastore::Command;
 use crate::db::entities;
 use crate::enums::{RecordClass, RecordType};
+use crate::web::GoatStateTrait;
 use crate::web::constants::{SESSION_REDIRECT_KEY, SESSION_USER_KEY};
 use crate::web::utils::Urls;
-use crate::web::GoatStateTrait;
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::Router;
@@ -13,8 +13,8 @@ use axum::extract::{OriginalUri, Path, Query, State};
 use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
-use serde::Deserialize;
 use sea_orm::ModelTrait;
+use serde::Deserialize;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument, trace};
 use uuid::Uuid;
@@ -102,7 +102,7 @@ pub(crate) async fn zones_list(
     {
         eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
         error!("failed to send GetZoneNames command to datastore: {err:?}");
-        return Err(Urls::Dashboard.redirect().into_response());
+        return Err(Urls::ZonesList.redirect().into_response());
     };
 
     let zones = os_rx.await.map_err(|err| {
