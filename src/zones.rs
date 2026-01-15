@@ -182,7 +182,7 @@ impl Display for ZoneRecord {
 }
 
 /// Loads a zone file
-pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, GoatNsError> {
+pub fn load_zone_from_file(filename: &Path) -> Result<ZoneFile, GoatNsError> {
     let mut file = match File::open(filename) {
         Ok(value) => value,
         Err(err) => {
@@ -194,7 +194,7 @@ pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, GoatNsError> {
     let mut buf: String = String::new();
     file.read_to_string(&mut buf)
         .inspect_err(|err| error!("Failed to read {}: {:?}", &filename.display(), err))?;
-    let jsonstruct: FileZone = match json5::from_str(&buf) {
+    let jsonstruct: ZoneFile = match json5::from_str(&buf) {
         Ok(value) => value,
         Err(err) => {
             let emsg = format!("Failed to read JSON file: {err:?}");
@@ -205,7 +205,7 @@ pub fn load_zone_from_file(filename: &Path) -> Result<FileZone, GoatNsError> {
     Ok(jsonstruct)
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ZoneFile {
     #[serde(flatten)]
     pub zone: ZoneForm,

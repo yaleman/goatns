@@ -1,4 +1,6 @@
+use crate::datastore::import_zonefile;
 use crate::tests::prelude::*;
+use crate::zones::ZoneFile;
 
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter,
@@ -249,9 +251,12 @@ async fn load_then_export() -> Result<(), GoatNsError> {
     eprintln!("load_zone_from_file from {example_zone_file:?}");
     let example_zone = crate::zones::load_zone_from_file(example_zone_file)
         .inspect_err(|err| println!("Failed to load zone file! {err:?}"))?;
-
+    let zone_name = example_zone.zone.name.clone();
+    let am: entities::zones::ActiveModel = example_zone.zone.clone().into();
+    am.insert(&pool).await?;
     eprint!("importing zone into db...");
-    example_zone.save(&pool).await?;
+    import_zonefile(&pool, example_zone).await?;
+    // example_zone.insert(&pool).await?;
     eprintln!("done!");
 
     let mut file = match tokio::fs::File::open(example_zone_file).await {
@@ -267,7 +272,7 @@ async fn load_then_export() -> Result<(), GoatNsError> {
 
     eprintln!("File contents: {buf:?}");
 
-    let json: entities::zones::Model = json5::from_str(&buf)
+    let json: ZoneFile = json5::from_str(&buf)
         .map_err(|e| panic!("{e:?}"))
         .expect("Failed to parse json");
     eprintln!("loaded zone from file again: {json:?}");
@@ -275,7 +280,7 @@ async fn load_then_export() -> Result<(), GoatNsError> {
 
     eprintln!("Exporting zone");
     let zone_got = entities::zones::Entity::find()
-        .filter(entities::zones::Column::Name.eq("example.com".to_string()))
+        .filter(entities::zones::Column::Name.eq(zone_name))
         .one(&pool)
         .await?
         .expect("Failed to get zone from DB");

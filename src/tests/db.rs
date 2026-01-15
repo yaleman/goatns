@@ -36,7 +36,7 @@ async fn userauthtoken_saves() -> Result<(), GoatNsError> {
 
     println!("Saving duplicate UAT Object to DB: {uat:?}");
     let uat2 = uat.clone().into_active_model();
-    uat2.save(&pool)
+    uat2.insert(&pool)
         .await
         .expect_err("Creating a duplicate token value should fail!");
 

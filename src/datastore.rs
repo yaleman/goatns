@@ -5,8 +5,8 @@ use crate::resourcerecord::InternalResourceRecord;
 use crate::zones::{ZoneFile, ZoneRecord};
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter,
-    QuerySelect, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, ModelTrait,
+    QueryFilter, QuerySelect, TransactionTrait,
 };
 use std::str::from_utf8;
 use std::time::Duration;
@@ -234,6 +234,74 @@ async fn handle_get_command(
     Ok(())
 }
 
+pub async fn import_zonefile<C: ConnectionTrait>(
+    pool: &C,
+    zonefile: ZoneFile,
+) -> Result<(), GoatNsError> {
+    let zone: entities::zones::ActiveModel = zonefile.zone.into();
+    let zone_name = zone.name.clone();
+
+    debug!("Importing zone: {}", zone_name.as_ref());
+    let zone_id = if zone.id.is_not_set() {
+        match zone.insert(pool).await {
+            Ok(zone_res) => {
+                info!("Created zone: {:?}", zone_res);
+                zone_res.id
+            }
+            Err(err) => {
+                error!("Failed to create zone {}: {:?}", zone_name.as_ref(), err);
+                return Err(err.into());
+            }
+        }
+    } else {
+        match zone.update(pool).await {
+            Ok(zone_res) => {
+                info!("Updated zone: {:?}", zone_res);
+                zone_res.id
+            }
+            Err(err) => {
+                error!("Failed to update zone {}: {:?}", zone_name.as_ref(), err);
+                return Err(err.into());
+            }
+        }
+    };
+    for record in zonefile.records {
+        let record_am: entities::records::ActiveModel = record.to_activemodel(zone_id);
+
+        let record_clone = record_am.clone();
+        if record_am.id.is_unchanged() || record_am.id.is_not_set() {
+            match record_am.insert(pool).await {
+                Ok(record_res) => {
+                    debug!("Inserted record: {:?}", record_res);
+                }
+                Err(err) => {
+                    error!(
+                        "Failed to insert record {:?} in zone {}: {:?}",
+                        record_clone,
+                        zone_name.as_ref(),
+                        err
+                    );
+                }
+            }
+        } else {
+            match record_am.update(pool).await {
+                Ok(record_res) => {
+                    debug!("Updated record: {:?}", record_res);
+                }
+                Err(err) => {
+                    error!(
+                        "Failed to update record {:?} in zone {}: {:?}",
+                        record_clone,
+                        zone_name.as_ref(),
+                        err
+                    );
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Import a file directly into the database. Normally, you shouldn't use this directly, call it through calls to the datastore.
 #[instrument(level = "info", skip(pool))]
 pub async fn handle_import_file(
@@ -261,67 +329,7 @@ pub async fn handle_import_file(
 
     let txn = pool.begin().await?;
     for zonefile in zones {
-        let zone: entities::zones::ActiveModel = zonefile.zone.into();
-        let zone_name = zone.name.clone();
-
-        debug!("Importing zone: {}", zone_name.as_ref());
-        let zone_id = if zone.id.is_not_set() {
-            match zone.insert(&txn).await {
-                Ok(zone_res) => {
-                    info!("Created zone: {:?}", zone_res);
-                    zone_res.id
-                }
-                Err(err) => {
-                    error!("Failed to create zone {}: {:?}", zone_name.as_ref(), err);
-                    continue;
-                }
-            }
-        } else {
-            match zone.update(&txn).await {
-                Ok(zone_res) => {
-                    info!("Updated zone: {:?}", zone_res);
-                    zone_res.id
-                }
-                Err(err) => {
-                    error!("Failed to update zone {}: {:?}", zone_name.as_ref(), err);
-                    continue;
-                }
-            }
-        };
-        for record in zonefile.records {
-            let record_am: entities::records::ActiveModel = record.to_activemodel(zone_id);
-
-            let record_clone = record_am.clone();
-            if record_am.id.is_unchanged() || record_am.id.is_not_set() {
-                match record_am.insert(&txn).await {
-                    Ok(record_res) => {
-                        debug!("Inserted record: {:?}", record_res);
-                    }
-                    Err(err) => {
-                        error!(
-                            "Failed to insert record {:?} in zone {}: {:?}",
-                            record_clone,
-                            zone_name.as_ref(),
-                            err
-                        );
-                    }
-                }
-            } else {
-                match record_am.update(&txn).await {
-                    Ok(record_res) => {
-                        debug!("Updated record: {:?}", record_res);
-                    }
-                    Err(err) => {
-                        error!(
-                            "Failed to update record {:?} in zone {}: {:?}",
-                            record_clone,
-                            zone_name.as_ref(),
-                            err
-                        );
-                    }
-                }
-            }
-        }
+        import_zonefile(&txn, zonefile).await?;
     }
     txn.commit()
         .await
