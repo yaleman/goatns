@@ -167,6 +167,7 @@ build_book: doc
 # Format docs and check them
 book_format:
 	find . -type f \
+		-not -path './AGENTS.md' \
 		-not -path './CLAUDE.md' \
 		-not -path './target/*' \
 		-not -path '*/.venv/*' \
@@ -176,6 +177,7 @@ book_format:
 # Fix docs formatting
 book_format_fix:
 	find . -type f \
+		-not -path './AGENTS.md' \
 		-not -path './target/*' \
 		-not -path '*/.venv/*' \
 		-name \*.md \
