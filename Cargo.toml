@@ -1,8 +1,8 @@
 [package]
 name = "goatns"
-version = "0.6.1"
-categories = ["network-programming"]
-edition = "2024"
+version = { workspace = true }
+categories = { workspace = true }
+edition = { workspace = true }
 include = [
   "src/**/*",
   "LICENSE.md",
@@ -10,17 +10,25 @@ include = [
   "!**/*_test.*",
   "!**/tests/**/*",
 ]
-keywords = ["dns", "server", "tokio", "api", "oauth2", "oidc"]
-license = "MIT"
-repository = "https://github.com/yaleman/goatns.git"
-rust-version = "1.87"
 description = "Yet another authoritative DNS name server. But with goat references."
+keywords = ["dns", "server", "tokio", "api", "oauth2", "oidc"]
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 
 [features]
 default = []
 
 [workspace]
 members = [".", "goat-lib", "goatns-macros"]
+[workspace.package]
+version = "0.7.0"
+categories = ["network-programming"]
+edition = "2024"
+license = "MIT"
+rust-version = "1.87"
+repository = "https://github.com/yaleman/goatns.git"
+
 
 [lib]
 bench = false

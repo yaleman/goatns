@@ -151,7 +151,6 @@ async fn store_api_csrf_token(
         .insert(SESSION_CSRFTOKEN_FIELD, stored_csrf)
         .await
         .map_err(|err| {
-            // TODO: nice errors are nice but secure errors are better
             GoatNsError::Csrf(format!("Failed to store CSRF Token for user: {err:?}"))
         })?;
     Ok(csrftoken)
@@ -324,7 +323,6 @@ pub struct ApiTokenPage {
 }
 
 /// The user settings page at /ui/settings
-// #[debug_handler]
 pub async fn api_tokens_post(
     mut session: Session,
     State(state): State<GoatState>,
@@ -339,7 +337,6 @@ pub async fn api_tokens_post(
     .await?;
 
     if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
-        // TODO: redirect to the start
         debug!("Failed to validate csrf expiry");
         return Err(Urls::Settings.redirect());
     }
@@ -432,7 +429,6 @@ pub async fn api_tokens_post(
                             error!("Txn rollback fail: {e:?}");
                             Urls::SettingsApiTokens.redirect()
                         })?;
-                        // TODO: bail, which should roll back the txn
                         error!(
                             "Failed to store new API tokenkey in the session, ruh roh? {error:?}"
                         );
@@ -472,8 +468,6 @@ pub async fn api_tokens_post(
         }
     };
     Ok(context)
-
-    // Html::from("Welcome to the api tokens page".to_string())
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Template, WebTemplate)]
@@ -493,7 +487,6 @@ pub struct ApiTokenDeleteForm {
 
 pub async fn api_tokens_delete_get(
     State(state): State<GoatState>,
-    // Form(form): Form<ApiTokenPage>,
     Path(id): Path<String>,
     mut session: Session,
 ) -> Result<ApiTokenDeleteTemplate, Redirect> {

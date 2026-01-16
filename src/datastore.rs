@@ -163,8 +163,6 @@ async fn handle_get_command(
     server_hostname: &str,
     // database pool
     conn: &DatabaseConnection,
-    // this is the result from the things in memory
-    // zone_get: Option<&ZoneRecord>,
     name: Vec<u8>,
     rrtype: RecordType,
     rclass: RecordClass,
@@ -211,17 +209,6 @@ async fn handle_get_command(
             }
         };
     }
-
-    // if let Some(value) = zone_get {
-    //     // check if the type we want is in there, and only return the matching records
-    //     let res: Vec<InternalResourceRecord> = value
-    //         .to_owned()
-    //         .typerecords
-    //         .into_iter()
-    //         .filter(|r| r == &rrtype && r == &rclass)
-    //         .collect();
-    //     zr.typerecords.extend(res);
-    // };
 
     let result = match zr.typerecords.is_empty() {
         true => None,
@@ -457,33 +444,26 @@ pub(crate) async fn handle_message(
                 error!("{e:?}")
             };
         }
-        Command::CreateZone {
-            zone,
-            userid: _,
-            resp: _,
-        } => {
+        Command::CreateZone { zone, userid, resp } => {
             let zone_cloned = zone.clone();
             match zone.update(&connpool).await {
-                Ok(_zone) => {
-                    // TODO: create the ownership
-                    todo!();
-                    //     entities::ownership::ActiveModel {
-                    //         id: NotSet,
-                    //         userid: Set(userid),
-                    //         zoneid: Set(userid),
-                    //     }
-                    //     .insert(connpool)
-                    //     .await
-                    //     .map_err(|e| format!("{e:?}"))?;
-                    // }
+                Ok(zone) => {
+                    entities::ownership::ActiveModel {
+                        id: NotSet,
+                        userid: Set(userid),
+                        zoneid: Set(zone.id),
+                    }
+                    .update(&connpool)
+                    .await
+                    .map_err(|e| format!("Failed to create ownership for for zone {e:?}"))?;
 
-                    // if let Err(err) = resp.send(*zone.clone()) {
-                    //     error!(
-                    //         "Failed to send message back to caller after creating zone {zone:?}: {err:?}"
-                    //     );
-                    // } else {
-                    //     info!("Created zone: {:?}", zone);
-                    // }
+                    if let Err(err) = resp.send(zone.clone()) {
+                        error!(
+                            "Failed to send message back to caller after creating zone {zone:?}: {err:?}"
+                        );
+                    } else {
+                        info!("Created zone: {:?}", zone);
+                    }
                 }
                 Err(err) => {
                     error!("Failed to create zone: {zone_cloned:?} {err:?}");

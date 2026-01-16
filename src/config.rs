@@ -94,10 +94,6 @@ pub struct ConfigFile {
     pub admin_contact: ContactDetails,
     /// Allow auto-provisioning of users
     pub user_auto_provisioning: bool,
-    // /// Allow disabling oauth2 under test/debug mode
-    // #[cfg(any(test, debug_assertions))]
-    // #[serde(default)]
-    // pub disable_oauth2: bool,
     /// If you want to export traces to an OTLP endpoint, set this to the endpoint
     pub otel_endpoint: Option<String>,
 
@@ -296,10 +292,7 @@ impl Default for ConfigFile {
             tcp_client_timeout: 5,
             enable_hinfo: false,
             allowed_tlds: vec![],
-            ip_allow_lists: IPAllowList {
-                // axfr: vec![],
-                shutdown: vec![],
-            },
+            ip_allow_lists: IPAllowList { shutdown: vec![] },
             db_path: String::from("~/.cache/goatns.sqlite"),
             zone_file: None,
             enable_api: false,
@@ -321,8 +314,6 @@ impl Default for ConfigFile {
             sql_db_cleanup_seconds: 3600, // one hour
             admin_contact: Default::default(),
             user_auto_provisioning: false,
-            // #[cfg(any(test, debug_assertions))]
-            // disable_oauth2: false,
             otel_endpoint: None,
             cert_reload_interval_seconds: Some(300),
         }
@@ -462,10 +453,6 @@ impl From<Config> for ConfigFile {
             user_auto_provisioning: config
                 .get("user_auto_provisioning")
                 .unwrap_or(Self::default().user_auto_provisioning),
-            // #[cfg(any(test, debug_assertions))]
-            // disable_oauth2: config
-            //     .get("disable_oauth2")
-            //     .unwrap_or(Self::default().disable_oauth2),
             otel_endpoint,
             cert_reload_interval_seconds: config
                 .get("cert_reload_interval_seconds")
@@ -478,8 +465,6 @@ impl FromStr for ConfigFile {
     type Err = String;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        // let res =Config::try_from(&input);
-
         let configfile = File::from_str(input, config::FileFormat::Json);
 
         let res = Config::builder()
@@ -514,7 +499,6 @@ pub async fn use_flexi_logger(
                 "hyper::client",
                 "rustls",
                 "h2::proto",
-                // "tower_http::trace::make_span",
                 "tokio_util::codec::framed_impl",
             ],
         }))

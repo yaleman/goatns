@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0
+
+Moving to sea-orm for all database access, cleaning up a LOT of the internals.
+
 ## 0.4.0
 
 Someone decided that axum-sessions was bad so I had to rewrite a heap of stuff. I cried. It wasn't

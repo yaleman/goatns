@@ -1,7 +1,6 @@
-use criterion::{criterion_group, criterion_main, Criterion};
-use std::hint::black_box; // ,Bencher
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 
-// use std::process::Termination;
 use goatns::{resourcerecord::NameAsBytes, utils::name_as_bytes};
 
 fn criterion_benchmark(c: &mut Criterion) {

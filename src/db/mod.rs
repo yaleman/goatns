@@ -14,8 +14,6 @@ pub mod migrations;
 #[cfg(test)]
 pub mod test;
 
-// const SQL_VIEW_RECORDS: &str = "records_merged";
-
 async fn get_conn_inner(
     db_url: &str,
     log_sql_statements: bool,

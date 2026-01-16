@@ -2,7 +2,7 @@
 	"addr" : "127.0.0.1",
 	"hostname" : "localhost",
 	"port" : 15353,
-	"log_level" : "TRACE",
+	"log_level" : "DEBUG",
 	"capture_packets" :false,
 	"enable_hinfo" : true,
 	"enable_api" : true,

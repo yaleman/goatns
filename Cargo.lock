@@ -1848,14 +1848,14 @@ checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "goat-lib"
-version = "0.1.0"
+version = "0.7.0"
 dependencies = [
  "regex",
 ]
 
 [[package]]
 name = "goatns"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "argon2",
  "askama",

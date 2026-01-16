@@ -85,7 +85,7 @@ pub enum Rcode {
 )]
 /// RRType, eg A, NS, MX, etc
 #[sqlx(type_name = "INTEGER")]
-#[repr(i64)]
+#[repr(u64)]
 pub enum RecordType {
     /// A host address
     A = 1,
@@ -282,7 +282,7 @@ impl RecordType {
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Sequence, sqlx::Type, ToSchema)]
-#[repr(i64)]
+#[repr(u64)]
 /// CLASS fields appear in resource records, most entries should be IN, but CHAOS is typically used for management-layer things. Ref RFC1035 3.2.4.
 pub enum RecordClass {
     /// IN - Internet
@@ -441,52 +441,45 @@ impl TryFrom<String> for ContactDetails {
         let contact_value = split_value.next();
 
         match (contact_type, contact_value) {
-            (Some(contact_type), Some(contact_value)) => {
-                // return Err(ContactDetailsDeserializerError::InputLengthWrong{
-                //     msg: "Length of input is wrong please ensure it's in the format type:username@server (server for Mastodon)",
-                //     len: split_value.count(),
-                // });
-
-                match contact_type {
-                    "Mastodon" => {
-                        let contact_value = match contact_value.starts_with('@') {
-                            false => contact_value,
-                            true => contact_value.trim_start_matches('@'),
-                        };
-                        if !contact_value.contains('@') {
-                            Err(ContactDetailsDeserializerError::InputFormatWrong {
-                                unexp: contact_value.to_string(),
-                                exp: "Input format is wrong please ensure it's in the format Mastodon:username@server for Mastodon",
-                            })
-                        } else {
-                            let mut contact_split = contact_value.split('@');
-                            #[allow(clippy::expect_used)]
-                            Ok(Self::Mastodon {
-                                contact: contact_split
-                                    .next()
-                                    .expect(
-                                        "THe length was checked and then we couldn't get 
+            (Some(contact_type), Some(contact_value)) => match contact_type {
+                "Mastodon" => {
+                    let contact_value = match contact_value.starts_with('@') {
+                        false => contact_value,
+                        true => contact_value.trim_start_matches('@'),
+                    };
+                    if !contact_value.contains('@') {
+                        Err(ContactDetailsDeserializerError::InputFormatWrong {
+                            unexp: contact_value.to_string(),
+                            exp: "Input format is wrong please ensure it's in the format Mastodon:username@server for Mastodon",
+                        })
+                    } else {
+                        let mut contact_split = contact_value.split('@');
+                        #[allow(clippy::expect_used)]
+                        Ok(Self::Mastodon {
+                            contact: contact_split
+                                .next()
+                                .expect(
+                                    "THe length was checked and then we couldn't get 
                                 it!",
-                                    )
-                                    .to_string(),
-                                server: contact_split
-                                    .next()
-                                    .expect("THe length was checked and then we couldn't get it!")
-                                    .to_string(),
-                            })
-                        }
+                                )
+                                .to_string(),
+                            server: contact_split
+                                .next()
+                                .expect("THe length was checked and then we couldn't get it!")
+                                .to_string(),
+                        })
                     }
-                    "Email" => Ok(Self::Email {
-                        contact: contact_value.to_string(),
-                    }),
-                    "Twitter" => Ok(Self::Twitter {
-                        contact: contact_value.to_string(),
-                    }),
-                    &_ => Err(ContactDetailsDeserializerError::WrongContactType(format!(
-                        "Contact type ({contact_type}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon"
-                    ))),
                 }
-            }
+                "Email" => Ok(Self::Email {
+                    contact: contact_value.to_string(),
+                }),
+                "Twitter" => Ok(Self::Twitter {
+                    contact: contact_value.to_string(),
+                }),
+                &_ => Err(ContactDetailsDeserializerError::WrongContactType(format!(
+                    "Contact type ({contact_type}) wrong, please ensure it's in the format type:value where type is one of Email/Twitter/Mastodon"
+                ))),
+            },
             _ => Err(ContactDetailsDeserializerError::InputLengthWrong {
                 msg: "Length/value of input is wrong. please ensure it's in the format type:username@server (server for Mastodon)",
                 len: split_value.count(),
