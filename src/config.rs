@@ -49,7 +49,7 @@ pub struct ConfigFile {
     /// Enable a HINFO record at hinfo.goat
     pub enable_hinfo: bool,
     /// The location for the zone sqlite file
-    pub sqlite_path: String,
+    pub db_path: String,
     /// Where the JSON zone file is
     pub zone_file: Option<String>,
     /// List of "valid" TLDs - if this is empty let anything be created
@@ -300,7 +300,7 @@ impl Default for ConfigFile {
                 // axfr: vec![],
                 shutdown: vec![],
             },
-            sqlite_path: String::from("~/.cache/goatns.sqlite"),
+            db_path: String::from("~/.cache/goatns.sqlite"),
             zone_file: None,
             enable_api: false,
             api_port: 9000,
@@ -413,9 +413,7 @@ impl From<Config> for ConfigFile {
             tcp_client_timeout: config
                 .get("tcp_client_timeout")
                 .unwrap_or(Self::default().tcp_client_timeout),
-            sqlite_path: config
-                .get("sqlite_path")
-                .unwrap_or(Self::default().sqlite_path),
+            db_path: config.get("sqlite_path").unwrap_or(Self::default().db_path),
             allowed_tlds: config
                 .get("allowed_tlds")
                 .unwrap_or(Self::default().allowed_tlds),

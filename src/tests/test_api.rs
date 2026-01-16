@@ -25,7 +25,6 @@ pub async fn is_free_port(port: u16) -> bool {
 }
 
 pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<ConfigFile>) {
-    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     test_logging().await;
     let pool = test_get_sqlite_memory().await;
 

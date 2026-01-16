@@ -15,7 +15,7 @@ use goatns::servers;
 use tokio::time::sleep;
 
 async fn run() -> Result<(), GoatNsError> {
-    // let clap_results = clap_parser();
+    goatns::init_crypto();
 
     let cli = Cli::parse();
 
@@ -71,8 +71,6 @@ async fn run() -> Result<(), GoatNsError> {
     let connpool: DatabaseConnection = db::get_conn(config.read().await)
         .await
         .map_err(|err| GoatNsError::StartupError(format!("DB Setup failed: {err:?}")))?;
-
-    db::start_db(&connpool).await?;
 
     // start all the things!
 
@@ -133,7 +131,6 @@ async fn run() -> Result<(), GoatNsError> {
     };
 
     if let SystemState::Server = next_step {
-        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
         let udpserver = tokio::spawn(servers::udp_server(
             config.read().await,
             datastore_sender.clone(),

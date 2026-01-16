@@ -52,6 +52,11 @@ pub mod utils;
 pub mod web;
 pub mod zones;
 
+// Ensure that the AWS-LC-Rust crypto provider is installed as the default for rustls
+pub fn init_crypto() {
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+}
+
 /// Internal limit of in-flight requests
 pub const MAX_IN_FLIGHT: usize = 512;
 /// The size of a DNS request header
