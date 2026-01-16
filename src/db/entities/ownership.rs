@@ -59,16 +59,6 @@ impl ActiveModelBehavior for ActiveModel {
 }
 
 impl Entity {
-    // pub(crate) async fn find_by_user<C>(db: &C, user_id: Uuid) -> Result<Vec<Model>, DbErr>
-    // where
-    //     C: ConnectionTrait,
-    // {
-    //     Self::find()
-    //         .filter(Column::Userid.eq(user_id))
-    //         .all(db)
-    //         .await
-    // }
-
     pub(crate) async fn find_by_user_and_zone<C>(
         db: &C,
         user_id: Uuid,

@@ -173,7 +173,6 @@ pub async fn import_zones(
         sleep(std::time::Duration::from_micros(500)).await;
     }
     Ok(())
-    // rx_oneshot.await.map_err(|e| format!("Failed to receive result: {e:?}"))
 }
 
 /// Presents the CLI UI to add an admin user.
