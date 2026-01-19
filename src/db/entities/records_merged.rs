@@ -1,11 +1,4 @@
-//! `SeaORM` Entity based on the records_merged view
-
-use sea_orm::QueryFilter;
-use sea_orm::entity::prelude::*;
-use serde::{Deserialize, Serialize};
-
-use crate::enums::{RecordClass, RecordType};
-use crate::error::GoatNsError;
+use super::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Deserialize, Serialize)]
 #[sea_orm(table_name = "records_merged")]
