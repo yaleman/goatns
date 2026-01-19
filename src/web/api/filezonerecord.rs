@@ -1,14 +1,9 @@
-use crate::db::entities;
-use crate::enums::{RecordClass, RecordType};
-use crate::error_result_json;
-use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
-use tower_sessions::Session;
-use tracing::debug;
-use utoipa::ToSchema;
-use uuid::Uuid;
-
-use super::*;
+use super::prelude::*;
+use sea_orm::{
+    ActiveModelTrait,
+    ActiveValue::{NotSet, Set},
+    ColumnTrait, EntityTrait, ModelTrait, QueryFilter,
+};
 
 #[derive(Deserialize, Serialize, Debug, ToSchema, Clone)]
 pub struct ZoneForm {
@@ -131,10 +126,10 @@ pub(crate) async fn api_record_create(
             "User {:?} does not own zone id {:?}",
             user.id, record_form.zoneid
         );
-        return error_result_json!(
+        return Err(error_result_json(
             "Not authorized to create record in this zone",
-            StatusCode::FORBIDDEN
-        );
+            StatusCode::FORBIDDEN,
+        ));
     };
 
     let record = entities::records::ActiveModel::from(record_form);
@@ -147,58 +142,62 @@ pub(crate) async fn api_record_create(
             match &err {
                 crate::error::GoatNsError::Generic(msg) => {
                     if msg.contains("Record with same zone, name, type, and class already exists") {
-                        return error_result_json!(
+                        return Err(error_result_json(
                             "A record with the same name, type, and class already exists in this zone",
-                            StatusCode::CONFLICT
-                        );
+                            StatusCode::CONFLICT,
+                        ));
                     }
                     if msg.contains("Record must have a valid zone ID") {
-                        return error_result_json!(
+                        return Err(error_result_json(
                             "Record must have a valid zone ID",
-                            StatusCode::BAD_REQUEST
-                        );
+                            StatusCode::BAD_REQUEST,
+                        ));
                     }
                     if msg.contains("Record name cannot be empty") {
-                        return error_result_json!(
+                        return Err(error_result_json(
                             "Record name cannot be empty",
-                            StatusCode::BAD_REQUEST
-                        );
+                            StatusCode::BAD_REQUEST,
+                        ));
                     }
                 }
                 crate::error::GoatNsError::SqlxError(sqlx::Error::Database(db_err)) => {
                     if let Some(constraint) = db_err.constraint() {
                         if constraint == "ind_records" {
-                            return error_result_json!(
+                            return Err(error_result_json(
                                 "A record with the same name, type, and class already exists in this zone",
-                                StatusCode::CONFLICT
-                            );
+                                StatusCode::CONFLICT,
+                            ));
                         }
                     }
                     // Check for unique constraint error codes
                     if db_err.code() == Some(std::borrow::Cow::Borrowed("2067"))
                         || db_err.code() == Some(std::borrow::Cow::Borrowed("1555"))
                     {
-                        return error_result_json!(
+                        return Err(error_result_json(
                             "A record with the same name, type, and class already exists in this zone",
-                            StatusCode::CONFLICT
-                        );
+                            StatusCode::CONFLICT,
+                        ));
                     }
                 }
                 _ => {}
             }
 
-            error_result_json!("Error saving record", StatusCode::BAD_REQUEST)
+            Err(error_result_json(
+                "Error saving record",
+                StatusCode::BAD_REQUEST,
+            ))
         }
         Ok(val) => {
             if let Err(err) = txn.commit().await {
                 // TODO: This error message needs improving
                 eprintln!("error committing transaction! {err:?}");
-                return error_result_json!(
+                Err(error_result_json(
                     "Error saving record, see the admins",
-                    StatusCode::INTERNAL_SERVER_ERROR
-                );
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                ))
+            } else {
+                Ok(Json(val))
             }
-            Ok(Json(val))
         }
     }
 }
@@ -247,7 +246,7 @@ pub(crate) async fn api_record_update(
                 "Record id {:?} not found or zone missing for user {:?}",
                 payload.id, user.id
             );
-            return error_result_json!("Record not found", StatusCode::NOT_FOUND);
+            return Err(error_result_json("Record not found", StatusCode::NOT_FOUND));
         }
     };
 
@@ -269,10 +268,10 @@ pub(crate) async fn api_record_update(
         })?
     else {
         debug!("User {:?} does not own zone id {:?}", user.id, zone.id);
-        return error_result_json!(
+        return Err(error_result_json(
             "Not authorized to modify this record",
-            StatusCode::FORBIDDEN
-        );
+            StatusCode::FORBIDDEN,
+        ));
     };
 
     let mut record_am: entities::records::ActiveModel = record.into();
@@ -300,14 +299,17 @@ pub(crate) async fn api_record_update(
     })?;
 
     if let Err(err) = txn.commit().await {
-        error!("Error committing record update for id {:?}: {err:?}", payload.id);
-        return error_result_json!(
-            "Error updating record, see the admins",
-            StatusCode::INTERNAL_SERVER_ERROR
+        error!(
+            "Error committing record update for id {:?}: {err:?}",
+            payload.id
         );
+        Err(error_result_json(
+            "Error updating record, see the admins",
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ))
+    } else {
+        Ok(Json(res))
     }
-
-    Ok(Json(res))
 }
 pub(crate) async fn api_record_get(
     State(state): State<GoatState>,
@@ -327,13 +329,11 @@ pub(crate) async fn api_record_get(
         .await
     {
         Ok(Some(val)) => Ok(Json(val)),
-        Ok(None) => {
-            error_result_json!("Record not found", StatusCode::NOT_FOUND)
-        }
+        Ok(None) => Err(error_result_json("Record not found", StatusCode::NOT_FOUND)),
         Err(err) => {
             // TODO: this should handle missing OR failures
             eprintln!("Error getting record: {err:?}");
-            error_result_json!("", StatusCode::NOT_FOUND)
+            Err(error_result_json("", StatusCode::NOT_FOUND))
         }
     }
 }
@@ -369,7 +369,7 @@ pub(crate) async fn api_record_delete(
             "Record id {:?} not found for in request from user {}",
             record_id, user.id
         );
-        return error_result_json!("Record not found", StatusCode::NOT_FOUND);
+        return Err(error_result_json("Record not found", StatusCode::NOT_FOUND));
     };
 
     let ownership_zone = entities::ownership::Entity::find()
@@ -391,7 +391,10 @@ pub(crate) async fn api_record_delete(
 
     let Some((_ownership, Some(zone))) = ownership_zone else {
         error!("User {:?} does not own zone id {:?}", user.id, record_id);
-        return error_result_json!("Not authorized to delete this zone", StatusCode::FORBIDDEN);
+        return Err(error_result_json(
+            "Not authorized to delete this zone",
+            StatusCode::FORBIDDEN,
+        ));
     };
 
     zone.delete(&txn).await.map_err(|err| {
@@ -405,11 +408,11 @@ pub(crate) async fn api_record_delete(
     if let Err(err) = txn.commit().await {
         // TODO: This error message needs improving
         eprintln!("error committing transaction! {err:?}");
-        return error_result_json!(
+        Err(error_result_json(
             "Error deleting record, see the admins",
-            StatusCode::INTERNAL_SERVER_ERROR
-        );
-    };
-
-    Ok(())
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ))
+    } else {
+        Ok(())
+    }
 }

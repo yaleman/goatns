@@ -1,27 +1,4 @@
 extern crate proc_macro;
-use proc_macro::TokenStream;
-
-#[proc_macro]
-pub fn check_api_auth(_item: TokenStream) -> TokenStream {
-    // TODO: This is terrible
-    r#"
-    use tracing::debug;
-
-    let user = match session.get(crate::constants::SESSION_USER_KEY).await? {
-        Some(val) => val,
-        None => {
-            #[cfg(test)]
-            println!("User not found in api_create call");
-            #[cfg(not(test))]
-            debug!("User not found in api_create call");
-            return error_result_json!("", StatusCode::FORBIDDEN);
-        }
-    };
-
-    "#
-    .parse()
-    .expect("Failed to parse code")
-}
 
 // TODO: go back and revisit this weirdness.
 // #[proc_macro]

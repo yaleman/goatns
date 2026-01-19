@@ -1,31 +1,12 @@
-use crate::db::entities;
-use crate::web::constants::SESSION_USER_KEY;
+use prelude::*;
 
-use super::*;
-use axum::Json;
-use axum::extract::Path;
-use axum::extract::State;
-use axum::http::StatusCode;
-use axum::routing::{post, put};
-use tower_sessions::Session;
-use tracing::debug;
-
-use serde::Deserialize;
-use serde::Serialize;
-use uuid::Uuid;
+use axum::{Router, routing::get};
 
 pub mod auth;
 pub(crate) mod docs;
 pub mod filezone;
 pub mod filezonerecord;
-
-#[macro_export]
-/// message, status
-macro_rules! error_result_json {
-    ($msg:expr, $status:expr) => {
-        Err(($status, Json(ErrorResult::from($msg))))
-    };
-}
+pub(crate) mod prelude;
 
 #[derive(Serialize)]
 pub struct NotImplemented {
@@ -101,6 +82,13 @@ pub async fn version_get() -> Json<GoatNSVersion> {
     Json::from(GoatNSVersion::default())
 }
 
+pub(crate) fn error_result_json(
+    message: &str,
+    status: StatusCode,
+) -> (StatusCode, axum::Json<ErrorResult>) {
+    (status, axum::Json(ErrorResult::from(message)))
+}
+
 /// Check API authentication by extracting user from session
 /// Returns the authenticated user or an error response
 pub async fn check_api_auth(
@@ -113,11 +101,14 @@ pub async fn check_api_auth(
             error!("User not found in API call");
             #[cfg(not(test))]
             error!("User not found in API call");
-            error_result_json!("", StatusCode::FORBIDDEN)
+            Err(error_result_json("", StatusCode::FORBIDDEN))
         }
         Err(err) => {
             error!("Session error in API call: {err:?}");
-            error_result_json!("Session error", StatusCode::INTERNAL_SERVER_ERROR)
+            Err(error_result_json(
+                "Session error",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
         }
     }
 }

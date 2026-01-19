@@ -120,7 +120,7 @@ impl GoatStateTrait for GoatState {
     }
 }
 
-type GoatState = Arc<RwLock<GoatChildState>>;
+pub(crate) type GoatState = Arc<RwLock<GoatChildState>>;
 
 #[derive(Clone, FromRef)]
 /// Internal State handler for the datastore object within the API

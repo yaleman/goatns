@@ -4,8 +4,8 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::IntoActiveModel;
 use sea_orm::ModelTrait;
 
+use super::error_result_json;
 use crate::db::entities;
-use crate::error_result_json;
 use crate::utils::check_valid_tld;
 use crate::web::api::filezonerecord::ZoneForm;
 
@@ -58,7 +58,10 @@ pub(crate) async fn api_zone_create(
     let user = check_api_auth(&session).await?;
 
     if !check_valid_tld(&zone.name, &state.read().await.config.allowed_tlds) {
-        return error_result_json!("Invalid TLD for this system", StatusCode::BAD_REQUEST);
+        return Err(error_result_json(
+            "Invalid TLD for this system",
+            StatusCode::BAD_REQUEST,
+        ));
     }
 
     // check to see if the zone exists
@@ -79,7 +82,10 @@ pub(crate) async fn api_zone_create(
     {
         Ok(Some(_)) => {
             debug!("Zone {} already exists, user sent POST", zone.name);
-            return error_result_json!("Zone already exists!", StatusCode::BAD_REQUEST);
+            return Err(error_result_json(
+                "Zone already exists!",
+                StatusCode::BAD_REQUEST,
+            ));
         }
         Ok(None) => {}
         Err(err) => {
@@ -87,10 +93,10 @@ pub(crate) async fn api_zone_create(
                 "Couldn't get zone  {}, something went wrong: {err:?}",
                 zone.name
             );
-            return error_result_json!(
+            return Err(error_result_json(
                 "Server error querying zone!",
-                StatusCode::INTERNAL_SERVER_ERROR
-            );
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ));
         }
     };
 
@@ -119,10 +125,10 @@ pub(crate) async fn api_zone_create(
 
     if let Err(err) = ownership.clone().insert(&txn).await {
         debug!("Couldn't store zone ownership {ownership:?}, something went wrong: {err:?}");
-        return error_result_json!(
+        return Err(error_result_json(
             "Server error creating zone ownership, contact the admins!",
-            StatusCode::INTERNAL_SERVER_ERROR
-        );
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ));
     };
 
     if let Err(err) = txn.commit().await {
@@ -130,10 +136,10 @@ pub(crate) async fn api_zone_create(
             "Couldn't commit zone create txn {}, something went wrong committing transaction: {err:?}",
             zone.name
         );
-        return error_result_json!(
+        return Err(error_result_json(
             "Server error creating zone, contact the admins!",
-            StatusCode::INTERNAL_SERVER_ERROR
-        );
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ));
     }
     debug!("Zone created by user={:?} zone={:?}", user.id, zone);
 
@@ -285,14 +291,14 @@ pub(crate) async fn api_zone_delete(
                 "Zone ID {} not found but ownership exists for user {:?}",
                 zone_id, user.id
             );
-            return error_result_json!("Zone not found", StatusCode::NOT_FOUND);
+            return Err(error_result_json("Zone not found", StatusCode::NOT_FOUND));
         }
         // no ownership, no zone
         Ok(None) => {
-            return error_result_json!(
+            return Err(error_result_json(
                 format!("Zone ID {zone_id} not found").as_str(),
-                StatusCode::NOT_FOUND
-            );
+                StatusCode::NOT_FOUND,
+            ));
         }
         Ok(Some((_ownership, Some(zone)))) => zone,
         Err(err) => {
@@ -300,7 +306,10 @@ pub(crate) async fn api_zone_delete(
                 "Failed to get zone ownership for zoneid={}: error: {:?}",
                 zone_id, err
             );
-            return error_result_json!("Internal server error", StatusCode::INTERNAL_SERVER_ERROR);
+            return Err(error_result_json(
+                "Internal server error",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ));
         }
     };
 
@@ -309,10 +318,7 @@ pub(crate) async fn api_zone_delete(
             "Failed to delete Zone during api_delete zoneid={} error=\"{err:?}\"",
             zone_id
         );
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json::from(ErrorResult::from("Internal server error")),
-        )
+        error_result_json("Internal server error", StatusCode::INTERNAL_SERVER_ERROR)
     })?;
 
     if let Err(err) = txn.commit().await {
@@ -320,9 +326,9 @@ pub(crate) async fn api_zone_delete(
             "Failed to commit txn for zone.delete during api_delete zoneid={} error=\"{err:?}\"",
             zone_id
         );
-        return Err((
+        return Err(error_result_json(
+            "Internal server error",
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json::from(ErrorResult::from("Internal server error")),
         ));
     };
     Ok(StatusCode::OK)
@@ -364,7 +370,7 @@ pub(crate) async fn api_get(
         Some((_, Some(zone))) => zone,
         _ => {
             error!("Zone ID {} not found for user {:?}", id, user.id);
-            return error_result_json!("Zone not found", StatusCode::NOT_FOUND);
+            return Err(error_result_json("Zone not found", StatusCode::NOT_FOUND));
         }
     };
 
