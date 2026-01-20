@@ -1,11 +1,9 @@
-use crate::error::GoatNsError;
-use std::time::Duration;
-
 use crate::config::ConfigFile;
-
+use crate::error::GoatNsError;
 use concread::cowcell::asynch::CowCellReadTxn;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tokio::time;
 use tracing::*;
 
