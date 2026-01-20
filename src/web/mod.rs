@@ -29,6 +29,7 @@ use regex::RegexSet;
 use sea_orm::DatabaseConnection;
 use sea_orm::DatabaseTransaction;
 use sea_orm::TransactionTrait;
+use utoipa::OpenApi;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -207,10 +208,10 @@ async fn build_router(
         .route(Urls::Home.as_ref(), get(generic::index))
         .nest("/ui", ui::new())
         .nest("/api", api::new())
-        // .merge(
-        //     utoipa_swagger_ui::SwaggerUi::new("/api/docs")
-        //         .url("/api/openapi.json", ApiDoc::openapi()),
-        // )
+        .merge(
+            utoipa_swagger_ui::SwaggerUi::new("/api/docs")
+                .url("/api/openapi.json", api::docs::ApiDoc::openapi()),
+        )
         .nest("/auth", auth::new())
         .nest("/dns-query", doh::new())
         .with_state(state)

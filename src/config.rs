@@ -1,3 +1,6 @@
+use crate::enums::ContactDetails;
+use crate::error::GoatNsError;
+use crate::web::utils::Urls;
 use axum_server::tls_rustls::RustlsConfig;
 use concread::cowcell::asynch::{CowCell, CowCellReadTxn, CowCellWriteTxn};
 use config::{Config, File};
@@ -15,10 +18,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{error, trace};
 use url::Url;
-
-use crate::enums::ContactDetails;
-use crate::error::GoatNsError;
-use crate::web::utils::Urls;
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 /// Allow-listing ranges for making particular kinds of requests

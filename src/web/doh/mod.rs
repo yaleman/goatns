@@ -225,20 +225,21 @@ pub async fn handle_get(
         response_500()
     })?;
 
-    let records =
-        match entities::records_merged::Entity::find()
-            .filter(entities::records_merged::Column::Name.eq(qname.clone()).and(
-                entities::records_merged::Column::Rrtype.eq(rrtype_value as u16),
-            ))
-            .all(&read_txn)
-            .await
-        {
-            Ok(value) => value,
-            Err(error) => {
-                error!("Failed to query {qname}/{}: {error:?}", rrtype);
-                return Err(response_500()); // TODO: This should probably be a SERVFAIL
-            }
-        };
+    let records = match entities::records_merged::Entity::find()
+        .filter(
+            entities::records_merged::Column::Name
+                .eq(qname.clone())
+                .and(entities::records_merged::Column::Rrtype.eq(rrtype_value as u16)),
+        )
+        .all(&read_txn)
+        .await
+    {
+        Ok(value) => value,
+        Err(error) => {
+            error!("Failed to query {qname}/{}: {error:?}", rrtype);
+            return Err(response_500()); // TODO: This should probably be a SERVFAIL
+        }
+    };
 
     trace!("Completed record request...");
 

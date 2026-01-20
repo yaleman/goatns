@@ -1,8 +1,7 @@
+use crate::web::GoatState;
 use axum::{extract::State, http::HeaderValue, middleware::Next, response::Response};
 use axum_csp::*;
 use tracing::debug;
-
-use crate::web::GoatState;
 
 pub async fn cspheaders(
     State(state): State<GoatState>,

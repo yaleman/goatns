@@ -1,17 +1,14 @@
 //! Logging and OTEL related thingies
 
-use std::{env, time::Duration};
-
 use init_tracing_opentelemetry::tracing_subscriber_ext;
 use opentelemetry::{KeyValue, global, trace::TracerProvider as _};
-
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
     Resource,
     trace::{Sampler, SdkTracerProvider},
 };
-
 use opentelemetry_semantic_conventions::attribute::SERVICE_VERSION;
+use std::{env, time::Duration};
 use tracing::Subscriber;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::EnvFilter;

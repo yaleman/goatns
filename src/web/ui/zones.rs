@@ -1,21 +1,19 @@
 //! Zone-ui-things
 
-use std::collections::HashMap;
-
+use crate::datastore::Command;
+use crate::db::entities;
+use crate::web::GoatState;
+use crate::web::ui::check_logged_in;
+use crate::web::utils::Urls;
 use axum::Form;
 use axum::extract::{OriginalUri, State};
 use axum::response::Redirect;
 use goat_lib::validators::dns_name;
 use sea_orm::ActiveValue::{NotSet, Set};
 use serde::Deserialize;
+use std::collections::HashMap;
 use tower_sessions::Session;
 use tracing::{debug, error, info};
-
-use crate::datastore::Command;
-use crate::db::entities;
-use crate::web::GoatState;
-use crate::web::ui::check_logged_in;
-use crate::web::utils::Urls;
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct NewZoneForm {

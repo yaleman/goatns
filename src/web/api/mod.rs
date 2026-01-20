@@ -1,12 +1,10 @@
-use prelude::*;
-
 use axum::{Router, routing::get};
-
+use prelude::*;
 pub mod auth;
 pub(crate) mod docs;
-pub mod filezone;
-pub mod filezonerecord;
 pub(crate) mod prelude;
+pub mod records;
+pub mod zones;
 
 #[derive(Serialize)]
 pub struct NotImplemented {
@@ -35,36 +33,6 @@ impl From<&str> for ErrorResult {
         }
     }
 }
-
-/// This gets applied to DBEntities
-// #[async_trait]
-// trait APIEntity {
-//     /// Save the entity to the database
-//     async fn api_create(
-//         State(state): State<GoatState>,
-//         session: Session,
-//         Json(payload): Json<serde_json::Value>,
-//     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
-//     /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
-//     async fn api_update(
-//         State(state): State<GoatState>,
-//         session: Session,
-//         Json(payload): Json<serde_json::Value>,
-//     ) -> Result<Json<String>, (StatusCode, Json<ErrorResult>)>;
-//     async fn api_get(
-//         State(state): State<GoatState>,
-//         session: Session,
-//         Path(id): Path<i64>,
-//     ) -> Result<Json<Box<Self>>, (StatusCode, Json<ErrorResult>)>;
-
-//     /// Delete an object
-//     /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
-//     async fn api_delete(
-//         State(state): State<GoatState>,
-//         session: Session,
-//         Path(id): Path<i64>,
-//     ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)>;
-// }
 
 #[derive(Serialize)]
 pub struct GoatNSVersion {
@@ -115,17 +83,17 @@ pub async fn check_api_auth(
 
 pub fn new() -> Router<GoatState> {
     Router::new()
-        .route("/zone", post(filezone::api_zone_create))
-        .route("/zone", put(filezone::api_zone_update))
+        .route("/zone", post(zones::api_zone_create))
+        .route("/zone", put(zones::api_zone_update))
         .route(
             "/zone/{zone_id}",
-            get(filezone::api_get).delete(filezone::api_zone_delete),
+            get(zones::api_get).delete(zones::api_zone_delete),
         )
-        .route("/record", post(filezonerecord::api_record_create))
-        .route("/record", put(filezonerecord::api_record_update))
+        .route("/record", post(records::api_record_create))
+        .route("/record", put(records::api_record_update))
         .route(
             "/record/{record_id}",
-            get(filezonerecord::api_record_get).delete(filezonerecord::api_record_delete),
+            get(records::api_record_get).delete(records::api_record_delete),
         )
         .route("/login", post(auth::api_token_login))
 }

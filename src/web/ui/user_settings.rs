@@ -2,28 +2,24 @@ use crate::db::entities;
 use crate::error::GoatNsError;
 use crate::web::ui::check_logged_in;
 use crate::web::utils::{Urls, create_api_token};
-use std::collections::HashMap;
-use std::fmt::Display;
-use std::str::FromStr;
-
+use crate::web::{GoatState, GoatStateTrait};
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::extract::{OriginalUri, Path, State};
-use axum::response::{Html, IntoResponse, Redirect};
-use axum::routing::get;
-use axum::routing::post;
-use axum::{Form, Router};
-
 use axum::http::Uri;
+use axum::response::{Html, IntoResponse, Redirect};
+use axum::routing::{get, post};
+use axum::{Form, Router};
 use chrono::{DateTime, TimeDelta, Utc};
 use enum_iterator::Sequence;
 use oauth2::CsrfToken;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::str::FromStr;
 use tower_sessions::Session;
 use tracing::{debug, error, info, trace};
-
-use crate::web::{GoatState, GoatStateTrait};
 
 static SESSION_CSRFTOKEN_FIELD: &str = "api_token_csrf_token";
 

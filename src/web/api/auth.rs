@@ -1,3 +1,7 @@
+use crate::db::entities;
+use crate::web::constants::SESSION_USER_KEY;
+use crate::web::utils::validate_api_token;
+use crate::web::{GoatState, GoatStateTrait};
 use axum::http::StatusCode;
 use axum::{Json, extract::State};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
@@ -5,11 +9,6 @@ use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
 use tracing::{debug, error, info};
 use utoipa::ToSchema;
-
-use crate::db::entities;
-use crate::web::constants::SESSION_USER_KEY;
-use crate::web::utils::validate_api_token;
-use crate::web::{GoatState, GoatStateTrait};
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct AuthPayload {

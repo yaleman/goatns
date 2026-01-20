@@ -1,3 +1,4 @@
+use super::check_logged_in;
 use crate::db::entities;
 use crate::web::utils::Urls;
 use crate::web::{GoatState, GoatStateTrait};
@@ -15,8 +16,6 @@ use serde::Deserialize;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument};
 use uuid::Uuid;
-
-use super::check_logged_in;
 
 #[derive(Template, WebTemplate)]
 #[template(path = "admin_ui.html")]

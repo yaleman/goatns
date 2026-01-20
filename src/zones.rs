@@ -1,8 +1,8 @@
 use crate::enums::RecordClass;
 use crate::error::GoatNsError;
 use crate::resourcerecord::InternalResourceRecord;
-use crate::web::api::filezonerecord::ZoneFileRecord;
-use crate::{db::entities, web::api::filezonerecord::ZoneForm};
+use crate::web::api::records::ZoneFileRecord;
+use crate::{db::entities, web::api::zones::ZoneForm};
 use sea_orm::{ActiveModelTrait, ActiveValue::NotSet};
 use tracing::*;
 

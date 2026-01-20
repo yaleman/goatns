@@ -6,19 +6,7 @@ use sea_orm::{
 };
 
 #[derive(Deserialize, Serialize, Debug, ToSchema, Clone)]
-pub struct ZoneForm {
-    pub id: Option<Uuid>,
-    pub name: String,
-    pub rname: String,
-    pub serial: u32,
-    pub refresh: u32,
-    pub retry: u32,
-    pub expire: u32,
-    pub minimum: u32,
-}
-
-#[derive(Deserialize, Serialize, Debug, ToSchema, Clone)]
-pub struct ZoneRecordForm {
+pub struct RecordForm {
     pub id: Option<Uuid>,
     pub name: String,
     #[serde(default = "RecordClass::default")]
@@ -28,22 +16,6 @@ pub struct ZoneRecordForm {
     pub ttl: Option<u32>,
     pub zoneid: Uuid,
 }
-
-impl From<entities::zones::Model> for ZoneForm {
-    fn from(zone: entities::zones::Model) -> Self {
-        ZoneForm {
-            id: Some(zone.id),
-            name: zone.name,
-            rname: zone.rname,
-            serial: zone.serial,
-            refresh: zone.refresh,
-            retry: zone.retry,
-            expire: zone.expire,
-            minimum: zone.minimum,
-        }
-    }
-}
-
 #[derive(Deserialize, Serialize, Debug, ToSchema, Clone)]
 /// Used when parsing a zone json dump because the zoneid's are not known ahead of time
 pub struct ZoneFileRecord {
@@ -84,7 +56,7 @@ impl ZoneFileRecord {
     post,
     path = "/api/record",
     operation_id = "record_create",
-    request_body = ZoneForm,
+    request_body = RecordForm,
     responses(
         (status = 200, description = "Successful"),
         (status = 403, description = "Auth failed"),
@@ -92,11 +64,10 @@ impl ZoneFileRecord {
     ),
     tag = "Records",
 )]
-
 pub(crate) async fn api_record_create(
     State(state): State<GoatState>,
     session: Session,
-    Json(record_form): Json<ZoneRecordForm>,
+    Json(record_form): Json<RecordForm>,
 ) -> Result<Json<entities::records::Model>, (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
 
@@ -213,6 +184,18 @@ pub struct ApiRecordUpdate {
 }
 
 /// HTTP Put <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PUT>
+#[utoipa::path(
+    put,
+    path = "/api/record",
+    operation_id = "record_update",
+    request_body = entities::records::Model,
+    responses(
+        (status = 200, description = "Successful"),
+        (status = 403, description = "Auth failed"),
+        (status = 500, description = "Something broke!"),
+    ),
+    tag = "Records",
+)]
 pub(crate) async fn api_record_update(
     State(state): State<GoatState>,
     session: Session,

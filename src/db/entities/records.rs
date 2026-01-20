@@ -1,8 +1,8 @@
 use super::prelude::*;
 
-use crate::web::api::filezonerecord::ZoneRecordForm;
+use crate::web::api::records::RecordForm;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Deserialize, Serialize, ToSchema)]
 #[sea_orm(table_name = "records")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -47,8 +47,8 @@ impl ActiveModelBehavior for ActiveModel {
     }
 }
 
-impl From<ZoneRecordForm> for ActiveModel {
-    fn from(form: ZoneRecordForm) -> Self {
+impl From<RecordForm> for ActiveModel {
+    fn from(form: RecordForm) -> Self {
         let mut am = ActiveModel {
             id: NotSet,
             zoneid: Set(form.zoneid),

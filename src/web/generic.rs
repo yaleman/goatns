@@ -1,9 +1,9 @@
 use super::*;
 use crate::enums::ContactDetails;
-
 use axum::extract::{Query, State};
 use serde::Deserialize;
 
+/// Healthcheck endpoint
 pub async fn status() -> String {
     STATUS_OK.to_string()
 }

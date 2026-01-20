@@ -1,18 +1,17 @@
 use clap::Parser;
 use goatns::cli::{Cli, Commands, add_admin_user, default_config, export_zone_file, import_zones};
+use goatns::config::{ConfigFile, setup_logging};
+use goatns::datastore;
+use goatns::db;
 use goatns::enums::SystemState;
 use goatns::error::GoatNsError;
+use goatns::servers;
 use goatns::utils::start_channels;
 use sea_orm::DatabaseConnection;
 use std::io;
 use std::time::Duration;
-use tracing::{debug, error, info};
-
-use goatns::config::{ConfigFile, setup_logging};
-use goatns::datastore;
-use goatns::db;
-use goatns::servers;
 use tokio::time::sleep;
+use tracing::{debug, error, info};
 
 async fn run() -> Result<(), GoatNsError> {
     goatns::init_crypto();

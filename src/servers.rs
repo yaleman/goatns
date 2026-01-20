@@ -1,3 +1,11 @@
+use crate::config::ConfigFile;
+use crate::datastore::Command;
+use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
+use crate::error::GoatNsError;
+use crate::reply::{Reply, reply_any, reply_builder, reply_nxdomain};
+use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
+use crate::zones::ZoneRecord;
+use crate::{HEADER_BYTES, Header, OpCode, Question, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 use concread::cowcell::asynch::CowCellReadTxn;
 use packed_struct::prelude::*;
 use std::io::Error;
@@ -11,15 +19,6 @@ use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
 use tracing::{debug, error, field, info, instrument, trace, warn};
-
-use crate::config::ConfigFile;
-use crate::datastore::Command;
-use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
-use crate::error::GoatNsError;
-use crate::reply::{Reply, reply_any, reply_builder, reply_nxdomain};
-use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
-use crate::zones::ZoneRecord;
-use crate::{HEADER_BYTES, Header, OpCode, Question, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
 pub(crate) enum ChaosResult {
     Refused(Reply),

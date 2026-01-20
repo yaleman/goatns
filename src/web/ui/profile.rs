@@ -1,14 +1,13 @@
 //! User profile things
 //!
 
+use crate::db::entities;
+use crate::web::ui::check_logged_in;
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::extract::OriginalUri;
 use axum::response::Redirect;
 use tower_sessions::Session;
-
-use crate::db::entities;
-use crate::web::ui::check_logged_in;
 
 #[derive(Template, WebTemplate)]
 #[template(path = "view_profile.html")]

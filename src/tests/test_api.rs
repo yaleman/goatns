@@ -3,7 +3,8 @@ use super::prelude::*;
 use crate::config::ConfigFile;
 use crate::servers::{self, Servers};
 use crate::web::api::auth::AuthPayload;
-use crate::web::api::filezonerecord::{ZoneForm, ZoneRecordForm};
+use crate::web::api::records::RecordForm;
+use crate::web::api::zones::ZoneForm;
 use crate::web::utils::create_api_token;
 use concread::cowcell::asynch::CowCell;
 use log::info;
@@ -426,7 +427,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
         .expect("Failed to save zone ownership");
 
     println!("building fzr object");
-    let fzr = ZoneRecordForm {
+    let fzr = RecordForm {
         id: None,
         name: "doggo".to_string(),
         zoneid: zone.id,

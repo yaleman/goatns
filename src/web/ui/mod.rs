@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use super::GoatState;
 use crate::datastore::Command;
 use crate::db::entities;
 use crate::enums::{RecordClass, RecordType};
@@ -15,11 +14,10 @@ use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
 use sea_orm::ModelTrait;
 use serde::Deserialize;
+use std::collections::HashMap;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument, trace};
 use uuid::Uuid;
-
-use super::GoatState;
 
 mod admin_ui;
 mod profile;

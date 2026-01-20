@@ -1,19 +1,17 @@
+use crate::{RecordClass, web::api::records::RecordForm};
 use utoipa::{Modify, OpenApi};
-
-use crate::RecordClass;
-use crate::zones::FileZoneRecord;
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
         super::auth::api_token_login,
-        super::filezonerecord::api_record_create,
+        super::records::api_record_create,
     ),
     components(
         schemas(
             super::auth::AuthPayload,
             super::auth::AuthResponse,
-            FileZoneRecord,
+            RecordForm,
             RecordClass,
         )
     ),

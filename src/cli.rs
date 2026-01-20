@@ -1,6 +1,8 @@
 //! Code related to CLI things
 //!
 
+use crate::config::ConfigFile;
+use crate::datastore::Command;
 use clap::*;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Confirm, Input};
@@ -8,9 +10,6 @@ use tokio::io::AsyncWriteExt;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
-
-use crate::config::ConfigFile;
-use crate::datastore::Command;
 
 #[derive(Parser, Clone)]
 pub struct SharedOpts {

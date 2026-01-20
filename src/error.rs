@@ -1,6 +1,5 @@
-use std::str::Utf8Error;
-
 use packed_struct::PackingError;
+use std::str::Utf8Error;
 
 /// When things go awry
 #[derive(Debug)]

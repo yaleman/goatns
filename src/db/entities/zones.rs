@@ -1,7 +1,7 @@
 use super::prelude::*;
 
 use crate::{
-    enums::RecordClass, resourcerecord::InternalResourceRecord, web::api::filezonerecord::ZoneForm,
+    enums::RecordClass, resourcerecord::InternalResourceRecord, web::api::zones::ZoneForm,
 };
 
 #[derive(Clone, Debug, DeriveEntityModel, Eq, Deserialize, Serialize)]

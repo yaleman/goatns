@@ -1,22 +1,47 @@
-use super::*;
-use sea_orm::ActiveModelTrait;
-use sea_orm::ActiveValue::Set;
-use sea_orm::IntoActiveModel;
-use sea_orm::ModelTrait;
-
 use super::error_result_json;
+use super::*;
 use crate::db::entities;
 use crate::utils::check_valid_tld;
-use crate::web::api::filezonerecord::ZoneForm;
-
 use axum::Json;
 use axum::extract::Path;
+use sea_orm::ActiveModelTrait;
+use sea_orm::ActiveValue::Set;
 use sea_orm::ColumnTrait;
 use sea_orm::EntityTrait;
+use sea_orm::IntoActiveModel;
+use sea_orm::ModelTrait;
 use sea_orm::QueryFilter;
 use serde::Deserialize;
 use serde::Serialize;
 use tower_sessions::Session;
+
+/// For when you're submitting a request via the API
+#[derive(Deserialize, Serialize, Debug, ToSchema, Clone)]
+pub struct ZoneForm {
+    pub id: Option<Uuid>,
+    pub name: String,
+    pub rname: String,
+    pub serial: u32,
+    pub refresh: u32,
+    pub retry: u32,
+    pub expire: u32,
+    pub minimum: u32,
+}
+
+impl From<entities::zones::Model> for ZoneForm {
+    fn from(zone: entities::zones::Model) -> Self {
+        ZoneForm {
+            id: Some(zone.id),
+            name: zone.name,
+            rname: zone.rname,
+            serial: zone.serial,
+            refresh: zone.refresh,
+            retry: zone.retry,
+            expire: zone.expire,
+            minimum: zone.minimum,
+        }
+    }
+}
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct FileZoneResponse {

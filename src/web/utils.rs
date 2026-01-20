@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use crate::db::entities;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
@@ -9,10 +8,9 @@ use chrono::{DateTime, TimeDelta, Utc};
 use rand::distr::{Alphanumeric, SampleString};
 use sea_orm::ActiveValue::{NotSet, Set};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use tracing::{debug, trace};
 use uuid::Uuid;
-
-use crate::db::entities;
 
 /// URLs for the web interface
 #[derive(Copy, Clone)]
