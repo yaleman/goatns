@@ -354,8 +354,8 @@ impl From<Config> for ConfigFile {
         let oauth2_redirect_url = match oauth2_redirect_url {
             Some(mut url) => {
                 // update the URL with the final auth path
-                if !url.path().ends_with(Urls::Login.as_ref()) {
-                    url.set_path(Urls::Login.as_ref());
+                if !url.path().ends_with(&Urls::Login.to_string()) {
+                    url.set_path(&Urls::Login.to_string());
                 }
                 url
             }
@@ -368,7 +368,7 @@ impl From<Config> for ConfigFile {
                 #[allow(clippy::expect_used)]
                 let mut url =
                     Url::from_str(&baseurl).expect("Failed to parse known-sensible URL as URL");
-                url.set_path(Urls::Login.as_ref());
+                url.set_path(&Urls::Login.to_string());
                 url
             }
         };

@@ -302,6 +302,7 @@ pub(crate) async fn dashboard_redirect(
 }
 
 pub fn new() -> Router<GoatState> {
+    // all of these are prefixed with '/ui/'
     Router::new()
         .route("/", get(dashboard_redirect))
         .route("/zones/{id}", get(zone_view))

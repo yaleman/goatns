@@ -83,14 +83,18 @@ pub async fn check_api_auth(
 
 pub fn new() -> Router<GoatState> {
     Router::new()
-        .route("/zone", post(zones::api_zone_create))
-        .route("/zone", put(zones::api_zone_update))
+        .route(
+            "/zone",
+            post(zones::api_zone_create).put(zones::api_zone_update),
+        )
         .route(
             "/zone/{zone_id}",
             get(zones::api_get).delete(zones::api_zone_delete),
         )
-        .route("/record", post(records::api_record_create))
-        .route("/record", put(records::api_record_update))
+        .route(
+            "/record",
+            post(records::api_record_create).put(records::api_record_update),
+        )
         .route(
             "/record/{record_id}",
             get(records::api_record_get).delete(records::api_record_delete),

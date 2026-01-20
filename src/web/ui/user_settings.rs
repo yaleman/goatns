@@ -157,11 +157,11 @@ pub async fn api_tokens_get(
     State(state): State<GoatState>,
     mut session: Session,
 ) -> Result<ApiTokensGetPage, Redirect> {
-    let user = check_logged_in(
-        &mut session,
-        Uri::from_static(Urls::SettingsApiTokens.as_ref()),
-    )
-    .await?;
+    let url = Uri::from_str(&Urls::SettingsApiTokens.to_string()).map_err(|err| {
+        error!("Failed to parse Urls::Home.to_string() as URL, this is a bug!: {err:?}");
+        Urls::Home.redirect()
+    })?;
+    let user = check_logged_in(&mut session, url).await?;
 
     let csrftoken = match store_api_csrf_token(&mut session, None).await {
         Ok(value) => value,
@@ -326,12 +326,13 @@ pub async fn api_tokens_post(
 ) -> Result<impl IntoResponse, Redirect> {
     eprintln!("Got form: {form:?}");
 
-    let user = check_logged_in(
-        &mut session,
-        Uri::from_static(Urls::SettingsApiTokens.as_ref()),
-    )
-    .await?;
-
+    let url = Uri::from_str(&Urls::SettingsApiTokens.to_string()).map_err(|err| {
+        error!(
+            "Failed to parse Urls::SettingsApiTokens.to_string() as URL, this is a bug!: {err:?}"
+        );
+        Urls::SettingsApiTokens.redirect()
+    })?;
+    let user = check_logged_in(&mut session, url).await?;
     if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
         debug!("Failed to validate csrf expiry");
         return Err(Urls::Settings.redirect());
@@ -486,11 +487,13 @@ pub async fn api_tokens_delete_get(
     Path(id): Path<String>,
     mut session: Session,
 ) -> Result<ApiTokenDeleteTemplate, Redirect> {
-    let user = check_logged_in(
-        &mut session,
-        Uri::from_static(Urls::SettingsApiTokens.as_ref()),
-    )
-    .await?;
+    let url = Uri::from_str(&Urls::SettingsApiTokens.to_string()).map_err(|err| {
+        error!(
+            "Failed to parse Urls::SettingsApiTokens.to_string() as URL, this is a bug!: {err:?}"
+        );
+        Urls::SettingsApiTokens.redirect()
+    })?;
+    let user = check_logged_in(&mut session, url).await?;
 
     let csrftoken = match store_api_csrf_token(&mut session, None).await {
         Ok(val) => val,

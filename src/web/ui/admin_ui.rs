@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::check_logged_in;
 use crate::db::entities;
 use crate::web::utils::Urls;
@@ -44,7 +46,11 @@ pub(crate) struct ZoneRecord {
 
 #[instrument(level = "info", skip_all)]
 pub(crate) async fn dashboard(mut session: Session) -> Result<AdminUITemplate, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
+    let url = Uri::from_str(&Urls::Home.to_string()).map_err(|err| {
+        error!("Failed to parse Urls::Home.to_string() as URL, this is a bug!: {err:?}");
+        Urls::Home.redirect()
+    })?;
+    let user = check_logged_in(&mut session, url).await?;
 
     Ok(AdminUITemplate {
         user_is_admin: user.admin,
@@ -55,11 +61,15 @@ pub(crate) async fn report_unowned_records(
     mut session: Session,
     State(state): State<GoatState>,
 ) -> Result<AdminReportUnownedRecords, Redirect> {
-    let user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
+    let url = Uri::from_str(&Urls::Home.to_string()).map_err(|err| {
+        error!("Failed to parse Urls::Home.to_string() as URL, this is a bug!: {err:?}");
+        Urls::Home.redirect()
+    })?;
+    let user = check_logged_in(&mut session, url).await?;
 
     let txn = state.get_db_txn().await.map_err(|err| {
         error!("Failed to get DB connection: {err:?}");
-        Redirect::to(Urls::ZonesList.as_ref())
+        Urls::ZonesList.redirect()
     })?;
 
     // Get all zone IDs that have ownership records
@@ -71,7 +81,7 @@ pub(crate) async fn report_unowned_records(
         .await
         .map_err(|err| {
             error!("Failed to query ownership: {err:?}");
-            Redirect::to(Urls::Admin.as_ref())
+            Urls::Admin.redirect()
         })?;
 
     // Get zones that don't have ownership records
@@ -81,7 +91,7 @@ pub(crate) async fn report_unowned_records(
         .await
         .map_err(|err| {
             error!("Failed to get unowned zones: {err:?}");
-            Redirect::to(Urls::Admin.as_ref())
+            Urls::Admin.redirect()
         })?;
 
     Ok(AdminReportUnownedRecords {
@@ -112,11 +122,15 @@ pub(crate) async fn assign_zone_ownership(
     Path(id): Path<Uuid>,
     Form(form): Form<AssignOwnershipForm>,
 ) -> Result<AssignOwnershipTemplate, Redirect> {
-    let current_user = check_logged_in(&mut session, Uri::from_static(Urls::Home.as_ref())).await?;
+    let url = Uri::from_str(&Urls::Home.to_string()).map_err(|err| {
+        error!("Failed to parse Urls::Home.to_string() as URL, this is a bug!: {err:?}");
+        Urls::Home.redirect()
+    })?;
+    let current_user = check_logged_in(&mut session, url).await?;
 
     let txn = state.get_db_txn().await.map_err(|err| {
         error!("Failed to get DB transaction: {err:?}");
-        Redirect::to(Urls::Admin.as_ref())
+        Urls::Admin.redirect()
     })?;
 
     let zone = entities::zones::Entity::find_by_id(id)
@@ -124,11 +138,11 @@ pub(crate) async fn assign_zone_ownership(
         .await
         .map_err(|err| {
             error!("Failed to get zone by ID: {err:?}");
-            Redirect::to(Urls::Admin.as_ref())
+            Urls::Admin.redirect()
         })?
         .ok_or_else(|| {
             error!("No zone found with ID: {}", id);
-            Redirect::to(Urls::Admin.as_ref())
+            Urls::Admin.redirect()
         })?;
 
     if let Some(username) = form.username.as_ref() {
@@ -139,7 +153,7 @@ pub(crate) async fn assign_zone_ownership(
             .await
             .map_err(|err| {
                 error!("Failed to get user by name: {err:?}");
-                Redirect::to(Urls::Admin.as_ref())
+                Urls::Admin.redirect()
             })?;
 
         if let Some(target_user) = target_user {

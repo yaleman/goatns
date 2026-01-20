@@ -116,7 +116,7 @@ impl GoatStateTrait for GoatState {
     async fn get_db_txn(&self) -> Result<DatabaseTransaction, Redirect> {
         self.read().await.db.begin().await.map_err(|err| {
             error!("Failed to begin DB transaction: {err:?}");
-            Redirect::to(Urls::Admin.as_ref())
+            Urls::Admin.redirect()
         })
     }
 }
@@ -205,7 +205,7 @@ async fn build_router(
         .layer(from_fn_with_state(state.clone(), csp::cspheaders));
 
     let router = Router::new()
-        .route(Urls::Home.as_ref(), get(generic::index))
+        .route(&Urls::Home.to_string(), get(generic::index))
         .nest("/ui", ui::new())
         .nest("/api", api::new())
         .merge(

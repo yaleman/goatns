@@ -10,7 +10,7 @@
     </thead>
     {% for zone in zones %}
     <tr>
-        <td><a href="{{Urls::Admin.as_ref()}}/zones/assign_ownership/{{zone.id}}">{{zone.name}}</a></td>
+        <td><a href="{{ Urls::Admin }}/zones/assign_ownership/{{zone.id}}">{{zone.name}}</a></td>
     </tr>
     {% endfor %}
 </table>

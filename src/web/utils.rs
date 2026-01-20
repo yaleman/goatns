@@ -21,6 +21,8 @@ pub(crate) enum Urls {
     Login,
     /// List of zones
     ZonesList,
+    /// A specific zone
+    Zone(Uuid),
     /// Admin UI
     Admin,
     /// Settings page
@@ -29,15 +31,18 @@ pub(crate) enum Urls {
     SettingsApiTokens,
 }
 
-impl AsRef<str> for Urls {
-    fn as_ref(&self) -> &str {
+impl std::fmt::Display for Urls {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Urls::Home => "/",
-            Urls::Login => "/auth/login",
-            Urls::Admin => "/ui/admin",
-            Urls::ZonesList => "/ui/zones",
-            Urls::Settings => "/ui/settings",
-            Urls::SettingsApiTokens => "/ui/settings/api_tokens",
+            Urls::Home => write!(f, "/"),
+            Urls::Login => write!(f, "/auth/login"),
+            Urls::Admin => write!(f, "/ui/admin"),
+            Urls::ZonesList => write!(f, "/ui/zones"),
+            Urls::Zone(id) => {
+                write!(f, "/ui/zones/{}", id.as_hyphenated())
+            }
+            Urls::Settings => write!(f, "/ui/settings"),
+            Urls::SettingsApiTokens => write!(f, "/ui/settings/api_tokens"),
         }
     }
 }
@@ -45,7 +50,7 @@ impl AsRef<str> for Urls {
 impl Urls {
     /// Get the URL for the given enum
     pub fn redirect(self) -> Redirect {
-        Redirect::to(self.as_ref())
+        Redirect::to(&self.to_string())
     }
 
     /// Redirect to a url with query params
@@ -58,7 +63,7 @@ impl Urls {
             .map(|(key, value)| format!("{}={}", key.to_string(), value.to_string()))
             .collect::<Vec<String>>()
             .join("&");
-        let url = format!("{}?{}", self.as_ref(), queryparts);
+        let url = format!("{}?{}", self, queryparts);
         Redirect::to(&url)
     }
 }

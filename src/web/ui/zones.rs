@@ -119,8 +119,8 @@ pub(crate) async fn zones_new_post(
     match os_rx.await {
         Ok(zone) => {
             info!("Zone {} created successfully", form.name);
-            debug!("Redirecting to /ui/zones/{}", zone.id);
-            Ok(Redirect::to(&format!("/ui/zones/{}", zone.id)))
+            debug!("Redirecting to {}", Urls::Zone(zone.id));
+            Ok(Urls::Zone(zone.id).redirect())
         }
         Err(err) => {
             error!("Error creating zone {}: {:?}", form.name, err);

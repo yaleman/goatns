@@ -11,7 +11,7 @@ pub(crate) use crate::{
 pub(crate) use axum::Json;
 pub(crate) use axum::extract::{Path, State};
 pub(crate) use axum::http::StatusCode;
-pub(crate) use axum::routing::{post, put};
+pub(crate) use axum::routing::post;
 pub(crate) use serde::{Deserialize, Serialize};
 pub(crate) use tower_sessions::Session;
 pub(crate) use tracing::*;
