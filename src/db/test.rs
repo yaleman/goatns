@@ -1,13 +1,11 @@
 use crate::datastore::import_zonefile;
+use crate::enums::{RecordClass, RecordType};
+use crate::error::GoatNsError;
 use crate::tests::prelude::*;
 use crate::zones::ZoneFile;
-
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter,
 };
-
-use crate::enums::{RecordClass, RecordType};
-use crate::error::GoatNsError;
 
 #[tokio::test]
 async fn create_user() -> Result<(), GoatNsError> {
