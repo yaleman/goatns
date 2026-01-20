@@ -299,7 +299,7 @@ pub(crate) async fn api_record_get(
     session: Session,
     Path(record_id): Path<Uuid>,
 ) -> Result<Json<entities::records::Model>, (StatusCode, Json<ErrorResult>)> {
-    check_api_auth(&session).await?;
+    let user = check_api_auth(&session).await?;
     let txn = state.get_db_txn().await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -307,18 +307,53 @@ pub(crate) async fn api_record_get(
         )
     })?;
 
-    match entities::records::Entity::find_by_id(record_id)
+    let record = entities::records::Entity::find_by_id(record_id)
+        .find_also_related(entities::zones::Entity)
         .one(&txn)
         .await
-    {
-        Ok(Some(val)) => Ok(Json(val)),
-        Ok(None) => Err(error_result_json("Record not found", StatusCode::NOT_FOUND)),
-        Err(err) => {
-            // TODO: this should handle missing OR failures
-            eprintln!("Error getting record: {err:?}");
-            Err(error_result_json("", StatusCode::NOT_FOUND))
+        .map_err(|err| {
+            error!("Error fetching record id {:?}: {err:?}", record_id);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?;
+
+    let (record, zone) = match record {
+        Some((record, Some(zone))) => (record, zone),
+        _ => {
+            debug!(
+                "Record id {:?} not found or zone missing for user {:?}",
+                record_id, user.id
+            );
+            return Err(error_result_json("Record not found", StatusCode::NOT_FOUND));
         }
-    }
+    };
+
+    let Some(_ownership) = entities::ownership::Entity::find()
+        .filter(
+            entities::ownership::Column::Zoneid
+                .eq(zone.id)
+                .and(entities::ownership::Column::Userid.eq(user.id)),
+        )
+        .one(&txn)
+        .await
+        .map_err(|err| {
+            error!("Error checking ownership: {err:?}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json::from(ErrorResult::from("Database error")),
+            )
+        })?
+    else {
+        debug!("User {:?} does not own zone id {:?}", user.id, zone.id);
+        return Err(error_result_json(
+            "Not authorized to view this record",
+            StatusCode::FORBIDDEN,
+        ));
+    };
+
+    Ok(Json(record))
 }
 
 /// Delete an object
@@ -329,7 +364,6 @@ pub(crate) async fn api_record_delete(
     Path(record_id): Path<Uuid>,
 ) -> Result<(), (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
-    dbg!(&user);
     let txn = state.get_db_txn().await.map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -372,16 +406,16 @@ pub(crate) async fn api_record_delete(
             )
         })?;
 
-    let Some((_ownership, Some(zone))) = ownership_zone else {
+    let Some((_ownership, Some(_zone))) = ownership_zone else {
         error!("User {:?} does not own zone id {:?}", user.id, record_id);
         return Err(error_result_json(
-            "Not authorized to delete this zone",
+            "Not authorized to delete this record",
             StatusCode::FORBIDDEN,
         ));
     };
 
-    zone.delete(&txn).await.map_err(|err| {
-        error!("Error deleting zone id {:?}: {err:?}", record_id);
+    record.delete(&txn).await.map_err(|err| {
+        error!("Error deleting record id {:?}: {err:?}", record_id);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json::from(ErrorResult::from("Database error")),
