@@ -107,9 +107,10 @@ pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<Config
     res
 }
 
+/// Insert a test user into the database
 pub async fn insert_test_user(pool: &DatabaseConnection) -> entities::users::Model {
     entities::users::ActiveModel {
-        id: Set(Uuid::now_v7()),
+        id: NotSet,
         displayname: Set("Example user".to_string()),
         username: Set("example".to_string()),
         email: Set("example@hello.goat".to_string()),
@@ -647,6 +648,91 @@ async fn api_record_delete_forbidden_without_ownership() -> Result<(), GoatNsErr
         .one(&pool)
         .await?;
     assert!(record.is_some());
+
+    drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_record_get_forbidden_without_ownership() -> Result<(), GoatNsError> {
+    let (pool, _servers, config) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    let owner = insert_test_user(&pool).await;
+    let other_user = insert_test_user(&pool).await;
+
+    let (_owner_token, _owner_secret) = insert_test_user_api_token(&pool, owner.id)
+        .await
+        .expect("Failed to insert test owner api token");
+    let (other_token, other_secret) = insert_test_user_api_token(&pool, other_user.id)
+        .await
+        .expect("Failed to insert test user api token");
+
+    let zone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set("example.goat".to_string()),
+        rname: Set("bob@example.goat".to_string()),
+        serial: Set(12345),
+        expire: Set(30),
+        minimum: Set(1235),
+        refresh: Set(0),
+        retry: Set(0),
+    }
+    .insert(&pool)
+    .await
+    .expect("Failed to save zone");
+
+    entities::ownership::ActiveModel {
+        id: NotSet,
+        userid: Set(owner.id),
+        zoneid: Set(zone.id),
+    }
+    .insert(&pool)
+    .await
+    .expect("failed to save zone ownership");
+
+    let zone_record = entities::records::ActiveModel {
+        id: NotSet,
+        rclass: Set(RecordClass::Internet.into()),
+        name: Set("doggo".to_string()),
+        zoneid: Set(zone.id),
+        rrtype: Set(RecordType::A.into()),
+        ttl: Set(Some(33)),
+        rdata: Set("1.2.3.4".to_string()),
+    }
+    .insert(&pool)
+    .await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .expect("Failed to build client");
+
+    let res = client
+        .post(format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(5))
+        .json(&AuthPayload {
+            token_key: other_token.key,
+            token_secret: other_secret.clone(),
+        })
+        .send()
+        .await
+        .expect("Failed to log in with token");
+    assert_eq!(res.status(), 200);
+
+    let res = client
+        .get(format!(
+            "https://localhost:{api_port}/api/record/{}",
+            zone_record.id
+        ))
+        .header("Authorization", format!("Bearer {}", other_secret))
+        .send()
+        .await
+        .expect("Failed to send get request");
+
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
 
     drop(pool);
     Ok(())
