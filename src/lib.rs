@@ -5,6 +5,7 @@
 #![deny(clippy::await_holding_lock)]
 #![deny(clippy::complexity)]
 #![deny(clippy::correctness)]
+#![deny(clippy::disallowed_methods)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::needless_pass_by_value)]
 #![deny(clippy::panic)]

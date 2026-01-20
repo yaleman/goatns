@@ -1,3 +1,5 @@
+#![deny(clippy::disallowed_methods)]
+
 use clap::Parser;
 use goatns::cli::{Cli, Commands, add_admin_user, default_config, export_zone_file, import_zones};
 use goatns::config::{ConfigFile, setup_logging};
