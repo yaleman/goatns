@@ -313,10 +313,7 @@ pub(crate) async fn api_record_get(
         .await
         .map_err(|err| {
             error!("Error fetching record id {:?}: {err:?}", record_id);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json::from(ErrorResult::from("Database error")),
-            )
+            error_result_json("Database error", StatusCode::INTERNAL_SERVER_ERROR)
         })?;
 
     let (record, zone) = match record {
@@ -340,10 +337,7 @@ pub(crate) async fn api_record_get(
         .await
         .map_err(|err| {
             error!("Error checking ownership: {err:?}");
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json::from(ErrorResult::from("Database error")),
-            )
+            error_result_json("Database error", StatusCode::INTERNAL_SERVER_ERROR)
         })?
     else {
         debug!("User {:?} does not own zone id {:?}", user.id, zone.id);
@@ -364,22 +358,17 @@ pub(crate) async fn api_record_delete(
     Path(record_id): Path<Uuid>,
 ) -> Result<(), (StatusCode, Json<ErrorResult>)> {
     let user = check_api_auth(&session).await?;
-    let txn = state.get_db_txn().await.map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json::from(ErrorResult::from("Database error")),
-        )
-    })?;
+    let txn = state
+        .get_db_txn()
+        .await
+        .map_err(|_| error_result_json("Database error", StatusCode::INTERNAL_SERVER_ERROR))?;
 
     let Some(record) = entities::records::Entity::find_by_id(record_id)
         .one(&txn)
         .await
         .map_err(|err| {
             error!("Error fetching record id {:?}: {err:?}", record_id);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json::from(ErrorResult::from("Database error")),
-            )
+            error_result_json("Database error", StatusCode::INTERNAL_SERVER_ERROR)
         })?
     else {
         debug!(
@@ -400,10 +389,7 @@ pub(crate) async fn api_record_delete(
         .await
         .map_err(|err| {
             error!("Error checking ownership: {err:?}");
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json::from(ErrorResult::from("Database error")),
-            )
+            error_result_json("Database error", StatusCode::INTERNAL_SERVER_ERROR)
         })?;
 
     let Some((_ownership, Some(_zone))) = ownership_zone else {
@@ -416,10 +402,7 @@ pub(crate) async fn api_record_delete(
 
     record.delete(&txn).await.map_err(|err| {
         error!("Error deleting record id {:?}: {err:?}", record_id);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json::from(ErrorResult::from("Database error")),
-        )
+        error_result_json("Database error", StatusCode::INTERNAL_SERVER_ERROR)
     })?;
 
     if let Err(err) = txn.commit().await {
