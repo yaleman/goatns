@@ -329,7 +329,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
     println!("=> Token login success!");
 
     let newzone = entities::zones::ActiveModel {
-        id: Set(Uuid::now_v7()),
+        id: NotSet,
         name: Set("example.goat".to_string()),
         rname: Set("bob@example.goat".to_string()),
         serial: Set(12345),
@@ -342,7 +342,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
     let newzone = newzone.insert(&pool).await?;
     println!("Saving zone ownership");
     let _zo = entities::ownership::ActiveModel {
-        id: Set(Uuid::now_v7()),
+        id: NotSet,
         userid: Set(user.id),
         zoneid: Set(newzone.id),
     }

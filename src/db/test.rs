@@ -22,15 +22,16 @@ async fn create_user() -> Result<(), GoatNsError> {
     };
 
     println!("Creating user the first time");
-    let model = user.save(&pool).await?;
+    let model = user.insert(&pool).await?;
 
     let mut user = model.into_active_model();
 
     user.disabled = Set(false);
 
     println!("Updating user to disable second time");
-    let res = user.save(&pool).await;
-    assert!(res.is_ok());
+    user.update(&pool)
+        .await
+        .expect("Failed to update user after creation");
 
     Ok(())
 }
@@ -88,7 +89,7 @@ async fn test_get_zone_records() -> Result<(), GoatNsError> {
 /// An example zone for testing
 pub fn test_example_com_zone() -> entities::zones::ActiveModel {
     entities::zones::ActiveModel {
-        id: Set(Uuid::now_v7()),
+        id: NotSet,
         name: Set(String::from("example.com")),
         rname: Set(String::from("billy.example.com")),
         serial: Set(0),
@@ -120,9 +121,10 @@ async fn test_db_create_records() -> Result<(), GoatNsError> {
         rdata: Set("test txt".to_string()),
     };
     println!("rec to create: {rec_to_create:?}");
-    if let Err(error) = rec_to_create.save(&pool).await {
-        panic!("{error:?}");
-    };
+    rec_to_create
+        .insert(&pool)
+        .await
+        .expect("Failed to create record");
 
     let res = entities::records_merged::Entity::get_records(
         &pool,
@@ -168,15 +170,13 @@ async fn test_all_db_things() -> Result<(), GoatNsError> {
         rdata: Set("test txt".to_string()),
     };
     println!("rec to create: {rec_to_create:?}");
-    let saved_record = rec_to_create.save(&pool).await?;
+    let saved_record = rec_to_create.insert(&pool).await?;
     println!("Saved record: {saved_record:?}");
-
+    let saved_record = saved_record.into_active_model();
     // Saving the same record object again should work (it has an ID now so it's an update)
-    if let Err(err) = saved_record.save(&pool).await {
+    if let Err(err) = saved_record.update(&pool).await {
         panic!("{err:?}");
     };
-    // rec_to_create.save(&pool).await?;
-    // rec_to_create.save(&pool).await?;
 
     println!("Looking for foo.example.com TXT IN");
     let result = entities::records_merged::Entity::get_records(

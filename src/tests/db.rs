@@ -64,7 +64,7 @@ async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
     };
     println!("Saving UAT Object 1 to DB: {uat:?}");
 
-    uat.save(&pool).await?;
+    uat.insert(&pool).await.expect("Failed to save token");
     let tokenhash = "hello world this should exist".to_string();
     let expiry = Utc::now() + TimeDelta::try_hours(60).expect("how did this fail?");
     let uat = entities::user_tokens::ActiveModel {

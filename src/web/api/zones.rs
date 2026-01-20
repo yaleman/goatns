@@ -255,8 +255,7 @@ pub(crate) async fn api_zone_update(
 
     if zone.is_changed() {
         println!("Zone has changes, updating...");
-        if let Err(err) = zone.save(&txn).await {
-            // TODO: make this a better log
+        if let Err(err) = zone.update(&txn).await {
             error!("Failed to save zone: {err:?}");
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,

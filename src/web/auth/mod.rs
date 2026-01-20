@@ -23,6 +23,7 @@ use openidconnect::{
 use openidconnect::{
     ClaimsVerificationError, EmptyAdditionalClaims, IdTokenClaims, TokenResponse, core::*,
 };
+use sea_orm::ActiveValue::NotSet;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
 };
@@ -33,7 +34,6 @@ use tower_sessions::{Expiry, Session, SessionManagerLayer};
 use tower_sessions_sqlx_store::SqliteStore;
 use tracing::{debug, error, info, instrument, trace};
 use traits::*;
-use uuid::Uuid;
 pub mod traits;
 
 #[derive(Deserialize)]
@@ -527,7 +527,7 @@ pub async fn signup(
         Ok(claims) => {
             debug!("Verified claims in signup form: {claims:?}");
             let user = entities::users::ActiveModel {
-                id: Set(Uuid::now_v7()),
+                id: NotSet,
                 displayname: Set(claims.get_displayname()),
                 username: Set(claims.get_username()),
                 email: Set(claims.get_email()?),
