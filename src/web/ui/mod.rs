@@ -305,7 +305,7 @@ pub fn new() -> Router<GoatState> {
     Router::new()
         .route("/", get(dashboard_redirect))
         .route("/zones/{id}", get(zone_view))
-        .route("/zones/list", get(zones_list))
+        .route("/zones", get(zones_list))
         .route("/zones/new", post(zones::zones_new_post))
         .route("/profile", get(profile::user_profile_get))
         .nest("/settings", user_settings::router())

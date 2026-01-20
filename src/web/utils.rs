@@ -3,7 +3,7 @@ use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use axum::http::StatusCode;
-use axum::response::Redirect;
+use axum::response::{Html, Redirect};
 use chrono::{DateTime, TimeDelta, Utc};
 use rand::distr::{Alphanumeric, SampleString};
 use sea_orm::ActiveValue::{NotSet, Set};
@@ -151,9 +151,11 @@ pub fn validate_api_token(
         .map_err(|e| format!("validation error: {e:?}"))
 }
 
-pub async fn handler_404() -> (StatusCode, &'static str) {
+pub async fn handler_404() -> (StatusCode, Html<&'static str>) {
     (
         StatusCode::NOT_FOUND,
-        "<h1>Oh no!</h1><p>You've found a 404, try <a href='#' onclick='history.back();'>going back</a> or <a href='/'>home!</a></p>",
+        Html(
+            "<h1>Oh no!</h1><p>You've found a 404, try <a href='#' onclick='history.back();'>going back</a> or <a href='/'>home!</a></p>",
+        ),
     )
 }
