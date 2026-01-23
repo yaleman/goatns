@@ -1,10 +1,11 @@
-use sqlx::{Pool, Sqlite};
+use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::{ActiveModelTrait, DatabaseConnection};
 
 use crate::datastore::handle_import_file;
-use crate::db::{DBEntity, User};
+use crate::db::entities;
 use crate::error::GoatNsError;
 
-pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), GoatNsError> {
+pub async fn import_test_zone_file(pool: &DatabaseConnection) -> Result<(), GoatNsError> {
     println!("#####################################################################");
     println!("importing test zone ./examples/test_config/zones.json");
     println!("#####################################################################");
@@ -21,17 +22,18 @@ pub async fn import_test_zone_file(pool: &Pool<Sqlite>) -> Result<(), GoatNsErro
     Ok(())
 }
 
-pub async fn create_test_user(pool: &Pool<Sqlite>) -> Result<Box<User>, GoatNsError> {
+pub async fn create_test_user(pool: &DatabaseConnection) -> entities::users::Model {
     println!("Creating User");
-    User {
-        id: None,
-        displayname: "Testuser".to_string(),
-        username: "testuser".to_string(),
-        email: "billy@dotgoat.net".to_string(),
-        disabled: false,
-        authref: None,
-        admin: false,
+    let res = entities::users::ActiveModel {
+        id: NotSet,
+        displayname: Set("Testuser".to_string()),
+        username: Set("testuser".to_string()),
+        email: Set("billy@dotgoat.net".to_string()),
+        disabled: Set(false),
+        authref: Set(None),
+        admin: Set(false),
     }
-    .save(pool)
-    .await
+    .insert(pool)
+    .await;
+    res.expect("Failed to create test user")
 }

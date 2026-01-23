@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use axum::Router;
 use axum::extract::FromRef;
 use axum::middleware::from_fn_with_state;
+use axum::response::Redirect;
 use axum::routing::get;
 use axum_csp::CspUrlMatcher;
 #[cfg(not(test))]
@@ -25,7 +26,11 @@ use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{ClientId, ClientSecret};
 use openidconnect::Nonce;
 use regex::RegexSet;
-use sqlx::{Pool, Sqlite, SqlitePool};
+use sea_orm::DatabaseConnection;
+use sea_orm::DatabaseTransaction;
+use sea_orm::TransactionTrait;
+use utoipa::OpenApi;
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -43,6 +48,7 @@ use self::auth::CustomProviderMetadata;
 pub(crate) use askama::Template;
 pub(crate) use askama_web::WebTemplate;
 
+pub mod constants;
 #[macro_use]
 pub mod macros;
 
@@ -62,19 +68,20 @@ pub const STATUS_OK: &str = "Ok";
 
 #[async_trait]
 pub trait GoatStateTrait {
-    async fn connpool(&self) -> Pool<Sqlite>;
+    async fn connpool(&self) -> DatabaseConnection;
     async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata);
     async fn pop_verifier<'life0>(&'life0 mut self, csrftoken: String) -> Option<(String, Nonce)>;
     async fn oauth2_client_id(&self) -> ClientId;
     async fn oauth2_secret(&self) -> Option<ClientSecret>;
     async fn push_verifier(&mut self, csrftoken: String, verifier: (String, Nonce));
+    async fn get_db_txn(&self) -> Result<DatabaseTransaction, Redirect>;
 }
 
 #[async_trait]
 impl GoatStateTrait for GoatState {
     /// Get an sqlite connection pool
-    async fn connpool(&self) -> Pool<Sqlite> {
-        self.read().await.connpool.clone()
+    async fn connpool(&self) -> DatabaseConnection {
+        self.read().await.db.clone()
     }
     async fn oidc_update<'life0>(&'life0 mut self, response: CustomProviderMetadata) {
         debug!("Storing OIDC config!");
@@ -105,15 +112,22 @@ impl GoatStateTrait for GoatState {
         trace!("Pushing CSRF token into shared state: token={csrftoken}");
         writer.oidc_verifier.insert(csrftoken, verifier);
     }
+
+    async fn get_db_txn(&self) -> Result<DatabaseTransaction, Redirect> {
+        self.read().await.db.begin().await.map_err(|err| {
+            error!("Failed to begin DB transaction: {err:?}");
+            Urls::Admin.redirect()
+        })
+    }
 }
 
-type GoatState = Arc<RwLock<GoatChildState>>;
+pub(crate) type GoatState = Arc<RwLock<GoatChildState>>;
 
 #[derive(Clone, FromRef)]
 /// Internal State handler for the datastore object within the API
 pub struct GoatChildState {
     pub tx: Sender<datastore::Command>,
-    pub connpool: SqlitePool,
+    pub db: DatabaseConnection,
     pub config: ConfigFile,
     pub oidc_config_updated: DateTime<Utc>,
     pub oidc_config: Option<auth::CustomProviderMetadata>,
@@ -160,7 +174,7 @@ fn check_static_dir_exists(static_dir: &PathBuf, config: &ConfigFile) -> bool {
 async fn build_router(
     tx: Sender<datastore::Command>,
     config: CowCellReadTxn<ConfigFile>,
-    connpool: SqlitePool,
+    connpool: DatabaseConnection,
 ) -> Result<Router, GoatNsError> {
     let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await?;
 
@@ -178,7 +192,7 @@ async fn build_router(
 
     let state = Arc::new(RwLock::new(GoatChildState {
         tx,
-        connpool,
+        db: connpool.clone(),
         config: (*config).clone(),
         oidc_config_updated,
         oidc_config: None,
@@ -191,13 +205,13 @@ async fn build_router(
         .layer(from_fn_with_state(state.clone(), csp::cspheaders));
 
     let router = Router::new()
-        .route(Urls::Home.as_ref(), get(generic::index))
+        .route(&Urls::Home.to_string(), get(generic::index))
         .nest("/ui", ui::new())
         .nest("/api", api::new())
-        // .merge(
-        //     utoipa_swagger_ui::SwaggerUi::new("/api/docs")
-        //         .url("/api/openapi.json", ApiDoc::openapi()),
-        // )
+        .merge(
+            utoipa_swagger_ui::SwaggerUi::new("/api/docs")
+                .url("/api/openapi.json", api::docs::ApiDoc::openapi()),
+        )
         .nest("/auth", auth::new())
         .nest("/dns-query", doh::new())
         .with_state(state)
@@ -235,7 +249,7 @@ pub async fn build(
     tx: Sender<datastore::Command>,
     rx: Receiver<ServerCommand>,
     config: CowCellReadTxn<ConfigFile>,
-    connpool: SqlitePool,
+    connpool: DatabaseConnection,
 ) -> Result<JoinHandle<Result<(), std::io::Error>>, GoatNsError> {
     let router = build_router(tx, config.clone(), connpool).await?;
     let listener_address = config.api_listener_address()?;

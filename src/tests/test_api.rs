@@ -1,25 +1,35 @@
+use super::prelude::*;
+
 use crate::config::ConfigFile;
-use crate::db::test::test_get_sqlite_memory;
-use crate::db::{DBEntity, User, UserAuthToken, ZoneOwnership, start_db};
-use crate::enums::RecordType;
-use crate::error::GoatNsError;
 use crate::servers::{self, Servers};
 use crate::web::api::auth::AuthPayload;
-use crate::web::utils::{ApiToken, create_api_token};
-use crate::zones::{FileZone, FileZoneRecord};
+use crate::web::api::records::RecordForm;
+use crate::web::api::zones::ZoneForm;
+use crate::web::utils::create_api_token;
 use concread::cowcell::asynch::CowCell;
-use sqlx::SqlitePool;
-use tokio::net::TcpStream;
+use log::info;
+use reqwest::StatusCode;
+use sea_orm::EntityTrait;
+use tokio::net::{TcpListener, UdpSocket};
 
 pub async fn is_free_port(port: u16) -> bool {
-    TcpStream::connect(("127.0.0.1", port)).await.is_err()
+    let addr = ("127.0.0.1", port);
+    let tcp_listener = TcpListener::bind(addr).await;
+    if tcp_listener.is_err() {
+        return false;
+    }
+
+    let udp_listener = UdpSocket::bind(addr).await;
+    if udp_listener.is_err() {
+        return false;
+    }
+
+    true
 }
 
-pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
-    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<ConfigFile>) {
+    test_logging().await;
     let pool = test_get_sqlite_memory().await;
-
-    start_db(&pool).await.expect("failed to start DB");
 
     let config = crate::config::ConfigFile::try_as_cowcell(Some(
         "./examples/test_config/goatns-test.json".to_string(),
@@ -28,16 +38,25 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
 
     use rand::Rng;
     let mut rng = rand::rng();
-    let mut port: u16 = rng.random_range(2000..=65000);
+    let mut api_port: u16 = rng.random_range(2000..=65000);
     loop {
-        if is_free_port(port).await {
+        if is_free_port(api_port).await {
             break;
         }
-        port = rng.random_range(2000..=65000);
+        api_port = rng.random_range(2000..=65000);
+    }
+
+    let mut dns_port: u16 = rng.random_range(2000..=65000);
+    loop {
+        if dns_port != api_port && is_free_port(dns_port).await {
+            break;
+        }
+        dns_port = rng.random_range(2000..=65000);
     }
 
     let mut config_tx = config.write().await;
-    config_tx.api_port = port;
+    config_tx.api_port = api_port;
+    config_tx.port = dns_port;
     config_tx.commit().await;
 
     // println!("Starting channels");
@@ -61,7 +80,7 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
         None,
     ));
 
-    println!("Starting API Server on port {port}");
+    info!("Starting API Server on port {api_port}");
     let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
 
     let apiserver = crate::web::build(
@@ -80,47 +99,40 @@ pub async fn start_test_server() -> (SqlitePool, Servers, CowCell<ConfigFile>) {
             .with_apiserver(apiserver)
             .with_datastore(datastore_manager)
             .with_udpserver(udpserver)
-            .with_tcpserver(tcpserver),
+            .with_tcpserver(tcpserver)
+            .with_datastore_tx(datastore_tx),
         config,
     );
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     res
 }
 
-pub async fn insert_test_user(pool: &SqlitePool) -> Box<User> {
-    User {
-        id: Some(5),
-        displayname: "Example user".to_string(),
-        username: "example".to_string(),
-        email: "example@hello.goat".to_string(),
-        disabled: false,
-        authref: Some("zooooom".to_string()),
-        admin: true,
+/// Insert a test user into the database
+pub async fn insert_test_user(pool: &DatabaseConnection) -> entities::users::Model {
+    entities::users::ActiveModel {
+        id: NotSet,
+        displayname: Set("Example user".to_string()),
+        username: Set("example".to_string()),
+        email: Set("example@hello.goat".to_string()),
+        disabled: Set(false),
+        authref: Set(Some("zooooom".to_string())),
+        admin: Set(true),
     }
-    .save(pool)
+    .insert(pool)
     .await
     .expect("Failed to save test user")
 }
 
 /// Shoves an API token into the DB for a user
-async fn insert_test_user_api_token(pool: &SqlitePool, userid: i64) -> Result<ApiToken, ()> {
+async fn insert_test_user_api_token(
+    db: &DatabaseConnection,
+    userid: Uuid,
+) -> Result<(entities::user_tokens::Model, String), GoatNsError> {
     println!("creating test token for user {userid:?}");
-    let token = create_api_token("lols".as_bytes(), 900, userid);
+    let (token_secret, token) = create_api_token("lols".as_bytes(), 900, userid);
 
-    UserAuthToken {
-        id: None,
-        name: "test token".to_string(),
-        issued: token.issued,
-        expiry: token.expiry,
-        tokenkey: token.token_key.to_owned(),
-        tokenhash: token.token_hash.to_owned(),
-        userid,
-    }
-    .save(pool)
-    .await
-    .expect("Failed to save test token");
-
-    Ok(token)
+    let res = token.insert(db).await.map_err(GoatNsError::from)?;
+    Ok((res, token_secret))
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -134,7 +146,7 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
     println!("api_zone_create Created user... {user:?}");
 
     println!("api_zone_create Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id)
         .await
         .expect("Failed to insert test user api token");
     println!("api_zone_create Created token... {token:?}");
@@ -151,8 +163,8 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
         .post(format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
-            token_key: token.token_key,
-            token_secret: token.token_secret.to_owned(),
+            token_key: token.key,
+            token_secret: token_secret.clone(),
         })
         .send()
         .await
@@ -161,27 +173,28 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
     assert_eq!(res.status(), 200);
     println!("api_zone_create => Token login success!");
 
-    let newzone = FileZone {
-        id: Some(1234),
+    let newzone = ZoneForm {
+        id: None,
         name: "example.goat".to_string(),
         rname: "bob@example.goat".to_string(),
         serial: 12345,
         expire: 30,
         minimum: 1235,
-        ..Default::default()
+        refresh: 1234,
+        retry: 1234,
     };
 
     println!("api_zone_create Sending zone create");
     let res = client
         .post(format!("https://localhost:{api_port}/api/zone"))
-        .header("Authorization", format!("Bearer {}", token.token_secret))
+        .header("Authorization", format!("Bearer {}", token_secret))
         .json(&newzone)
         .send()
         .await
         .expect("Failed to send create request");
     assert_eq!(res.status(), 200);
 
-    let response_zone: FileZone = res
+    let response_zone: entities::zones::Model = res
         .json()
         .await
         .inspect_err(|err| println!("Failed to parse response content: {err:?}"))?;
@@ -204,7 +217,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     println!("Created user... {user:?}");
 
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id)
         .await
         .expect("Failed to insert test user api token");
     println!("Created token... {token:?}");
@@ -221,24 +234,25 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
         .post(format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
-            token_key: token.token_key,
-            token_secret: token.token_secret.to_owned(),
+            token_key: token.key,
+            token_secret,
         })
         .send()
         .await
         .expect("Failed to log in with token");
+
     println!("{res:?}");
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
-
-    let newzone = FileZone {
-        id: Some(1234),
+    let newzone = ZoneForm {
+        id: None,
         name: "example.goat".to_string(),
         rname: "bob@example.goat".to_string(),
         serial: 12345,
         expire: 30,
         minimum: 1235,
-        ..Default::default()
+        refresh: 1111,
+        retry: 1234234,
     };
 
     println!("Sending zone create");
@@ -252,10 +266,18 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     assert_eq!(res.status(), 200);
     let res_content = res.bytes().await;
     println!("content from create: {res_content:?}");
+    let zone: entities::zones::Model = serde_json::from_slice(
+        res_content
+            .as_ref()
+            .expect("Failed to get response content"),
+    )
+    .expect("Failed to parse zone from response");
 
-    println!("Sending zone delete");
+    let url = format!("https://localhost:{api_port}/api/zone/{}", zone.id);
+    println!("Sending zone delete to URL: {url}");
+
     let res = client
-        .delete(format!("https://localhost:{api_port}/api/zone/1234"))
+        .delete(url)
         .send()
         .await
         .expect("Failed to send delete request");
@@ -279,7 +301,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
     println!("Created user... {user:?}");
 
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id)
         .await
         .expect("Failed to insert test user api token");
     println!("Created token... {token:?}");
@@ -296,8 +318,8 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
         .post(format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
-            token_key: token.token_key,
-            token_secret: token.token_secret.to_owned(),
+            token_key: token.key,
+            token_secret: token_secret.to_owned(),
         })
         .send()
         .await
@@ -306,30 +328,30 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
 
-    let newzone = FileZone {
-        id: Some(1234),
-        name: "example.goat".to_string(),
-        rname: "bob@example.goat".to_string(),
-        serial: 12345,
-        expire: 30,
-        minimum: 1235,
-        ..Default::default()
+    let newzone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set("example.goat".to_string()),
+        rname: Set("bob@example.goat".to_string()),
+        serial: Set(12345),
+        expire: Set(30),
+        minimum: Set(1235),
+        refresh: Set(1111),
+        retry: Set(1234234),
     };
     println!("Saving zone");
-    newzone.save(&pool).await?;
+    let newzone = newzone.insert(&pool).await?;
     println!("Saving zone ownership");
-    ZoneOwnership {
-        id: None,
-        userid: user.id.expect("No user id"),
-        zoneid: newzone.id.expect("No zone id"),
+    let _zo = entities::ownership::ActiveModel {
+        id: NotSet,
+        userid: Set(user.id),
+        zoneid: Set(newzone.id),
     }
-    .save(&pool)
+    .insert(&pool)
     .await?;
-
     println!("updating zone rname to steve@example.goat");
-    let newzone = FileZone {
+    let newzone = ZoneForm {
         rname: "steve@example.goat".to_string(),
-        ..newzone
+        ..newzone.into()
     };
 
     println!("Sending zone update");
@@ -356,7 +378,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id)
         .await
         .expect("Failed to insert test user api token");
     println!("Created token... {token:?}");
@@ -373,8 +395,8 @@ async fn api_record_create() -> Result<(), GoatNsError> {
         .post(format!("https://localhost:{api_port}/api/login"))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
-            token_key: token.token_key,
-            token_secret: token.token_secret.to_owned(),
+            token_key: token.key,
+            token_secret: token_secret.clone(),
         })
         .send()
         .await
@@ -383,48 +405,52 @@ async fn api_record_create() -> Result<(), GoatNsError> {
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
 
-    let zone = FileZone {
-        id: Some(333),
-        name: "example.goat".to_string(),
-        rname: "bob@example.goat".to_string(),
-        serial: 12345,
-        expire: 30,
-        minimum: 1235,
-        ..Default::default()
+    let zone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set("example.goat".to_string()),
+        rname: Set("bob@example.goat".to_string()),
+        serial: Set(12345),
+        expire: Set(30),
+        minimum: Set(1235),
+        refresh: Set(1341234),
+        retry: Set(123456),
     }
-    .save(&pool)
+    .insert(&pool)
     .await
     .expect("Failed to save filezone");
 
-    let zo = ZoneOwnership {
-        id: None,
-        userid: user.id.expect("no user id found"),
-        zoneid: zone.id.expect("Failed to get zone id"),
+    let zo = entities::ownership::ActiveModel {
+        id: NotSet,
+        userid: Set(user.id),
+        zoneid: Set(zone.id),
     };
     println!("ZO: {zo:?}");
-    zo.save(&pool).await.expect("Failed to save zone ownership");
+    zo.insert(&pool)
+        .await
+        .expect("Failed to save zone ownership");
 
     println!("building fzr object");
-    let fzr = FileZoneRecord {
-        id: Some(3),
-        class: crate::enums::RecordClass::Internet,
+    let fzr = RecordForm {
+        id: None,
         name: "doggo".to_string(),
-        zoneid: Some(333),
-        rrtype: RecordType::A.to_string(),
-        ttl: 33,
+        zoneid: zone.id,
+        rclass: RecordClass::Internet,
+        rrtype: RecordType::A,
+        ttl: Some(33),
         rdata: "1.2.3.4".to_string(),
     };
+
     println!("Sending record create");
     let res = client
         .post(format!("https://localhost:{api_port}/api/record"))
-        .header("Authorization", format!("Bearer {}", token.token_secret))
+        .header("Authorization", format!("Bearer {}", token_secret))
         .json(&fzr)
         .send()
         .await
         .expect("Failed to create record");
 
     assert_eq!(res.status(), 200);
-    let response_record: FileZoneRecord = res
+    let response_record: entities::records::Model = res
         .json()
         .await
         .inspect_err(|err| eprintln!("Failed to get response content: {err:?}"))?;
@@ -441,7 +467,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
     println!("Creating token for user");
-    let token = insert_test_user_api_token(&pool, user.id.expect("no user id found"))
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id)
         .await
         .expect("Failed to insert test user api token");
     println!("Created token... {token:?}");
@@ -459,8 +485,8 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
         .timeout(std::time::Duration::from_secs(5))
         .timeout(std::time::Duration::from_secs(5))
         .json(&AuthPayload {
-            token_key: token.token_key,
-            token_secret: token.token_secret.to_owned(),
+            token_key: token.key,
+            token_secret: token_secret.clone(),
         })
         .send()
         .await
@@ -477,46 +503,53 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
     assert_eq!(res.status(), 200);
     println!("=> Token login success!");
 
-    let zone = FileZone {
-        id: Some(333),
-        name: "example.goat".to_string(),
-        rname: "bob@example.goat".to_string(),
-        serial: 12345,
-        expire: 30,
-        minimum: 1235,
-        ..Default::default()
+    let zone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set("example.goat".to_string()),
+        rname: Set("bob@example.goat".to_string()),
+        serial: Set(12345),
+        expire: Set(30),
+        minimum: Set(1235),
+        refresh: Set(0),
+        retry: Set(0),
     }
-    .save(&pool)
+    .insert(&pool)
     .await
     .expect("Failed to save filezone");
 
-    let zo = ZoneOwnership {
-        id: None,
-        userid: user.id.expect("no user id found"),
-        zoneid: zone.id.expect("Failed to get zone id"),
+    let zo = entities::ownership::ActiveModel {
+        id: NotSet,
+        userid: Set(user.id),
+        zoneid: Set(zone.id),
     };
     println!("ZO: {zo:?}");
-    zo.save(&pool).await.expect("failed to save zone ownership");
+    let _ownership = zo
+        .insert(&pool)
+        .await
+        .expect("failed to save zone ownership");
 
-    println!("creating fzr object in the database");
-    let fzr = FileZoneRecord {
-        id: Some(3),
-        class: crate::enums::RecordClass::Internet,
-        name: "doggo".to_string(),
-        zoneid: Some(333),
-        rrtype: RecordType::A.to_string(),
-        ttl: 33,
-        rdata: "1.2.3.4".to_string(),
+    println!("creating record object in the database");
+    let zone_record = entities::records::ActiveModel {
+        id: NotSet,
+        rclass: Set(RecordClass::Internet.into()),
+        name: Set("doggo".to_string()),
+        zoneid: Set(zone.id),
+        rrtype: Set(RecordType::A.into()),
+        ttl: Set(Some(33)),
+        rdata: Set("1.2.3.4".to_string()),
     }
-    .save(&pool)
+    .insert(&pool)
     .await?;
 
-    println!("{fzr:?}");
+    println!("Record: {zone_record:?}");
 
     println!("Sending record delete");
     let res = client
-        .delete(format!("https://localhost:{api_port}/api/record/3"))
-        .header("Authorization", format!("Bearer {}", token.token_secret))
+        .delete(format!(
+            "https://localhost:{api_port}/api/record/{}",
+            zone_record.id
+        ))
+        .header("Authorization", format!("Bearer {}", token_secret))
         .send()
         .await
         .expect("Failed to send delete request");
@@ -525,6 +558,399 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
     println!("Response content: {:?}", res.text().await);
 
     assert_eq!(status, 200);
+
+    drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_record_delete_forbidden_without_ownership() -> Result<(), GoatNsError> {
+    let (pool, _servers, config) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    let owner = insert_test_user(&pool).await;
+    let other_user = insert_test_user(&pool).await;
+
+    let (_owner_token, _owner_secret) = insert_test_user_api_token(&pool, owner.id)
+        .await
+        .expect("Failed to insert test owner api token");
+    let (other_token, other_secret) = insert_test_user_api_token(&pool, other_user.id)
+        .await
+        .expect("Failed to insert test user api token");
+
+    let zone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set("example.goat".to_string()),
+        rname: Set("bob@example.goat".to_string()),
+        serial: Set(12345),
+        expire: Set(30),
+        minimum: Set(1235),
+        refresh: Set(0),
+        retry: Set(0),
+    }
+    .insert(&pool)
+    .await
+    .expect("Failed to save zone");
+
+    entities::ownership::ActiveModel {
+        id: NotSet,
+        userid: Set(owner.id),
+        zoneid: Set(zone.id),
+    }
+    .insert(&pool)
+    .await
+    .expect("failed to save zone ownership");
+
+    let zone_record = entities::records::ActiveModel {
+        id: NotSet,
+        rclass: Set(RecordClass::Internet.into()),
+        name: Set("doggo".to_string()),
+        zoneid: Set(zone.id),
+        rrtype: Set(RecordType::A.into()),
+        ttl: Set(Some(33)),
+        rdata: Set("1.2.3.4".to_string()),
+    }
+    .insert(&pool)
+    .await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .expect("Failed to build client");
+
+    let res = client
+        .post(format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(5))
+        .json(&AuthPayload {
+            token_key: other_token.key,
+            token_secret: other_secret.clone(),
+        })
+        .send()
+        .await
+        .expect("Failed to log in with token");
+    assert_eq!(res.status(), 200);
+
+    let res = client
+        .delete(format!(
+            "https://localhost:{api_port}/api/record/{}",
+            zone_record.id
+        ))
+        .header("Authorization", format!("Bearer {}", other_secret))
+        .send()
+        .await
+        .expect("Failed to send delete request");
+
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    let record = entities::records::Entity::find_by_id(zone_record.id)
+        .one(&pool)
+        .await?;
+    assert!(record.is_some());
+
+    drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_record_get_forbidden_without_ownership() -> Result<(), GoatNsError> {
+    let (pool, _servers, config) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    let owner = insert_test_user(&pool).await;
+    let other_user = insert_test_user(&pool).await;
+
+    let (_owner_token, _owner_secret) = insert_test_user_api_token(&pool, owner.id)
+        .await
+        .expect("Failed to insert test owner api token");
+    let (other_token, other_secret) = insert_test_user_api_token(&pool, other_user.id)
+        .await
+        .expect("Failed to insert test user api token");
+
+    let zone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set("example.goat".to_string()),
+        rname: Set("bob@example.goat".to_string()),
+        serial: Set(12345),
+        expire: Set(30),
+        minimum: Set(1235),
+        refresh: Set(0),
+        retry: Set(0),
+    }
+    .insert(&pool)
+    .await
+    .expect("Failed to save zone");
+
+    entities::ownership::ActiveModel {
+        id: NotSet,
+        userid: Set(owner.id),
+        zoneid: Set(zone.id),
+    }
+    .insert(&pool)
+    .await
+    .expect("failed to save zone ownership");
+
+    let zone_record = entities::records::ActiveModel {
+        id: NotSet,
+        rclass: Set(RecordClass::Internet.into()),
+        name: Set("doggo".to_string()),
+        zoneid: Set(zone.id),
+        rrtype: Set(RecordType::A.into()),
+        ttl: Set(Some(33)),
+        rdata: Set("1.2.3.4".to_string()),
+    }
+    .insert(&pool)
+    .await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .expect("Failed to build client");
+
+    let res = client
+        .post(format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(5))
+        .json(&AuthPayload {
+            token_key: other_token.key,
+            token_secret: other_secret.clone(),
+        })
+        .send()
+        .await
+        .expect("Failed to log in with token");
+    assert_eq!(res.status(), 200);
+
+    let res = client
+        .get(format!(
+            "https://localhost:{api_port}/api/record/{}",
+            zone_record.id
+        ))
+        .header("Authorization", format!("Bearer {}", other_secret))
+        .send()
+        .await
+        .expect("Failed to send get request");
+
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_record_get_requires_auth() -> Result<(), GoatNsError> {
+    let (pool, _servers, config) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    let user = insert_test_user(&pool).await;
+
+    let zone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set("example.goat".to_string()),
+        rname: Set("bob@example.goat".to_string()),
+        serial: Set(12345),
+        expire: Set(30),
+        minimum: Set(1235),
+        refresh: Set(0),
+        retry: Set(0),
+    }
+    .insert(&pool)
+    .await
+    .expect("Failed to save zone");
+
+    entities::ownership::ActiveModel {
+        id: NotSet,
+        userid: Set(user.id),
+        zoneid: Set(zone.id),
+    }
+    .insert(&pool)
+    .await
+    .expect("failed to save zone ownership");
+
+    let zone_record = entities::records::ActiveModel {
+        id: NotSet,
+        rclass: Set(RecordClass::Internet.into()),
+        name: Set("doggo".to_string()),
+        zoneid: Set(zone.id),
+        rrtype: Set(RecordType::A.into()),
+        ttl: Set(Some(33)),
+        rdata: Set("1.2.3.4".to_string()),
+    }
+    .insert(&pool)
+    .await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .expect("Failed to build client");
+
+    let res = client
+        .get(format!(
+            "https://localhost:{api_port}/api/record/{}",
+            zone_record.id
+        ))
+        .send()
+        .await
+        .expect("Failed to send get request");
+
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_record_delete_requires_auth() -> Result<(), GoatNsError> {
+    let (pool, _servers, config) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    let user = insert_test_user(&pool).await;
+
+    let zone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set("example.goat".to_string()),
+        rname: Set("bob@example.goat".to_string()),
+        serial: Set(12345),
+        expire: Set(30),
+        minimum: Set(1235),
+        refresh: Set(0),
+        retry: Set(0),
+    }
+    .insert(&pool)
+    .await
+    .expect("Failed to save zone");
+
+    entities::ownership::ActiveModel {
+        id: NotSet,
+        userid: Set(user.id),
+        zoneid: Set(zone.id),
+    }
+    .insert(&pool)
+    .await
+    .expect("failed to save zone ownership");
+
+    let zone_record = entities::records::ActiveModel {
+        id: NotSet,
+        rclass: Set(RecordClass::Internet.into()),
+        name: Set("doggo".to_string()),
+        zoneid: Set(zone.id),
+        rrtype: Set(RecordType::A.into()),
+        ttl: Set(Some(33)),
+        rdata: Set("1.2.3.4".to_string()),
+    }
+    .insert(&pool)
+    .await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .expect("Failed to build client");
+
+    let res = client
+        .delete(format!(
+            "https://localhost:{api_port}/api/record/{}",
+            zone_record.id
+        ))
+        .send()
+        .await
+        .expect("Failed to send delete request");
+
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    let record = entities::records::Entity::find_by_id(zone_record.id)
+        .one(&pool)
+        .await?;
+    assert!(record.is_some());
+
+    drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_record_delete_does_not_delete_zone() -> Result<(), GoatNsError> {
+    let (pool, _servers, config) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    let user = insert_test_user(&pool).await;
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id)
+        .await
+        .expect("Failed to insert test user api token");
+
+    let zone = entities::zones::ActiveModel {
+        id: NotSet,
+        name: Set("example.goat".to_string()),
+        rname: Set("bob@example.goat".to_string()),
+        serial: Set(12345),
+        expire: Set(30),
+        minimum: Set(1235),
+        refresh: Set(0),
+        retry: Set(0),
+    }
+    .insert(&pool)
+    .await
+    .expect("Failed to save zone");
+
+    entities::ownership::ActiveModel {
+        id: NotSet,
+        userid: Set(user.id),
+        zoneid: Set(zone.id),
+    }
+    .insert(&pool)
+    .await
+    .expect("failed to save zone ownership");
+
+    let zone_record = entities::records::ActiveModel {
+        id: NotSet,
+        rclass: Set(RecordClass::Internet.into()),
+        name: Set("doggo".to_string()),
+        zoneid: Set(zone.id),
+        rrtype: Set(RecordType::A.into()),
+        ttl: Set(Some(33)),
+        rdata: Set("1.2.3.4".to_string()),
+    }
+    .insert(&pool)
+    .await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .expect("Failed to build client");
+
+    let res = client
+        .post(format!("https://localhost:{api_port}/api/login"))
+        .timeout(std::time::Duration::from_secs(5))
+        .json(&AuthPayload {
+            token_key: token.key,
+            token_secret: token_secret.clone(),
+        })
+        .send()
+        .await
+        .expect("Failed to log in with token");
+    assert_eq!(res.status(), 200);
+
+    let res = client
+        .delete(format!(
+            "https://localhost:{api_port}/api/record/{}",
+            zone_record.id
+        ))
+        .header("Authorization", format!("Bearer {}", token_secret))
+        .send()
+        .await
+        .expect("Failed to send delete request");
+
+    assert_eq!(res.status(), StatusCode::OK);
+
+    let zone_exists = entities::zones::Entity::find_by_id(zone.id)
+        .one(&pool)
+        .await?;
+    assert!(zone_exists.is_some());
 
     drop(pool);
     Ok(())

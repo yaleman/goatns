@@ -1,10 +1,11 @@
 use super::GoatState;
-use crate::config::ConfigFile;
-use crate::db::{DBEntity, User};
-use crate::error::GoatNsError;
-use crate::web::utils::Urls;
-use crate::web::GoatStateTrait;
 use crate::COOKIE_NAME;
+use crate::config::ConfigFile;
+use crate::db::entities;
+use crate::error::GoatNsError;
+use crate::web::GoatStateTrait;
+use crate::web::constants::{SESSION_SIGNED_IN_KEY, SESSION_USER_KEY};
+use crate::web::utils::Urls;
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::extract::{Query, State};
@@ -15,25 +16,25 @@ use axum::{Form, Router};
 use chrono::{DateTime, Utc};
 use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{PkceCodeChallenge, PkceCodeVerifier, RedirectUrl};
-
 use openidconnect::EmptyAdditionalProviderMetadata;
-use openidconnect::{
-    core::*, ClaimsVerificationError, EmptyAdditionalClaims, IdTokenClaims, TokenResponse,
-};
 use openidconnect::{
     AuthenticationFlow, AuthorizationCode, CsrfToken, IssuerUrl, Nonce, ProviderMetadata, Scope,
 };
+use openidconnect::{
+    ClaimsVerificationError, EmptyAdditionalClaims, IdTokenClaims, TokenResponse, core::*,
+};
+use sea_orm::ActiveValue::NotSet;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
+};
 use serde::Deserialize;
-use sqlx::SqlitePool;
 use tower_sessions::cookie::time::Duration;
 use tower_sessions::session_store::ExpiredDeletion;
-
-// pub(crate) mod sessionstore;
-pub mod traits;
 use tower_sessions::{Expiry, Session, SessionManagerLayer};
 use tower_sessions_sqlx_store::SqliteStore;
 use tracing::{debug, error, info, instrument, trace};
 use traits::*;
+pub mod traits;
 
 #[derive(Deserialize)]
 /// Parser for path bits
@@ -216,9 +217,7 @@ pub async fn parse_state_code(
     assert_eq!(verifier_copy.secret(), pkce_verifier.secret());
 
     let http_client = get_http_client().map_err(|err| ParserError::ErrorMessage {
-        content: format!(
-            "Failed to build reqwest client to query OIDC token response: {err:?}"
-        ),
+        content: format!("Failed to build reqwest client to query OIDC token response: {err:?}"),
     })?;
 
     // Now you can exchange it for an access token and ID token.
@@ -241,7 +240,7 @@ pub async fn parse_state_code(
         None => {
             return Err(ParserError::ErrorMessage {
                 content: "couldn't parse token".to_string(),
-            })
+            });
         }
     };
     trace!("id_token: {id_token:?}");
@@ -269,7 +268,7 @@ pub async fn login(
     // check if we've got an existing, valid session
     if let Some(signed_in) = session.get("signed_in").await.unwrap_or(Some(false)) {
         if signed_in {
-            return Ok(Urls::Dashboard.redirect().into_response());
+            return Ok(Urls::ZonesList.redirect().into_response());
         }
     }
 
@@ -313,10 +312,11 @@ pub async fn login(
             // check if they're in the database
 
             let email = claims.get_email().map_err(|err| err.into_response())?;
-
-            let mut dbuser = match User::get_by_subject(&state.connpool().await, claims.subject())
-                .await
-            {
+            let dbuser = entities::users::Entity::find()
+                .filter(entities::users::Column::Authref.eq(claims.subject().to_string()))
+                .one(&state.read().await.db.clone())
+                .await;
+            let dbuser = match dbuser {
                 Ok(Some(user)) => user,
                 Ok(None) => {
                     if !state.read().await.config.user_auto_provisioning {
@@ -386,46 +386,34 @@ pub async fn login(
                         claims_email, dbuser.email
                     );
 
-                    dbuser.email = claims_email;
-                    let mut db_txn = match state.connpool().await.begin().await {
-                        Ok(val) => val,
-                        Err(err) => {
-                            error!("Failed to start transaction to store user: {err:?}");
-                            return Err(Urls::Home.redirect().into_response());
-                            // TODO: this probably... should be handled as a better error?
-                        }
-                    };
-                    if let Err(err) = dbuser.update_with_txn(&mut db_txn).await {
+                    let txn = state
+                        .get_db_txn()
+                        .await
+                        .map_err(|_| Urls::Home.redirect().into_response())?;
+
+                    let mut user_active: entities::users::ActiveModel = dbuser.clone().into();
+                    user_active.email = Set(claims_email);
+
+                    if let Err(err) = user_active.update(&txn).await {
                         error!("Failed to update user email: {err:?}");
                         return Err(Urls::Home.redirect().into_response());
                         // TODO: this probably... should be handled as a better error?
                     }
-                    if let Err(err) = db_txn.commit().await {
+                    if let Err(err) = txn.commit().await {
                         error!("Failed to commit user email update: {err:?}");
                         return Err(Urls::Home.redirect().into_response());
                     };
                 }
             }
 
-            if session
-                .insert("authref", claims.subject().to_string())
-                .await
-                .is_err()
-            {
+            if session.insert(SESSION_USER_KEY, dbuser).await.is_err() {
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to store session details",
                 )
                     .into_response());
             };
-            if session.insert("user", dbuser).await.is_err() {
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to store session details",
-                )
-                    .into_response());
-            };
-            if session.insert("signed_in", true).await.is_err() {
+            if session.insert(SESSION_SIGNED_IN_KEY, true).await.is_err() {
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to store session details",
@@ -437,7 +425,7 @@ pub async fn login(
             let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
             match redirect {
                 Some(destination) => Ok(Redirect::to(&destination).into_response()),
-                None => Ok(Urls::Dashboard.redirect().into_response()),
+                None => Ok(Urls::ZonesList.redirect().into_response()),
             }
         }
         Err(error) => match error {
@@ -467,9 +455,9 @@ pub async fn logout(session: Session) -> Result<Redirect, (axum::http::StatusCod
 
 pub async fn build_auth_stores(
     config: CowCellReadTxn<ConfigFile>,
-    connpool: SqlitePool,
+    connpool: DatabaseConnection,
 ) -> Result<SessionManagerLayer<SqliteStore>, GoatNsError> {
-    let session_store = SqliteStore::new(connpool)
+    let session_store = SqliteStore::new(connpool.get_sqlite_connection_pool().clone())
         .with_table_name("sessions")
         .map_err(|err| {
             GoatNsError::StartupError(format!("Failed to initialize session store: {err}"))
@@ -538,24 +526,24 @@ pub async fn signup(
         },
         Ok(claims) => {
             debug!("Verified claims in signup form: {claims:?}");
-            let user = User {
-                id: None,
-                displayname: claims.get_displayname(),
-                username: claims.get_username(),
-                email: claims.get_email()?,
-                disabled: false,
-                authref: Some(claims.subject().to_string()),
-                admin: false,
+            let user = entities::users::ActiveModel {
+                id: NotSet,
+                displayname: Set(claims.get_displayname()),
+                username: Set(claims.get_username()),
+                email: Set(claims.get_email()?),
+                disabled: Set(false),
+                authref: Set(Some(claims.subject().to_string())),
+                admin: Set(false),
             };
-            match user.save(&state.connpool().await).await {
+            match user.insert(&state.read().await.db).await {
                 Ok(_) => {
                     // Check if there's a stored redirect path from before authentication
                     let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
                     match redirect {
                         Some(destination) => Ok(Redirect::to(&destination).into_response()),
-                        None => Ok(Urls::Dashboard.redirect().into_response()),
+                        None => Ok(Urls::ZonesList.redirect().into_response()),
                     }
-                },
+                }
                 Err(error) => {
                     debug!("Failed to save new user signup... oh no! {error:?}");
                     // TODO: throw an error page on this one

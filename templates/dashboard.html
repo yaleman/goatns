@@ -1,110 +1,65 @@
 {% extends "basetemplate.html" %}
 
-
 {% block titletag %}GoatNS Dashboard{% endblock titletag %}
 
 {% block body %}
 <body class="h-100">
-<header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-  <button class="navbar-toggler d-sm-block d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-   <img class="mx-2 nav-logo" src="/static/img/logo.svg" /></span>
-  </button>
+  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+    <button class="navbar-toggler goatns-toggler d-sm-block d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu"
+      aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="goatns-toggler-bar"></span>
+      <span class="goatns-toggler-bar"></span>
+      <span class="goatns-toggler-bar"></span>
+    </button>
 
-  <a class="navbar-brand col-md-3 col-lg-2 me-md-3 px-sm-3 text-left" href="/">
-    <img class="mx-2 nav-logo d-sm-none d-md-inline" src="/static/img/logo.svg" />
-    GoatNS</a>
+    <a class="navbar-brand col-md-3 col-lg-2 me-md-3 px-sm-3 text-left" href="/">
+      <img class="mx-2 nav-logo d-none d-md-inline" src="/static/img/logo.svg" />
+      GoatNS</a>
 
     <form method="POST" action="/ui/search">
-    <input class="form-control form-control-dark" type="text" placeholder="Search" aria-label="Search">
+      <input class="form-control form-control-dark" type="text" placeholder="Search" aria-label="Search">
     </form>
-  <div class="navbar-nav">
-    <div class="nav-item text-nowrap">
-      <a class="nav-link px-3" href="/auth/logout">Sign out</a>
-    </div>
-  </div>
-</header>
-<div class="container-fluid">
+    <div class="navbar-nav"></div>
+  </header>
+  <div class="container-fluid">
     <div class="row">
       <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
         <div class="position-sticky pt-3">
           <ul class="nav flex-column">
             <li class="nav-item">
-                <a href="/ui" class="link-dark nav-link"><img src="/static/img/icons/home.svg" class="nav-icon"> Dashboard</a>
-            </li>
-            <li class="nav-item">
-                <a href="/ui/zones/list" class="link-dark nav-link"><i data-feather="at-sign"></i> Zones</a>
+              <a href="{{ crate::web::Urls::ZonesList }}" class="link-dark nav-link"><img src="/static/img/feather/at-sign.svg" class="nav-icon">
+                Zones</a>
             </li>
 
             <li class="nav-item">
-              <a class="link-dark nav-link" href="/ui/settings"><i data-feather="settings"></i> Settings</a>
+              <a class="link-dark nav-link" href="/ui/settings"><img src="/static/img/feather/settings.svg" class="nav-icon"> Settings</a>
             </li>
             {% if user_is_admin %}
             <li class="nav-item">
-              <a class="link-dark nav-link" href="/ui/admin"><i data-feather="settings"></i> Admin</a>
+              <a class="link-dark nav-link" href="/ui/admin"><img src="/static/img/feather/settings.svg" class="nav-icon"> Admin</a>
             </li>
             {% endif %}
             <li class="nav-item">
-              <a class="link-dark nav-link" href="https://goatns.dotgoat.net" target="_blank"><i data-feather="external-link"></i> GoatNS Docs</a>
+              <a class="link-dark nav-link" href="https://goatns.dotgoat.net" target="_blank"><img src="/static/img/feather/external-link.svg" class="nav-icon">
+                GoatNS Docs</a>
             </li>
             <li class="nav-item">
-              <a class="link-dark nav-link" href="/api/docs" target="_blank"><i data-feather="external-link"></i> API Docs</a>
+              <a class="link-dark nav-link" href="/api/docs" target="_blank"><img src="/static/img/feather/external-link.svg" class="nav-icon"> API Docs</a>
+            </li>
+            <li class="nav-item">
+              <a class="link-dark nav-link" href="/auth/logout"><img src="/static/img/feather/log-out.svg" class="nav-icon"> Sign out</a>
             </li>
 
-           {# <li class="nav-item">
-              <a class="nav-link" href="#">
-                <span data-feather="file"></span>
-                Orders
-              </a>
-            </li>
-          </ul>
-
-          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
-            <span>Saved reports</span>
-            <a class="link-secondary" href="#" aria-label="Add a new report">
-              <span data-feather="plus-circle"></span>
-            </a>
-          </h6>
-          <ul class="nav flex-column mb-2">
-            <li class="nav-item">
-              <a class="nav-link" href="#">
-                <span data-feather="file-text"></span>
-                Current month
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">
-                <span data-feather="file-text"></span>
-                Last quarter
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">
-                <span data-feather="file-text"></span>
-                Social engagement
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">
-                <span data-feather="file-text"></span>
-                Year-end sale
-              </a>
-            </li>#}
           </ul>
         </div>
       </nav>
 
-
       <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-md-4">
-    {#<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">#}
-
         {% block content %}
-
-        <h1>Welcome to your dashboard!</h1>
-        <p>There really should be more here.</p>
+        {# intentionally empty; page content comes from child templates #}
         {% endblock content %}
-    </div>
       </main>
     </div>
-</div>
+  </div>
 </body>
 {% endblock body %}

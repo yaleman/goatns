@@ -1,9 +1,10 @@
-use std::collections::HashMap;
-
+use super::GoatState;
 use crate::datastore::Command;
-use crate::db::{DBEntity, User};
+use crate::db::entities;
+use crate::enums::{RecordClass, RecordType};
+use crate::web::GoatStateTrait;
+use crate::web::constants::{SESSION_REDIRECT_KEY, SESSION_USER_KEY};
 use crate::web::utils::Urls;
-use crate::zones::FileZone;
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::Router;
@@ -11,11 +12,12 @@ use axum::extract::{OriginalUri, Path, Query, State};
 use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
+use sea_orm::ModelTrait;
 use serde::Deserialize;
+use std::collections::HashMap;
 use tower_sessions::Session;
 use tracing::{debug, error, instrument, trace};
-
-use super::GoatState;
+use uuid::Uuid;
 
 mod admin_ui;
 mod profile;
@@ -25,7 +27,7 @@ mod zones;
 #[derive(Template, WebTemplate)]
 #[template(path = "view_zones.html")]
 pub(crate) struct TemplateViewZones {
-    zones: Vec<FileZone>,
+    zones: Vec<entities::zones::Model>,
     pub user_is_admin: bool,
     message: Option<String>,
     error: Option<String>,
@@ -34,8 +36,32 @@ pub(crate) struct TemplateViewZones {
 #[derive(Template, WebTemplate)]
 #[template(path = "view_zone.html")]
 pub(crate) struct TemplateViewZone {
-    zone: FileZone,
+    zone: entities::zones::Model,
+    records: Vec<UiZoneRecord>,
+    record_type_options: Vec<RecordTypeOption>,
+    record_class_options: Vec<RecordClassOption>,
     pub user_is_admin: bool,
+}
+
+pub(crate) struct UiZoneRecord {
+    id: Uuid,
+    name: String,
+    rrtype: u16,
+    rrtype_text: String,
+    rclass: u16,
+    rclass_text: String,
+    ttl: Option<u32>,
+    rdata: String,
+}
+
+pub(crate) struct RecordTypeOption {
+    value: u16,
+    label: String,
+}
+
+pub(crate) struct RecordClassOption {
+    value: u16,
+    label: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -51,7 +77,7 @@ pub(crate) async fn zones_list(
     OriginalUri(path): OriginalUri,
     Query(query): Query<ViewZonesQueryString>,
 ) -> Result<TemplateViewZones, impl IntoResponse> {
-    let user = check_logged_in(&mut session, path, state.clone())
+    let user = check_logged_in(&mut session, path)
         .await
         .map_err(|err| err.into_response())?;
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
@@ -66,7 +92,7 @@ pub(crate) async fn zones_list(
         .tx
         .send(Command::GetZoneNames {
             resp: os_tx,
-            user: user.clone(),
+            user_id: user.id,
             offset,
             limit,
         })
@@ -74,7 +100,7 @@ pub(crate) async fn zones_list(
     {
         eprintln!("failed to send GetZoneNames command to datastore: {err:?}");
         error!("failed to send GetZoneNames command to datastore: {err:?}");
-        return Err(Urls::Dashboard.redirect().into_response());
+        return Err(Urls::ZonesList.redirect().into_response());
     };
 
     let zones = os_rx.await.map_err(|err| {
@@ -97,18 +123,18 @@ pub(crate) async fn zones_list(
 #[instrument(level = "debug", skip(state))]
 pub(crate) async fn zone_view(
     OriginalUri(path): OriginalUri,
-    Path(name_or_id): Path<i64>,
+    Path(id): Path<Uuid>,
     State(state): State<GoatState>,
     mut session: Session,
 ) -> Result<TemplateViewZone, impl IntoResponse> {
-    let user = check_logged_in(&mut session, path, state.clone())
+    let user = check_logged_in(&mut session, path)
         .await
         .map_err(|err| err.into_response())?;
 
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
     let cmd = Command::GetZone {
         resp: os_tx,
-        id: Some(name_or_id),
+        id: Some(id),
         name: None,
     };
     debug!("{cmd:?}");
@@ -124,7 +150,7 @@ pub(crate) async fn zone_view(
             None => {
                 return Err((
                     axum::http::StatusCode::NOT_FOUND,
-                    format!("Zone '{name_or_id}' not found"),
+                    format!("Zone '{id}' not found"),
                 )
                     .into_response());
             }
@@ -135,9 +161,89 @@ pub(crate) async fn zone_view(
         }
     };
 
+    let txn = state.get_db_txn().await.map_err(|err| {
+        error!("Failed to begin DB transaction for zone records: {err:?}");
+        Urls::ZonesList.redirect().into_response()
+    })?;
+    let records = zone
+        .find_related(entities::records::Entity)
+        .all(&txn)
+        .await
+        .map_err(|err| {
+            error!("Error getting records for zone {}: {err:?}", zone.name);
+            Urls::ZonesList.redirect().into_response()
+        })?;
+
+    let records = records
+        .into_iter()
+        .map(|record| {
+            let rrtype = RecordType::from(&record.rrtype);
+            let rrtype_text = if rrtype == RecordType::InvalidType {
+                record.rrtype.to_string()
+            } else {
+                rrtype.to_string()
+            };
+            let rclass = RecordClass::from(&record.rclass);
+            let rclass_text = if rclass == RecordClass::InvalidType {
+                record.rclass.to_string()
+            } else {
+                rclass.to_string()
+            };
+
+            UiZoneRecord {
+                id: record.id,
+                name: record.name,
+                rrtype: record.rrtype,
+                rrtype_text,
+                rclass: record.rclass,
+                rclass_text,
+                ttl: record.ttl,
+                rdata: record.rdata,
+            }
+        })
+        .collect();
+
+    let record_type_options = vec![
+        RecordType::A,
+        RecordType::AAAA,
+        RecordType::CAA,
+        RecordType::CNAME,
+        RecordType::HINFO,
+        RecordType::LOC,
+        RecordType::MX,
+        RecordType::NAPTR,
+        RecordType::NS,
+        RecordType::PTR,
+        RecordType::SOA,
+        RecordType::TXT,
+        RecordType::URI,
+    ]
+    .into_iter()
+    .map(|record_type| RecordTypeOption {
+        value: record_type as u16,
+        label: record_type.to_string(),
+    })
+    .collect();
+
+    let record_class_options = vec![
+        RecordClass::Internet,
+        RecordClass::CsNet,
+        RecordClass::Chaos,
+        RecordClass::Hesiod,
+    ]
+    .into_iter()
+    .map(|record_class| RecordClassOption {
+        value: record_class as u16,
+        label: record_class.to_string(),
+    })
+    .collect();
+
     trace!("Returning zone: {zone:?}");
     Ok(TemplateViewZone {
         zone,
+        records,
+        record_type_options,
+        record_class_options,
         user_is_admin: user.admin,
     })
 }
@@ -145,10 +251,9 @@ pub(crate) async fn zone_view(
 pub async fn check_logged_in(
     session: &mut Session,
     path: Uri,
-    state: GoatState,
-) -> Result<User, Redirect> {
-    let authref: Option<String> = session
-        .get("authref")
+) -> Result<entities::users::Model, Redirect> {
+    let user: Option<entities::users::Model> = session
+        .get(SESSION_USER_KEY)
         .await
         .map_err(|_e| Urls::Login.redirect())?;
 
@@ -157,80 +262,51 @@ pub async fn check_logged_in(
             .map(|v| v.to_string())
             .unwrap_or("/".to_string()),
     );
-    if authref.is_none() {
-        session.clear().await;
-
-        session
-            .insert("redirect", redirect_path)
-            .await
-            .map_err(|e| {
-                debug!("Couldn't store redirect for user: {e:?}");
-                Urls::Home.redirect_with_query(HashMap::from([(
-                    "error",
-                    "An error storing your session occurred!",
-                )]))
-            })?;
-        debug!("Not-logged-in-user tried to log in, how rude!");
-        return Err(Urls::Login.redirect());
-    }
-    debug!("session ok!");
-
-    let user: User = match session.get("user").await.unwrap_or(None) {
-        Some(val) => val,
-        None => return Err(Urls::Login.redirect()),
-    };
 
     // Check the database to make sure they're actually legit and not disabled
-    if let Some(user_id) = user.id {
-        let pool = state.read().await.connpool.clone();
-        match User::get(&pool, user_id).await {
-            Ok(db_user) => {
-                if db_user.disabled {
-                    debug!("User {} is disabled, clearing session", user_id);
-                    session.clear().await;
-                    Err(Urls::Login.redirect())
-                } else {
-                    // Return the user from the database to ensure we have fresh data
-                    Ok(*db_user)
-                }
-            }
-            Err(err) => {
-                debug!("Failed to validate user {} from database: {err:?}", user_id);
+    match user {
+        Some(user) => {
+            if user.disabled {
+                debug!("User {} is disabled, clearing session", user.id);
                 session.clear().await;
                 Err(Urls::Login.redirect())
+            } else {
+                Ok(user)
             }
         }
-    } else {
-        debug!("User has no ID, clearing session");
-        session.clear().await;
-        Err(Urls::Login.redirect())
+        None => {
+            session.clear().await;
+
+            session
+                .insert(SESSION_REDIRECT_KEY, redirect_path)
+                .await
+                .map_err(|e| {
+                    debug!("Couldn't store redirect for user: {e:?}");
+                    Urls::Home.redirect_with_query(HashMap::from([(
+                        "error",
+                        "An error storing your session occurred!",
+                    )]))
+                })?;
+            debug!("Not-logged-in-user tried to log in, how rude!");
+            Err(Urls::Login.redirect())
+        }
     }
 }
 
-#[derive(Template, WebTemplate)]
-#[template(path = "dashboard.html")]
-pub(crate) struct DashboardTemplate /*<'a>*/ {
-    // name: &'a str,
-    pub user_is_admin: bool,
-}
-
-pub(crate) async fn dashboard(
-    State(state): State<GoatState>,
+pub(crate) async fn dashboard_redirect(
     mut session: Session,
     OriginalUri(path): OriginalUri,
-) -> Result<DashboardTemplate, Redirect> {
-    let user = check_logged_in(&mut session, path, state).await?;
-
-    Ok(DashboardTemplate {
-        user_is_admin: user.admin,
-    })
+) -> Result<Redirect, Redirect> {
+    check_logged_in(&mut session, path).await?;
+    Ok(Urls::ZonesList.redirect())
 }
 
 pub fn new() -> Router<GoatState> {
+    // all of these are prefixed with '/ui/'
     Router::new()
-        .route("/", get(dashboard))
+        .route("/", get(dashboard_redirect))
         .route("/zones/{id}", get(zone_view))
-        .route("/zones/list", get(zones_list))
+        .route("/zones", get(zones_list))
         .route("/zones/new", post(zones::zones_new_post))
         .route("/profile", get(profile::user_profile_get))
         .nest("/settings", user_settings::router())

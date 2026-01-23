@@ -1,14 +1,13 @@
 [package]
 name = "goatns-macros"
-version = "0.0.1"
-categories = ["network-programming"]
-edition = "2024"
+version = "0.0.2"
+categories = { workspace = true }
+edition = { workspace = true }
 keywords = ["macros"]
-license = "MIT"
-readme = "README.md"
-repository = "https://github.com/yaleman/goatns.git"
+license = { workspace = true }
+readme = { workspace = true }
+repository = { workspace = true }
 description = "Macros for the GoatNS Project"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 proc-macro = true

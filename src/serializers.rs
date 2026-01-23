@@ -1,9 +1,7 @@
-use serde::{de, Serializer};
-use tracing::{error, trace};
-
-use std::net::{IpAddr, Ipv6Addr};
-
 use crate::enums::ContactDetails;
+use serde::{Serializer, de};
+use std::net::{IpAddr, Ipv6Addr};
+use tracing::{error, trace};
 
 /// Convert a u32 to a string representation of an ipv4 address
 pub fn a_to_ip<S>(address: &u32, s: S) -> Result<S::Ok, S::Error>

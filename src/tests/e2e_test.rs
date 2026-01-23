@@ -6,7 +6,10 @@ mod tests {
     use hickory_resolver::{Resolver, config::*};
     use std::env;
     use std::net::*;
+    use tracing::info;
 
+    use crate::enums::RecordType;
+    use crate::logging::test_logging;
     use crate::servers::udp_server;
     use crate::tests::utils::wait_for_server;
 
@@ -16,6 +19,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_full_run() -> Result<(), std::io::Error> {
+        test_logging().await;
+        crate::init_crypto();
+
         if in_github_actions() {
             eprintln!("Skipping this test because it won't work in GHA");
             return Ok(());
@@ -25,7 +31,18 @@ mod tests {
             "./examples/test_config/goatns-test.json".to_string(),
         ))?;
 
-        println!("Config as loaded");
+        println!("Config as loaded: {:?}", config.read().await);
+
+        let db_path = tempfile::tempdir()?;
+        println!("Using temp dir for db path: {}", db_path.path().display());
+        let mut cw = config.write().await;
+
+        cw.db_path = db_path
+            .path()
+            .with_file_name("goatns-test-e2e.db")
+            .display()
+            .to_string();
+        cw.commit().await;
 
         println!("{:?}", config.read().await);
 
@@ -39,12 +56,15 @@ mod tests {
             agent_sender.clone(),
         ));
 
-        println!("Starting database connection pool");
+        println!(
+            "Starting database connection pool at {}",
+            config.read().await.db_path
+        );
         let connpool = crate::db::get_conn(config.read().await)
             .await
             .expect("Failed to get connpool");
 
-        println!("Starting datastore");
+        info!("Starting datastore");
 
         // start all the things!
         let datastore_manager = tokio::spawn(crate::datastore::manager(
@@ -54,7 +74,7 @@ mod tests {
             None,
         ));
 
-        println!("Starting API Server");
+        info!("Starting API Server");
         let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
         let apiserver = crate::web::build(
             datastore_tx.clone(),
@@ -65,7 +85,7 @@ mod tests {
         .await
         .expect("Failed to build API server");
 
-        println!("Building test run server struct");
+        info!("Building test run server struct");
         let _ = crate::servers::Servers::build(agent_sender)
             .with_datastore(datastore_manager)
             .with_udpserver(udpserver)
@@ -125,9 +145,7 @@ mod tests {
         let response = match resolver
             .lookup(
                 "_mqtt._http.hello.goat",
-                hickory_resolver::proto::rr::RecordType::Unknown(
-                    crate::enums::RecordType::URI as u16,
-                ),
+                hickory_resolver::proto::rr::RecordType::Unknown(RecordType::URI as u16),
             )
             .await
         {

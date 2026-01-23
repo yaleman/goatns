@@ -1,16 +1,18 @@
+mod cli;
 mod config;
 mod db;
 mod doh;
 mod e2e_test;
 mod enums;
+pub(crate) mod prelude;
 mod resourcerecord;
 mod test_api;
 pub mod test_harness;
 mod utils;
 
-use crate::config::test_logging;
-use crate::db::test::test_get_sqlite_memory;
 use crate::db::*;
+use prelude::*;
+
 use crate::enums::{RecordClass, RecordType};
 use crate::resourcerecord::{InternalResourceRecord, LocRecord, NameAsBytes};
 use crate::tests::test_harness::*;
@@ -21,7 +23,7 @@ use ipnet::IpNet;
 use packed_struct::prelude::*;
 use std::net::IpAddr;
 use std::str::FromStr;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace, warn};
 
 #[test]
 /// test my assumptions about ipnet things
@@ -55,7 +57,7 @@ fn test_resourcerecord_short_name_to_bytes() {
 }
 #[tokio::test]
 async fn test_name_as_bytes_compressed() {
-    let _ = test_logging().await;
+    test_logging().await;
     let rdata = "cheese.hello.world".as_bytes();
     let compress_ref = "zing.hello.world".as_bytes().to_vec();
     assert_eq!(
@@ -664,17 +666,16 @@ async fn test_question_from_bytes() {
 #[tokio::test]
 /// this test checks that all TTLs in the record are the same when we set normalise_ttls = true
 async fn test_normalize_ttls() {
-    // use crate::zones::FileZoneRecord;
+    test_logging().await;
     let pool = test_get_sqlite_memory().await;
 
-    start_db(&pool).await.expect("failed to start DB");
     import_test_zone_file(&pool)
         .await
         .expect("failed to import test zone file");
 
-    let response = get_records(
+    let response = entities::records_merged::Entity::get_records(
         &pool,
-        "ttltest.hello.goat".to_string(),
+        "ttltest.hello.goat",
         RecordType::A,
         RecordClass::Internet,
         true,
@@ -682,29 +683,28 @@ async fn test_normalize_ttls() {
     .await
     .expect("Failed to query records");
 
-    print!("Checking that we got three records...");
-    println!("Response:");
+    info!("Checking that we got three records...");
+    info!("Response:");
     for re in response.iter() {
-        println!("{re:?}");
+        info!("{re:?}");
     }
     assert_eq!(response.iter().len(), 3);
-    println!(" OK");
 
     // first we just check we got three records from the db
     let mut found_records: Vec<u32> = vec![];
     for record in response {
-        println!("found record {record:?}");
-        if let InternalResourceRecord::A { ttl, .. } = record {
-            if !found_records.contains(&ttl) {
-                found_records.push(ttl);
+        info!("found record {record:?}");
+        if record.rrtype == RecordType::A as u16 {
+            if !found_records.contains(&record.ttl) {
+                found_records.push(record.ttl);
             }
         } else {
-            println!("We found a record that wasn't an A record, that's cool I guess?")
+            warn!("We found a record that wasn't an A record, that's cool I guess?")
         }
     }
-    print!("Checking that we found a single ttl...");
+    info!("Checking that we found a single ttl...");
     assert!(found_records.len() == 1);
-    println!(" OK");
+    info!(" OK");
 }
 
 #[tokio::test]
@@ -713,14 +713,13 @@ async fn test_dont_normalize_ttls() {
     // use crate::zones::FileZoneRecord;
     let pool = test_get_sqlite_memory().await;
 
-    start_db(&pool).await.expect("Failed to start DB");
     import_test_zone_file(&pool)
         .await
         .expect("Failed to import zone file");
 
-    let response = get_records(
+    let response = entities::records_merged::Entity::get_records(
         &pool,
-        "ttltest.hello.goat".to_string(),
+        "ttltest.hello.goat",
         RecordType::A,
         RecordClass::Internet,
         false,
@@ -736,9 +735,9 @@ async fn test_dont_normalize_ttls() {
     let mut found_records: Vec<u32> = vec![];
     for record in response {
         println!("found record {record:?}");
-        if let InternalResourceRecord::A { ttl, .. } = record {
-            if !found_records.contains(&ttl) {
-                found_records.push(ttl);
+        if record.rrtype == RecordType::A as u16 {
+            if !found_records.contains(&record.ttl) {
+                found_records.push(record.ttl);
             }
         } else {
             println!("We found a record that wasn't an A record, that's cool I guess?")

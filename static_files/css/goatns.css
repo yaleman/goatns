@@ -9,3 +9,30 @@
 .nav-icon {
     height: 1.5em;
 }
+
+.zone-record-row {
+    cursor: pointer;
+}
+
+.zone-record-name {
+    max-width: 18rem;
+}
+
+@media (max-width: 576px) {
+    .zone-record-name {
+        max-width: 12rem;
+    }
+}
+
+.goatns-toggler {
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 0.35rem 0.5rem;
+}
+
+.goatns-toggler-bar {
+    display: block;
+    width: 1.25rem;
+    height: 2px;
+    margin: 0.2rem 0;
+    background-color: #f8f9fa;
+}

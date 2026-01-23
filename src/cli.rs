@@ -1,6 +1,8 @@
 //! Code related to CLI things
 //!
 
+use crate::config::ConfigFile;
+use crate::datastore::Command;
 use clap::*;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Confirm, Input};
@@ -8,10 +10,6 @@ use tokio::io::AsyncWriteExt;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
-
-use crate::config::ConfigFile;
-use crate::datastore::Command;
-use crate::zones::FileZone;
 
 #[derive(Parser, Clone)]
 pub struct SharedOpts {
@@ -90,15 +88,13 @@ impl Cli {
 }
 
 /// Output a default configuration file, based on the [crate::config::ConfigFile] object.
-pub fn default_config() {
+pub fn default_config() -> String {
     let output = match serde_json::to_string_pretty(&ConfigFile::default()) {
         Ok(value) => value,
-        Err(_) => {
-            error!("I don't know how, but we couldn't parse our own config file def.");
-            "".to_string()
-        }
+        Err(_) => "Failed to serialize default config file".to_string(),
     };
     println!("{output}");
+    output
 }
 
 /// Dump a zone to a file
@@ -122,22 +118,17 @@ pub async fn export_zone_file(
     };
     debug!("Sent request to datastore");
 
-    let zone: Option<FileZone> = match rx_oneshot.await {
-        Ok(value) => value,
-        Err(err) => return Err(format!("rx from ds failed {err:?}")),
-    };
-    eprintln!("Got filezone: {zone:?}");
+    let zone = rx_oneshot
+        .await
+        .map_err(|err| format!("rx from ds failed {err:?}"))?;
 
     let zone_bytes = match zone {
         None => {
             warn!("Couldn't find the zone {zone_name}");
-            return Ok(());
+            return Err(format!("Zone {zone_name} not found"));
         }
-        Some(zone) => serde_json::to_string_pretty(&zone).map_err(|err| {
-            format!(
-                "Failed to serialize zone {zone_name} to json: {err:?}"
-            )
-        })?,
+        Some(zone) => serde_json::to_string_pretty(&zone)
+            .map_err(|err| format!("Failed to serialize zone {zone_name} to json: {err:?}"))?,
     };
 
     // open the file
@@ -181,7 +172,6 @@ pub async fn import_zones(
         sleep(std::time::Duration::from_micros(500)).await;
     }
     Ok(())
-    // rx_oneshot.await.map_err(|e| format!("Failed to receive result: {e:?}"))
 }
 
 /// Presents the CLI UI to add an admin user.

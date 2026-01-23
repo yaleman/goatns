@@ -1,16 +1,16 @@
-use std::collections::HashMap;
-
+use crate::db::entities;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use axum::http::StatusCode;
-use axum::response::Redirect;
+use axum::response::{Html, Redirect};
 use chrono::{DateTime, TimeDelta, Utc};
 use rand::distr::{Alphanumeric, SampleString};
+use sea_orm::ActiveValue::{NotSet, Set};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use tracing::{debug, trace};
-
-use crate::db::TokenSearchRow;
+use uuid::Uuid;
 
 /// URLs for the web interface
 #[derive(Copy, Clone)]
@@ -19,10 +19,10 @@ pub(crate) enum Urls {
     Home,
     /// Login page
     Login,
-    /// User Dashboard
-    Dashboard,
     /// List of zones
     ZonesList,
+    /// A specific zone
+    Zone(Uuid),
     /// Admin UI
     Admin,
     /// Settings page
@@ -31,16 +31,18 @@ pub(crate) enum Urls {
     SettingsApiTokens,
 }
 
-impl AsRef<str> for Urls {
-    fn as_ref(&self) -> &str {
+impl std::fmt::Display for Urls {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Urls::Home => "/",
-            Urls::Login => "/auth/login",
-            Urls::Admin => "/ui/admin",
-            Urls::Dashboard => "/ui",
-            Urls::ZonesList => "/ui/zones/list",
-            Urls::Settings => "/ui/settings",
-            Urls::SettingsApiTokens => "/ui/settings/api_tokens",
+            Urls::Home => write!(f, "/"),
+            Urls::Login => write!(f, "/auth/login"),
+            Urls::Admin => write!(f, "/ui/admin"),
+            Urls::ZonesList => write!(f, "/ui/zones"),
+            Urls::Zone(id) => {
+                write!(f, "/ui/zones/{}", id.as_hyphenated())
+            }
+            Urls::Settings => write!(f, "/ui/settings"),
+            Urls::SettingsApiTokens => write!(f, "/ui/settings/api_tokens"),
         }
     }
 }
@@ -48,7 +50,7 @@ impl AsRef<str> for Urls {
 impl Urls {
     /// Get the URL for the given enum
     pub fn redirect(self) -> Redirect {
-        Redirect::to(self.as_ref())
+        Redirect::to(&self.to_string())
     }
 
     /// Redirect to a url with query params
@@ -61,7 +63,7 @@ impl Urls {
             .map(|(key, value)| format!("{}={}", key.to_string(), value.to_string()))
             .collect::<Vec<String>>()
             .join("&");
-        let url = format!("{}?{}", self.as_ref(), queryparts);
+        let url = format!("{}?{}", self, queryparts);
         Redirect::to(&url)
     }
 }
@@ -80,8 +82,17 @@ pub struct ApiToken {
     pub expiry: Option<DateTime<Utc>>,
 }
 
+pub fn generate_token_key() -> String {
+    let token_key = Alphanumeric.sample_string(&mut rand::rng(), 12);
+    format!("GA{token_key}")
+}
+
 /// Create an API token
-pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) -> ApiToken {
+pub fn create_api_token(
+    api_cookie_secret: &[u8],
+    lifetime: i32,
+    userid: Uuid,
+) -> (String, entities::user_tokens::ActiveModel) {
     let issued = Utc::now();
     let expiry = match lifetime {
         -1 => None,
@@ -107,21 +118,27 @@ pub fn create_api_token(api_cookie_secret: &[u8], lifetime: i32, userid: i64) ->
     let password_hash_string = password_hash.to_string();
     debug!("Done hashing password");
 
-    let token_key = Alphanumeric.sample_string(&mut rand::rng(), 12);
-    let token_key = format!("GA{token_key}");
-    ApiToken {
-        token_key,
+    (
         token_secret,
-        token_hash: password_hash_string,
-        issued,
-        expiry,
-    }
+        entities::user_tokens::ActiveModel {
+            id: NotSet,
+            key: Set(generate_token_key()),
+            hash: Set(password_hash_string),
+            issued: Set(issued),
+            expiry: Set(expiry),
+            name: Set("test token".to_string()),
+            userid: Set(userid),
+        },
+    )
 }
 
 /// validate an API token matches our thingamajig
-pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result<(), String> {
+pub fn validate_api_token(
+    token: &entities::user_tokens::Model,
+    payload_token: &str,
+) -> Result<(), String> {
     let passwordhash =
-        match argon2::PasswordHash::parse(&token.tokenhash, argon2::password_hash::Encoding::B64) {
+        match argon2::PasswordHash::parse(&token.hash, argon2::password_hash::Encoding::B64) {
             Ok(val) => {
                 #[cfg(test)]
                 println!("Hashed payload: {val:?}");
@@ -130,7 +147,7 @@ pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result
             Err(err) => {
                 return Err(format!(
                     "Failed to parse token ({:?}) into hash: {err:?}",
-                    token.tokenhash
+                    token.hash
                 ));
             }
         };
@@ -139,9 +156,11 @@ pub fn validate_api_token(token: &TokenSearchRow, payload_token: &str) -> Result
         .map_err(|e| format!("validation error: {e:?}"))
 }
 
-pub async fn handler_404() -> (StatusCode, &'static str) {
+pub async fn handler_404() -> (StatusCode, Html<&'static str>) {
     (
         StatusCode::NOT_FOUND,
-        "<h1>Oh no!</h1><p>You've found a 404, try <a href='#' onclick='history.back();'>going back</a> or <a href='/'>home!</a></p>",
+        Html(
+            "<h1>Oh no!</h1><p>You've found a 404, try <a href='#' onclick='history.back();'>going back</a> or <a href='/'>home!</a></p>",
+        ),
     )
 }

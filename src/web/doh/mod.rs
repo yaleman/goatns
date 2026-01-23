@@ -1,22 +1,23 @@
+use axum::Router;
 use axum::body::{Body, Bytes};
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
-use axum::Router;
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use packed_struct::PackedStruct;
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 use std::str::from_utf8;
 use tracing::{debug, error, trace};
 
-use crate::db::get_all_fzr_by_name;
+use crate::db::entities;
 use crate::enums::{Rcode, RecordClass, RecordType};
 use crate::reply::Reply;
 use crate::resourcerecord::InternalResourceRecord;
-use crate::servers::{parse_query, QueryProtocol};
-use crate::web::GoatState;
-use crate::{Header, Question, HEADER_BYTES};
+use crate::servers::{QueryProtocol, parse_query};
+use crate::web::{GoatState, GoatStateTrait};
+use crate::{HEADER_BYTES, Header, Question};
 
 // TODO: when responding to requests and have an empty response, if we can find the root zone, include the SOA minimum
 
@@ -166,6 +167,15 @@ pub(crate) fn response_500() -> Response {
         .into_response()
 }
 
+pub(crate) fn response_400() -> Response {
+    (
+        StatusCode::BAD_REQUEST,
+        [(axum::http::header::CACHE_CONTROL, "max-age=1")],
+        "",
+    )
+        .into_response()
+}
+
 pub async fn handle_get(
     State(state): State<GoatState>,
     headers: HeaderMap,
@@ -201,17 +211,28 @@ pub async fn handle_get(
         id = query.id;
     }
 
-    let mut read_txn = state.read().await.connpool.begin().await.map_err(|err| {
+    if qname.is_empty() {
+        return Err(response_400());
+    }
+
+    let rrtype_value = RecordType::from(rrtype.as_str());
+    if rrtype_value == RecordType::InvalidType {
+        return Err(response_400());
+    }
+
+    let read_txn = state.get_db_txn().await.map_err(|err| {
         error!("Failed to get DB connection: {err:?}");
         response_500()
     })?;
 
-    let records = match get_all_fzr_by_name(
-        &mut read_txn,
-        &qname,
-        RecordType::from(rrtype.as_str()) as u16,
-    )
-    .await
+    let records = match entities::records_merged::Entity::find()
+        .filter(
+            entities::records_merged::Column::Name
+                .eq(qname.clone())
+                .and(entities::records_merged::Column::Rrtype.eq(rrtype_value as u16)),
+        )
+        .all(&read_txn)
+        .await
     {
         Ok(value) => value,
         Err(error) => {
@@ -222,16 +243,13 @@ pub async fn handle_get(
 
     trace!("Completed record request...");
 
-    let ttl = records.iter().map(|r| r.ttl).min();
-    let ttl = match ttl {
-        Some(val) => val.to_owned(),
+    let min_ttl = match records.iter().map(|r| r.ttl).min() {
+        Some(val) => val,
         None => {
             trace!("Failed to get minimum TTL from query, using 1");
             1
         }
     };
-
-    trace!("Returned records: {records:?}");
 
     match response_type {
         ResponseType::Invalid => Err(response_500()),
@@ -240,8 +258,8 @@ pub async fn handle_get(
                 .iter()
                 .map(|rec| JSONRecord {
                     name: rec.name.clone(),
-                    qtype: RecordType::from(rec.rrtype.clone()) as u16,
-                    ttl: rec.ttl.to_owned(),
+                    qtype: rec.rrtype,
+                    ttl: rec.ttl,
                     data: Some(rec.rdata.clone()),
                 })
                 .collect();
@@ -256,7 +274,7 @@ pub async fn handle_get(
                 client_dnssec_disable: false,
                 question: vec![JSONQuestion {
                     name: qname,
-                    qtype: RecordType::from(rrtype) as u16,
+                    qtype: rrtype_value as u16,
                 }],
                 ..Default::default()
             };
@@ -269,7 +287,7 @@ pub async fn handle_get(
             let response_builder = axum::response::Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-type", "application/dns-json")
-                .header("Cache-Control", format!("max-age={ttl}"));
+                .header("Cache-Control", format!("max-age={min_ttl}"));
             // TODO: add handler for DNSSEC responses
             response_builder.body(Body::from(response)).map_err(|err| {
                 error!("Failed to turn DoH GET request into JSON: {err:?}");
@@ -314,7 +332,7 @@ pub async fn handle_get(
                 Ok(value) => axum::response::Response::builder()
                     .status(StatusCode::OK)
                     .header("Content-type", "application/dns-message")
-                    .header("Cache-Control", format!("max-age={ttl}"))
+                    .header("Cache-Control", format!("max-age={min_ttl}"))
                     .body(Body::from(value))
                     .map_err(|err| {
                         error!("Failed to turn DoH GET request into bytes: {err:?}");

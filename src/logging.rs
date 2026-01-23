@@ -1,17 +1,14 @@
 //! Logging and OTEL related thingies
 
-use std::{env, time::Duration};
-
 use init_tracing_opentelemetry::tracing_subscriber_ext;
 use opentelemetry::{KeyValue, global, trace::TracerProvider as _};
-
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
     Resource,
     trace::{Sampler, SdkTracerProvider},
 };
-
 use opentelemetry_semantic_conventions::attribute::SERVICE_VERSION;
+use std::{env, time::Duration};
 use tracing::Subscriber;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::EnvFilter;
@@ -55,6 +52,24 @@ where
                 .with_timer(tracing_subscriber::fmt::time::uptime()),
         )
     }
+}
+
+#[cfg(test)]
+pub async fn test_logging() {
+    use crate::config::{ConfigFile, setup_logging};
+
+    let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "debug".to_string());
+
+    let config = ConfigFile {
+        log_level,
+        ..ConfigFile::default()
+    };
+
+    let _ = setup_logging(
+        concread::cowcell::asynch::CowCell::new(config).read().await,
+        false,
+    )
+    .await;
 }
 
 #[allow(dead_code)]

@@ -1,21 +1,22 @@
+#![deny(clippy::disallowed_methods)]
+
 use clap::Parser;
 use goatns::cli::{Cli, Commands, add_admin_user, default_config, export_zone_file, import_zones};
-use goatns::enums::SystemState;
-use goatns::error::GoatNsError;
-use goatns::utils::start_channels;
-use sqlx::SqlitePool;
-use std::io;
-use std::time::Duration;
-use tracing::{debug, error, info};
-
 use goatns::config::{ConfigFile, setup_logging};
 use goatns::datastore;
 use goatns::db;
+use goatns::enums::SystemState;
+use goatns::error::GoatNsError;
 use goatns::servers;
+use goatns::utils::start_channels;
+use sea_orm::DatabaseConnection;
+use std::io;
+use std::time::Duration;
 use tokio::time::sleep;
+use tracing::{debug, error, info};
 
 async fn run() -> Result<(), GoatNsError> {
-    // let clap_results = clap_parser();
+    goatns::init_crypto();
 
     let cli = Cli::parse();
 
@@ -68,11 +69,9 @@ async fn run() -> Result<(), GoatNsError> {
     let (agent_tx, datastore_sender, datastore_receiver) = start_channels();
 
     // start up the DB
-    let connpool: SqlitePool = db::get_conn(config.read().await)
+    let connpool: DatabaseConnection = db::get_conn(config.read().await)
         .await
         .map_err(|err| GoatNsError::StartupError(format!("DB Setup failed: {err:?}")))?;
-
-    db::start_db(&connpool).await?;
 
     // start all the things!
 
@@ -133,7 +132,6 @@ async fn run() -> Result<(), GoatNsError> {
     };
 
     if let SystemState::Server = next_step {
-        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
         let udpserver = tokio::spawn(servers::udp_server(
             config.read().await,
             datastore_sender.clone(),

@@ -1,3 +1,11 @@
+use crate::config::ConfigFile;
+use crate::datastore::Command;
+use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
+use crate::error::GoatNsError;
+use crate::reply::{Reply, reply_any, reply_builder, reply_nxdomain};
+use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
+use crate::zones::ZoneRecord;
+use crate::{HEADER_BYTES, Header, OpCode, Question, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 use concread::cowcell::asynch::CowCellReadTxn;
 use packed_struct::prelude::*;
 use std::io::Error;
@@ -11,15 +19,6 @@ use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
 use tracing::{debug, error, field, info, instrument, trace, warn};
-
-use crate::config::ConfigFile;
-use crate::datastore::Command;
-use crate::enums::{Agent, AgentState, PacketType, Rcode, RecordClass, RecordType};
-use crate::error::GoatNsError;
-use crate::reply::{Reply, reply_any, reply_builder, reply_nxdomain};
-use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
-use crate::zones::ZoneRecord;
-use crate::{HEADER_BYTES, Header, OpCode, Question, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
 
 pub(crate) enum ChaosResult {
     Refused(Reply),
@@ -411,6 +410,7 @@ pub async fn parse_query(
         crate::packet_dumper::dump_bytes(
             buf[0..len].into(),
             crate::packet_dumper::DumpType::ClientRequest,
+            None,
         )
         .await;
     }
@@ -576,6 +576,7 @@ pub struct Servers {
     pub tcpserver: Option<JoinHandle<Result<(), Error>>>,
     pub apiserver: Option<JoinHandle<Result<(), Error>>>,
     pub agent_tx: broadcast::Sender<AgentState>,
+    pub datastore_tx: Option<mpsc::Sender<crate::datastore::Command>>,
 }
 
 impl Default for Servers {
@@ -587,6 +588,7 @@ impl Default for Servers {
             tcpserver: None,
             apiserver: None,
             agent_tx,
+            datastore_tx: None,
         }
     }
 }
@@ -619,6 +621,12 @@ impl Servers {
     pub fn with_udpserver(self, udpserver: JoinHandle<Result<(), Error>>) -> Self {
         Self {
             udpserver: Some(udpserver),
+            ..self
+        }
+    }
+    pub fn with_datastore_tx(self, datastore_tx: mpsc::Sender<crate::datastore::Command>) -> Self {
+        Self {
+            datastore_tx: Some(datastore_tx),
             ..self
         }
     }

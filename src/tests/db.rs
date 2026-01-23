@@ -1,57 +1,42 @@
+use super::prelude::*;
+
 use chrono::{TimeDelta, Utc};
+use sea_orm::{ActiveModelTrait, EntityTrait, IntoActiveModel, PaginatorTrait, TransactionTrait};
 
-use crate::db::test::test_get_sqlite_memory;
-use crate::db::{cron_db_cleanup, get_zones_with_txn, start_db, DBEntity, ZoneOwnership};
-use crate::error::GoatNsError;
-use crate::tests::test_harness;
+use crate::db::{cron_db_cleanup, entities};
+use crate::tests::test_harness::{self, create_test_user};
+use crate::web::utils::generate_token_key;
 
-#[test]
-fn zoneownership_serde() {
-    let test_str = r#"{"id":1,"userid":1,"zoneid":1}"#;
-
-    let zo: ZoneOwnership = serde_json::from_str(test_str).expect("failed to serde");
-    assert_eq!(zo.id, Some(1));
-
-    let test_str = r#"{"userid":1,"zoneid":1}"#;
-    let zo: ZoneOwnership = serde_json::from_str(test_str).expect("failed to serde");
-    assert_eq!(zo.id, None);
-
-    let res = serde_json::to_string(&zo).expect("failed to serde");
-
-    assert_eq!(res, test_str);
-}
 #[tokio::test]
 async fn userauthtoken_saves() -> Result<(), GoatNsError> {
-    use crate::db::UserAuthToken;
-
     let pool = test_get_sqlite_memory().await;
 
-    println!("Starting DB");
-    start_db(&pool).await?;
-
-    test_harness::create_test_user(&pool).await?;
+    let user = create_test_user(&pool).await;
 
     println!("Creating UAT Object");
 
-    let uat = UserAuthToken {
-        name: "Test Token".to_string(),
-        id: None,
-        issued: Utc::now(),
-        expiry: None,
-        userid: 1,
-        tokenkey: "tokenkey".to_string(),
-        tokenhash: "hello world".to_string(),
+    let uat = entities::user_tokens::ActiveModel {
+        name: Set("Test Token".to_string()),
+        id: NotSet,
+        issued: Set(Utc::now()),
+        expiry: Set(Some(Utc::now() + TimeDelta::days(1))),
+        userid: Set(user.id),
+        key: Set(generate_token_key()),
+        hash: Set("hello world".to_string()),
     };
     println!("Saving UAT Object to DB: {uat:?}");
 
-    uat.save(&pool).await?;
+    let uat = uat.insert(&pool).await?;
 
     println!("Saving duplicate UAT Object to DB: {uat:?}");
-    uat.save(&pool)
+    let uat2 = uat.clone().into_active_model();
+    uat2.insert(&pool)
         .await
         .expect_err("Creating a duplicate token value should fail!");
+
     println!("Saving duplicate UAT Object to DB: {uat:?}");
-    uat.save(&pool)
+    let uat2 = uat.clone().into_active_model();
+    uat2.insert(&pool)
         .await
         .expect_err("Creating a duplicate token value should fail!");
 
@@ -61,57 +46,60 @@ async fn userauthtoken_saves() -> Result<(), GoatNsError> {
 }
 #[tokio::test]
 async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
-    use crate::db::UserAuthToken;
-
     let pool = test_get_sqlite_memory().await;
 
-    println!("Starting DB");
-    start_db(&pool).await?;
-
-    test_harness::create_test_user(&pool).await?;
+    let user = test_harness::create_test_user(&pool).await;
 
     println!("Creating UAT Objects");
     let tokenhash = "hello world".to_string();
-    #[allow(clippy::expect_used)]
     let expiry = Utc::now() - TimeDelta::try_hours(60).expect("how did this fail?");
-    let uat = UserAuthToken {
-        id: None,
-        name: "Test Token".to_string(),
-        issued: Utc::now(),
-        expiry: Some(expiry),
-        userid: 1,
-        tokenkey: "hello world".to_string(),
-        tokenhash,
+    let uat = entities::user_tokens::ActiveModel {
+        id: NotSet,
+        name: Set("Test Token".to_string()),
+        issued: Set(Utc::now()),
+        expiry: Set(Some(expiry)),
+        userid: Set(user.id),
+        key: Set(generate_token_key()),
+        hash: Set(tokenhash),
     };
     println!("Saving UAT Object 1 to DB: {uat:?}");
 
-    uat.save(&pool).await?;
+    uat.insert(&pool).await.expect("Failed to save token");
     let tokenhash = "hello world this should exist".to_string();
-    #[allow(clippy::expect_used)]
     let expiry = Utc::now() + TimeDelta::try_hours(60).expect("how did this fail?");
-    let uat = UserAuthToken {
-        id: None,
-        name: "Test Token".to_string(),
-        issued: Utc::now(),
-        expiry: Some(expiry),
-        userid: 1,
-        tokenkey: "hello world".to_string(),
-        tokenhash,
+    let uat = entities::user_tokens::ActiveModel {
+        id: NotSet,
+        name: Set("Test Token".to_string()),
+        issued: Set(Utc::now()),
+        expiry: Set(Some(expiry)),
+        userid: Set(user.id),
+        key: Set(generate_token_key()),
+        hash: Set(tokenhash),
     };
     println!("Saving UAT Object 2 to DB: {uat:?}");
-    let res = uat.save(&pool).await;
-    println!("result: {res:?}");
+    let _res = uat
+        .insert(&pool)
+        .await
+        .expect("Failed to insert second object");
 
     print!("Starting DB Cleanup... ");
-    UserAuthToken::cleanup(&pool).await?;
+    entities::user_tokens::Entity::cleanup(&pool).await?;
     println!("Done!");
 
-    match UserAuthToken::get(&pool, 1).await {
-        Ok(uat) => panic!("We shouldn't find this! {uat:?}"),
-        Err(err) => println!("Didn't find the UserAuthToken after cleanup, is good. Got {err:?}"),
+    match entities::user_tokens::Entity::find_by_id(1i64)
+        .one(&pool)
+        .await?
+    {
+        Some(uat) => panic!("We shouldn't find this! {uat:?}"),
+        None => println!("Didn't find the UserAuthToken after cleanup, is good."),
     };
 
-    assert!(UserAuthToken::get(&pool, 2).await.is_ok());
+    assert!(
+        entities::user_tokens::Entity::find_by_id(2i64)
+            .one(&pool)
+            .await?
+            .is_some()
+    );
 
     println!("Done!");
 
@@ -122,10 +110,7 @@ async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
 async fn test_cron_db_cleanup() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
 
-    println!("Starting DB");
-    start_db(&pool).await?;
-
-    test_harness::create_test_user(&pool).await?;
+    test_harness::create_test_user(&pool).await;
     println!("doing cleanup");
     cron_db_cleanup(pool, core::time::Duration::from_micros(100), Some(2)).await;
     println!("done with cleanup cycle");
@@ -137,23 +122,27 @@ async fn test_cron_db_cleanup() -> Result<(), GoatNsError> {
 async fn testget_zones_with_txn() -> Result<(), GoatNsError> {
     let pool = test_get_sqlite_memory().await;
 
-    println!("Starting DB");
-    start_db(&pool).await?;
+    test_harness::create_test_user(&pool).await;
 
-    test_harness::create_test_user(&pool).await?;
-
-    let mut txn = pool.begin().await?;
-    let zones = get_zones_with_txn(&mut txn, 0, 10).await?;
+    let txn = pool.begin().await?;
+    let zones = entities::zones::Entity::find()
+        .count(&txn)
+        .await
+        .map_err(|e| GoatNsError::Generic(format!("Failed to get zones from database: {e:?}")))?;
     drop(txn);
 
-    assert!(zones.is_empty());
+    assert_eq!(zones, 0);
 
     test_harness::import_test_zone_file(&pool).await?;
 
-    let mut txn = pool.begin().await?;
-    let zones = get_zones_with_txn(&mut txn, 100, 0).await?;
+    let txn = pool.begin().await?;
+    let zones = entities::zones::Entity::find()
+        .count(&txn)
+        .await
+        .map_err(|e| GoatNsError::Generic(format!("Failed to get zones from database: {e:?}")))?;
+    drop(txn);
 
-    assert!(!zones.is_empty());
+    assert!(zones > 0);
 
     Ok(())
 }

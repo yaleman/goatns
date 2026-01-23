@@ -17,8 +17,8 @@
 <form method="POST" action="/ui/zones/new">
     <div class="row">
         <div class="col">
-        <input type="text" class="form-control" id="name" name="name"
-            placeholder="New Zone" required>
+            <input type="text" class="form-control" id="name" name="name"
+                placeholder="New Zone" required>
         </div>
         <div class="col">
             <button type="submit" class="btn btn-primary mb-2">Create</button>
@@ -34,7 +34,7 @@
     {% for zone in zones %}
     <tr>
         <td class="text-truncate"><a
-                href="/ui/zones/{{zone.id.unwrap()}}">{{zone.name}}</a></td>
+                href="/ui/zones/{{zone.id}}">{{zone.name}}</a></td>
         <td>{{zone.rname}}</td>
     </tr>
     {% endfor %}

@@ -5,6 +5,7 @@
 #![deny(clippy::await_holding_lock)]
 #![deny(clippy::complexity)]
 #![deny(clippy::correctness)]
+#![deny(clippy::disallowed_methods)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::needless_pass_by_value)]
 #![deny(clippy::panic)]
@@ -51,6 +52,11 @@ pub mod utils;
 #[macro_use]
 pub mod web;
 pub mod zones;
+
+// Ensure that the AWS-LC-Rust crypto provider is installed as the default for rustls
+pub fn init_crypto() {
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+}
 
 /// Internal limit of in-flight requests
 pub const MAX_IN_FLIGHT: usize = 512;

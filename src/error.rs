@@ -1,6 +1,5 @@
-use std::str::Utf8Error;
-
 use packed_struct::PackingError;
+use std::str::Utf8Error;
 
 /// When things go awry
 #[derive(Debug)]
@@ -26,6 +25,8 @@ pub enum GoatNsError {
     Generic(String),
     Regex(String),
     InvalidValue(String),
+    NotFound,
+    Serde(serde_json::Error),
 }
 
 impl From<regex::Error> for GoatNsError {
@@ -36,6 +37,12 @@ impl From<regex::Error> for GoatNsError {
 impl From<std::io::Error> for GoatNsError {
     fn from(error: std::io::Error) -> Self {
         GoatNsError::IoError(error)
+    }
+}
+
+impl From<serde_json::Error> for GoatNsError {
+    fn from(error: serde_json::Error) -> Self {
+        GoatNsError::Serde(error)
     }
 }
 

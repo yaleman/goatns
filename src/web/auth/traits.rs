@@ -1,10 +1,8 @@
+use super::CustomClaimType;
+use crate::web::utils::Urls;
 use axum::response::Redirect;
 use openidconnect::EndUserUsername;
 use tracing::error;
-
-use crate::web::utils::Urls;
-
-use super::CustomClaimType;
 
 pub trait CustomClaimTypeThings {
     fn get_displayname(&self) -> String;

@@ -1,3 +1,6 @@
+use crate::enums::ContactDetails;
+use crate::error::GoatNsError;
+use crate::web::utils::Urls;
 use axum_server::tls_rustls::RustlsConfig;
 use concread::cowcell::asynch::{CowCell, CowCellReadTxn, CowCellWriteTxn};
 use config::{Config, File};
@@ -15,10 +18,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use tracing::{error, trace};
 use url::Url;
-
-use crate::enums::ContactDetails;
-use crate::error::GoatNsError;
-use crate::web::utils::Urls;
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 /// Allow-listing ranges for making particular kinds of requests
@@ -49,7 +48,7 @@ pub struct ConfigFile {
     /// Enable a HINFO record at hinfo.goat
     pub enable_hinfo: bool,
     /// The location for the zone sqlite file
-    pub sqlite_path: String,
+    pub db_path: String,
     /// Where the JSON zone file is
     pub zone_file: Option<String>,
     /// List of "valid" TLDs - if this is empty let anything be created
@@ -69,7 +68,7 @@ pub struct ConfigFile {
     pub api_static_dir: String,
     /// Secret for cookie storage - it'll randomly generate on startup by default
     #[serde(default = "generate_cookie_secret", skip_serializing)]
-    api_cookie_secret: String,
+    pub api_cookie_secret: String,
     /// OAuth2 Resource server name
     pub oauth2_client_id: String,
     /// If your instance is behind a proxy/load balancer/whatever, you need to specify this, eg `https://example.com:12345`
@@ -94,10 +93,6 @@ pub struct ConfigFile {
     pub admin_contact: ContactDetails,
     /// Allow auto-provisioning of users
     pub user_auto_provisioning: bool,
-    // /// Allow disabling oauth2 under test/debug mode
-    // #[cfg(any(test, debug_assertions))]
-    // #[serde(default)]
-    // pub disable_oauth2: bool,
     /// If you want to export traces to an OTLP endpoint, set this to the endpoint
     pub otel_endpoint: Option<String>,
 
@@ -296,11 +291,8 @@ impl Default for ConfigFile {
             tcp_client_timeout: 5,
             enable_hinfo: false,
             allowed_tlds: vec![],
-            ip_allow_lists: IPAllowList {
-                // axfr: vec![],
-                shutdown: vec![],
-            },
-            sqlite_path: String::from("~/.cache/goatns.sqlite"),
+            ip_allow_lists: IPAllowList { shutdown: vec![] },
+            db_path: String::from("~/.cache/goatns.sqlite"),
             zone_file: None,
             enable_api: false,
             api_port: 9000,
@@ -321,8 +313,6 @@ impl Default for ConfigFile {
             sql_db_cleanup_seconds: 3600, // one hour
             admin_contact: Default::default(),
             user_auto_provisioning: false,
-            // #[cfg(any(test, debug_assertions))]
-            // disable_oauth2: false,
             otel_endpoint: None,
             cert_reload_interval_seconds: Some(300),
         }
@@ -364,8 +354,8 @@ impl From<Config> for ConfigFile {
         let oauth2_redirect_url = match oauth2_redirect_url {
             Some(mut url) => {
                 // update the URL with the final auth path
-                if !url.path().ends_with(Urls::Login.as_ref()) {
-                    url.set_path(Urls::Login.as_ref());
+                if !url.path().ends_with(&Urls::Login.to_string()) {
+                    url.set_path(&Urls::Login.to_string());
                 }
                 url
             }
@@ -378,12 +368,13 @@ impl From<Config> for ConfigFile {
                 #[allow(clippy::expect_used)]
                 let mut url =
                     Url::from_str(&baseurl).expect("Failed to parse known-sensible URL as URL");
-                url.set_path(Urls::Login.as_ref());
+                url.set_path(&Urls::Login.to_string());
                 url
             }
         };
 
         let mut otel_endpoint = None;
+        #[cfg(not(test))]
         if let Ok(val) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
             if !val.is_empty() {
                 otel_endpoint = Some(val);
@@ -412,9 +403,7 @@ impl From<Config> for ConfigFile {
             tcp_client_timeout: config
                 .get("tcp_client_timeout")
                 .unwrap_or(Self::default().tcp_client_timeout),
-            sqlite_path: config
-                .get("sqlite_path")
-                .unwrap_or(Self::default().sqlite_path),
+            db_path: config.get("sqlite_path").unwrap_or(Self::default().db_path),
             allowed_tlds: config
                 .get("allowed_tlds")
                 .unwrap_or(Self::default().allowed_tlds),
@@ -463,10 +452,6 @@ impl From<Config> for ConfigFile {
             user_auto_provisioning: config
                 .get("user_auto_provisioning")
                 .unwrap_or(Self::default().user_auto_provisioning),
-            // #[cfg(any(test, debug_assertions))]
-            // disable_oauth2: config
-            //     .get("disable_oauth2")
-            //     .unwrap_or(Self::default().disable_oauth2),
             otel_endpoint,
             cert_reload_interval_seconds: config
                 .get("cert_reload_interval_seconds")
@@ -479,8 +464,6 @@ impl FromStr for ConfigFile {
     type Err = String;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        // let res =Config::try_from(&input);
-
         let configfile = File::from_str(input, config::FileFormat::Json);
 
         let res = Config::builder()
@@ -515,7 +498,6 @@ pub async fn use_flexi_logger(
                 "hyper::client",
                 "rustls",
                 "h2::proto",
-                // "tower_http::trace::make_span",
                 "tokio_util::codec::framed_impl",
             ],
         }))
@@ -579,16 +561,6 @@ pub async fn setup_logging(
         otel_enabled: true,
         provider,
     })
-}
-
-#[cfg(test)]
-pub async fn test_logging() {
-    let config = ConfigFile {
-        log_level: "trace".to_string(),
-        ..ConfigFile::default()
-    };
-
-    let _ = setup_logging(CowCell::new(config).read().await, false).await;
 }
 
 /// A filter for log lines
