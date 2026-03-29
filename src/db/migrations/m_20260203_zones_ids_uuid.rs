@@ -142,7 +142,7 @@ impl MigrationTrait for Migration {
                     )
                     .await?;
                 db.execute_unprepared(
-                "INSERT INTO records_new (id, zoneid, name, ttl, rrtype, rclass, rdata)
+                    "INSERT INTO records_new (id, zoneid, name, ttl, rrtype, rclass, rdata)
                     SELECT record_id_map.new_id, zone_id_map.new_id, records.name, records.ttl,
                            records.rrtype, records.rclass, records.rdata
                     FROM records

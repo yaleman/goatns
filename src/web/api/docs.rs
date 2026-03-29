@@ -1,21 +1,34 @@
-use crate::{RecordClass, web::api::records::RecordForm};
-use utoipa::{Modify, OpenApi};
+use crate::{RecordClass, RecordType};
+use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
         super::auth::api_token_login,
         super::records::api_record_create,
+        super::records::api_record_update,
+        super::records::api_record_get,
+        super::records::api_record_delete,
+        super::zones::api_zone_create,
+        super::zones::api_zone_update,
+        super::zones::api_get,
+        super::zones::api_zone_delete,
     ),
     components(
         schemas(
             super::auth::AuthPayload,
             super::auth::AuthResponse,
-            RecordForm,
+            super::records::ApiRecordUpdate,
+            super::records::RecordForm,
+            super::zones::ApiZoneResponse,
+            super::zones::ZoneForm,
+            super::zones::ZoneUpdate,
+            crate::db::entities::records::Model,
+            crate::db::entities::zones::Model,
             RecordClass,
+            RecordType,
         )
     ),
-    modifiers(&SecurityAddon),
     tags(
         (name = "Authentication", description = "Authentication-related tasks"),
         (name = "Records", description = "DNS Record operations"),
@@ -24,17 +37,3 @@ use utoipa::{Modify, OpenApi};
 )]
 #[allow(dead_code)]
 pub(crate) struct ApiDoc;
-
-#[allow(dead_code)]
-pub(crate) struct SecurityAddon;
-
-impl Modify for SecurityAddon {
-    fn modify(&self, _openapi: &mut utoipa::openapi::OpenApi) {
-        // if let Some(components) = openapi.components.as_mut() {
-        //     components.add_security_scheme(
-        //         "api_key",
-        //         SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("todo_apikey"))),
-        //     )
-        // }
-    }
-}

@@ -563,7 +563,6 @@ impl TryFrom<entities::records::Model> for InternalResourceRecord {
     }
 }
 
-
 impl TryFrom<entities::records_merged::Model> for InternalResourceRecord {
     type Error = GoatNsError;
     /// This is where we convert from the JSON blob in the file to an internal representation of the data.
@@ -780,7 +779,6 @@ impl TryFrom<entities::records_merged::Model> for InternalResourceRecord {
         }
     }
 }
-
 
 impl PartialEq<RecordClass> for InternalResourceRecord {
     fn eq(&self, other: &RecordClass) -> bool {

@@ -14,7 +14,7 @@ use crate::tests::test_api::start_test_server;
 #[tokio::test]
 async fn test_doh_get_json() -> Result<(), ()> {
     // here we stand up the servers
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
 
@@ -146,7 +146,7 @@ async fn test_doh_get_json() -> Result<(), ()> {
 
 #[tokio::test]
 async fn test_doh_ask_raw_accept() -> Result<(), ()> {
-    let (_pool, _servers, config) = start_test_server().await;
+    let (_pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
     let mut headers = reqwest::header::HeaderMap::new();
@@ -182,7 +182,7 @@ async fn test_doh_ask_raw_accept() -> Result<(), ()> {
 
 #[tokio::test]
 async fn test_doh_ask_json_accept() -> Result<(), ()> {
-    let (_pool, _servers, config) = start_test_server().await;
+    let (_pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
     let mut headers = reqwest::header::HeaderMap::new();
@@ -219,7 +219,7 @@ async fn test_doh_ask_json_accept() -> Result<(), ()> {
 
 #[tokio::test]
 async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
-    let (_pool, _servers, config) = start_test_server().await;
+    let (_pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
     let mut headers = reqwest::header::HeaderMap::new();
@@ -257,7 +257,7 @@ async fn test_doh_ask_wrong_accept() -> Result<(), ()> {
 #[tokio::test]
 async fn test_doh_post_raw_dns() -> Result<(), ()> {
     // here we stand up the servers
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
 
@@ -387,7 +387,7 @@ async fn test_doh_post_raw_dns() -> Result<(), ()> {
 #[tokio::test]
 async fn test_doh_nxdomain_response() -> Result<(), ()> {
     // Test DoH response for non-existent domain
-    let (_pool, _servers, config) = start_test_server().await;
+    let (_pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
 
@@ -453,7 +453,7 @@ async fn test_doh_nxdomain_response() -> Result<(), ()> {
 #[tokio::test]
 async fn test_doh_multiple_records() -> Result<(), ()> {
     // Test DoH response with multiple A records for the same name
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
 
@@ -565,7 +565,7 @@ async fn test_doh_multiple_records() -> Result<(), ()> {
 #[tokio::test]
 async fn test_doh_query_parameter_validation() -> Result<(), ()> {
     // Test DoH parameter validation
-    let (_pool, _servers, config) = start_test_server().await;
+    let (_pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
 
@@ -624,7 +624,7 @@ async fn test_doh_query_parameter_validation() -> Result<(), ()> {
 #[tokio::test]
 async fn test_doh_different_record_types() -> Result<(), ()> {
     // Test DoH with different DNS record types
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
 

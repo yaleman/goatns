@@ -667,14 +667,14 @@ async fn test_question_from_bytes() {
 /// this test checks that all TTLs in the record are the same when we set normalise_ttls = true
 async fn test_normalize_ttls() {
     test_logging().await;
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
-    import_test_zone_file(&pool)
+    import_test_zone_file(&dbconn)
         .await
         .expect("failed to import test zone file");
 
     let response = entities::records_merged::Entity::get_records(
-        &pool,
+        &dbconn,
         "ttltest.hello.goat",
         RecordType::A,
         RecordClass::Internet,
@@ -711,14 +711,14 @@ async fn test_normalize_ttls() {
 /// this test checks that all TTLs in the record are the same when we set normalise_ttls = true
 async fn test_dont_normalize_ttls() {
     // use crate::zones::FileZoneRecord;
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
-    import_test_zone_file(&pool)
+    import_test_zone_file(&dbconn)
         .await
         .expect("Failed to import zone file");
 
     let response = entities::records_merged::Entity::get_records(
-        &pool,
+        &dbconn,
         "ttltest.hello.goat",
         RecordType::A,
         RecordClass::Internet,

@@ -4,7 +4,7 @@ use crate::{
     enums::RecordClass, resourcerecord::InternalResourceRecord, web::api::zones::ZoneForm,
 };
 
-#[derive(Clone, Debug, DeriveEntityModel, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, DeriveEntityModel, Eq, Deserialize, Serialize, ToSchema)]
 #[sea_orm(table_name = "zones")]
 #[allow(dead_code)] // because clippy and auto-generated code
 pub struct Model {

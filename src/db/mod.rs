@@ -19,11 +19,14 @@ async fn get_conn_inner(
     debug!("Opening Database: {db_url}");
     let mut opt = ConnectOptions::new(db_url);
 
-    opt.connect_timeout(Duration::from_secs(3))
-        .acquire_timeout(Duration::from_secs(5))
-        .idle_timeout(Duration::from_secs(1))
-        .max_lifetime(Duration::from_secs(30))
+    opt.connect_timeout(Duration::from_secs(10))
+        .acquire_timeout(Duration::from_secs(10))
+        .idle_timeout(Duration::from_secs(10))
+        .max_lifetime(Duration::from_secs(180))
         .sqlx_logging(log_sql_statements);
+    #[cfg(test)]
+    opt.max_connections(1);
+
     Database::connect(opt).await.map_err(GoatNsError::from)
 }
 
@@ -43,7 +46,7 @@ pub async fn get_conn(
 }
 
 #[cfg(test)]
-/// Get a sqlite pool with a memory-only database
+/// Get a sqlite db with a memory-only storage
 pub async fn test_get_sqlite_memory() -> DatabaseConnection {
     crate::init_crypto();
 

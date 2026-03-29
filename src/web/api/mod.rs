@@ -1,5 +1,6 @@
 use axum::{Router, routing::get};
 use prelude::*;
+use utoipa::ToSchema;
 pub mod auth;
 pub(crate) mod docs;
 pub(crate) mod prelude;
@@ -19,7 +20,7 @@ impl Default for NotImplemented {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[allow(dead_code)]
 pub struct ErrorResult {
     #[allow(dead_code)]
