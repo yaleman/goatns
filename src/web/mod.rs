@@ -255,9 +255,9 @@ pub async fn build(
     let listener_address = config.api_listener_address()?;
     let listener = std::net::TcpListener::bind(listener_address)
         .map_err(|err| GoatNsError::StartupError(format!("Failed to bind API listener: {err}")))?;
-    listener
-        .set_nonblocking(true)
-        .map_err(|err| GoatNsError::StartupError(format!("Failed to set API listener nonblocking: {err}")))?;
+    listener.set_nonblocking(true).map_err(|err| {
+        GoatNsError::StartupError(format!("Failed to set API listener nonblocking: {err}"))
+    })?;
     build_with_listener(tx, rx, config, connpool, listener).await
 }
 
@@ -269,18 +269,20 @@ pub async fn build_with_listener(
     listener: std::net::TcpListener,
 ) -> Result<JoinHandle<Result<(), std::io::Error>>, GoatNsError> {
     let router = build_router(tx, config.clone(), connpool).await?;
-    let listener_address: SocketAddr = listener
-        .local_addr()
-        .map_err(|err| GoatNsError::StartupError(format!("Failed to inspect API listener: {err}")))?;
+    let listener_address: SocketAddr = listener.local_addr().map_err(|err| {
+        GoatNsError::StartupError(format!("Failed to inspect API listener: {err}"))
+    })?;
     let hostname = config.hostname.clone();
+    let tls_cert = config.api_tls_cert.clone();
+    let tls_key = config.api_tls_key.clone();
+    let tls_config = config
+        .get_tls_config()
+        .await
+        .map_err(GoatNsError::StartupError)?;
     let mut rx = rx;
     let res: JoinHandle<Result<(), std::io::Error>> = tokio::spawn(async move {
-        let tls_config = config
-            .get_tls_config()
-            .await
-            .map_err(std::io::Error::other)?;
         let handle = axum_server::Handle::new();
-        let server = axum_server::from_tcp_rustls(listener, tls_config)?
+        let server = axum_server::from_tcp_rustls(listener, tls_config.clone())?
             .handle(handle.clone())
             .serve(router.into_make_service());
         tokio::pin!(server);
@@ -289,7 +291,14 @@ pub async fn build_with_listener(
             tokio::select! {
                 Some(action) = rx.recv() => match action {
                     ServerCommand::ReloadTls => {
-                        warn!("Ignoring TLS reload for pre-bound API listener");
+                        match tls_config.reload_from_pem_file(&tls_cert, &tls_key).await {
+                            Ok(()) => {
+                                info!("Reloaded TLS configuration for API listener.");
+                            }
+                            Err(err) => {
+                                error!("Failed to reload TLS configuration: {err}");
+                            }
+                        }
                     }
                     ServerCommand::ShutDown => {
                         info!("Shutting down web server.");
@@ -308,7 +317,9 @@ pub async fn build_with_listener(
     });
     let startup_message = format!(
         "Started Web server on https://{} / https://{}:{}",
-        listener_address, hostname, listener_address.port()
+        listener_address,
+        hostname,
+        listener_address.port()
     );
 
     #[cfg(test)]

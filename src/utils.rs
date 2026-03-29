@@ -1,6 +1,6 @@
+use crate::HEADER_BYTES;
 use crate::enums::AgentState;
 use crate::error::GoatNsError;
-use crate::HEADER_BYTES;
 use crate::{datastore::Command, resourcerecord::NameAsBytes};
 use std::cmp::min;
 use std::str::from_utf8;

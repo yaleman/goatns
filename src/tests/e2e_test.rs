@@ -113,10 +113,7 @@ mod tests {
 
         // Construct a new Resolver pointing at localhost
         let mut resolver_config = ResolverConfig::new();
-        resolver_config.add_name_server(NameServerConfig::new(
-            dns_addr,
-            Protocol::Udp,
-        ));
+        resolver_config.add_name_server(NameServerConfig::new(dns_addr, Protocol::Udp));
         let resolver =
             Resolver::builder_with_config(resolver_config, TokioConnectionProvider::default())
                 .build();
