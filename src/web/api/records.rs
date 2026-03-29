@@ -188,11 +188,12 @@ pub struct ApiRecordUpdate {
     put,
     path = "/api/record",
     operation_id = "record_update",
-    request_body = entities::records::Model,
+    request_body = ApiRecordUpdate,
     responses(
-        (status = 200, description = "Successful"),
-        (status = 403, description = "Auth failed"),
-        (status = 500, description = "Something broke!"),
+        (status = 200, description = "Successful", body = entities::records::Model),
+        (status = 403, description = "Auth failed", body = ErrorResult),
+        (status = 404, description = "Record not found", body = ErrorResult),
+        (status = 500, description = "Something broke!", body = ErrorResult),
     ),
     tag = "Records",
 )]
@@ -294,6 +295,22 @@ pub(crate) async fn api_record_update(
         Ok(Json(res))
     }
 }
+
+#[utoipa::path(
+    get,
+    path = "/api/record/{record_id}",
+    operation_id = "record_get",
+    params(
+        ("record_id" = Uuid, Path, description = "Record ID")
+    ),
+    responses(
+        (status = 200, description = "Successful", body = entities::records::Model),
+        (status = 403, description = "Auth failed", body = ErrorResult),
+        (status = 404, description = "Record not found", body = ErrorResult),
+        (status = 500, description = "Something broke!", body = ErrorResult),
+    ),
+    tag = "Records",
+)]
 pub(crate) async fn api_record_get(
     State(state): State<GoatState>,
     session: Session,
@@ -352,6 +369,21 @@ pub(crate) async fn api_record_get(
 
 /// Delete an object
 /// <https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/DELETE>
+#[utoipa::path(
+    delete,
+    path = "/api/record/{record_id}",
+    operation_id = "record_delete",
+    params(
+        ("record_id" = Uuid, Path, description = "Record ID")
+    ),
+    responses(
+        (status = 200, description = "Successful"),
+        (status = 403, description = "Auth failed", body = ErrorResult),
+        (status = 404, description = "Record not found", body = ErrorResult),
+        (status = 500, description = "Something broke!", body = ErrorResult),
+    ),
+    tag = "Records",
+)]
 pub(crate) async fn api_record_delete(
     State(state): State<GoatState>,
     session: Session,

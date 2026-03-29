@@ -50,7 +50,7 @@ pub struct FileZoneResponse {
     pub id: Option<i64>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, ToSchema)]
 pub struct ApiZoneResponse {
     #[serde(flatten)]
     pub zone: entities::zones::Model,
@@ -68,13 +68,18 @@ impl From<entities::zones::Model> for ApiZoneResponse {
 }
 
 #[utoipa::path(
-    method(post),
+    post,
     path = "/api/zone",
+    operation_id = "zone_create",
+    request_body = ZoneForm,
     responses(
-        (status = OK, description = "Success", body = str, content_type = "text/plain")
-    )
+        (status = 200, description = "Successful", body = ApiZoneResponse),
+        (status = 400, description = "Validation failed", body = ErrorResult),
+        (status = 403, description = "Auth failed", body = ErrorResult),
+        (status = 500, description = "Something broke!", body = ErrorResult),
+    ),
+    tag = "Zones",
 )]
-
 pub(crate) async fn api_zone_create(
     State(state): State<GoatState>,
     session: Session,
@@ -171,7 +176,7 @@ pub(crate) async fn api_zone_create(
     Ok(Json(zone.into()))
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
 pub(crate) struct ZoneUpdate {
     pub id: Uuid,
     pub rname: Option<String>,
@@ -182,6 +187,18 @@ pub(crate) struct ZoneUpdate {
     pub minimum: Option<u32>,
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/zone",
+    operation_id = "zone_update",
+    request_body = ZoneUpdate,
+    responses(
+        (status = 200, description = "Successful", body = String),
+        (status = 401, description = "Not authorized", body = ErrorResult),
+        (status = 500, description = "Something broke!", body = ErrorResult),
+    ),
+    tag = "Zones",
+)]
 pub(crate) async fn api_zone_update(
     State(state): State<GoatState>,
     session: Session,
@@ -282,6 +299,20 @@ pub(crate) async fn api_zone_update(
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/zone/{zone_id}",
+    operation_id = "zone_delete",
+    params(
+        ("zone_id" = Uuid, Path, description = "Zone ID")
+    ),
+    responses(
+        (status = 200, description = "Successful"),
+        (status = 404, description = "Zone not found", body = ErrorResult),
+        (status = 500, description = "Something broke!", body = ErrorResult),
+    ),
+    tag = "Zones",
+)]
 pub(crate) async fn api_zone_delete(
     State(state): State<GoatState>,
     session: Session,
@@ -358,6 +389,21 @@ pub(crate) async fn api_zone_delete(
     Ok(StatusCode::OK)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/zone/{zone_id}",
+    operation_id = "zone_get",
+    params(
+        ("zone_id" = Uuid, Path, description = "Zone ID")
+    ),
+    responses(
+        (status = 200, description = "Successful", body = ApiZoneResponse),
+        (status = 403, description = "Auth failed", body = ErrorResult),
+        (status = 404, description = "Zone not found", body = ErrorResult),
+        (status = 500, description = "Something broke!", body = ErrorResult),
+    ),
+    tag = "Zones",
+)]
 pub(crate) async fn api_get(
     State(state): State<GoatState>,
     session: Session,

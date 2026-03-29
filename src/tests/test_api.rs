@@ -3,6 +3,7 @@ use super::prelude::*;
 use crate::config::ConfigFile;
 use crate::servers::{self, Servers};
 use crate::web::api::auth::AuthPayload;
+use crate::web::api::docs::ApiDoc;
 use crate::web::api::records::RecordForm;
 use crate::web::api::zones::ZoneForm;
 use crate::web::utils::create_api_token;
@@ -11,6 +12,7 @@ use log::info;
 use reqwest::StatusCode;
 use sea_orm::EntityTrait;
 use tokio::net::{TcpListener, UdpSocket};
+use utoipa::OpenApi;
 
 pub async fn is_free_port(port: u16) -> bool {
     let addr = ("127.0.0.1", port);
@@ -203,6 +205,109 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
     assert_eq!(response_zone.serial, 12345);
     assert_ne!(response_zone.serial, 123456);
     drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn swagger_ui_and_openapi_are_served() -> Result<(), GoatNsError> {
+    let (_pool, _servers, config) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    let no_redirect_client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .expect("Failed to build no-redirect client");
+
+    let redirect_response = no_redirect_client
+        .get(format!("https://localhost:{api_port}/api/docs"))
+        .send()
+        .await
+        .expect("Failed to fetch Swagger redirect");
+    assert_eq!(redirect_response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(
+        redirect_response
+            .headers()
+            .get(reqwest::header::LOCATION)
+            .expect("Missing redirect location"),
+        "/api/docs/"
+    );
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .expect("Failed to build client");
+
+    let docs_response = client
+        .get(format!("https://localhost:{api_port}/api/docs/"))
+        .send()
+        .await
+        .expect("Failed to fetch Swagger UI");
+    assert_eq!(docs_response.status(), StatusCode::OK);
+    let docs_html = docs_response
+        .text()
+        .await
+        .expect("Failed to read Swagger UI response");
+    assert!(
+        docs_html.contains("<title>Swagger UI</title>"),
+        "Swagger UI title missing"
+    );
+    assert!(
+        docs_html.contains("swagger-initializer.js"),
+        "Swagger UI bootstrap missing"
+    );
+
+    let openapi_response = client
+        .get(format!("https://localhost:{api_port}/api/openapi.json"))
+        .send()
+        .await
+        .expect("Failed to fetch OpenAPI document");
+    assert_eq!(openapi_response.status(), StatusCode::OK);
+    let openapi_json = openapi_response
+        .text()
+        .await
+        .expect("Failed to read OpenAPI response");
+
+    for expected_path in [
+        "/api/login",
+        "/api/record",
+        "/api/record/{record_id}",
+        "/api/zone",
+        "/api/zone/{zone_id}",
+    ] {
+        assert!(
+            openapi_json.contains(&format!("\"{expected_path}\"")),
+            "Missing OpenAPI path {expected_path}"
+        );
+    }
+
+    for expected_operation in [
+        "\"operationId\":\"login\"",
+        "\"operationId\":\"record_create\"",
+        "\"operationId\":\"record_update\"",
+        "\"operationId\":\"record_get\"",
+        "\"operationId\":\"record_delete\"",
+        "\"operationId\":\"zone_create\"",
+        "\"operationId\":\"zone_update\"",
+        "\"operationId\":\"zone_get\"",
+        "\"operationId\":\"zone_delete\"",
+    ] {
+        assert!(
+            openapi_json.contains(expected_operation),
+            "Missing OpenAPI operation {expected_operation}"
+        );
+    }
+
+    let generated_openapi = ApiDoc::openapi()
+        .to_pretty_json()
+        .expect("Failed to serialise OpenAPI document");
+    assert!(
+        generated_openapi.contains("\"/api/zone/{zone_id}\""),
+        "Generated OpenAPI should include zone detail route"
+    );
+
     Ok(())
 }
 
