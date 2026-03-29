@@ -10,7 +10,6 @@ mod tests {
 
     use crate::enums::RecordType;
     use crate::logging::test_logging;
-    use crate::servers::udp_server;
     use crate::tests::utils::wait_for_server;
 
     fn in_github_actions() -> bool {
@@ -36,12 +35,28 @@ mod tests {
         let db_path = tempfile::tempdir()?;
         println!("Using temp dir for db path: {}", db_path.path().display());
         let mut cw = config.write().await;
+        let udp_socket = tokio::net::UdpSocket::bind((Ipv4Addr::LOCALHOST, 0))
+            .await
+            .expect("failed to bind test UDP listener");
+        let dns_addr = udp_socket
+            .local_addr()
+            .expect("failed to inspect test UDP listener");
+        let api_listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+            .expect("failed to bind test API listener");
+        let api_addr = api_listener
+            .local_addr()
+            .expect("failed to inspect test API listener");
+        api_listener
+            .set_nonblocking(true)
+            .expect("failed to set test API listener nonblocking");
 
         cw.db_path = db_path
             .path()
             .with_file_name("goatns-test-e2e.db")
             .display()
             .to_string();
+        cw.port = dns_addr.port();
+        cw.api_port = api_addr.port();
         cw.commit().await;
 
         println!("{:?}", config.read().await);
@@ -50,10 +65,11 @@ mod tests {
         let (agent_sender, datastore_tx, datastore_rx) = crate::utils::start_channels();
 
         println!("Starting UDP server");
-        let udpserver = tokio::spawn(udp_server(
+        let udpserver = tokio::spawn(crate::servers::udp_server_with_socket(
             config.read().await,
             datastore_tx.clone(),
             agent_sender.clone(),
+            udp_socket,
         ));
 
         println!(
@@ -76,11 +92,12 @@ mod tests {
 
         info!("Starting API Server");
         let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
-        let apiserver = crate::web::build(
+        let apiserver = crate::web::build_with_listener(
             datastore_tx.clone(),
             apiserver_rx,
             config.read().await,
             connpool.clone(),
+            api_listener,
         )
         .await
         .expect("Failed to build API server");
@@ -95,11 +112,9 @@ mod tests {
         wait_for_server(status_url).await;
 
         // Construct a new Resolver pointing at localhost
-        let localhost: std::net::IpAddr =
-            "127.0.0.1".parse().expect("Failed to parse localhost IP");
         let mut resolver_config = ResolverConfig::new();
         resolver_config.add_name_server(NameServerConfig::new(
-            SocketAddr::new(localhost, 15353),
+            dns_addr,
             Protocol::Udp,
         ));
         let resolver =

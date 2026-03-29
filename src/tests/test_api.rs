@@ -11,92 +11,95 @@ use concread::cowcell::asynch::CowCell;
 use log::info;
 use reqwest::StatusCode;
 use sea_orm::EntityTrait;
+use std::net::{Ipv4Addr, SocketAddr};
 use tokio::net::{TcpListener, UdpSocket};
 use utoipa::OpenApi;
 
-pub async fn is_free_port(port: u16) -> bool {
-    let addr = ("127.0.0.1", port);
-    let tcp_listener = TcpListener::bind(addr).await;
-    if tcp_listener.is_err() {
-        return false;
-    }
+async fn bind_test_dns_listeners() -> (TcpListener, UdpSocket, SocketAddr) {
+    loop {
+        let tcp_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+            .await
+            .expect("failed to bind DNS TCP test listener");
+        let dns_addr = tcp_listener
+            .local_addr()
+            .expect("failed to inspect DNS TCP test listener");
 
-    let udp_listener = UdpSocket::bind(addr).await;
-    if udp_listener.is_err() {
-        return false;
+        match UdpSocket::bind((Ipv4Addr::LOCALHOST, dns_addr.port())).await {
+            Ok(udp_socket) => return (tcp_listener, udp_socket, dns_addr),
+            Err(_) => drop(tcp_listener),
+        }
     }
-
-    true
 }
 
-pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<ConfigFile>) {
+pub async fn start_test_server() -> (
+    DatabaseConnection,
+    Servers,
+    CowCell<ConfigFile>,
+    SocketAddr,
+    SocketAddr,
+) {
     test_logging().await;
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
     let config = crate::config::ConfigFile::try_as_cowcell(Some(
         "./examples/test_config/goatns-test.json".to_string(),
     ))
     .expect("failed to parse test config");
 
-    use rand::Rng;
-    let mut rng = rand::rng();
-    let mut api_port: u16 = rng.random_range(2000..=65000);
-    loop {
-        if is_free_port(api_port).await {
-            break;
-        }
-        api_port = rng.random_range(2000..=65000);
-    }
-
-    let mut dns_port: u16 = rng.random_range(2000..=65000);
-    loop {
-        if dns_port != api_port && is_free_port(dns_port).await {
-            break;
-        }
-        dns_port = rng.random_range(2000..=65000);
-    }
+    let api_listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+        .expect("failed to bind API test listener");
+    let api_addr = api_listener
+        .local_addr()
+        .expect("failed to inspect API test listener");
+    api_listener
+        .set_nonblocking(true)
+        .expect("failed to set API test listener nonblocking");
+    let (dns_tcp_listener, dns_udp_socket, dns_addr) = bind_test_dns_listeners().await;
 
     let mut config_tx = config.write().await;
-    config_tx.api_port = api_port;
-    config_tx.port = dns_port;
+    config_tx.api_port = api_addr.port();
+    config_tx.port = dns_addr.port();
     config_tx.commit().await;
 
     // println!("Starting channels");
     let (agent_sender, datastore_tx, datastore_rx) = crate::utils::start_channels();
 
-    let udpserver = tokio::spawn(servers::udp_server(
+    let udpserver = tokio::spawn(servers::udp_server_with_socket(
         config.read().await,
         datastore_tx.clone(),
         agent_sender.clone(),
+        dns_udp_socket,
     ));
-    let tcpserver = tokio::spawn(servers::tcp_server(
+    let tcpserver = tokio::spawn(servers::tcp_server_with_listener(
         config.read().await,
         datastore_tx.clone(),
         agent_sender.clone(),
+        dns_tcp_listener,
     ));
     // start all the things!
     let datastore_manager = tokio::spawn(crate::datastore::manager(
         datastore_rx,
         "test.goatns.goat".to_string(),
-        pool.clone(),
+        dbconn.clone(),
         None,
     ));
 
-    info!("Starting API Server on port {api_port}");
+    info!("Starting API Server on port {}", api_addr.port());
     let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
 
-    let apiserver = crate::web::build(
+    let apiserver = crate::web::build_with_listener(
         datastore_tx.clone(),
         apiserver_rx,
         config.read().await,
-        pool.clone(),
+        dbconn.clone(),
+        api_listener,
     )
     .await
     .expect("Failed to start API server");
 
     println!("Building server struct");
     let res = (
-        pool,
+        dbconn,
         crate::servers::Servers::build(agent_sender)
             .with_apiserver(apiserver)
             .with_datastore(datastore_manager)
@@ -104,6 +107,8 @@ pub async fn start_test_server() -> (DatabaseConnection, Servers, CowCell<Config
             .with_tcpserver(tcpserver)
             .with_datastore_tx(datastore_tx),
         config,
+        api_addr,
+        dns_addr,
     );
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     res
@@ -140,7 +145,7 @@ async fn insert_test_user_api_token(
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_zone_create() -> Result<(), GoatNsError> {
     // here we stand up the servers
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
 
@@ -210,7 +215,7 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn swagger_ui_and_openapi_are_served() -> Result<(), GoatNsError> {
-    let (_pool, _servers, config) = start_test_server().await;
+    let (_pool, _servers, config, ..) = start_test_server().await;
     let api_port = config.read().await.api_port;
 
     let no_redirect_client = reqwest::ClientBuilder::new()
@@ -314,7 +319,7 @@ async fn swagger_ui_and_openapi_are_served() -> Result<(), GoatNsError> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
     // here we stand up the servers
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
 
@@ -398,7 +403,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_zone_create_update() -> Result<(), GoatNsError> {
     // here we stand up the servers
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
 
     let api_port = config.read().await.api_port;
 
@@ -478,7 +483,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_record_create() -> Result<(), GoatNsError> {
     // here we stand up the servers
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
     let api_port = config.read().await.api_port;
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
@@ -567,7 +572,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_record_delete() -> Result<(), GoatNsError> {
     // here we stand up the servers
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
     let api_port = config.read().await.api_port;
     let user = insert_test_user(&pool).await;
     println!("Created user... {user:?}");
@@ -670,7 +675,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_record_delete_forbidden_without_ownership() -> Result<(), GoatNsError> {
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
     let api_port = config.read().await.api_port;
 
     let owner = insert_test_user(&pool).await;
@@ -760,7 +765,7 @@ async fn api_record_delete_forbidden_without_ownership() -> Result<(), GoatNsErr
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_record_get_forbidden_without_ownership() -> Result<(), GoatNsError> {
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
     let api_port = config.read().await.api_port;
 
     let owner = insert_test_user(&pool).await;
@@ -845,7 +850,7 @@ async fn api_record_get_forbidden_without_ownership() -> Result<(), GoatNsError>
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_record_get_requires_auth() -> Result<(), GoatNsError> {
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
     let api_port = config.read().await.api_port;
 
     let user = insert_test_user(&pool).await;
@@ -909,7 +914,7 @@ async fn api_record_get_requires_auth() -> Result<(), GoatNsError> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_record_delete_requires_auth() -> Result<(), GoatNsError> {
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
     let api_port = config.read().await.api_port;
 
     let user = insert_test_user(&pool).await;
@@ -978,7 +983,7 @@ async fn api_record_delete_requires_auth() -> Result<(), GoatNsError> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn api_record_delete_does_not_delete_zone() -> Result<(), GoatNsError> {
-    let (pool, _servers, config) = start_test_server().await;
+    let (pool, _servers, config, ..) = start_test_server().await;
     let api_port = config.read().await.api_port;
 
     let user = insert_test_user(&pool).await;

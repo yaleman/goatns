@@ -32,6 +32,7 @@ use sea_orm::TransactionTrait;
 use utoipa::OpenApi;
 
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
@@ -251,45 +252,63 @@ pub async fn build(
     config: CowCellReadTxn<ConfigFile>,
     connpool: DatabaseConnection,
 ) -> Result<JoinHandle<Result<(), std::io::Error>>, GoatNsError> {
-    let router = build_router(tx, config.clone(), connpool).await?;
     let listener_address = config.api_listener_address()?;
-    let hostname = config.hostname.clone();
-    let api_port = config.api_port;
-    let mut rx = rx;
+    let listener = std::net::TcpListener::bind(listener_address)
+        .map_err(|err| GoatNsError::StartupError(format!("Failed to bind API listener: {err}")))?;
+    listener
+        .set_nonblocking(true)
+        .map_err(|err| GoatNsError::StartupError(format!("Failed to set API listener nonblocking: {err}")))?;
+    build_with_listener(tx, rx, config, connpool, listener).await
+}
 
-    let loop_config = config.clone();
+pub async fn build_with_listener(
+    tx: Sender<datastore::Command>,
+    rx: Receiver<ServerCommand>,
+    config: CowCellReadTxn<ConfigFile>,
+    connpool: DatabaseConnection,
+    listener: std::net::TcpListener,
+) -> Result<JoinHandle<Result<(), std::io::Error>>, GoatNsError> {
+    let router = build_router(tx, config.clone(), connpool).await?;
+    let listener_address: SocketAddr = listener
+        .local_addr()
+        .map_err(|err| GoatNsError::StartupError(format!("Failed to inspect API listener: {err}")))?;
+    let hostname = config.hostname.clone();
+    let mut rx = rx;
     let res: JoinHandle<Result<(), std::io::Error>> = tokio::spawn(async move {
+        let tls_config = config
+            .get_tls_config()
+            .await
+            .map_err(std::io::Error::other)?;
+        let handle = axum_server::Handle::new();
+        let server = axum_server::from_tcp_rustls(listener, tls_config)?
+            .handle(handle.clone())
+            .serve(router.into_make_service());
+        tokio::pin!(server);
+
         loop {
-            let tls_config = loop_config
-                .get_tls_config()
-                .await
-                .map_err(GoatNsError::StartupError)?;
             tokio::select! {
-                Some(action) = rx.recv() => {
-                    match action {
-                        ServerCommand::ReloadTls => {
-                            info!("Reloading TLS configuration.");
-                            continue;
-                        }
-                        ServerCommand::ShutDown => {
-                            info!("Shutting down web server.");
-                            return Ok(());
-                        }
+                Some(action) = rx.recv() => match action {
+                    ServerCommand::ReloadTls => {
+                        warn!("Ignoring TLS reload for pre-bound API listener");
                     }
+                    ServerCommand::ShutDown => {
+                        info!("Shutting down web server.");
+                        handle.shutdown();
+                    }
+                },
+                res = &mut server => {
+                    if let Err(err) = res {
+                        error!("Web server error: {}", err);
+                        return Err(err);
+                    }
+                    return Ok(());
                 }
-                res = axum_server::bind_rustls(loop_config.api_listener_address()?, tls_config)
-                    .serve(router.clone().into_make_service()) => {
-                        if let Err(err) = res {
-                            error!("Web server error: {}", err);
-                            return Err(err);
-                        }
-                    }
             }
         }
     });
     let startup_message = format!(
         "Started Web server on https://{} / https://{}:{}",
-        listener_address, hostname, api_port
+        listener_address, hostname, listener_address.port()
     );
 
     #[cfg(test)]

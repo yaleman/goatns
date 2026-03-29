@@ -9,7 +9,7 @@ use sea_orm::{
 
 #[tokio::test]
 async fn create_user() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
     let user = entities::users::ActiveModel {
         id: NotSet,
@@ -22,14 +22,14 @@ async fn create_user() -> Result<(), GoatNsError> {
     };
 
     println!("Creating user the first time");
-    let model = user.insert(&pool).await?;
+    let model = user.insert(&dbconn).await?;
 
     let mut user = model.into_active_model();
 
     user.disabled = Set(false);
 
     println!("Updating user to disable second time");
-    user.update(&pool)
+    user.update(&dbconn)
         .await
         .expect("Failed to update user after creation");
 
@@ -69,16 +69,16 @@ pub async fn test_create_example_com_records(
 
 #[tokio::test]
 async fn test_get_zone_records() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
-    let zone = test_create_example_com_zone(&pool)
+    let dbconn = test_get_sqlite_memory().await;
+    let zone = test_create_example_com_zone(&dbconn)
         .await
         .expect("Failed to create example.com zone");
 
-    test_create_example_com_records(&pool, zone.id, 1000).await?;
+    test_create_example_com_records(&dbconn, zone.id, 1000).await?;
 
     let records = zone
         .find_related(entities::records::Entity)
-        .all(&pool)
+        .all(&dbconn)
         .await
         .expect("Failed to get records");
 
@@ -102,11 +102,11 @@ pub fn test_example_com_zone() -> entities::zones::ActiveModel {
 /// A whole lotta tests
 #[tokio::test]
 async fn test_db_create_records() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
     println!("Creating Zone");
     let zone = test_example_com_zone()
-        .insert(&pool)
+        .insert(&dbconn)
         .await
         .expect("Failed to save the zone!");
 
@@ -122,12 +122,12 @@ async fn test_db_create_records() -> Result<(), GoatNsError> {
     };
     println!("rec to create: {rec_to_create:?}");
     rec_to_create
-        .insert(&pool)
+        .insert(&dbconn)
         .await
         .expect("Failed to create record");
 
     let res = entities::records_merged::Entity::get_records(
-        &pool,
+        &dbconn,
         "foo",
         RecordType::TXT,
         RecordClass::Internet,
@@ -141,19 +141,19 @@ async fn test_db_create_records() -> Result<(), GoatNsError> {
 /// test all the things
 #[tokio::test]
 async fn test_all_db_things() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
     let zone = test_example_com_zone();
 
     println!("Creating a zone");
-    let zone = zone.clone().insert(&pool).await?;
+    let zone = zone.clone().insert(&dbconn).await?;
     println!("Getting a zone!");
 
     println!("Zone: {zone:?}");
 
     let zone_data = entities::zones::Entity::find()
         .filter(entities::zones::Column::Name.eq("example.com".to_string()))
-        .one(&pool)
+        .one(&dbconn)
         .await?
         .expect("Failed to get zone");
     println!("{zone_data:?}");
@@ -170,17 +170,17 @@ async fn test_all_db_things() -> Result<(), GoatNsError> {
         rdata: Set("test txt".to_string()),
     };
     println!("rec to create: {rec_to_create:?}");
-    let saved_record = rec_to_create.insert(&pool).await?;
+    let saved_record = rec_to_create.insert(&dbconn).await?;
     println!("Saved record: {saved_record:?}");
     let saved_record = saved_record.into_active_model();
     // Saving the same record object again should work (it has an ID now so it's an update)
-    if let Err(err) = saved_record.update(&pool).await {
+    if let Err(err) = saved_record.update(&dbconn).await {
         panic!("{err:?}");
     };
 
     println!("Looking for foo.example.com TXT IN");
     let result = entities::records_merged::Entity::get_records(
-        &pool,
+        &dbconn,
         "foo.example.com",
         RecordType::TXT,
         RecordClass::Internet,
@@ -205,13 +205,13 @@ async fn test_create_example_com_zone(
 
 #[tokio::test]
 async fn test_export_zone() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
     eprintln!("Setting up example zone");
-    let zone = test_create_example_com_zone(&pool).await?;
+    let zone = test_create_example_com_zone(&dbconn).await?;
 
     let records_to_create = 100usize;
     eprintln!("Creating records");
-    if let Err(err) = test_create_example_com_records(&pool, zone.id, records_to_create).await {
+    if let Err(err) = test_create_example_com_records(&dbconn, zone.id, records_to_create).await {
         panic!("failed to create test records: {err:?}");
     }
 
@@ -242,7 +242,7 @@ async fn test_export_zone() -> Result<(), GoatNsError> {
 async fn load_then_export() -> Result<(), GoatNsError> {
     use tokio::io::AsyncReadExt;
     // set up the DB
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
     let example_zone_file = std::path::Path::new(&"./examples/test_config/single-zone.json");
 
@@ -251,9 +251,9 @@ async fn load_then_export() -> Result<(), GoatNsError> {
         .inspect_err(|err| println!("Failed to load zone file! {err:?}"))?;
     let zone_name = example_zone.zone.name.clone();
     let am: entities::zones::ActiveModel = example_zone.zone.clone().into();
-    am.insert(&pool).await?;
+    am.insert(&dbconn).await?;
     eprint!("importing zone into db...");
-    import_zonefile(&pool, example_zone).await?;
+    import_zonefile(&dbconn, example_zone).await?;
     // example_zone.insert(&pool).await?;
     eprintln!("done!");
 
@@ -279,7 +279,7 @@ async fn load_then_export() -> Result<(), GoatNsError> {
     eprintln!("Exporting zone");
     let zone_got = entities::zones::Entity::find()
         .filter(entities::zones::Column::Name.eq(zone_name))
-        .one(&pool)
+        .one(&dbconn)
         .await?
         .expect("Failed to get zone from DB");
     eprintln!("zone_got {zone_got:?}");
@@ -289,7 +289,7 @@ async fn load_then_export() -> Result<(), GoatNsError> {
 
 #[tokio::test]
 async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
     // Create a test zone
     let test_zone = entities::zones::ActiveModel {
@@ -303,7 +303,7 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
         minimum: Set(86400),
     };
 
-    let zone = test_zone.insert(&pool).await?;
+    let zone = test_zone.insert(&dbconn).await?;
     let zone_id = zone.id;
 
     // Create the first record
@@ -317,7 +317,7 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
         ttl: Set(Some(300)),
     };
 
-    let record1 = record1.insert(&pool).await?;
+    let record1 = record1.insert(&dbconn).await?;
     println!("Created first record: {record1:?}");
 
     // Try to create a record with same name, type, class but different rdata (should succeed in DNS)
@@ -331,7 +331,7 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
         ttl: Set(Some(300)),
     };
 
-    let record2 = record2.insert(&pool).await?;
+    let record2 = record2.insert(&dbconn).await?;
     println!("Created second record: {record2:?}");
 
     assert_eq!(
@@ -343,7 +343,7 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
     let record3 = record1.into_active_model();
 
     record3
-        .insert(&pool)
+        .insert(&dbconn)
         .await
         .expect_err("Creating duplicate record should fail");
 
@@ -352,7 +352,7 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
 
 #[tokio::test]
 async fn test_record_requires_name() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
     // Create a test zone first
     let test_zone = entities::zones::ActiveModel {
@@ -366,7 +366,7 @@ async fn test_record_requires_name() -> Result<(), GoatNsError> {
         minimum: Set(86400),
     };
 
-    let zone = test_zone.insert(&pool).await?;
+    let zone = test_zone.insert(&dbconn).await?;
 
     // Try to create a record with empty name (now allowed for apex records)
     let record = entities::records::ActiveModel {
@@ -379,7 +379,7 @@ async fn test_record_requires_name() -> Result<(), GoatNsError> {
         ttl: Set(Some(300)),
     };
 
-    let result = record.insert(&pool).await;
+    let result = record.insert(&dbconn).await;
 
     // This should now succeed (empty names are allowed for apex records)
     match result {

@@ -95,15 +95,22 @@ pub async fn udp_server(
     })?)
     .await
     {
-        Ok(value) => {
-            info!("Started UDP listener on {}:{}", config.address, config.port);
-            value
-        }
+        Ok(value) => value,
         Err(error) => {
             error!("Failed to start UDP listener: {:?}", error);
             return Ok(());
         }
     };
+    udp_server_with_socket(config, datastore_sender, _agent_tx, udp_sock).await
+}
+
+pub async fn udp_server_with_socket(
+    config: CowCellReadTxn<ConfigFile>,
+    datastore_sender: mpsc::Sender<crate::datastore::Command>,
+    _agent_tx: broadcast::Sender<AgentState>,
+    udp_sock: UdpSocket,
+) -> io::Result<()> {
+    info!("Started UDP listener on {}", udp_sock.local_addr()?);
 
     // TODO: this needs to be bigger to handle edns0-negotiated queries
     let mut udp_buffer = [0; UDP_BUFFER_SIZE];
@@ -311,28 +318,28 @@ pub async fn tcp_server(
     agent_tx: broadcast::Sender<AgentState>,
     // mut agent_rx: broadcast::Receiver<AgentState>,
 ) -> io::Result<()> {
-    let mut agent_rx = agent_tx.subscribe();
     let tcpserver = match TcpListener::bind(config.dns_listener_address().map_err(|_err| {
         GoatNsError::StartupError("Failed to get DNS listener address on startup!".to_string())
     })?)
     .await
     {
-        Ok(value) => {
-            info!(
-                "Started TCP listener on {}",
-                config
-                    .dns_listener_address()
-                    .map_err(|_err| GoatNsError::StartupError(
-                        "Failed to get DNS listener address on startup!".to_string()
-                    ))?
-            );
-            value
-        }
+        Ok(value) => value,
         Err(error) => {
             error!("Failed to start TCP Server: {:?}", error);
             return Ok(());
         }
     };
+    tcp_server_with_listener(config, tx, agent_tx, tcpserver).await
+}
+
+pub async fn tcp_server_with_listener(
+    config: CowCellReadTxn<ConfigFile>,
+    tx: mpsc::Sender<crate::datastore::Command>,
+    agent_tx: broadcast::Sender<AgentState>,
+    tcpserver: TcpListener,
+) -> io::Result<()> {
+    let mut agent_rx = agent_tx.subscribe();
+    info!("Started TCP listener on {}", tcpserver.local_addr()?);
 
     let tcp_client_timeout = config.tcp_client_timeout;
     let shutdown_ip_address_list = config.ip_allow_lists.shutdown.to_vec();

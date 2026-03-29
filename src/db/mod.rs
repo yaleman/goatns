@@ -19,11 +19,12 @@ async fn get_conn_inner(
     debug!("Opening Database: {db_url}");
     let mut opt = ConnectOptions::new(db_url);
 
-    opt.connect_timeout(Duration::from_secs(3))
-        .acquire_timeout(Duration::from_secs(5))
-        .idle_timeout(Duration::from_secs(1))
-        .max_lifetime(Duration::from_secs(30))
-        .sqlx_logging(log_sql_statements);
+    opt.connect_timeout(Duration::from_secs(10))
+        .acquire_timeout(Duration::from_secs(10))
+        .idle_timeout(Duration::from_secs(10))
+        .max_lifetime(Duration::from_secs(180))
+        .sqlx_logging(log_sql_statements)
+        .max_connections(1);
     Database::connect(opt).await.map_err(GoatNsError::from)
 }
 

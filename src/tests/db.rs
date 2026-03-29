@@ -9,9 +9,9 @@ use crate::web::utils::generate_token_key;
 
 #[tokio::test]
 async fn userauthtoken_saves() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
-    let user = create_test_user(&pool).await;
+    let user = create_test_user(&dbconn).await;
 
     println!("Creating UAT Object");
 
@@ -26,17 +26,17 @@ async fn userauthtoken_saves() -> Result<(), GoatNsError> {
     };
     println!("Saving UAT Object to DB: {uat:?}");
 
-    let uat = uat.insert(&pool).await?;
+    let uat = uat.insert(&dbconn).await?;
 
     println!("Saving duplicate UAT Object to DB: {uat:?}");
     let uat2 = uat.clone().into_active_model();
-    uat2.insert(&pool)
+    uat2.insert(&dbconn)
         .await
         .expect_err("Creating a duplicate token value should fail!");
 
     println!("Saving duplicate UAT Object to DB: {uat:?}");
     let uat2 = uat.clone().into_active_model();
-    uat2.insert(&pool)
+    uat2.insert(&dbconn)
         .await
         .expect_err("Creating a duplicate token value should fail!");
 
@@ -46,9 +46,9 @@ async fn userauthtoken_saves() -> Result<(), GoatNsError> {
 }
 #[tokio::test]
 async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
-    let user = test_harness::create_test_user(&pool).await;
+    let user = test_harness::create_test_user(&dbconn).await;
 
     println!("Creating UAT Objects");
     let tokenhash = "hello world".to_string();
@@ -64,7 +64,7 @@ async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
     };
     println!("Saving UAT Object 1 to DB: {uat:?}");
 
-    uat.insert(&pool).await.expect("Failed to save token");
+    uat.insert(&dbconn).await.expect("Failed to save token");
     let tokenhash = "hello world this should exist".to_string();
     let expiry = Utc::now() + TimeDelta::try_hours(60).expect("how did this fail?");
     let uat = entities::user_tokens::ActiveModel {
@@ -78,16 +78,16 @@ async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
     };
     println!("Saving UAT Object 2 to DB: {uat:?}");
     let _res = uat
-        .insert(&pool)
+        .insert(&dbconn)
         .await
         .expect("Failed to insert second object");
 
     print!("Starting DB Cleanup... ");
-    entities::user_tokens::Entity::cleanup(&pool).await?;
+    entities::user_tokens::Entity::cleanup(&dbconn).await?;
     println!("Done!");
 
     match entities::user_tokens::Entity::find_by_id(1i64)
-        .one(&pool)
+        .one(&dbconn)
         .await?
     {
         Some(uat) => panic!("We shouldn't find this! {uat:?}"),
@@ -96,7 +96,7 @@ async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
 
     assert!(
         entities::user_tokens::Entity::find_by_id(2i64)
-            .one(&pool)
+            .one(&dbconn)
             .await?
             .is_some()
     );
@@ -108,11 +108,11 @@ async fn userauthtoken_expiry() -> Result<(), GoatNsError> {
 
 #[tokio::test]
 async fn test_cron_db_cleanup() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
-    test_harness::create_test_user(&pool).await;
+    test_harness::create_test_user(&dbconn).await;
     println!("doing cleanup");
-    cron_db_cleanup(pool, core::time::Duration::from_micros(100), Some(2)).await;
+    cron_db_cleanup(dbconn, core::time::Duration::from_micros(100), Some(2)).await;
     println!("done with cleanup cycle");
 
     Ok(())
@@ -120,11 +120,11 @@ async fn test_cron_db_cleanup() -> Result<(), GoatNsError> {
 
 #[tokio::test]
 async fn testget_zones_with_txn() -> Result<(), GoatNsError> {
-    let pool = test_get_sqlite_memory().await;
+    let dbconn = test_get_sqlite_memory().await;
 
-    test_harness::create_test_user(&pool).await;
+    test_harness::create_test_user(&dbconn).await;
 
-    let txn = pool.begin().await?;
+    let txn = dbconn.begin().await?;
     let zones = entities::zones::Entity::find()
         .count(&txn)
         .await
@@ -133,9 +133,9 @@ async fn testget_zones_with_txn() -> Result<(), GoatNsError> {
 
     assert_eq!(zones, 0);
 
-    test_harness::import_test_zone_file(&pool).await?;
+    test_harness::import_test_zone_file(&dbconn).await?;
 
-    let txn = pool.begin().await?;
+    let txn = dbconn.begin().await?;
     let zones = entities::zones::Entity::find()
         .count(&txn)
         .await

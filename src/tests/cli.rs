@@ -11,7 +11,7 @@ fn test_default_config_serialization() {
 async fn test_export_zone_file() {
     use crate::tests::test_api::start_test_server;
     let _ = test_logging().await;
-    let (db_connection, servers, _config) = start_test_server().await;
+    let (db_connection, servers, _config, ..) = start_test_server().await;
 
     let tempdir = tempfile::tempdir().expect("failed to create temp dir");
     let output_filename = tempdir.path().join("zone_export.json");
