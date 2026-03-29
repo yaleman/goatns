@@ -23,8 +23,10 @@ async fn get_conn_inner(
         .acquire_timeout(Duration::from_secs(10))
         .idle_timeout(Duration::from_secs(10))
         .max_lifetime(Duration::from_secs(180))
-        .sqlx_logging(log_sql_statements)
-        .max_connections(1);
+        .sqlx_logging(log_sql_statements);
+    #[cfg(test)]
+    opt.max_connections(1);
+
     Database::connect(opt).await.map_err(GoatNsError::from)
 }
 
