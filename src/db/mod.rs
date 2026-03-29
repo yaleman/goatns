@@ -43,7 +43,7 @@ pub async fn get_conn(
 }
 
 #[cfg(test)]
-/// Get a sqlite pool with a memory-only database
+/// Get a sqlite db with a memory-only storage
 pub async fn test_get_sqlite_memory() -> DatabaseConnection {
     crate::init_crypto();
 
