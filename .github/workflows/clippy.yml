@@ -22,7 +22,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install protoc
         run: sudo apt-get install -y protobuf-compiler
       - name: "Run clippy for goatns"
