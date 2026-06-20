@@ -9,15 +9,17 @@ use tracing::error;
 
 async fn hash_file(path: &PathBuf) -> Result<Vec<u8>, GoatNsError> {
     let mut file = File::open(&path).await?;
-    let mut hasher = Sha256::new();
-    let mut buffer = [0u8; 4096];
 
+    let mut hasher = Sha256::new();
+
+    let mut buffer = [0u8; 4096];
     loop {
         let n = file.read(&mut buffer).await?;
         if n == 0 {
             break;
         }
         hasher.update(&buffer[..n]);
+        buffer.fill(0); // Clear the buffer to avoid keeping sensitive data in memory longer than necessary
     }
 
     Ok(hasher.finalize().to_vec())
@@ -41,8 +43,12 @@ pub async fn cert_reloader(
     loop {
         interval.tick().await;
         debug!("Checking for TLS certificate updates...");
-        let api_tls_cert_hash = hash_file(&config.api_tls_cert).await?;
-        let api_tls_key_hash = hash_file(&config.api_tls_key).await?;
+        let api_tls_cert_hash = hash_file(&config.api_tls_cert).await.inspect_err(|err| {
+            error!("Failed to hash TLS certificate file: {err:?}");
+        })?;
+        let api_tls_key_hash = hash_file(&config.api_tls_key).await.inspect_err(|err| {
+            error!("Failed to hash TLS key file: {err:?}");
+        })?;
         // store the current cert hashes
 
         if (api_tls_cert_hash != current_api_tls_cert_hash)
