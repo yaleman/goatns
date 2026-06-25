@@ -2,12 +2,14 @@ use std::str::FromStr;
 
 use super::check_logged_in;
 use crate::db::entities;
+use crate::web::middleware::admin::require_admin;
 use crate::web::utils::Urls;
 use crate::web::{GoatState, GoatStateTrait};
 use askama::Template;
 use askama_web::WebTemplate;
 use axum::extract::{Path, State};
 use axum::http::Uri;
+use axum::middleware::from_fn;
 use axum::response::Redirect;
 use axum::routing::get;
 use axum::{Form, Router};
@@ -205,4 +207,5 @@ pub fn router() -> Router<GoatState> {
             "/zones/assign_ownership/{id}",
             get(assign_zone_ownership).post(assign_zone_ownership),
         )
+        .layer(from_fn(require_admin))
 }
