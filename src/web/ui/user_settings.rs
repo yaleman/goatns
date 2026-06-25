@@ -7,7 +7,7 @@ use askama::Template;
 use askama_web::WebTemplate;
 use axum::extract::{OriginalUri, Path, State};
 use axum::http::Uri;
-use axum::response::{Html, IntoResponse, Redirect};
+use axum::response::{Html, Redirect};
 use axum::routing::{get, post};
 use axum::{Form, Router};
 use chrono::{DateTime, TimeDelta, Utc};
@@ -30,10 +30,15 @@ pub(crate) struct Settings {
 }
 
 /// The user settings page at /ui/settings
-pub(crate) async fn settings(State(_state): State<GoatState>) -> Settings {
-    Settings {
-        user_is_admin: true,
-    }
+pub(crate) async fn settings(mut session: Session) -> Result<Settings, Redirect> {
+    let url = Uri::from_str(&Urls::Settings.to_string()).map_err(|err| {
+        error!("Failed to parse Urls::Settings as URL, this is a bug!: {err:?}");
+        Urls::Home.redirect()
+    })?;
+    let user = check_logged_in(&mut session, url).await?;
+    Ok(Settings {
+        user_is_admin: user.admin,
+    })
 }
 
 #[derive(Template, WebTemplate)]
@@ -323,7 +328,7 @@ pub async fn api_tokens_post(
     mut session: Session,
     State(state): State<GoatState>,
     Form(form): Form<ApiTokenForm>,
-) -> Result<impl IntoResponse, Redirect> {
+) -> Result<ApiTokenPage, Redirect> {
     eprintln!("Got form: {form:?}");
 
     let url = Uri::from_str(&Urls::SettingsApiTokens.to_string()).map_err(|err| {
@@ -365,7 +370,6 @@ pub async fn api_tokens_post(
                 token_value: None,
                 user_is_admin: user.admin,
             }
-            .into_response()
         }
         // The user has set a lifetime and we're generating a token
         ApiTokenCreatePageState::Generating => {

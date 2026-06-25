@@ -1065,3 +1065,95 @@ async fn api_record_delete_does_not_delete_zone() -> Result<(), GoatNsError> {
     drop(pool);
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn admin_middleware_blocks_non_admin_user() -> Result<(), GoatNsError> {
+    let (pool, _servers, config, ..) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    // Create a non-admin user
+    let user = entities::users::ActiveModel {
+        id: NotSet,
+        displayname: Set("Regular user".to_string()),
+        username: Set("regularuser".to_string()),
+        email: Set("regular@hello.goat".to_string()),
+        disabled: Set(false),
+        authref: Set(None),
+        admin: Set(false),
+    }
+    .insert(&pool)
+    .await?;
+
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id).await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()?;
+
+    // Log in as the non-admin user
+    let res = client
+        .post(format!("https://localhost:{api_port}/api/login"))
+        .json(&AuthPayload {
+            token_key: token.key,
+            token_secret,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // Attempt to access admin endpoint — should be 403 FORBIDDEN
+    let res = client
+        .get(format!("https://localhost:{api_port}/ui/admin"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    // Attempt to access admin reports — should be 403 FORBIDDEN
+    let res = client
+        .get(format!("https://localhost:{api_port}/ui/admin/reports/unowned_records"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn admin_middleware_allows_admin_user() -> Result<(), GoatNsError> {
+    let (pool, _servers, config, ..) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    // The default test user is admin (admin: Set(true))
+    let user = insert_test_user(&pool).await;
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id).await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()?;
+
+    // Log in as admin
+    let res = client
+        .post(format!("https://localhost:{api_port}/api/login"))
+        .json(&AuthPayload {
+            token_key: token.key,
+            token_secret,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // Access admin endpoint — should be 200 OK
+    let res = client
+        .get(format!("https://localhost:{api_port}/ui/admin"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+
+    drop(pool);
+    Ok(())
+}

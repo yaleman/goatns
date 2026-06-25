@@ -1,6 +1,5 @@
 use crate::db::entities;
 use crate::web::constants::SESSION_USER_KEY;
-use crate::web::utils::Urls;
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
