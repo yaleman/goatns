@@ -2,13 +2,14 @@ use crate::db::entities;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
-use axum::http::StatusCode;
+use axum::http::{StatusCode, Uri};
 use axum::response::{Html, Redirect};
 use chrono::{DateTime, TimeDelta, Utc};
 use rand::distr::{Alphanumeric, SampleString};
 use sea_orm::ActiveValue::{NotSet, Set};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::str::FromStr;
 use tracing::{debug, trace};
 use uuid::Uuid;
 
@@ -65,6 +66,14 @@ impl Urls {
             .join("&");
         let url = format!("{}?{}", self, queryparts);
         Redirect::to(&url)
+    }
+}
+
+impl TryFrom<Urls> for Uri {
+    type Error = String;
+
+    fn try_from(value: Urls) -> Result<Self, Self::Error> {
+        Self::from_str(&value.to_string()).map_err(|e| format!("Failed to parse URL: {e:?}"))
     }
 }
 

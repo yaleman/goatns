@@ -1,4 +1,4 @@
-use crate::db::entities;
+use crate::db::entities::{self, users};
 use crate::web::constants::SESSION_USER_KEY;
 use crate::web::middleware::admin::require_admin;
 use crate::web::utils::Urls;
@@ -45,11 +45,11 @@ pub(crate) struct ZoneRecord {
 
 #[instrument(level = "info", skip_all)]
 pub(crate) async fn dashboard(session: Session) -> Result<AdminUITemplate, Redirect> {
-    let user: entities::users::Model = match session.get(SESSION_USER_KEY).await {
+    let user: users::Model = match session.get(SESSION_USER_KEY).await {
         Ok(Some(user)) => user,
         _ => {
             debug!("Admin dashboard: no valid session user");
-            return Err(Redirect::to(&Urls::Login.to_string()));
+            return Err(Urls::Login.redirect());
         }
     };
 
@@ -62,11 +62,11 @@ pub(crate) async fn report_unowned_records(
     session: Session,
     State(state): State<GoatState>,
 ) -> Result<AdminReportUnownedRecords, Redirect> {
-    let user: entities::users::Model = match session.get(SESSION_USER_KEY).await {
+    let user: users::Model = match session.get(SESSION_USER_KEY).await {
         Ok(Some(user)) => user,
         _ => {
             debug!("Admin report_unowned_records: no valid session user");
-            return Err(Redirect::to(&Urls::Login.to_string()));
+            return Err(Urls::Login.redirect());
         }
     };
 
@@ -74,7 +74,7 @@ pub(crate) async fn report_unowned_records(
         Ok(txn) => txn,
         Err(err) => {
             error!("Failed to get DB connection: {err:?}");
-            return Err(Redirect::to(&Urls::ZonesList.to_string()));
+            return Err(Urls::ZonesList.redirect());
         }
     };
 
@@ -89,7 +89,7 @@ pub(crate) async fn report_unowned_records(
         Ok(ids) => ids,
         Err(err) => {
             error!("Failed to query ownership: {err:?}");
-            return Err(Redirect::to(&Urls::Admin.to_string()));
+            return Err(Urls::Admin.redirect());
         }
     };
 
@@ -102,7 +102,7 @@ pub(crate) async fn report_unowned_records(
         Ok(zones) => zones,
         Err(err) => {
             error!("Failed to get unowned zones: {err:?}");
-            return Err(Redirect::to(&Urls::Admin.to_string()));
+            return Err(Urls::Admin.redirect());
         }
     };
 
@@ -123,60 +123,82 @@ pub(crate) struct AssignOwnershipTemplate {
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct AssignOwnershipForm {
-    // userid: Option<i64>,
     username: Option<String>,
 }
 
 #[instrument(level = "info", skip(session, state))]
-pub(crate) async fn assign_zone_ownership(
+pub(crate) async fn assign_zone_ownership_get(
+    session: Session,
+    State(state): State<GoatState>,
+    Path(id): Path<Uuid>,
+) -> Result<AssignOwnershipTemplate, Redirect> {
+    let Ok(Some(current_user)) = session.get::<users::Model>(SESSION_USER_KEY).await else {
+        debug!("Admin assign_zone_ownership: no valid session user");
+        return Err(Urls::Login.redirect());
+    };
+    let txn = state
+        .get_db_txn()
+        .await
+        .map_err(|_| Urls::Admin.redirect())?;
+
+    let Some(zone) = entities::zones::Entity::find_by_id(id)
+        .one(&txn)
+        .await
+        .map_err(|err| {
+            error!("Failed to get zone by ID: {err:?}");
+            Urls::Admin.redirect()
+        })?
+    else {
+        error!("No zone found with ID: {id}");
+        return Err(Urls::Admin.redirect());
+    };
+    Ok(AssignOwnershipTemplate {
+        user_is_admin: current_user.admin,
+        zone,
+        user: None,
+    })
+}
+
+#[instrument(level = "info", skip(session, state))]
+pub(crate) async fn assign_zone_ownership_post(
     session: Session,
     State(state): State<GoatState>,
     Path(id): Path<Uuid>,
     Form(form): Form<AssignOwnershipForm>,
 ) -> Result<AssignOwnershipTemplate, Redirect> {
-    let current_user: entities::users::Model = match session.get(SESSION_USER_KEY).await {
-        Ok(Some(user)) => user,
-        _ => {
-            debug!("Admin assign_zone_ownership: no valid session user");
-            return Err(Redirect::to(&Urls::Login.to_string()));
-        }
+    let Ok(Some(current_user)) = session.get::<users::Model>(SESSION_USER_KEY).await else {
+        debug!("Admin assign_zone_ownership: no valid session user");
+        return Err(Urls::Login.redirect());
     };
 
-    let txn = match state.get_db_txn().await {
-        Ok(txn) => txn,
-        Err(err) => {
-            error!("Failed to get DB transaction: {err:?}");
-            return Err(Redirect::to(&Urls::Admin.to_string()));
-        }
-    };
+    let txn = state
+        .get_db_txn()
+        .await
+        .map_err(|_| Urls::Admin.redirect())?;
 
-    let zone = match entities::zones::Entity::find_by_id(id).one(&txn).await {
-        Ok(Some(zone)) => zone,
-        Ok(None) => {
-            error!("No zone found with ID: {id}");
-            return Err(Redirect::to(&Urls::Admin.to_string()));
-        }
-        Err(err) => {
+    let Some(zone) = entities::zones::Entity::find_by_id(id)
+        .one(&txn)
+        .await
+        .map_err(|err| {
             error!("Failed to get zone by ID: {err:?}");
-            return Err(Redirect::to(&Urls::Admin.to_string()));
-        }
+            Urls::Admin.redirect()
+        })?
+    else {
+        error!("No zone found with ID: {id}");
+        return Err(Urls::Admin.redirect());
     };
 
     if let Some(username) = form.username.as_ref() {
         debug!("Got a username in the form!");
-        let target_user = match entities::users::Entity::find()
-            .filter(entities::users::Column::Username.eq(username.as_str()))
+        let Ok(Some(target_user)) = users::Entity::find()
+            .filter(users::Column::Username.eq(username.as_str()))
             .one(&txn)
             .await
-        {
-            Ok(Some(user)) => user,
-            Ok(None) => {
-                return Err(Redirect::to(&Urls::Admin.to_string()));
-            }
-            Err(err) => {
+            .inspect_err(|err| {
                 error!("Failed to get user by name: {err:?}");
-                return Err(Redirect::to(&Urls::Admin.to_string()));
-            }
+            })
+        else {
+            return Err(Urls::Admin.redirect());
         };
 
         // Create ownership record
@@ -188,15 +210,15 @@ pub(crate) async fn assign_zone_ownership(
 
         if let Err(err) = ownership.insert(&txn).await {
             error!("Failed to insert zone ownership: {err:?}");
-            return Err(Redirect::to(&Urls::Admin.to_string()));
+            return Err(Urls::Admin.redirect());
         }
 
         if let Err(err) = txn.commit().await {
             error!("Failed to commit transaction: {err:?}");
-            return Err(Redirect::to(&Urls::Admin.to_string()));
+            return Err(Urls::Admin.redirect());
         }
 
-        return Err(Redirect::to(&Urls::Admin.to_string()));
+        return Err(Urls::Admin.redirect());
     }
 
     Ok(AssignOwnershipTemplate {
@@ -213,7 +235,7 @@ pub fn router() -> Router<GoatState> {
         .route("/reports/unowned_records", get(report_unowned_records))
         .route(
             "/zones/assign_ownership/{id}",
-            get(assign_zone_ownership).post(assign_zone_ownership),
+            get(assign_zone_ownership_get).post(assign_zone_ownership_post),
         )
         .layer(from_fn(require_admin))
 }
