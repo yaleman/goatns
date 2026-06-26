@@ -9,10 +9,12 @@ use tracing::*;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::fs::File;
-use std::io::Read;
+use std::io::{BufReader, Read};
 use std::path::Path;
 use std::str::from_utf8;
 use utoipa::ToSchema;
+
+pub(crate) const MAX_ZONE_FILE_SIZE: u64 = 5 * 1024 * 1024;
 
 use sea_orm::{ActiveValue::Set, DatabaseConnection, TransactionTrait};
 use uuid::Uuid;
@@ -183,7 +185,7 @@ impl Display for ZoneRecord {
 
 /// Loads a zone file
 pub fn load_zone_from_file(filename: &Path) -> Result<ZoneFile, GoatNsError> {
-    let mut file = match File::open(filename) {
+    let file = match File::open(filename) {
         Ok(value) => value,
         Err(err) => {
             return Err(GoatNsError::FileError(format!(
@@ -191,18 +193,35 @@ pub fn load_zone_from_file(filename: &Path) -> Result<ZoneFile, GoatNsError> {
             )));
         }
     };
-    let mut buf: String = String::new();
-    file.read_to_string(&mut buf)
-        .inspect_err(|err| error!("Failed to read {}: {:?}", &filename.display(), err))?;
-    let jsonstruct: ZoneFile = match json5::from_str(&buf) {
-        Ok(value) => value,
+
+    let file_size = match file.metadata() {
+        Ok(meta) => meta.len(),
         Err(err) => {
-            let emsg = format!("Failed to read JSON file: {err:?}");
-            error!("{emsg}");
-            return Err(GoatNsError::FileError(emsg));
+            return Err(GoatNsError::FileError(format!(
+                "Failed to read file metadata: {err:?}"
+            )));
         }
     };
-    Ok(jsonstruct)
+
+    if file_size <= MAX_ZONE_FILE_SIZE {
+        let mut buf = String::new();
+        BufReader::new(file)
+            .read_to_string(&mut buf)
+            .inspect_err(|err| error!("Failed to read {}: {:?}", &filename.display(), err))?;
+        let jsonstruct: ZoneFile = match json5::from_str(&buf) {
+            Ok(value) => value,
+            Err(err) => {
+                let emsg = format!("Failed to read JSON file: {err:?}");
+                error!("{emsg}");
+                return Err(GoatNsError::FileError(emsg));
+            }
+        };
+        Ok(jsonstruct)
+    } else {
+        serde_json::from_reader(BufReader::new(file)).map_err(|err| {
+            GoatNsError::FileError(format!("Failed to parse zone file in streaming mode: {err:?}"))
+        })
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -215,7 +234,7 @@ pub struct ZoneFile {
 /// Loads a zone file
 #[instrument(level = "debug")]
 pub fn load_zones(filename: &str) -> Result<Vec<ZoneFile>, GoatNsError> {
-    let mut file = match File::open(filename) {
+    let file = match File::open(filename) {
         Ok(value) => value,
         Err(err) => {
             return Err(GoatNsError::FileError(format!(
@@ -224,9 +243,26 @@ pub fn load_zones(filename: &str) -> Result<Vec<ZoneFile>, GoatNsError> {
         }
     };
 
+    let file_size = match file.metadata() {
+        Ok(meta) => meta.len(),
+        Err(err) => {
+            return Err(GoatNsError::FileError(format!(
+                "Failed to read file metadata: {err:?}"
+            )));
+        }
+    };
+
+    if file_size <= MAX_ZONE_FILE_SIZE {
+        load_zones_small(file)
+    } else {
+        load_zones_streaming(file, file_size)
+    }
+}
+
+fn load_zones_small(mut file: File) -> Result<Vec<ZoneFile>, GoatNsError> {
     let mut buf: String = String::new();
     file.read_to_string(&mut buf)
-        .inspect_err(|err| error!("Failed to read {}: {:?}", filename, err))?;
+        .inspect_err(|err| error!("Failed to read file: {:?}", err))?;
     let jsonblob: Vec<serde_json::Value> =
         json5::from_str(&buf).map_err(|err| GoatNsError::FileError(err.to_string()))?;
     let mut zones: Vec<ZoneFile> = Vec::new();
@@ -238,5 +274,19 @@ pub fn load_zones(filename: &str) -> Result<Vec<ZoneFile>, GoatNsError> {
         );
     }
 
+    Ok(zones)
+}
+
+fn load_zones_streaming(file: File, file_size: u64) -> Result<Vec<ZoneFile>, GoatNsError> {
+    let reader = BufReader::new(file);
+    let zones: Vec<ZoneFile> = serde_json::from_reader(reader).map_err(|err| {
+        GoatNsError::FileError(format!("Failed to parse zone file in streaming mode: {err:?}"))
+    })?;
+
+    debug!(
+        zones = zones.len(),
+        size = file_size,
+        "Loaded zones via streaming parser"
+    );
     Ok(zones)
 }

@@ -6,6 +6,7 @@ mod tests {
     use hickory_resolver::{Resolver, config::*};
     use std::env;
     use std::net::*;
+    use std::path::PathBuf;
     use tracing::info;
 
     use crate::enums::RecordType;
@@ -26,9 +27,9 @@ mod tests {
             return Ok(());
         }
 
-        let config = crate::config::ConfigFile::try_as_cowcell(Some(
-            "./examples/test_config/goatns-test.json".to_string(),
-        ))?;
+        let config = crate::config::ConfigFile::try_as_cowcell(Some(PathBuf::from(
+            "./examples/test_config/goatns-test.json",
+        )))?;
 
         println!("Config as loaded: {:?}", config.read().await);
 

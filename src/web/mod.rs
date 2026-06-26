@@ -11,6 +11,7 @@ use crate::error::GoatNsError;
 
 // TODO: return the API docs use crate::web::api::docs::ApiDoc;
 use crate::web::middleware::csp;
+use crate::web::middleware::rate_limit::RateLimitState;
 use async_trait::async_trait;
 use axum::Router;
 use axum::extract::FromRef;
@@ -134,6 +135,7 @@ pub struct GoatChildState {
     pub oidc_config: Option<auth::CustomProviderMetadata>,
     pub oidc_verifier: std::collections::HashMap<String, (String, Nonce)>,
     pub csp_matchers: Vec<CspUrlMatcher>,
+    pub rate_limit_state: RateLimitState,
 }
 
 fn check_static_dir_exists(static_dir: &PathBuf, config: &ConfigFile) -> bool {
@@ -199,6 +201,7 @@ async fn build_router(
         oidc_config: None,
         oidc_verifier: HashMap::new(),
         csp_matchers,
+        rate_limit_state: crate::web::middleware::rate_limit::rate_limit_state(),
     }));
 
     let service_layer = ServiceBuilder::new()
@@ -209,11 +212,15 @@ async fn build_router(
         .route(&Urls::Home.to_string(), get(generic::index))
         .nest("/ui", ui::new())
         .nest("/api", api::new())
+        .nest("/auth", auth::new())
+        .layer(from_fn_with_state(
+            state.clone(),
+            crate::web::middleware::rate_limit::rate_limit_middleware,
+        ))
         .merge(
             utoipa_swagger_ui::SwaggerUi::new("/api/docs")
                 .url("/api/openapi.json", api::docs::ApiDoc::openapi()),
         )
-        .nest("/auth", auth::new())
         .nest("/dns-query", doh::new())
         .with_state(state)
         .layer(service_layer);
@@ -284,7 +291,7 @@ pub async fn build_with_listener(
         let handle = axum_server::Handle::new();
         let server = axum_server::from_tcp_rustls(listener, tls_config.clone())?
             .handle(handle.clone())
-            .serve(router.into_make_service());
+            .serve(router.into_make_service_with_connect_info::<SocketAddr>());
         tokio::pin!(server);
 
         loop {

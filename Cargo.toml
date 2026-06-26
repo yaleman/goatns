@@ -22,11 +22,11 @@ default = []
 [workspace]
 members = [".", "goat-lib", "goatns-macros"]
 [workspace.package]
-version = "0.7.0"
+version = "0.9.0"
 categories = ["network-programming"]
 edition = "2024"
 license = "MIT"
-rust-version = "1.87"
+rust-version = "1.95"
 repository = "https://github.com/yaleman/goatns.git"
 
 
@@ -57,9 +57,11 @@ concread = "0.5.8"
 config = { version = "0.15", features = ["json"] }
 dialoguer = "0.12.0"
 enum-iterator = "2.3.0"
-flexi_logger = { version = "0.31", features = ["async", "default"] }
-futures = "0.3.31"
-futures-util = "0.3.31"
+flexi_logger = { version = "^0.31", features = ["async", "default"] }
+futures = "0.3.32"
+futures-util = "0.3.32"
+governor = { version = "0.8", features = ["std", "quanta"] }
+nonzero_ext = "0.3"
 gethostname = "1.1.0"
 goat-lib = { path = "goat-lib" }
 goatns-macros = { path = "./goatns-macros" }

@@ -9,6 +9,7 @@ mod resourcerecord;
 mod test_api;
 pub mod test_harness;
 mod utils;
+mod zones;
 
 use crate::db::*;
 use prelude::*;

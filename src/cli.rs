@@ -1,6 +1,8 @@
 //! Code related to CLI things
 //!
 
+use std::path::PathBuf;
+
 use crate::config::ConfigFile;
 use crate::datastore::Command;
 use clap::*;
@@ -13,8 +15,8 @@ use tracing::{debug, error, info, warn};
 
 #[derive(Parser, Clone)]
 pub struct SharedOpts {
-    #[clap(short, long, help = "Configuration file")]
-    config: Option<String>,
+    #[clap(short, long, help = "Configuration file", env = "GOATNS_CONFIG_FILE")]
+    config: Option<PathBuf>,
     #[clap(short, long)]
     debug: bool,
 }
@@ -72,7 +74,7 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn config(&self) -> Option<String> {
+    pub fn config(&self) -> Option<PathBuf> {
         match &self.command {
             Commands::Server { sopt } => sopt.config.clone(),
             _ => None,
