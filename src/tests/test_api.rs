@@ -190,6 +190,7 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
         minimum: 1235,
         refresh: 1234,
         retry: 1234,
+        signed: false,
     };
 
     println!("api_zone_create Sending zone create");
@@ -364,6 +365,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
         minimum: 1235,
         refresh: 1111,
         retry: 1234234,
+        signed: false,
     };
 
     println!("Sending zone create");
@@ -448,6 +450,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(1111),
         retry: Set(1234234),
+        signed: Set(false),
     };
     println!("Saving zone");
     let newzone = newzone.insert(&pool).await?;
@@ -525,6 +528,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(1341234),
         retry: Set(123456),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -623,6 +627,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -698,6 +703,7 @@ async fn api_record_delete_forbidden_without_ownership() -> Result<(), GoatNsErr
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -788,6 +794,7 @@ async fn api_record_get_forbidden_without_ownership() -> Result<(), GoatNsError>
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -865,6 +872,7 @@ async fn api_record_get_requires_auth() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -929,6 +937,7 @@ async fn api_record_delete_requires_auth() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -1001,6 +1010,7 @@ async fn api_record_delete_does_not_delete_zone() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await

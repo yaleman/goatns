@@ -112,6 +112,17 @@ mod tests {
         let status_url = config.read().await.status_url();
         wait_for_server(status_url).await;
 
+        use crate::datastore::import_zonefile;
+
+        let zone_file = crate::zones::load_zones("./examples/test_config/zones.json")
+            .expect("Failed to load zones.json")
+            .into_iter()
+            .next()
+            .expect("Expected at least one zone");
+        import_zonefile(&connpool, zone_file)
+            .await
+            .expect("Failed to import test zone file");
+
         // Construct a new Resolver pointing at localhost
         let mut resolver_config = ResolverConfig::new();
         resolver_config.add_name_server(NameServerConfig::new(dns_addr, Protocol::Udp));
@@ -167,6 +178,134 @@ mod tests {
         };
         assert!(!response.records().is_empty());
         eprintln!("URL response: {response:?}");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_dnssec_signed_zone() -> Result<(), std::io::Error> {
+        test_logging().await;
+        crate::init_crypto();
+
+        if in_github_actions() {
+            eprintln!("Skipping DNSSEC test because it won't work in GHA");
+            return Ok(());
+        }
+
+        let config = crate::config::ConfigFile::try_as_cowcell(Some(PathBuf::from(
+            "./examples/test_config/goatns-test.json",
+        )))?;
+
+        let db_path = tempfile::tempdir()?;
+        let mut cw = config.write().await;
+        let udp_socket = tokio::net::UdpSocket::bind((Ipv4Addr::LOCALHOST, 0))
+            .await
+            .expect("failed to bind test UDP listener");
+        let dns_addr = udp_socket
+            .local_addr()
+            .expect("failed to inspect test UDP listener");
+        let api_listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+            .expect("failed to bind test API listener");
+        let api_addr = api_listener
+            .local_addr()
+            .expect("failed to inspect test API listener");
+        api_listener
+            .set_nonblocking(true)
+            .expect("failed to set test API listener nonblocking");
+
+        cw.db_path = db_path
+            .path()
+            .with_file_name("goatns-test-dnssec.db")
+            .display()
+            .to_string();
+        cw.port = dns_addr.port();
+        cw.api_port = api_addr.port();
+        cw.commit().await;
+
+        let (agent_sender, datastore_tx, datastore_rx) = crate::utils::start_channels();
+
+        let udpserver = tokio::spawn(crate::servers::udp_server_with_socket(
+            config.read().await,
+            datastore_tx.clone(),
+            agent_sender.clone(),
+            udp_socket,
+        ));
+
+        let connpool = crate::db::get_conn(config.read().await)
+            .await
+            .expect("Failed to get connpool");
+
+        let datastore_manager = tokio::spawn(crate::datastore::manager(
+            datastore_rx,
+            "hello.goat".to_string(),
+            connpool.clone(),
+            None,
+        ));
+
+        let (_apiserver_tx, apiserver_rx) = tokio::sync::mpsc::channel(5);
+        let apiserver = crate::web::build_with_listener(
+            datastore_tx.clone(),
+            apiserver_rx,
+            config.read().await,
+            connpool.clone(),
+            api_listener,
+        )
+        .await
+        .expect("Failed to build API server");
+
+        let _ = crate::servers::Servers::build(agent_sender)
+            .with_datastore(datastore_manager)
+            .with_udpserver(udpserver)
+            .with_apiserver(apiserver);
+
+        let status_url = config.read().await.status_url();
+        wait_for_server(status_url).await;
+
+        use crate::datastore::import_zonefile;
+        use crate::zones::ZoneFile;
+
+        let zone_files: Vec<ZoneFile> =
+            serde_json::from_str(include_str!("../../examples/test_config/zones.json"))
+                .expect("Failed to parse zones.json");
+
+        let mut zone_file = zone_files
+            .into_iter()
+            .next()
+            .expect("Expected at least one zone in zones.json");
+
+        zone_file.zone.signed = true;
+
+        import_zonefile(&connpool, zone_file)
+            .await
+            .expect("Failed to import DNSSEC test zone");
+
+        let mut resolver_config = ResolverConfig::new();
+        resolver_config.add_name_server(NameServerConfig::new(dns_addr, Protocol::Udp));
+
+        let mut opts = ResolverOpts::default();
+        opts.edns0 = true;
+
+        let resolver = Resolver::builder_with_config(
+            resolver_config,
+            TokioConnectionProvider::default(),
+        )
+        .with_options(opts)
+        .build();
+
+        let response = resolver
+            .lookup_ip("hello.goat")
+            .await
+            .expect("DNSSEC lookup failed");
+
+        let address = response
+            .iter()
+            .next()
+            .expect("no addresses returned");
+        assert_eq!(
+            address,
+            IpAddr::V4(Ipv4Addr::new(6, 6, 6, 6)),
+            "DNSSEC query should return the correct A record"
+        );
 
         Ok(())
     }
