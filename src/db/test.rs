@@ -95,6 +95,7 @@ pub fn test_example_com_zone() -> entities::zones::ActiveModel {
         serial: Set(0),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
         expire: Set(0),
         minimum: Set(0),
     }
@@ -299,6 +300,7 @@ async fn test_duplicate_record_constraint() -> Result<(), GoatNsError> {
         serial: Set(1),
         refresh: Set(3600),
         retry: Set(1800),
+        signed: Set(false),
         expire: Set(604800),
         minimum: Set(86400),
     };
@@ -362,6 +364,7 @@ async fn test_record_requires_name() -> Result<(), GoatNsError> {
         serial: Set(1),
         refresh: Set(3600),
         retry: Set(1800),
+        signed: Set(false),
         expire: Set(604800),
         minimum: Set(86400),
     };
