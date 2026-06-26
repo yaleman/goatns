@@ -1,8 +1,8 @@
 use super::prelude::*;
 
+use crate::zones::ZoneRecord;
 use crate::enums::RecordType;
 use crate::resourcerecord::InternalResourceRecord;
-use crate::zones::ZoneRecord;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
 async fn setup_signed_zone() -> DatabaseConnection {
@@ -75,7 +75,7 @@ async fn dnssec_signed_zone_returns_ad_bit_and_rrsig() {
     let dbconn = setup_signed_zone().await;
 
     let qname = b"example.com".to_vec();
-    let db_name = String::from_utf8(qname.clone()).expect("invalid UTF-8");
+    let db_name = String::from_utf8(qname.clone()).unwrap();
     let records = entities::records_merged::Entity::get_records(
         &dbconn,
         &db_name,
@@ -193,7 +193,7 @@ async fn dnssec_signed_zone_ad_bit_in_wire_response() {
     assert!(reply_bytes.len() > 12, "reply should have content");
 
     let header = Header::unpack_from_slice(&reply_bytes[..12]).expect("unpack header");
-    assert!(header.ad, "AD bit should be set for signed zone");
+    assert_eq!(header.ad, true, "AD bit should be set for signed zone");
     assert_eq!(header.ancount, 1, "ancount should be 1 (A record)");
 
     drop(dbconn);
@@ -238,7 +238,7 @@ async fn dnssec_unsigned_zone_no_ad_bit() {
         .expect("find zone")
         .expect("zone exists");
 
-    assert!(!zone_check.signed, "zone should be unsigned");
+    assert_eq!(zone_check.signed, false, "zone should be unsigned");
 
     let records = entities::records_merged::Entity::get_records(
         &dbconn,
@@ -275,7 +275,7 @@ async fn dnssec_unsigned_zone_no_ad_bit() {
         signed: false,
     };
 
-    assert!(!zr.signed);
+    assert_eq!(zr.signed, false);
 
     drop(dbconn);
 }
