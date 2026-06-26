@@ -17,6 +17,7 @@ pub struct Model {
     pub retry: u32,
     pub expire: u32,
     pub minimum: u32,
+    pub signed: bool,
 }
 
 impl PartialEq for Model {
@@ -78,6 +79,7 @@ impl From<ZoneForm> for ActiveModel {
             retry: Set(record.retry),
             expire: Set(record.expire),
             minimum: Set(record.minimum),
+            signed: Set(record.signed),
         };
 
         if let Some(id) = record.id {

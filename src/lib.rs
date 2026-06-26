@@ -373,3 +373,178 @@ impl TryFrom<Question> for Vec<u8> {
         question.try_to_bytes()
     }
 }
+
+#[derive(Clone, Debug)]
+/// EDNS0 OPT pseudo-RR, RFC 6891
+pub struct OptRecord {
+    /// UDP payload size the sender can handle
+    pub udp_payload_size: u16,
+    /// extended RCODE (upper 8 bits of the full 12-bit RCODE)
+    pub extended_rcode: u8,
+    /// EDNS version (must be 0 for EDNS0)
+    pub version: u8,
+    /// DNSSEC OK bit - client requests DNSSEC records
+    pub do_bit: bool,
+    /// additional EDNS options (ignored for now)
+    pub options: Vec<u8>,
+}
+
+impl OptRecord {
+    /// Build an OPT record suitable for a response
+    pub fn response(udp_payload_size: u16, do_bit: bool) -> Self {
+        Self {
+            udp_payload_size,
+            extended_rcode: 0,
+            version: 0,
+            do_bit,
+            options: vec![],
+        }
+    }
+
+    /// true if this record indicates the client supports DNSSEC (DO bit set)
+    pub fn dnssec_ok(&self) -> bool {
+        self.do_bit
+    }
+
+    /// serialize the OPT RR into wire format for the additional section
+    pub fn to_wire(&self) -> Vec<u8> {
+        let mut res = vec![];
+        // name: root label only
+        res.push(0);
+        // type: OPT = 41
+        res.extend((41u16).to_be_bytes());
+        // class: UDP payload size
+        res.extend(self.udp_payload_size.to_be_bytes());
+        // TTL: extended RCODE (bits 31-24), version (bits 23-16), DO bit (bit 15), rest zero
+        let mut ttl: u32 = 0;
+        ttl |= (self.extended_rcode as u32) << 24;
+        ttl |= (self.version as u32) << 16;
+        if self.do_bit {
+            ttl |= 1 << 15;
+        }
+        res.extend(ttl.to_be_bytes());
+        // RDLENGTH
+        res.extend((self.options.len() as u16).to_be_bytes());
+        // RDATA
+        res.extend(&self.options);
+        res
+    }
+
+    /// parse OPT RR from wire format, returns the OPT record and number of bytes consumed
+    pub fn from_wire(input: &[u8]) -> Result<(Self, usize), String> {
+        if input.len() < 11 {
+            return Err("OPT RR too short".to_string());
+        }
+        // name should be root label (0)
+        if input[0] != 0 {
+            return Err("OPT name must be root label".to_string());
+        }
+        // type must be OPT (41)
+        let rrtype = u16::from_be_bytes([input[1], input[2]]);
+        if rrtype != 41 {
+            return Err(format!("OPT type mismatch: got {rrtype}"));
+        }
+        // class = UDP payload size
+        let udp_payload_size = u16::from_be_bytes([input[3], input[4]]);
+        // TTL
+        let ttl = u32::from_be_bytes([input[5], input[6], input[7], input[8]]);
+        let extended_rcode = (ttl >> 24) as u8;
+        let version = (ttl >> 16) as u8;
+        let do_bit = (ttl >> 15) & 1 == 1;
+        // RDLENGTH
+        let rdlength = u16::from_be_bytes([input[9], input[10]]);
+        let total = 11 + rdlength as usize;
+        if input.len() < total {
+            return Err("OPT RR RDATA extends past end".to_string());
+        }
+        let options = input[11..total].to_vec();
+        Ok((
+            Self {
+                udp_payload_size,
+                extended_rcode,
+                version,
+                do_bit,
+                options,
+            },
+            total,
+        ))
+    }
+}
+
+/// Parse the additional section of a DNS message, returning any OPT RR found and the DO bit.
+/// The additional section starts right after the question section.
+pub fn parse_opt_from_additional(buf: &[u8], question_end: usize) -> (Option<OptRecord>, bool) {
+    let mut pos = question_end;
+    let mut opt = None;
+    let mut do_bit = false;
+
+    while pos < buf.len() {
+        if buf.len() < pos + 11 {
+            break;
+        }
+        let Some(rr_end) = parse_rr_end(buf, pos) else {
+            break;
+        };
+        let rr_buf = &buf[pos..rr_end];
+        if rr_buf[0] == 0 && rr_buf[1..3] == [0, 41] {
+            if let Ok((parsed, _)) = OptRecord::from_wire(rr_buf) {
+                do_bit = parsed.do_bit;
+                opt = Some(parsed);
+            }
+            break;
+        };
+        pos = rr_end;
+    }
+
+    (opt, do_bit)
+}
+
+/// Calculate the wire-format length of a qname (labels + type + class).
+/// The qname is stored as the dotted-name string (e.g. "example.com"), so wire length
+/// is: sum of (label_len + 1) for each label + 1 for the terminating 0 + 4 for qtype+qclass.
+pub fn question_qname_wire_len(qname: &[u8]) -> usize {
+    if qname.is_empty() {
+        return 1 + 4; // root label + qtype + qclass
+    }
+    let mut len = 0;
+    let mut pos = 0;
+    while pos < qname.len() {
+        if qname[pos] == b'.' {
+            len += 1; // length octet for the next label
+            pos += 1;
+        } else {
+            len += 1; // the character itself
+            pos += 1;
+        }
+    }
+    len += 1; // first label length octet (not counted in the loop)
+    len += 1; // terminating 0
+    len += 4; // qtype + qclass
+    len
+}
+
+fn parse_rr_end(buf: &[u8], pos: usize) -> Option<usize> {
+    if pos >= buf.len() {
+        return None;
+    }
+    let mut p = pos;
+    // skip name: labels until 0 byte
+    while p < buf.len() && buf[p] != 0 {
+        let label_len = buf[p] as usize;
+        p += label_len + 1;
+    }
+    if p >= buf.len() {
+        return None;
+    }
+    p += 1; // skip the terminating 0
+    // skip type(2) + class(2) + ttl(4) + rdlength(2) = 10 bytes
+    if p + 10 > buf.len() {
+        return None;
+    }
+    let rdlength = u16::from_be_bytes([buf[p + 8], buf[p + 9]]) as usize;
+    p += 10 + rdlength;
+    if p > buf.len() {
+        return None;
+    }
+    Some(p)
+}

@@ -45,6 +45,9 @@ pub struct FileZone {
     /// MINIMUM - The unsigned 32 bit minimum TTL field that should be exported with any RR from this zone.
     #[serde(default)]
     pub minimum: u32,
+    /// Whether this zone is DNSSEC-signed (controls the ad bit in responses)
+    #[serde(default)]
+    pub signed: bool,
     /// The records associated with this zone
     pub records: Vec<FileZoneRecord>,
 }
@@ -94,6 +97,7 @@ impl FileZone {
             retry: Set(self.retry),
             expire: Set(self.expire),
             minimum: Set(self.minimum),
+            signed: Set(self.signed),
         };
 
         let zone_model = zone.insert(&txn).await?;
@@ -102,10 +106,15 @@ impl FileZone {
         for record in &self.records {
             let rrtype: crate::enums::RecordType = record.rrtype.as_str().into();
 
+            let name = if record.name == "@" {
+                String::new()
+            } else {
+                record.name.clone()
+            };
             let record_model = entities::records::ActiveModel {
                 id: NotSet,
                 zoneid: Set(zone_model.id),
-                name: Set(record.name.clone()),
+                name: Set(name),
                 ttl: Set(Some(record.ttl)),
                 rrtype: Set(rrtype as u16),
                 rclass: Set(record.class as u16),
@@ -170,6 +179,8 @@ pub struct ZoneRecord {
     pub name: Vec<u8>,
     /// the records associated with this name
     pub typerecords: Vec<InternalResourceRecord>,
+    /// whether this zone is DNSSEC-signed (controls the ad bit in responses)
+    pub signed: bool,
 }
 
 impl Display for ZoneRecord {

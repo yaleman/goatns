@@ -2,6 +2,8 @@ mod m_20260115_users_table;
 mod m_20260115_zones_tables;
 mod m_20260201_users_id_uuid;
 mod m_20260203_zones_ids_uuid;
+mod m_20260626_dnssec;
+mod m_20260627_fix_at_sign_name;
 
 use async_trait::async_trait;
 use sea_orm_migration::prelude::*;
@@ -16,6 +18,8 @@ impl MigratorTrait for Migrator {
             Box::new(m_20260115_zones_tables::Migration),
             Box::new(m_20260201_users_id_uuid::Migration),
             Box::new(m_20260203_zones_ids_uuid::Migration),
+            Box::new(m_20260626_dnssec::Migration),
+            Box::new(m_20260627_fix_at_sign_name::Migration),
         ]
     }
 }

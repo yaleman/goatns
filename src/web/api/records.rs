@@ -36,8 +36,8 @@ impl ZoneFileRecord {
         };
 
         let name = match &self.name {
-            Some(name) => Set(name.clone()),
-            None => Set(String::from("@")),
+            Some(name) if name != "@" => Set(name.clone()),
+            _ => Set(String::new()),
         };
         entities::records::ActiveModel {
             id,

@@ -26,6 +26,8 @@ pub struct ZoneForm {
     pub retry: u32,
     pub expire: u32,
     pub minimum: u32,
+    #[serde(default)]
+    pub signed: bool,
 }
 
 impl From<entities::zones::Model> for ZoneForm {
@@ -39,6 +41,7 @@ impl From<entities::zones::Model> for ZoneForm {
             retry: zone.retry,
             expire: zone.expire,
             minimum: zone.minimum,
+            signed: zone.signed,
         }
     }
 }

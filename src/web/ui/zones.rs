@@ -108,6 +108,7 @@ pub(crate) async fn zones_new_post(
         retry: NotSet,
         expire: NotSet,
         minimum: NotSet,
+        signed: Set(false),
     };
 
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();
