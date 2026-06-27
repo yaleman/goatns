@@ -31,8 +31,8 @@ pub(crate) enum ChaosResult {
 /// this handles a shutdown CHAOS request
 async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<ChaosResult, GoatNsError> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
-    if let Some(q) = &r.question {
-        if q.qclass == RecordClass::Chaos {
+    if let Some(q) = &r.question
+        && q.qclass == RecordClass::Chaos {
             let qname = from_utf8(&q.qname).inspect_err(|e| {
                 error!(
                     "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
@@ -59,8 +59,7 @@ async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<ChaosRe
                     }
                 };
             }
-        }
-    };
+        };
 
     let mut chaos_reply = r.clone();
     chaos_reply.answers.push(CHAOS_NO.clone());
@@ -209,11 +208,10 @@ pub async fn tcp_conn_handler(
         };
         trace!("Read {:?} bytes from TCP stream", len);
     }
-    if capture_packets {
-        if let Err(err) = crate::utils::hexdump(&buf) {
+    if capture_packets
+        && let Err(err) = crate::utils::hexdump(&buf) {
             error!("Failed to hexdump buffer: {:?}", err);
         };
-    }
     // the first two bytes of a tcp query is the message length
     // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
 

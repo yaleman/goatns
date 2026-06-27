@@ -221,7 +221,7 @@ impl ConfigFile {
     pub fn try_from(config_path: Option<PathBuf>) -> Result<ConfigFile, std::io::Error> {
         let file_locations = match config_path {
             Some(value) => vec![value],
-            None => CONFIG_LOCATIONS.iter().map(|x| PathBuf::from(x)).collect(),
+            None => CONFIG_LOCATIONS.iter().map(PathBuf::from).collect(),
         };
 
         // clean up the file paths and filter them by the ones that exist
@@ -379,11 +379,10 @@ impl From<Config> for ConfigFile {
 
         let mut otel_endpoint = None;
         #[cfg(not(test))]
-        if let Ok(val) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
-            if !val.is_empty() {
+        if let Ok(val) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+            && !val.is_empty() {
                 otel_endpoint = Some(val);
             }
-        }
         if otel_endpoint.is_none() {
             otel_endpoint = config
                 .get("otel_endpoint")

@@ -96,8 +96,8 @@ impl Reply {
 
     /// checks to see if it's over the max length set in [UDP_BUFFER_SIZE] and set the truncated flag if it is
     pub async fn check_set_truncated(&self) -> Reply {
-        if let Ok(ret_bytes) = self.as_bytes().await {
-            if ret_bytes.len() > UDP_BUFFER_SIZE {
+        if let Ok(ret_bytes) = self.as_bytes().await
+            && ret_bytes.len() > UDP_BUFFER_SIZE {
                 let mut header = self.header.clone();
                 header.truncated = true;
                 return Self {
@@ -105,7 +105,6 @@ impl Reply {
                     ..self.clone()
                 };
             }
-        }
         self.clone()
     }
 }
