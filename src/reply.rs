@@ -1,8 +1,8 @@
 use crate::enums::{PacketType, Rcode};
 use crate::error::GoatNsError;
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
-use crate::{Header, Question};
-use crate::{ResourceRecord, UDP_BUFFER_SIZE};
+use crate::{Header, Question, ResourceRecord};
+use crate::UDP_BUFFER_SIZE;
 use packed_struct::prelude::*;
 use tracing::{debug, error};
 
@@ -11,8 +11,8 @@ pub struct Reply {
     pub header: Header,
     pub question: Option<Question>,
     pub answers: Vec<InternalResourceRecord>,
-    pub authorities: Vec<ResourceRecord>,
-    pub additional: Vec<ResourceRecord>,
+    pub authorities: Vec<Vec<u8>>,
+    pub additional: Vec<Vec<u8>>,
 }
 
 impl Reply {
@@ -37,14 +37,22 @@ impl Reply {
                     InternalResourceRecord::AAAA { ttl, .. } => ttl,
                     InternalResourceRecord::AXFR { ttl, .. } => ttl,
                     InternalResourceRecord::CAA { ttl, .. } => ttl,
+                    InternalResourceRecord::CDNSKEY { ttl, .. } => ttl,
+                    InternalResourceRecord::CDS { ttl, .. } => ttl,
                     InternalResourceRecord::CNAME { ttl, .. } => ttl,
+                    InternalResourceRecord::DNSKEY { ttl, .. } => ttl,
+                    InternalResourceRecord::DS { ttl, .. } => ttl,
                     InternalResourceRecord::HINFO { ttl, .. } => ttl,
                     InternalResourceRecord::InvalidType => &1u32,
                     InternalResourceRecord::LOC { ttl, .. } => ttl,
                     InternalResourceRecord::MX { ttl, .. } => ttl,
                     InternalResourceRecord::NAPTR { ttl, .. } => ttl,
+                    InternalResourceRecord::NSEC { ttl, .. } => ttl,
+                    InternalResourceRecord::NSEC3 { ttl, .. } => ttl,
+                    InternalResourceRecord::NSEC3PARAM { ttl, .. } => ttl,
                     InternalResourceRecord::NS { ttl, .. } => ttl,
                     InternalResourceRecord::PTR { ttl, .. } => ttl,
+                    InternalResourceRecord::RRSIG { ttl, .. } => ttl,
                     InternalResourceRecord::SOA { minimum, .. } => minimum,
                     InternalResourceRecord::TXT { ttl, .. } => ttl,
                     InternalResourceRecord::URI { ttl, .. } => ttl,
@@ -70,10 +78,7 @@ impl Reply {
         }
 
         for additional in &final_reply.additional {
-            error!(
-                "Should be handling additional rr's in reply: {:?}",
-                additional
-            );
+            retval.extend(additional);
         }
 
         Ok(retval)
@@ -91,8 +96,8 @@ impl Reply {
 
     /// checks to see if it's over the max length set in [UDP_BUFFER_SIZE] and set the truncated flag if it is
     pub async fn check_set_truncated(&self) -> Reply {
-        if let Ok(ret_bytes) = self.as_bytes().await {
-            if ret_bytes.len() > UDP_BUFFER_SIZE {
+        if let Ok(ret_bytes) = self.as_bytes().await
+            && ret_bytes.len() > UDP_BUFFER_SIZE {
                 let mut header = self.header.clone();
                 header.truncated = true;
                 return Self {
@@ -100,7 +105,6 @@ impl Reply {
                     ..self.clone()
                 };
             }
-        }
         self.clone()
     }
 }

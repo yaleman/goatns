@@ -10,8 +10,8 @@
   - [ ] should check for zones, is currently just YOLOing a response to any request
   - [x] return a HINFO record of "RFC8482", can't be stored
 - [x] CAA (257) RFC6844
-- [ ] CDNSKEY (60) RFC7344 Child copy of DNSKEY record, for transfer to parent
-- [ ] CDNSKEY (59) RFC7344 Child copy of DS record, for transfer to parent
+- [x] CDNSKEY (60) RFC7344 Child copy of DNSKEY record, for transfer to parent
+- [x] CDS (59) RFC7344 Child copy of DS record, for transfer to parent
 - [ ] CERT (37) RFC4398 Certificate record
 - [ ] CSYNC (62) RFC7477 Specify a synchronization mechanism between a child and a parent DNS zone.
       Typical example is declaring the same NS records in the parent and the child zone
@@ -19,7 +19,8 @@
 - [ ] DHCID (49) RFC4701 Used in conjunction with the FQDN option to DHCP
 - [ ] DLV (32769) RFC4431 DNSSEC Lookaside Validation record
 - [ ] DNAME (39) RFC6672 Delegation name record
-- [ ] DNSKEY (48) RFC4034 DNS Key record The key record used in DNSSEC.
+- [x] DS (43) RFC4034 Delegation Signer record, part of DNSSEC
+- [x] DNSKEY (48) RFC4034 DNS Key record The key record used in DNSSEC.
 - [ ] EUI48 (108) RFC7043 MAC address (EUI-48) A 48-bit IEEE Extended Unique Identifier.
 - [ ] EUI64 (109) RFC7043 MAC address (EUI-64) A 64-bit IEEE Extended Unique Identifier.
 - [x] HINFO (13) RFC8482 Providing Minimal-Sized Responses to DNS Queries That Have QTYPE=ANY
@@ -41,17 +42,17 @@
 - [ ] NAPTR (35) RFC3403 Naming Authority Pointer Allows regular-expression-based rewriting of
       domain names which can then be used as URIs, further domain names to lookups, etc.
 - [x] NS
-- [ ] NSEC (47) RFC4034 Next Secure record Part of DNSSEC—used to prove a name does not exist. Uses
+- [x] NSEC (47) RFC4034 Next Secure record Part of DNSSEC—used to prove a name does not exist. Uses
       the same format as the (obsolete) NXT record.
-- [ ] NSEC3 50 RFC5155 Next Secure record version 3 An extension to DNSSEC that allows proof of
+- [x] NSEC3 50 RFC5155 Next Secure record version 3 An extension to DNSSEC that allows proof of
       nonexistence for a name without permitting zonewalking
-- [ ] NSEC3PARAM 51 RFC5155 NSEC3 parameters Parameter record for use with NSEC3
+- [x] NSEC3PARAM 51 RFC5155 NSEC3 parameters Parameter record for use with NSEC3
 - [ ] OPENPGPKEY 61 RFC7929 OpenPGP public key record A DNS-based Authentication of Named Entities
       (DANE) method for publishing and locating OpenPGP public keys in DNS for a specific email
       address using an OPENPGPKEY DNS resource record.
-- [ ] OPT 41 RFC6891 Option This is a pseudo-record type needed to support EDNS.
+- [x] OPT 41 RFC6891 Option This is a pseudo-record type needed to support EDNS.
 - [x] PTR 12 RFC1035
-- [ ] RRSIG 46 RFC4034 DNSSEC signature Signature for a DNSSEC-secured record set. Uses the same
+- [x] RRSIG 46 RFC4034 DNSSEC signature Signature for a DNSSEC-secured record set. Uses the same
       format as the SIG record.
 - [ ] RP 17 RFC1183 Responsible Person Information about the responsible person(s) for the domain.
       Usually an email address with the @ replaced by a .

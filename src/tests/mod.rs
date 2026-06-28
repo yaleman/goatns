@@ -1,6 +1,7 @@
 mod cli;
 mod config;
 mod db;
+mod dnssec;
 mod doh;
 mod e2e_test;
 mod enums;
@@ -9,6 +10,7 @@ mod resourcerecord;
 mod test_api;
 pub mod test_harness;
 mod utils;
+mod zones;
 
 use crate::db::*;
 use prelude::*;
@@ -24,6 +26,87 @@ use packed_struct::prelude::*;
 use std::net::IpAddr;
 use std::str::FromStr;
 use tracing::{debug, error, info, trace, warn};
+
+#[test]
+fn opt_record_roundtrip() {
+    use crate::OptRecord;
+    let opt = OptRecord::response(1232, true);
+    let wire = opt.to_wire();
+    let (parsed, consumed) =
+        OptRecord::from_wire(&wire).expect("OPT from_wire should succeed");
+    assert_eq!(consumed, wire.len());
+    assert_eq!(parsed.udp_payload_size, 1232);
+    assert!(parsed.do_bit);
+    assert_eq!(parsed.version, 0);
+    assert_eq!(parsed.extended_rcode, 0);
+}
+
+#[test]
+fn opt_record_without_do_bit() {
+    use crate::OptRecord;
+    let opt = OptRecord::response(512, false);
+    let wire = opt.to_wire();
+    let (parsed, _) =
+        OptRecord::from_wire(&wire).expect("OPT from_wire should succeed");
+    assert_eq!(parsed.udp_payload_size, 512);
+    assert!(!parsed.do_bit);
+}
+
+#[test]
+fn opt_from_additional_with_opt_rr() {
+    use crate::parse_opt_from_additional;
+    let mut buf: Vec<u8> = vec![];
+    buf.extend(0x0001u16.to_be_bytes()); // id
+    buf.extend(0x0000u16.to_be_bytes()); // flags
+    buf.extend(0x0001u16.to_be_bytes()); // qdcount
+    buf.extend(0x0000u16.to_be_bytes()); // ancount
+    buf.extend(0x0000u16.to_be_bytes()); // nscount
+    buf.extend(0x0001u16.to_be_bytes()); // arcount
+    buf.extend(b"\x07example\x03com\x00"); // qname
+    buf.extend(0x0001u16.to_be_bytes()); // qtype A
+    buf.extend(0x0001u16.to_be_bytes()); // qclass IN
+    let opt = crate::OptRecord::response(1232, true);
+    buf.extend(opt.to_wire());
+
+    let question_end = 12 + 13 + 4; // header + qname wire + qtype + qclass
+    let (opt_out, do_bit) = parse_opt_from_additional(&buf, question_end);
+    assert!(opt_out.is_some());
+    assert!(do_bit);
+}
+
+#[test]
+fn opt_from_additional_without_opt() {
+    use crate::parse_opt_from_additional;
+    let mut buf: Vec<u8> = vec![];
+    buf.extend(0x0001u16.to_be_bytes()); // id
+    buf.extend(0x0000u16.to_be_bytes()); // flags
+    buf.extend(0x0001u16.to_be_bytes()); // qdcount
+    buf.extend(0x0000u16.to_be_bytes()); // ancount
+    buf.extend(0x0000u16.to_be_bytes()); // nscount
+    buf.extend(0x0000u16.to_be_bytes()); // arcount
+    buf.extend(b"\x07example\x03com\x00"); // qname
+    buf.extend(0x0001u16.to_be_bytes()); // qtype A
+    buf.extend(0x0001u16.to_be_bytes()); // qclass IN
+
+    let question_end = 12 + 13 + 4;
+    let (opt_out, do_bit) = parse_opt_from_additional(&buf, question_end);
+    assert!(opt_out.is_none());
+    assert!(!do_bit);
+}
+
+#[test]
+fn question_qname_wire_len_example_com() {
+    use crate::question_qname_wire_len;
+    let qname = b"example.com".to_vec();
+    assert_eq!(question_qname_wire_len(&qname), 17);
+}
+
+#[test]
+fn question_qname_wire_len_root() {
+    use crate::question_qname_wire_len;
+    let qname = b"".to_vec();
+    assert_eq!(question_qname_wire_len(&qname), 5);
+}
 
 #[test]
 /// test my assumptions about ipnet things

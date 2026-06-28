@@ -210,7 +210,7 @@ impl ConfigFile {
     ///
     /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
     pub fn try_as_cowcell(
-        config_path: Option<String>,
+        config_path: Option<PathBuf>,
     ) -> Result<CowCell<ConfigFile>, std::io::Error> {
         Ok(CowCell::new(ConfigFile::try_from(config_path)?))
     }
@@ -218,17 +218,17 @@ impl ConfigFile {
     /// Loads the configuration from a given file or from some default locations.
     ///
     /// The default locations are `~/.config/goatns.json` and `./goatns.json`.
-    pub fn try_from(config_path: Option<String>) -> Result<ConfigFile, std::io::Error> {
+    pub fn try_from(config_path: Option<PathBuf>) -> Result<ConfigFile, std::io::Error> {
         let file_locations = match config_path {
-            Some(value) => vec![value.to_owned()],
-            None => CONFIG_LOCATIONS.iter().map(|x| x.to_string()).collect(),
+            Some(value) => vec![value],
+            None => CONFIG_LOCATIONS.iter().map(PathBuf::from).collect(),
         };
 
         // clean up the file paths and filter them by the ones that exist
         let found_files: Vec<String> = file_locations
             .iter()
             .filter_map(|f| {
-                let path = shellexpand::tilde(&f).into_owned();
+                let path = shellexpand::tilde(&f.to_string_lossy()).into_owned();
                 let filepath = std::path::Path::new(&path);
                 match filepath.exists() {
                     false => {
@@ -243,7 +243,11 @@ impl ConfigFile {
         if found_files.is_empty() {
             eprintln!(
                 "No configuration files exist, giving up! Tried: {}",
-                file_locations.join(", ")
+                file_locations
+                    .iter()
+                    .map(|p| p.to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join(", ")
             );
             return Err(std::io::Error::new(
                 ErrorKind::NotFound,
@@ -375,11 +379,10 @@ impl From<Config> for ConfigFile {
 
         let mut otel_endpoint = None;
         #[cfg(not(test))]
-        if let Ok(val) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
-            if !val.is_empty() {
+        if let Ok(val) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+            && !val.is_empty() {
                 otel_endpoint = Some(val);
             }
-        }
         if otel_endpoint.is_none() {
             otel_endpoint = config
                 .get("otel_endpoint")

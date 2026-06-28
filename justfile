@@ -69,7 +69,7 @@ codespell:
 
 # Ask the clip for the judgement
 clippy:
-	cargo clippy --all-features --all-targets --quiet
+	cargo clippy --all-features --all-targets --quiet -- -D warnings
 
 # Run the rust tests
 test:

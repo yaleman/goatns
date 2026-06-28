@@ -26,6 +26,8 @@ pub struct ZoneForm {
     pub retry: u32,
     pub expire: u32,
     pub minimum: u32,
+    #[serde(default)]
+    pub signed: bool,
 }
 
 impl From<entities::zones::Model> for ZoneForm {
@@ -39,6 +41,7 @@ impl From<entities::zones::Model> for ZoneForm {
             retry: zone.retry,
             expire: zone.expire,
             minimum: zone.minimum,
+            signed: zone.signed,
         }
     }
 }
@@ -227,12 +230,11 @@ pub(crate) async fn api_zone_update(
         .one(&txn)
         .await
         .map_err(|err| {
-            // TODO: make this a better log
-            println!("Failed to validate user owns zone: {err:?}");
+            error!("Failed to validate user owns zone: {err:?}");
             (
                 StatusCode::UNAUTHORIZED,
                 Json(ErrorResult {
-                    message: "".to_string(),
+                    message: "You do not own this zone".to_string(),
                 }),
             )
         })?
@@ -245,7 +247,7 @@ pub(crate) async fn api_zone_update(
             }),
         ));
     };
-    println!("looks like user owns zone");
+    debug!("User {} owns zone {}, proceeding with update", user.id, zone_form.id);
 
     // save the zone data
 
@@ -271,7 +273,7 @@ pub(crate) async fn api_zone_update(
     }
 
     if zone.is_changed() {
-        println!("Zone has changes, updating...");
+        debug!("Zone has changes, updating...");
         if let Err(err) = zone.update(&txn).await {
             error!("Failed to save zone: {err:?}");
             return Err((

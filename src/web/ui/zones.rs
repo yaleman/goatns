@@ -2,6 +2,7 @@
 
 use crate::datastore::Command;
 use crate::db::entities;
+use crate::utils::check_valid_tld;
 use crate::web::GoatState;
 use crate::web::ui::check_logged_in;
 use crate::web::utils::Urls;
@@ -42,6 +43,14 @@ pub(crate) async fn zones_new_post(
         return Err(Urls::Home.redirect_with_query(HashMap::from([(
             "error".to_string(),
             "Invalid DNS name".to_string(),
+        )])));
+    }
+
+    // Validate the TLD is in the allowed list
+    if !check_valid_tld(&form.name, &state.read().await.config.allowed_tlds) {
+        return Err(Urls::Home.redirect_with_query(HashMap::from([(
+            "error".to_string(),
+            "TLD not allowed".to_string(),
         )])));
     }
 
@@ -99,6 +108,7 @@ pub(crate) async fn zones_new_post(
         retry: NotSet,
         expire: NotSet,
         minimum: NotSet,
+        signed: Set(false),
     };
 
     let (os_tx, os_rx) = tokio::sync::oneshot::channel();

@@ -12,6 +12,7 @@ use log::info;
 use reqwest::StatusCode;
 use sea_orm::EntityTrait;
 use std::net::{Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
 use tokio::net::{TcpListener, UdpSocket};
 use utoipa::OpenApi;
 
@@ -41,9 +42,9 @@ pub async fn start_test_server() -> (
     test_logging().await;
     let dbconn = test_get_sqlite_memory().await;
 
-    let config = crate::config::ConfigFile::try_as_cowcell(Some(
-        "./examples/test_config/goatns-test.json".to_string(),
-    ))
+    let config = crate::config::ConfigFile::try_as_cowcell(Some(PathBuf::from(
+        "./examples/test_config/goatns-test.json",
+    )))
     .expect("failed to parse test config");
 
     let api_listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
@@ -189,6 +190,7 @@ async fn api_zone_create() -> Result<(), GoatNsError> {
         minimum: 1235,
         refresh: 1234,
         retry: 1234,
+        signed: false,
     };
 
     println!("api_zone_create Sending zone create");
@@ -363,6 +365,7 @@ async fn api_zone_create_delete() -> Result<(), sqlx::Error> {
         minimum: 1235,
         refresh: 1111,
         retry: 1234234,
+        signed: false,
     };
 
     println!("Sending zone create");
@@ -447,6 +450,7 @@ async fn api_zone_create_update() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(1111),
         retry: Set(1234234),
+        signed: Set(false),
     };
     println!("Saving zone");
     let newzone = newzone.insert(&pool).await?;
@@ -524,6 +528,7 @@ async fn api_record_create() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(1341234),
         retry: Set(123456),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -622,6 +627,7 @@ async fn api_record_delete() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -697,6 +703,7 @@ async fn api_record_delete_forbidden_without_ownership() -> Result<(), GoatNsErr
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -787,6 +794,7 @@ async fn api_record_get_forbidden_without_ownership() -> Result<(), GoatNsError>
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -864,6 +872,7 @@ async fn api_record_get_requires_auth() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -928,6 +937,7 @@ async fn api_record_delete_requires_auth() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -1000,6 +1010,7 @@ async fn api_record_delete_does_not_delete_zone() -> Result<(), GoatNsError> {
         minimum: Set(1235),
         refresh: Set(0),
         retry: Set(0),
+        signed: Set(false),
     }
     .insert(&pool)
     .await
@@ -1063,5 +1074,142 @@ async fn api_record_delete_does_not_delete_zone() -> Result<(), GoatNsError> {
     assert!(zone_exists.is_some());
 
     drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn admin_middleware_blocks_non_admin_user() -> Result<(), GoatNsError> {
+    let (pool, _servers, config, ..) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    // Create a non-admin user
+    let user = entities::users::ActiveModel {
+        id: NotSet,
+        displayname: Set("Regular user".to_string()),
+        username: Set("regularuser".to_string()),
+        email: Set("regular@hello.goat".to_string()),
+        disabled: Set(false),
+        authref: Set(None),
+        admin: Set(false),
+    }
+    .insert(&pool)
+    .await?;
+
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id).await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()?;
+
+    // Log in as the non-admin user
+    let res = client
+        .post(format!("https://localhost:{api_port}/api/login"))
+        .json(&AuthPayload {
+            token_key: token.key,
+            token_secret,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // Attempt to access admin endpoint — should be 403 FORBIDDEN
+    let res = client
+        .get(format!("https://localhost:{api_port}/ui/admin"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    // Attempt to access admin reports — should be 403 FORBIDDEN
+    let res = client
+        .get(format!(
+            "https://localhost:{api_port}/ui/admin/reports/unowned_records"
+        ))
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn admin_middleware_allows_admin_user() -> Result<(), GoatNsError> {
+    let (pool, _servers, config, ..) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    // The default test user is admin (admin: Set(true))
+    let user = insert_test_user(&pool).await;
+    let (token, token_secret) = insert_test_user_api_token(&pool, user.id).await?;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .cookie_store(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()?;
+
+    // Log in as admin
+    let res = client
+        .post(format!("https://localhost:{api_port}/api/login"))
+        .json(&AuthPayload {
+            token_key: token.key,
+            token_secret,
+        })
+        .send()
+        .await?;
+    assert_eq!(res.status(), 200);
+
+    // Access admin endpoint — should be 200 OK
+    let res = client
+        .get(format!("https://localhost:{api_port}/ui/admin"))
+        .send()
+        .await?;
+    assert_eq!(res.status(), StatusCode::OK);
+
+    drop(pool);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn api_rate_limit_returns_429_after_burst() -> Result<(), GoatNsError> {
+    let (_pool, _servers, config, ..) = start_test_server().await;
+    let api_port = config.read().await.api_port;
+
+    let client = reqwest::ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .timeout(std::time::Duration::from_secs(5))
+        .build()?;
+
+    let url = format!("https://localhost:{api_port}/api/login");
+
+    let mut too_many = 0;
+    let mut ok = 0;
+    for _ in 0..200 {
+        let res = client
+            .post(&url)
+            .json(&AuthPayload {
+                token_key: "x".to_string(),
+                token_secret: "y".to_string(),
+            })
+            .send()
+            .await?;
+        match res.status() {
+            StatusCode::OK | StatusCode::UNAUTHORIZED | StatusCode::INTERNAL_SERVER_ERROR => {
+                ok += 1;
+            }
+            StatusCode::TOO_MANY_REQUESTS => {
+                too_many += 1;
+            }
+            other => panic!("unexpected status: {other}"),
+        }
+    }
+
+    assert!(ok >= 10, "expected at least 10 ok responses, got {ok}");
+    assert!(
+        too_many > 0,
+        "expected some 429 responses after burst, got {too_many}"
+    );
+
     Ok(())
 }

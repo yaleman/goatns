@@ -266,11 +266,10 @@ pub async fn login(
     State(mut state): State<GoatState>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     // check if we've got an existing, valid session
-    if let Some(signed_in) = session.get("signed_in").await.unwrap_or(Some(false)) {
-        if signed_in {
+    if let Some(signed_in) = session.get("signed_in").await.unwrap_or(Some(false))
+        && signed_in {
             return Ok(Urls::ZonesList.redirect().into_response());
         }
-    }
 
     let (query_state, query_code) = match (query.state, query.code) {
         (Some(state), Some(code)) => (state, code),

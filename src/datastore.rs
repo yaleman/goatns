@@ -28,6 +28,8 @@ pub enum Command {
         rrtype: RecordType,
         /// The class of record to get
         rclass: RecordClass,
+        /// Whether the client set the DO (DNSSEC OK) bit - if true and zone is signed, include RRSIG records
+        do_bit: bool,
         /// The response channel
         resp: Responder<Option<ZoneRecord>>,
     },
@@ -166,6 +168,7 @@ async fn handle_get_command(
     name: Vec<u8>,
     rrtype: RecordType,
     rclass: RecordClass,
+    do_bit: bool,
     resp: oneshot::Sender<Option<ZoneRecord>>,
 ) -> Result<(), String> {
     debug!(
@@ -180,7 +183,19 @@ async fn handle_get_command(
     let mut zr = ZoneRecord {
         name: name.clone(),
         typerecords: vec![],
+        signed: false,
     };
+
+    // look up the zone's signed flag
+    let zone_signed = entities::zones::Entity::find()
+        .filter(entities::zones::Column::Name.eq(db_name.to_string()))
+        .one(conn)
+        .await
+        .ok()
+        .flatten()
+        .map(|z| z.signed)
+        .unwrap_or(false);
+    zr.signed = zone_signed;
 
     //  if it's an SOA record we don't go to the database directly, it's based on the zone, but currently we're only doing this for the specific zone.
 
@@ -208,6 +223,39 @@ async fn handle_get_command(
                 error!("Failed to query db: {err:?}")
             }
         };
+        // if the client set the DO bit and the zone is signed, include RRSIG records
+        if do_bit && zone_signed && rrtype != RecordType::RRSIG {
+            match entities::records_merged::Entity::get_records(
+                conn,
+                db_name,
+                RecordType::RRSIG,
+                rclass,
+                true,
+            )
+            .await
+            {
+                Ok(value) => {
+                    let rrsigs: Vec<InternalResourceRecord> = value
+                        .into_iter()
+                        .filter_map(|rec| InternalResourceRecord::try_from(rec).ok())
+                        .filter(|rr| {
+                            if let InternalResourceRecord::RRSIG {
+                                type_covered, ..
+                            } = rr
+                            {
+                                *type_covered == rrtype
+                            } else {
+                                false
+                            }
+                        })
+                        .collect();
+                    zr.typerecords.extend(rrsigs);
+                }
+                Err(err) => {
+                    error!("Failed to query RRSIG records: {err:?}")
+                }
+            }
+        }
     }
 
     let result = match zr.typerecords.is_empty() {
@@ -436,10 +484,11 @@ pub(crate) async fn handle_message(
             name,
             rrtype,
             rclass,
+            do_bit,
             resp,
         } => {
             let res =
-                handle_get_command(server_hostname, &connpool, name, rrtype, rclass, resp).await;
+                handle_get_command(server_hostname, &connpool, name, rrtype, rclass, do_bit, resp).await;
             if let Err(e) = res {
                 error!("{e:?}")
             };

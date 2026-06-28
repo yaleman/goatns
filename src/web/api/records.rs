@@ -36,8 +36,8 @@ impl ZoneFileRecord {
         };
 
         let name = match &self.name {
-            Some(name) => Set(name.clone()),
-            None => Set(String::from("@")),
+            Some(name) if name != "@" => Set(name.clone()),
+            _ => Set(String::new()),
         };
         entities::records::ActiveModel {
             id,
@@ -132,14 +132,13 @@ pub(crate) async fn api_record_create(
                     }
                 }
                 crate::error::GoatNsError::SqlxError(sqlx::Error::Database(db_err)) => {
-                    if let Some(constraint) = db_err.constraint() {
-                        if constraint == "ind_records" {
+                    if let Some(constraint) = db_err.constraint()
+                        && constraint == "ind_records" {
                             return Err(error_result_json(
                                 "A record with the same name, type, and class already exists in this zone",
                                 StatusCode::CONFLICT,
                             ));
                         }
-                    }
                     // Check for unique constraint error codes
                     if db_err.code() == Some(std::borrow::Cow::Borrowed("2067"))
                         || db_err.code() == Some(std::borrow::Cow::Borrowed("1555"))

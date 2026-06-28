@@ -119,7 +119,23 @@ pub enum RecordType {
     ANY = 255,
     /// Certification Authority Restriction - <https://www.rfc-editor.org/rfc/rfc6844.txt>
     CAA = 257,
-    InvalidType,
+    /// DNSKEY <https://www.rfc-editor.org/rfc/rfc4034>
+    DNSKEY = 48,
+    /// RRSIG <https://www.rfc-editor.org/rfc/rfc4034>
+    RRSIG = 46,
+    /// NSEC <https://www.rfc-editor.org/rfc/rfc4034>
+    NSEC = 47,
+    /// NSEC3 <https://www.rfc-editor.org/rfc/rfc5155>
+    NSEC3 = 50,
+    /// NSEC3PARAM <https://www.rfc-editor.org/rfc/rfc5155>
+    NSEC3PARAM = 51,
+    /// DS <https://www.rfc-editor.org/rfc/rfc4034>
+    DS = 43,
+    /// CDNSKEY <https://www.rfc-editor.org/rfc/rfc7344>
+    CDNSKEY = 60,
+    /// CDS <https://www.rfc-editor.org/rfc/rfc7344>
+    CDS = 59,
+    InvalidType = 254,
 }
 
 impl From<RecordType> for sea_orm::Value {
@@ -159,6 +175,14 @@ impl From<&u16> for RecordType {
             255 => Self::ANY,
             256 => Self::URI,
             257 => Self::CAA,
+            43 => Self::DS,
+            46 => Self::RRSIG,
+            47 => Self::NSEC,
+            48 => Self::DNSKEY,
+            50 => Self::NSEC3,
+            51 => Self::NSEC3PARAM,
+            59 => Self::CDS,
+            60 => Self::CDNSKEY,
             _ => Self::InvalidType,
         }
     }
@@ -195,6 +219,14 @@ impl From<&str> for RecordType {
             "TXT" => Self::TXT,
             "URI" => Self::URI,
             "WKS" => Self::WKS,
+            "DNSKEY" => Self::DNSKEY,
+            "RRSIG" => Self::RRSIG,
+            "NSEC" => Self::NSEC,
+            "NSEC3" => Self::NSEC3,
+            "NSEC3PARAM" => Self::NSEC3PARAM,
+            "DS" => Self::DS,
+            "CDNSKEY" => Self::CDNSKEY,
+            "CDS" => Self::CDS,
             _ => Self::InvalidType,
         }
     }
@@ -225,6 +257,14 @@ impl From<RecordType> for &'static str {
             RecordType::TXT => "TXT",
             RecordType::URI => "URI",
             RecordType::WKS => "WKS",
+            RecordType::DNSKEY => "DNSKEY",
+            RecordType::RRSIG => "RRSIG",
+            RecordType::NSEC => "NSEC",
+            RecordType::NSEC3 => "NSEC3",
+            RecordType::NSEC3PARAM => "NSEC3PARAM",
+            RecordType::DS => "DS",
+            RecordType::CDNSKEY => "CDNSKEY",
+            RecordType::CDS => "CDS",
             RecordType::InvalidType => "",
         }
     }
@@ -244,14 +284,22 @@ impl From<InternalResourceRecord> for RecordType {
             InternalResourceRecord::AAAA { .. } => RecordType::AAAA,
             InternalResourceRecord::AXFR { .. } => RecordType::AXFR,
             InternalResourceRecord::CAA { .. } => RecordType::CAA,
+            InternalResourceRecord::CDNSKEY { .. } => RecordType::CDNSKEY,
+            InternalResourceRecord::CDS { .. } => RecordType::CDS,
             InternalResourceRecord::CNAME { .. } => RecordType::CNAME,
+            InternalResourceRecord::DNSKEY { .. } => RecordType::DNSKEY,
+            InternalResourceRecord::DS { .. } => RecordType::DS,
             InternalResourceRecord::HINFO { .. } => RecordType::HINFO,
             InternalResourceRecord::InvalidType => RecordType::InvalidType,
             InternalResourceRecord::LOC { .. } => RecordType::LOC,
             InternalResourceRecord::MX { .. } => RecordType::MX,
             InternalResourceRecord::NAPTR { .. } => RecordType::NAPTR,
+            InternalResourceRecord::NSEC { .. } => RecordType::NSEC,
+            InternalResourceRecord::NSEC3 { .. } => RecordType::NSEC3,
+            InternalResourceRecord::NSEC3PARAM { .. } => RecordType::NSEC3PARAM,
             InternalResourceRecord::NS { .. } => RecordType::NS,
             InternalResourceRecord::PTR { .. } => RecordType::PTR,
+            InternalResourceRecord::RRSIG { .. } => RecordType::RRSIG,
             InternalResourceRecord::SOA { .. } => RecordType::SOA,
             InternalResourceRecord::TXT { .. } => RecordType::TXT,
             InternalResourceRecord::URI { .. } => RecordType::URI,
@@ -267,12 +315,20 @@ impl RecordType {
             | RecordType::AAAA
             | RecordType::ANY
             | RecordType::CAA
+            | RecordType::CDNSKEY
+            | RecordType::CDS
             | RecordType::CNAME
+            | RecordType::DNSKEY
+            | RecordType::DS
             | RecordType::HINFO
             | RecordType::LOC
             | RecordType::MX
+            | RecordType::NSEC
+            | RecordType::NSEC3
+            | RecordType::NSEC3PARAM
             | RecordType::NS
             | RecordType::PTR
+            | RecordType::RRSIG
             | RecordType::SOA
             | RecordType::TXT
             | RecordType::URI => true,

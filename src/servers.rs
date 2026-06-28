@@ -5,7 +5,10 @@ use crate::error::GoatNsError;
 use crate::reply::{Reply, reply_any, reply_builder, reply_nxdomain};
 use crate::resourcerecord::{DNSCharString, InternalResourceRecord};
 use crate::zones::ZoneRecord;
-use crate::{HEADER_BYTES, Header, OpCode, Question, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE};
+use crate::{
+    HEADER_BYTES, Header, OpCode, OptRecord, Question, REPLY_TIMEOUT_MS, UDP_BUFFER_SIZE,
+    parse_opt_from_additional, question_qname_wire_len,
+};
 use concread::cowcell::asynch::CowCellReadTxn;
 use packed_struct::prelude::*;
 use std::io::Error;
@@ -28,8 +31,8 @@ pub(crate) enum ChaosResult {
 /// this handles a shutdown CHAOS request
 async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<ChaosResult, GoatNsError> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
-    if let Some(q) = &r.question {
-        if q.qclass == RecordClass::Chaos {
+    if let Some(q) = &r.question
+        && q.qclass == RecordClass::Chaos {
             let qname = from_utf8(&q.qname).inspect_err(|e| {
                 error!(
                     "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
@@ -56,8 +59,7 @@ async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<ChaosRe
                     }
                 };
             }
-        }
-    };
+        };
 
     let mut chaos_reply = r.clone();
     chaos_reply.answers.push(CHAOS_NO.clone());
@@ -151,7 +153,8 @@ pub async fn udp_server_with_socket(
 
                 let reply_bytes: Vec<u8> = match r.as_bytes().await {
                     Ok(value) => {
-                        // Check if it's too long and set truncate flag if so, it's safe to unwrap since we've already gone
+                        // RFC 7766 §4.1: if the response is too large for UDP, set the TC (truncated) bit
+                        // and send the truncated response. The client will retry over TCP.
                         if value.len() > UDP_BUFFER_SIZE {
                             r = r.check_set_truncated().await;
                             r.as_bytes_udp().await?
@@ -205,11 +208,10 @@ pub async fn tcp_conn_handler(
         };
         trace!("Read {:?} bytes from TCP stream", len);
     }
-    if capture_packets {
-        if let Err(err) = crate::utils::hexdump(&buf) {
+    if capture_packets
+        && let Err(err) = crate::utils::hexdump(&buf) {
             error!("Failed to hexdump buffer: {:?}", err);
         };
-    }
     // the first two bytes of a tcp query is the message length
     // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
 
@@ -475,6 +477,12 @@ async fn get_result(
         }
     };
 
+    // calculate where the question section ends so we can parse the additional section
+    let qname_len = question_qname_wire_len(&question.qname);
+    let question_end = HEADER_BYTES + qname_len + 4;
+    let (opt_record, do_bit) =
+        parse_opt_from_additional(buf, question_end);
+
     // record the details of the query
     let span = tracing::Span::current();
     if !span.is_disabled() {
@@ -516,6 +524,7 @@ async fn get_result(
         name: question.qname.clone(),
         rrtype: question.qtype,
         rclass: question.qclass,
+        do_bit,
         resp: tx_oneshot,
     };
 
@@ -549,6 +558,19 @@ async fn get_result(
         .filter(|r| r.is_type(RecordType::NS))
         .count() as u16;
 
+    // build EDNS0 OPT RR for the response if the client sent one
+    let additional = if let Some(ref opt) = opt_record {
+        let response_opt = OptRecord::response(
+            UDP_BUFFER_SIZE as u16,
+            opt.dnssec_ok(),
+        );
+        vec![response_opt.to_wire()]
+    } else {
+        vec![]
+    };
+
+    let arcount = additional.len() as u16;
+
     // this is our reply - static until that bit's done
     Ok(Reply {
         header: Header {
@@ -560,19 +582,20 @@ async fn get_result(
             recursion_desired: header.recursion_desired,
             recursion_available: false, // TODO: work this out
             z: false,
-            // TODO: decide how the ad flag should be set
-            ad: false,
-            cd: false, // TODO: figure this out -  CD (checking disabled) bit in the query. This requests the server to not perform DNSSEC validation of responses.
+            // ad (authentic data) bit: set when the zone is DNSSEC-signed
+            ad: record.signed,
+            // copy the CD (checking disabled) bit from the query
+            cd: header.cd,
             rcode: Rcode::NoError,
             qdcount: 1,
             ancount: record.typerecords.len() as u16,
             nscount,
-            arcount: 0,
+            arcount,
         },
         question: Some(question),
         answers: record.typerecords,
         authorities: vec![], // TODO: we're authoritative, we should respond with our records!
-        additional: vec![],
+        additional,
     })
 }
 

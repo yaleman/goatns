@@ -25,11 +25,10 @@ impl CustomClaimTypeThings for CustomClaimType {
     }
     fn get_displayname(&self) -> String {
         let mut displayname: String = "Anonymous Kid".to_string();
-        if let Some(name) = self.name() {
-            if let Some(username) = name.iter().next() {
+        if let Some(name) = self.name()
+            && let Some(username) = name.iter().next() {
                 displayname = username.1.to_string();
             }
-        }
         displayname
     }
     fn get_username(&self) -> String {
