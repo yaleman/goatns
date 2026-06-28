@@ -329,8 +329,6 @@ pub async fn api_tokens_post(
     State(state): State<GoatState>,
     Form(form): Form<ApiTokenForm>,
 ) -> Result<ApiTokenPage, Redirect> {
-    eprintln!("Got form: {form:?}");
-
     let url = Uri::from_str(&Urls::SettingsApiTokens.to_string()).map_err(|err| {
         error!(
             "Failed to parse Urls::SettingsApiTokens.to_string() as URL, this is a bug!: {err:?}"
