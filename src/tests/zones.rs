@@ -1,6 +1,6 @@
 use crate::error::GoatNsError;
-use crate::zones::load_zones;
 use crate::zones::MAX_ZONE_FILE_SIZE;
+use crate::zones::load_zones;
 use std::io::Write;
 use tempfile::NamedTempFile;
 
@@ -26,8 +26,12 @@ fn write_zone_file(entries: usize, record_count: usize) -> NamedTempFile {
         if i > 0 {
             write!(file, ",").expect("Failed to write");
         }
-        write!(file, "{}", make_zone_json(&format!("zone{i}.goat"), record_count))
-            .expect("Failed to write");
+        write!(
+            file,
+            "{}",
+            make_zone_json(&format!("zone{i}.goat"), record_count)
+        )
+        .expect("Failed to write");
     }
     write!(file, "]").expect("Failed to write");
     file.flush().expect("Failed to flush");
@@ -57,7 +61,10 @@ fn test_streaming_zone_file() {
     );
 
     let result = load_zones(file.path().to_str().expect("Path to string"));
-    assert!(result.is_ok(), "Expected Ok for streaming parse, got: {result:?}");
+    assert!(
+        result.is_ok(),
+        "Expected Ok for streaming parse, got: {result:?}"
+    );
     let zones = result.expect("zones");
     assert_eq!(zones.len(), entries_needed as usize);
 }
@@ -73,8 +80,7 @@ fn test_streaming_invalid_json() {
         if i > 0 {
             write!(file, ",").expect("Failed to write");
         }
-        write!(file, "{}", make_zone_json(&format!("zone{i}.goat"), 100))
-            .expect("Failed to write");
+        write!(file, "{}", make_zone_json(&format!("zone{i}.goat"), 100)).expect("Failed to write");
     }
     write!(file, ",{{invalid}}]").expect("Failed to write");
     file.flush().expect("Failed to flush");

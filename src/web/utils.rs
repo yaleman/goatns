@@ -1,4 +1,5 @@
 use crate::db::entities;
+use crate::error::GoatNsError;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
@@ -7,10 +8,9 @@ use axum::response::{Html, Redirect};
 use chrono::{DateTime, TimeDelta, Utc};
 use rand::distr::{Alphanumeric, SampleString};
 use sea_orm::ActiveValue::{NotSet, Set};
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::str::FromStr;
-use tracing::{debug, trace};
+use tracing::debug;
 use uuid::Uuid;
 
 /// URLs for the web interface
@@ -98,20 +98,19 @@ pub fn generate_token_key() -> String {
 
 /// Create an API token
 pub fn create_api_token(
-    api_cookie_secret: &[u8],
     lifetime: i32,
     userid: Uuid,
-) -> (String, entities::user_tokens::ActiveModel) {
+) -> Result<(String, entities::user_tokens::ActiveModel), GoatNsError> {
     let issued = Utc::now();
     let expiry = match lifetime {
         -1 => None,
         _ => Some(issued + TimeDelta::seconds(lifetime.into())),
     };
-    let api_token_to_hash = format!("{api_cookie_secret:?}-{userid:?}-{issued:?}-{lifetime:?}-");
 
-    let api_token = hex::encode(Sha256::digest(api_token_to_hash));
-    let token_secret = format!("goatns_{api_token}");
-    trace!("Final token: {}", token_secret);
+    let token_secret = format!(
+        "goatns_{}",
+        Alphanumeric.sample_string(&mut rand::rng(), 32)
+    );
 
     // TODO: is rand_core the thing we want to use for generating randomness?
     let salt = SaltString::generate(&mut OsRng);
@@ -122,23 +121,24 @@ pub fn create_api_token(
     #[allow(clippy::expect_used)]
     let password_hash = argon2
         .hash_password(token_secret.as_bytes(), &salt)
-        .expect("Failed to hash password!");
+        .map_err(|err| GoatNsError::Generic(format!("Hash generation failure, {err:?}")))?
+        .to_string();
 
-    let password_hash_string = password_hash.to_string();
+    let token_hash = password_hash;
     debug!("Done hashing password");
 
-    (
+    Ok((
         token_secret,
         entities::user_tokens::ActiveModel {
             id: NotSet,
             key: Set(generate_token_key()),
-            hash: Set(password_hash_string),
+            hash: Set(token_hash),
             issued: Set(issued),
             expiry: Set(expiry),
             name: Set("test token".to_string()),
             userid: Set(userid),
         },
-    )
+    ))
 }
 
 /// validate an API token matches our thingamajig

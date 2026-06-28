@@ -32,34 +32,35 @@ pub(crate) enum ChaosResult {
 async fn check_for_shutdown(r: &Reply, allowed_shutdown: bool) -> Result<ChaosResult, GoatNsError> {
     // when you get a CHAOS from localhost with "shutdown" break dat loop
     if let Some(q) = &r.question
-        && q.qclass == RecordClass::Chaos {
-            let qname = from_utf8(&q.qname).inspect_err(|e| {
-                error!(
-                    "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
-                    q.qname
-                );
-            })?;
-            // Just don't do this on UDP, because we can't really tell who it's coming from.
-            if qname == "shutdown" {
-                // when we get a request, we update the response to say if we're going to do it or not
-                match allowed_shutdown {
-                    true => {
-                        info!("Got CHAOS shutdown, shutting down");
-                        let mut chaos_reply = r.clone();
-                        chaos_reply.answers.push(CHAOS_OK.clone());
-                        return Ok(ChaosResult::Shutdown(chaos_reply));
-                    }
-                    false => {
-                        // get lost!  🤣
-                        warn!("Got CHAOS shutdown, ignoring!");
-                        let mut chaos_reply = r.clone();
-                        chaos_reply.answers.push(CHAOS_NO.clone());
-                        chaos_reply.header.rcode = Rcode::Refused;
-                        return Ok(ChaosResult::Refused(chaos_reply));
-                    }
-                };
-            }
-        };
+        && q.qclass == RecordClass::Chaos
+    {
+        let qname = from_utf8(&q.qname).inspect_err(|e| {
+            error!(
+                "Failed to parse qname from {:?}, this shouldn't be able to happen! {e:?}",
+                q.qname
+            );
+        })?;
+        // Just don't do this on UDP, because we can't really tell who it's coming from.
+        if qname == "shutdown" {
+            // when we get a request, we update the response to say if we're going to do it or not
+            match allowed_shutdown {
+                true => {
+                    info!("Got CHAOS shutdown, shutting down");
+                    let mut chaos_reply = r.clone();
+                    chaos_reply.answers.push(CHAOS_OK.clone());
+                    return Ok(ChaosResult::Shutdown(chaos_reply));
+                }
+                false => {
+                    // get lost!  🤣
+                    warn!("Got CHAOS shutdown, ignoring!");
+                    let mut chaos_reply = r.clone();
+                    chaos_reply.answers.push(CHAOS_NO.clone());
+                    chaos_reply.header.rcode = Rcode::Refused;
+                    return Ok(ChaosResult::Refused(chaos_reply));
+                }
+            };
+        }
+    };
 
     let mut chaos_reply = r.clone();
     chaos_reply.answers.push(CHAOS_NO.clone());
@@ -208,10 +209,9 @@ pub async fn tcp_conn_handler(
         };
         trace!("Read {:?} bytes from TCP stream", len);
     }
-    if capture_packets
-        && let Err(err) = crate::utils::hexdump(&buf) {
-            error!("Failed to hexdump buffer: {:?}", err);
-        };
+    if capture_packets && let Err(err) = crate::utils::hexdump(&buf) {
+        error!("Failed to hexdump buffer: {:?}", err);
+    };
     // the first two bytes of a tcp query is the message length
     // ref <https://www.rfc-editor.org/rfc/rfc7766#section-8>
 
@@ -480,8 +480,7 @@ async fn get_result(
     // calculate where the question section ends so we can parse the additional section
     let qname_len = question_qname_wire_len(&question.qname);
     let question_end = HEADER_BYTES + qname_len + 4;
-    let (opt_record, do_bit) =
-        parse_opt_from_additional(buf, question_end);
+    let (opt_record, do_bit) = parse_opt_from_additional(buf, question_end);
 
     // record the details of the query
     let span = tracing::Span::current();
@@ -560,10 +559,7 @@ async fn get_result(
 
     // build EDNS0 OPT RR for the response if the client sent one
     let additional = if let Some(ref opt) = opt_record {
-        let response_opt = OptRecord::response(
-            UDP_BUFFER_SIZE as u16,
-            opt.dnssec_ok(),
-        );
+        let response_opt = OptRecord::response(UDP_BUFFER_SIZE as u16, opt.dnssec_ok());
         vec![response_opt.to_wire()]
     } else {
         vec![]

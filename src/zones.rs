@@ -230,7 +230,9 @@ pub fn load_zone_from_file(filename: &Path) -> Result<ZoneFile, GoatNsError> {
         Ok(jsonstruct)
     } else {
         serde_json::from_reader(BufReader::new(file)).map_err(|err| {
-            GoatNsError::FileError(format!("Failed to parse zone file in streaming mode: {err:?}"))
+            GoatNsError::FileError(format!(
+                "Failed to parse zone file in streaming mode: {err:?}"
+            ))
         })
     }
 }
@@ -291,7 +293,9 @@ fn load_zones_small(mut file: File) -> Result<Vec<ZoneFile>, GoatNsError> {
 fn load_zones_streaming(file: File, file_size: u64) -> Result<Vec<ZoneFile>, GoatNsError> {
     let reader = BufReader::new(file);
     let zones: Vec<ZoneFile> = serde_json::from_reader(reader).map_err(|err| {
-        GoatNsError::FileError(format!("Failed to parse zone file in streaming mode: {err:?}"))
+        GoatNsError::FileError(format!(
+            "Failed to parse zone file in streaming mode: {err:?}"
+        ))
     })?;
 
     debug!(

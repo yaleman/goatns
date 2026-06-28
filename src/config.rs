@@ -396,9 +396,10 @@ impl From<Config> for ConfigFile {
         let mut otel_endpoint = None;
         #[cfg(not(test))]
         if let Ok(val) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
-            && !val.is_empty() {
-                otel_endpoint = Some(val);
-            }
+            && !val.is_empty()
+        {
+            otel_endpoint = Some(val);
+        }
         if otel_endpoint.is_none() {
             otel_endpoint = config
                 .get("otel_endpoint")

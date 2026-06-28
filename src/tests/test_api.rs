@@ -137,7 +137,7 @@ async fn insert_test_user_api_token(
     userid: Uuid,
 ) -> Result<(entities::user_tokens::Model, String), GoatNsError> {
     println!("creating test token for user {userid:?}");
-    let (token_secret, token) = create_api_token("lols".as_bytes(), 900, userid);
+    let (token_secret, token) = create_api_token(900, userid)?;
 
     let res = token.insert(db).await.map_err(GoatNsError::from)?;
     Ok((res, token_secret))

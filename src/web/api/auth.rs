@@ -103,7 +103,10 @@ pub async fn api_token_login(
 
     match validate_api_token(&token, &payload.token_secret) {
         Ok(_) => {
-            info!("Successfully validated token on login for user {}", user.username);
+            info!(
+                "Successfully validated token on login for user {}",
+                user.username
+            );
             let session_user = session.insert(SESSION_USER_KEY, &user).await;
 
             if session_user.is_err() {

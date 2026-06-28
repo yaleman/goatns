@@ -247,7 +247,10 @@ pub(crate) async fn api_zone_update(
             }),
         ));
     };
-    debug!("User {} owns zone {}, proceeding with update", user.id, zone_form.id);
+    debug!(
+        "User {} owns zone {}, proceeding with update",
+        user.id, zone_form.id
+    );
 
     // save the zone data
 

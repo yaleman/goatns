@@ -452,379 +452,386 @@ impl InternalResourceRecord {
         ttl: u32,
         rclass: u16,
     ) -> Result<Self, GoatNsError> {
-    let rclass = RecordClass::from(&rclass);
-    match RecordType::from(&rrtype) {
-        RecordType::A => {
-            let address: u32 = match std::net::Ipv4Addr::from_str(rdata) {
-                Ok(value) => value.into(),
-                Err(error) => {
-                    error!("Failed to parse {rdata:?} into an IPv4 address: {error:?}");
-                    0u32
-                }
-            };
-            Ok(InternalResourceRecord::A {
-                address,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::AAAA => {
-            let address: u128 = match std::net::Ipv6Addr::from_str(rdata) {
-                Ok(value) => {
-                    let res: u128 = value.into();
-                    trace!("Encoding {value:?} as {res:?}");
-                    res
-                }
-                Err(error) => {
-                    return Err(GoatNsError::Generic(format!(
-                        "Failed to parse {rdata:?} into an IPv6 address: {error:?}"
-                    )));
-                }
-            };
-            Ok(InternalResourceRecord::AAAA {
-                address,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::CNAME => Ok(InternalResourceRecord::CNAME {
-            cname: DomainName::from(rdata),
-            ttl,
-            rclass,
-        }),
-        RecordType::PTR => Ok(InternalResourceRecord::PTR {
-            ptrdname: DomainName::from(rdata),
-            ttl,
-            rclass,
-        }),
-        RecordType::TXT => Ok(InternalResourceRecord::TXT {
-            txtdata: DNSCharString {
-                data: rdata.as_bytes().to_vec(),
-            },
-            ttl,
-            class: rclass,
-        }),
-        RecordType::MX => {
-            let split_bit: Vec<&str> = rdata.split(' ').collect();
-            if split_bit.len() != 2 {
-                return Err(GoatNsError::Generic(format!(
-                    "While trying to parse MX record, got '{split_bit:?}' which is wrong."
-                )));
-            };
-            let pref = match u16::from_str(split_bit[0]) {
-                Ok(value) => value,
-                Err(error) => {
-                    return Err(GoatNsError::Generic(format!(
-                        "Failed to parse {} into number: {error:?}",
-                        split_bit[0]
-                    )));
-                }
-            };
-            trace!("got pref {}, now {pref}", split_bit[0]);
-            Ok(InternalResourceRecord::MX {
-                preference: pref,
-                exchange: DomainName::from(split_bit[1]),
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::NS => Ok(InternalResourceRecord::NS {
-            nsdname: DomainName::from(rdata),
-            ttl,
-            rclass,
-        }),
-        RecordType::CAA => {
-            let split_bit: Vec<&str> = rdata.split(' ').collect();
-            if split_bit.len() < 3 {
-                return Err(GoatNsError::Generic(format!(
-                    "While trying to parse CAA record, got '{split_bit:?}' which is wrong."
-                )));
-            };
-            let flag = match u8::from_str(split_bit[0]) {
-                Ok(value) => value,
-                Err(error) => {
-                    return Err(GoatNsError::Generic(format!(
-                        "Failed to parse {} into number: {error:?}",
-                        split_bit[0]
-                    )));
-                }
-            };
-            let tag = DNSCharString::from(split_bit[1]);
-            if !CAA_TAG_VALIDATOR.is_match(split_bit[1]) {
-                return Err(GoatNsError::Generic(format!(
-                    "Invalid tag value {:?} for {}",
-                    split_bit[1], name
-                )));
-            };
-            let value = split_bit[2..].to_vec().join(" ").as_bytes().to_vec();
-            Ok(InternalResourceRecord::CAA {
-                flag,
-                tag,
-                value,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::LOC => {
-            let res: FileLocRecord = FileLocRecord::try_from(rdata)?;
-            Ok(InternalResourceRecord::LOC {
-                ttl,
-                rclass,
-                version: 0,
-                size: res.size,
-                horiz_pre: res.horiz_pre,
-                vert_pre: res.vert_pre,
-                latitude: dms_to_u32(res.d1, res.m1, res.s1, res.lat_dir == *"N"),
-                longitude: dms_to_u32(res.d2, res.m2, res.s2, res.lon_dir == *"E"),
-                altitude: res.alt,
-            })
-        }
-        RecordType::URI => {
-            let matches = match URI_RECORD.captures(rdata) {
-                Some(value) => value,
-                None => {
-                    return Err(GoatNsError::Generic(
-                        "Failed to parse URL record!".to_string(),
-                    ));
-                }
-            };
-            let priority = match matches.name("priority") {
-                Some(value) => match value.as_str().parse::<u16>() {
-                    Ok(value) => value,
-                    Err(err) => {
+        let rclass = RecordClass::from(&rclass);
+        match RecordType::from(&rrtype) {
+            RecordType::A => {
+                let address: u32 = match std::net::Ipv4Addr::from_str(rdata) {
+                    Ok(value) => value.into(),
+                    Err(error) => {
+                        error!("Failed to parse {rdata:?} into an IPv4 address: {error:?}");
+                        0u32
+                    }
+                };
+                Ok(InternalResourceRecord::A {
+                    address,
+                    ttl,
+                    rclass,
+                })
+            }
+            RecordType::AAAA => {
+                let address: u128 = match std::net::Ipv6Addr::from_str(rdata) {
+                    Ok(value) => {
+                        let res: u128 = value.into();
+                        trace!("Encoding {value:?} as {res:?}");
+                        res
+                    }
+                    Err(error) => {
                         return Err(GoatNsError::Generic(format!(
-                            "Failed to parse priority into u16: {err:?}"
+                            "Failed to parse {rdata:?} into an IPv6 address: {error:?}"
                         )));
                     }
+                };
+                Ok(InternalResourceRecord::AAAA {
+                    address,
+                    ttl,
+                    rclass,
+                })
+            }
+            RecordType::CNAME => Ok(InternalResourceRecord::CNAME {
+                cname: DomainName::from(rdata),
+                ttl,
+                rclass,
+            }),
+            RecordType::PTR => Ok(InternalResourceRecord::PTR {
+                ptrdname: DomainName::from(rdata),
+                ttl,
+                rclass,
+            }),
+            RecordType::TXT => Ok(InternalResourceRecord::TXT {
+                txtdata: DNSCharString {
+                    data: rdata.as_bytes().to_vec(),
                 },
-                None => {
-                    return Err(GoatNsError::Generic(
-                        "No target found in record?".to_string(),
-                    ));
-                }
-            };
-            let weight = match matches.name("weight") {
-                Some(value) => match value.as_str().parse::<u16>() {
+                ttl,
+                class: rclass,
+            }),
+            RecordType::MX => {
+                let split_bit: Vec<&str> = rdata.split(' ').collect();
+                if split_bit.len() != 2 {
+                    return Err(GoatNsError::Generic(format!(
+                        "While trying to parse MX record, got '{split_bit:?}' which is wrong."
+                    )));
+                };
+                let pref = match u16::from_str(split_bit[0]) {
                     Ok(value) => value,
-                    Err(err) => {
+                    Err(error) => {
                         return Err(GoatNsError::Generic(format!(
-                            "Failed to parse weight into u16: {err:?}"
+                            "Failed to parse {} into number: {error:?}",
+                            split_bit[0]
                         )));
                     }
-                },
-                None => {
+                };
+                trace!("got pref {}, now {pref}", split_bit[0]);
+                Ok(InternalResourceRecord::MX {
+                    preference: pref,
+                    exchange: DomainName::from(split_bit[1]),
+                    ttl,
+                    rclass,
+                })
+            }
+            RecordType::NS => Ok(InternalResourceRecord::NS {
+                nsdname: DomainName::from(rdata),
+                ttl,
+                rclass,
+            }),
+            RecordType::CAA => {
+                let split_bit: Vec<&str> = rdata.split(' ').collect();
+                if split_bit.len() < 3 {
+                    return Err(GoatNsError::Generic(format!(
+                        "While trying to parse CAA record, got '{split_bit:?}' which is wrong."
+                    )));
+                };
+                let flag = match u8::from_str(split_bit[0]) {
+                    Ok(value) => value,
+                    Err(error) => {
+                        return Err(GoatNsError::Generic(format!(
+                            "Failed to parse {} into number: {error:?}",
+                            split_bit[0]
+                        )));
+                    }
+                };
+                let tag = DNSCharString::from(split_bit[1]);
+                if !CAA_TAG_VALIDATOR.is_match(split_bit[1]) {
+                    return Err(GoatNsError::Generic(format!(
+                        "Invalid tag value {:?} for {}",
+                        split_bit[1], name
+                    )));
+                };
+                let value = split_bit[2..].to_vec().join(" ").as_bytes().to_vec();
+                Ok(InternalResourceRecord::CAA {
+                    flag,
+                    tag,
+                    value,
+                    ttl,
+                    rclass,
+                })
+            }
+            RecordType::LOC => {
+                let res: FileLocRecord = FileLocRecord::try_from(rdata)?;
+                Ok(InternalResourceRecord::LOC {
+                    ttl,
+                    rclass,
+                    version: 0,
+                    size: res.size,
+                    horiz_pre: res.horiz_pre,
+                    vert_pre: res.vert_pre,
+                    latitude: dms_to_u32(res.d1, res.m1, res.s1, res.lat_dir == *"N"),
+                    longitude: dms_to_u32(res.d2, res.m2, res.s2, res.lon_dir == *"E"),
+                    altitude: res.alt,
+                })
+            }
+            RecordType::URI => {
+                let matches = match URI_RECORD.captures(rdata) {
+                    Some(value) => value,
+                    None => {
+                        return Err(GoatNsError::Generic(
+                            "Failed to parse URL record!".to_string(),
+                        ));
+                    }
+                };
+                let priority = match matches.name("priority") {
+                    Some(value) => match value.as_str().parse::<u16>() {
+                        Ok(value) => value,
+                        Err(err) => {
+                            return Err(GoatNsError::Generic(format!(
+                                "Failed to parse priority into u16: {err:?}"
+                            )));
+                        }
+                    },
+                    None => {
+                        return Err(GoatNsError::Generic(
+                            "No target found in record?".to_string(),
+                        ));
+                    }
+                };
+                let weight = match matches.name("weight") {
+                    Some(value) => match value.as_str().parse::<u16>() {
+                        Ok(value) => value,
+                        Err(err) => {
+                            return Err(GoatNsError::Generic(format!(
+                                "Failed to parse weight into u16: {err:?}"
+                            )));
+                        }
+                    },
+                    None => {
+                        return Err(GoatNsError::Generic(
+                            "No target found in record?".to_string(),
+                        ));
+                    }
+                };
+                let target = match matches.name("target") {
+                    Some(value) => DNSCharString::from(value.as_str()),
+                    None => {
+                        return Err(GoatNsError::Generic(
+                            "No target found in record?".to_string(),
+                        ));
+                    }
+                };
+                Ok(InternalResourceRecord::URI {
+                    priority,
+                    weight,
+                    target,
+                    ttl,
+                    rclass,
+                })
+            }
+            RecordType::DNSKEY => {
+                let bytes = hex::decode(rdata).map_err(|e| {
+                    GoatNsError::Generic(format!("Failed to hex-decode DNSKEY rdata: {e:?}"))
+                })?;
+                if bytes.len() < 4 {
                     return Err(GoatNsError::Generic(
-                        "No target found in record?".to_string(),
+                        "DNSKEY rdata too short (need >= 4 bytes)".to_string(),
                     ));
                 }
-            };
-            let target = match matches.name("target") {
-                Some(value) => DNSCharString::from(value.as_str()),
-                None => {
+                let flags = u16::from_be_bytes([bytes[0], bytes[1]]);
+                let protocol = bytes[2];
+                let algorithm = bytes[3];
+                let public_key = bytes[4..].to_vec();
+                Ok(InternalResourceRecord::DNSKEY {
+                    flags,
+                    protocol,
+                    algorithm,
+                    public_key,
+                    ttl,
+                    rclass,
+                })
+            }
+            RecordType::DS => {
+                let bytes = hex::decode(rdata).map_err(|e| {
+                    GoatNsError::Generic(format!("Failed to hex-decode DS rdata: {e:?}"))
+                })?;
+                if bytes.len() < 4 {
                     return Err(GoatNsError::Generic(
-                        "No target found in record?".to_string(),
+                        "DS rdata too short (need >= 4 bytes)".to_string(),
                     ));
                 }
-            };
-            Ok(InternalResourceRecord::URI {
-                priority,
-                weight,
-                target,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::DNSKEY => {
-            let bytes = hex::decode(rdata)
-                .map_err(|e| GoatNsError::Generic(format!("Failed to hex-decode DNSKEY rdata: {e:?}")))?;
-            if bytes.len() < 4 {
-                return Err(GoatNsError::Generic(
-                    "DNSKEY rdata too short (need >= 4 bytes)".to_string(),
-                ));
+                let key_tag = u16::from_be_bytes([bytes[0], bytes[1]]);
+                let algorithm = bytes[2];
+                let digest_type = bytes[3];
+                let digest = bytes[4..].to_vec();
+                Ok(InternalResourceRecord::DS {
+                    key_tag,
+                    algorithm,
+                    digest_type,
+                    digest,
+                    ttl,
+                    rclass,
+                })
             }
-            let flags = u16::from_be_bytes([bytes[0], bytes[1]]);
-            let protocol = bytes[2];
-            let algorithm = bytes[3];
-            let public_key = bytes[4..].to_vec();
-            Ok(InternalResourceRecord::DNSKEY {
-                flags,
-                protocol,
-                algorithm,
-                public_key,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::DS => {
-            let bytes = hex::decode(rdata)
-                .map_err(|e| GoatNsError::Generic(format!("Failed to hex-decode DS rdata: {e:?}")))?;
-            if bytes.len() < 4 {
-                return Err(GoatNsError::Generic(
-                    "DS rdata too short (need >= 4 bytes)".to_string(),
-                ));
+            RecordType::CDNSKEY => {
+                let bytes = hex::decode(rdata).map_err(|e| {
+                    GoatNsError::Generic(format!("Failed to hex-decode CDNSKEY rdata: {e:?}"))
+                })?;
+                if bytes.len() < 4 {
+                    return Err(GoatNsError::Generic(
+                        "CDNSKEY rdata too short (need >= 4 bytes)".to_string(),
+                    ));
+                }
+                let flags = u16::from_be_bytes([bytes[0], bytes[1]]);
+                let protocol = bytes[2];
+                let algorithm = bytes[3];
+                let public_key = bytes[4..].to_vec();
+                Ok(InternalResourceRecord::CDNSKEY {
+                    flags,
+                    protocol,
+                    algorithm,
+                    public_key,
+                    ttl,
+                    rclass,
+                })
             }
-            let key_tag = u16::from_be_bytes([bytes[0], bytes[1]]);
-            let algorithm = bytes[2];
-            let digest_type = bytes[3];
-            let digest = bytes[4..].to_vec();
-            Ok(InternalResourceRecord::DS {
-                key_tag,
-                algorithm,
-                digest_type,
-                digest,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::CDNSKEY => {
-            let bytes = hex::decode(rdata).map_err(|e| {
-                GoatNsError::Generic(format!("Failed to hex-decode CDNSKEY rdata: {e:?}"))
-            })?;
-            if bytes.len() < 4 {
-                return Err(GoatNsError::Generic(
-                    "CDNSKEY rdata too short (need >= 4 bytes)".to_string(),
-                ));
+            RecordType::CDS => {
+                let bytes = hex::decode(rdata).map_err(|e| {
+                    GoatNsError::Generic(format!("Failed to hex-decode CDS rdata: {e:?}"))
+                })?;
+                if bytes.len() < 4 {
+                    return Err(GoatNsError::Generic(
+                        "CDS rdata too short (need >= 4 bytes)".to_string(),
+                    ));
+                }
+                let key_tag = u16::from_be_bytes([bytes[0], bytes[1]]);
+                let algorithm = bytes[2];
+                let digest_type = bytes[3];
+                let digest = bytes[4..].to_vec();
+                Ok(InternalResourceRecord::CDS {
+                    key_tag,
+                    algorithm,
+                    digest_type,
+                    digest,
+                    ttl,
+                    rclass,
+                })
             }
-            let flags = u16::from_be_bytes([bytes[0], bytes[1]]);
-            let protocol = bytes[2];
-            let algorithm = bytes[3];
-            let public_key = bytes[4..].to_vec();
-            Ok(InternalResourceRecord::CDNSKEY {
-                flags,
-                protocol,
-                algorithm,
-                public_key,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::CDS => {
-            let bytes = hex::decode(rdata)
-                .map_err(|e| GoatNsError::Generic(format!("Failed to hex-decode CDS rdata: {e:?}")))?;
-            if bytes.len() < 4 {
-                return Err(GoatNsError::Generic(
-                    "CDS rdata too short (need >= 4 bytes)".to_string(),
-                ));
+            RecordType::RRSIG => {
+                let bytes = hex::decode(rdata).map_err(|e| {
+                    GoatNsError::Generic(format!("Failed to hex-decode RRSIG rdata: {e:?}"))
+                })?;
+                if bytes.len() < 18 {
+                    return Err(GoatNsError::Generic(
+                        "RRSIG rdata too short (need >= 18 bytes before signer name)".to_string(),
+                    ));
+                }
+                let type_covered = RecordType::from(&u16::from_be_bytes([bytes[0], bytes[1]]));
+                let algorithm = bytes[2];
+                let labels = bytes[3];
+                let original_ttl = u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+                let signature_expiration =
+                    u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]);
+                let signature_inception =
+                    u32::from_be_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]);
+                let key_tag = u16::from_be_bytes([bytes[16], bytes[17]]);
+                let (signer_name, rest) = parse_domain_name_from_wire(&bytes[18..])?;
+                let signature = rest.to_vec();
+                Ok(InternalResourceRecord::RRSIG {
+                    type_covered,
+                    algorithm,
+                    labels,
+                    original_ttl,
+                    signature_expiration,
+                    signature_inception,
+                    key_tag,
+                    signer_name,
+                    signature,
+                    ttl,
+                    rclass,
+                })
             }
-            let key_tag = u16::from_be_bytes([bytes[0], bytes[1]]);
-            let algorithm = bytes[2];
-            let digest_type = bytes[3];
-            let digest = bytes[4..].to_vec();
-            Ok(InternalResourceRecord::CDS {
-                key_tag,
-                algorithm,
-                digest_type,
-                digest,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::RRSIG => {
-            let bytes = hex::decode(rdata)
-                .map_err(|e| GoatNsError::Generic(format!("Failed to hex-decode RRSIG rdata: {e:?}")))?;
-            if bytes.len() < 18 {
-                return Err(GoatNsError::Generic(
-                    "RRSIG rdata too short (need >= 18 bytes before signer name)".to_string(),
-                ));
+            RecordType::NSEC => {
+                let bytes = hex::decode(rdata).map_err(|e| {
+                    GoatNsError::Generic(format!("Failed to hex-decode NSEC rdata: {e:?}"))
+                })?;
+                let (next_domain_name, rest) = parse_domain_name_from_wire(&bytes)?;
+                let type_bit_maps = rest.to_vec();
+                Ok(InternalResourceRecord::NSEC {
+                    next_domain_name,
+                    type_bit_maps,
+                    ttl,
+                    rclass,
+                })
             }
-            let type_covered = RecordType::from(&u16::from_be_bytes([bytes[0], bytes[1]]));
-            let algorithm = bytes[2];
-            let labels = bytes[3];
-            let original_ttl = u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
-            let signature_expiration = u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]);
-            let signature_inception = u32::from_be_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]);
-            let key_tag = u16::from_be_bytes([bytes[16], bytes[17]]);
-            let (signer_name, rest) = parse_domain_name_from_wire(&bytes[18..])?;
-            let signature = rest.to_vec();
-            Ok(InternalResourceRecord::RRSIG {
-                type_covered,
-                algorithm,
-                labels,
-                original_ttl,
-                signature_expiration,
-                signature_inception,
-                key_tag,
-                signer_name,
-                signature,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::NSEC => {
-            let bytes = hex::decode(rdata)
-                .map_err(|e| GoatNsError::Generic(format!("Failed to hex-decode NSEC rdata: {e:?}")))?;
-            let (next_domain_name, rest) = parse_domain_name_from_wire(&bytes)?;
-            let type_bit_maps = rest.to_vec();
-            Ok(InternalResourceRecord::NSEC {
-                next_domain_name,
-                type_bit_maps,
-                ttl,
-                rclass,
-            })
-        }
-        RecordType::NSEC3 => {
-            let bytes = hex::decode(rdata)
-                .map_err(|e| GoatNsError::Generic(format!("Failed to hex-decode NSEC3 rdata: {e:?}")))?;
-            if bytes.len() < 5 {
-                return Err(GoatNsError::Generic("NSEC3 rdata too short".to_string()));
+            RecordType::NSEC3 => {
+                let bytes = hex::decode(rdata).map_err(|e| {
+                    GoatNsError::Generic(format!("Failed to hex-decode NSEC3 rdata: {e:?}"))
+                })?;
+                if bytes.len() < 5 {
+                    return Err(GoatNsError::Generic("NSEC3 rdata too short".to_string()));
+                }
+                let hash_algorithm = bytes[0];
+                let flags = bytes[1];
+                let iterations = u16::from_be_bytes([bytes[2], bytes[3]]);
+                let salt_len = bytes[4] as usize;
+                if bytes.len() < 5 + salt_len + 1 {
+                    return Err(GoatNsError::Generic(
+                        "NSEC3 rdata too short for salt".to_string(),
+                    ));
+                }
+                let salt = bytes[5..5 + salt_len].to_vec();
+                let hash_len = bytes[5 + salt_len] as usize;
+                if bytes.len() < 5 + salt_len + 1 + hash_len {
+                    return Err(GoatNsError::Generic(
+                        "NSEC3 rdata too short for hash".to_string(),
+                    ));
+                }
+                let next_hashed_owner_name =
+                    bytes[5 + salt_len + 1..5 + salt_len + 1 + hash_len].to_vec();
+                let type_bit_maps = bytes[5 + salt_len + 1 + hash_len..].to_vec();
+                Ok(InternalResourceRecord::NSEC3 {
+                    hash_algorithm,
+                    flags,
+                    iterations,
+                    salt,
+                    next_hashed_owner_name,
+                    type_bit_maps,
+                    ttl,
+                    rclass,
+                })
             }
-            let hash_algorithm = bytes[0];
-            let flags = bytes[1];
-            let iterations = u16::from_be_bytes([bytes[2], bytes[3]]);
-            let salt_len = bytes[4] as usize;
-            if bytes.len() < 5 + salt_len + 1 {
-                return Err(GoatNsError::Generic(
-                    "NSEC3 rdata too short for salt".to_string(),
-                ));
+            RecordType::NSEC3PARAM => {
+                let bytes = hex::decode(rdata).map_err(|e| {
+                    GoatNsError::Generic(format!("Failed to hex-decode NSEC3PARAM rdata: {e:?}"))
+                })?;
+                if bytes.len() < 5 {
+                    return Err(GoatNsError::Generic(
+                        "NSEC3PARAM rdata too short".to_string(),
+                    ));
+                }
+                let hash_algorithm = bytes[0];
+                let flags = bytes[1];
+                let iterations = u16::from_be_bytes([bytes[2], bytes[3]]);
+                let salt_len = bytes[4] as usize;
+                let salt = bytes[5..5 + salt_len].to_vec();
+                Ok(InternalResourceRecord::NSEC3PARAM {
+                    hash_algorithm,
+                    flags,
+                    iterations,
+                    salt,
+                    ttl,
+                    rclass,
+                })
             }
-            let salt = bytes[5..5 + salt_len].to_vec();
-            let hash_len = bytes[5 + salt_len] as usize;
-            if bytes.len() < 5 + salt_len + 1 + hash_len {
-                return Err(GoatNsError::Generic(
-                    "NSEC3 rdata too short for hash".to_string(),
-                ));
-            }
-            let next_hashed_owner_name =
-                bytes[5 + salt_len + 1..5 + salt_len + 1 + hash_len].to_vec();
-            let type_bit_maps = bytes[5 + salt_len + 1 + hash_len..].to_vec();
-            Ok(InternalResourceRecord::NSEC3 {
-                hash_algorithm,
-                flags,
-                iterations,
-                salt,
-                next_hashed_owner_name,
-                type_bit_maps,
-                ttl,
-                rclass,
-            })
+            _ => Err(GoatNsError::Generic("Invalid type specified!".to_string())),
         }
-        RecordType::NSEC3PARAM => {
-            let bytes = hex::decode(rdata).map_err(|e| {
-                GoatNsError::Generic(format!("Failed to hex-decode NSEC3PARAM rdata: {e:?}"))
-            })?;
-            if bytes.len() < 5 {
-                return Err(GoatNsError::Generic(
-                    "NSEC3PARAM rdata too short".to_string(),
-                ));
-            }
-            let hash_algorithm = bytes[0];
-            let flags = bytes[1];
-            let iterations = u16::from_be_bytes([bytes[2], bytes[3]]);
-            let salt_len = bytes[4] as usize;
-            let salt = bytes[5..5 + salt_len].to_vec();
-            Ok(InternalResourceRecord::NSEC3PARAM {
-                hash_algorithm,
-                flags,
-                iterations,
-                salt,
-                ttl,
-                rclass,
-            })
-        }
-        _ => Err(GoatNsError::Generic("Invalid type specified!".to_string())),
     }
-}
-
 }
 
 impl TryFrom<entities::records::Model> for InternalResourceRecord {
@@ -852,7 +859,13 @@ impl TryFrom<entities::records::Model> for InternalResourceRecord {
             )));
         };
 
-        Self::new(&record.name, record.rrtype, &record.rdata, ttl, record.rclass)
+        Self::new(
+            &record.name,
+            record.rrtype,
+            &record.rdata,
+            ttl,
+            record.rclass,
+        )
     }
 }
 
@@ -875,7 +888,13 @@ impl TryFrom<entities::records_merged::Model> for InternalResourceRecord {
             )));
         };
 
-        Self::new(&record.name, record.rrtype, &record.rdata, record.ttl, record.rclass)
+        Self::new(
+            &record.name,
+            record.rrtype,
+            &record.rdata,
+            record.ttl,
+            record.rclass,
+        )
     }
 }
 
@@ -1262,17 +1281,17 @@ impl SetTTL for InternalResourceRecord {
                 tag,
                 value,
                 rclass,
-                 ttl,
-             },
-             Self::LOC {
-                 rclass,
-                 version,
-                 size,
-                 horiz_pre,
-                 vert_pre,
-                 latitude,
-                 longitude,
-                 altitude,
+                ttl,
+            },
+            Self::LOC {
+                rclass,
+                version,
+                size,
+                horiz_pre,
+                vert_pre,
+                latitude,
+                longitude,
+                altitude,
                 ..
             } => Self::LOC {
                 ttl,

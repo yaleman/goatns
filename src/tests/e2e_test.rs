@@ -285,22 +285,17 @@ mod tests {
         let mut opts = ResolverOpts::default();
         opts.edns0 = true;
 
-        let resolver = Resolver::builder_with_config(
-            resolver_config,
-            TokioConnectionProvider::default(),
-        )
-        .with_options(opts)
-        .build();
+        let resolver =
+            Resolver::builder_with_config(resolver_config, TokioConnectionProvider::default())
+                .with_options(opts)
+                .build();
 
         let response = resolver
             .lookup_ip("hello.goat")
             .await
             .expect("DNSSEC lookup failed");
 
-        let address = response
-            .iter()
-            .next()
-            .expect("no addresses returned");
+        let address = response.iter().next().expect("no addresses returned");
         assert_eq!(
             address,
             IpAddr::V4(Ipv4Addr::new(6, 6, 6, 6)),
