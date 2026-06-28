@@ -6,11 +6,7 @@ use axum::response::{IntoResponse, Response};
 use tower_sessions::Session;
 use tracing::debug;
 
-pub async fn require_admin(
-    session: Session,
-    req: axum::extract::Request,
-    next: Next,
-) -> Response {
+pub async fn require_admin(session: Session, req: axum::extract::Request, next: Next) -> Response {
     let user: Option<entities::users::Model> = match session.get(SESSION_USER_KEY).await {
         Ok(u) => u,
         Err(err) => {

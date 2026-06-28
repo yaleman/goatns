@@ -329,8 +329,6 @@ pub async fn api_tokens_post(
     State(state): State<GoatState>,
     Form(form): Form<ApiTokenForm>,
 ) -> Result<ApiTokenPage, Redirect> {
-    eprintln!("Got form: {form:?}");
-
     let url = Uri::from_str(&Urls::SettingsApiTokens.to_string()).map_err(|err| {
         error!(
             "Failed to parse Urls::SettingsApiTokens.to_string() as URL, this is a bug!: {err:?}"
@@ -376,13 +374,13 @@ pub async fn api_tokens_post(
             debug!("In the 'Generating' state");
 
             // generate the credential
-
-            let state_reader = state.read().await;
-            let api_cookie_secret = state_reader.config.api_cookie_secret();
             let lifetime: i32 = form.lifetime.unwrap_or(ApiTokenLifetime::EightHours).into();
             // get the user id from the session store, we should be able to safely unwrap here because we checked they were logged in up higher
 
-            let (secret, mut api_token) = create_api_token(api_cookie_secret, lifetime, user.id);
+            let (secret, mut api_token) = create_api_token(lifetime, user.id).map_err(|err| {
+                error!("Failed to create API token: {err:?}");
+                Urls::SettingsApiTokens.redirect()
+            })?;
 
             let name = match form.token_name {
                 Some(val) => val,

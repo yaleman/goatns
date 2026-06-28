@@ -32,8 +32,7 @@ fn opt_record_roundtrip() {
     use crate::OptRecord;
     let opt = OptRecord::response(1232, true);
     let wire = opt.to_wire();
-    let (parsed, consumed) =
-        OptRecord::from_wire(&wire).expect("OPT from_wire should succeed");
+    let (parsed, consumed) = OptRecord::from_wire(&wire).expect("OPT from_wire should succeed");
     assert_eq!(consumed, wire.len());
     assert_eq!(parsed.udp_payload_size, 1232);
     assert!(parsed.do_bit);
@@ -46,8 +45,7 @@ fn opt_record_without_do_bit() {
     use crate::OptRecord;
     let opt = OptRecord::response(512, false);
     let wire = opt.to_wire();
-    let (parsed, _) =
-        OptRecord::from_wire(&wire).expect("OPT from_wire should succeed");
+    let (parsed, _) = OptRecord::from_wire(&wire).expect("OPT from_wire should succeed");
     assert_eq!(parsed.udp_payload_size, 512);
     assert!(!parsed.do_bit);
 }

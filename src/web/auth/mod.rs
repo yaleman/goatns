@@ -110,6 +110,10 @@ pub enum ParserError {
     ClaimsVerificationError { content: ClaimsVerificationError },
 }
 
+fn is_safe_redirect(dest: &str) -> bool {
+    dest.starts_with('/') && !dest.starts_with("//")
+}
+
 /// Pull the OIDC Discovery details
 #[instrument(level = "debug", skip(state))]
 pub async fn oauth_get_discover(
@@ -243,7 +247,6 @@ pub async fn parse_state_code(
             });
         }
     };
-    trace!("id_token: {id_token:?}");
     let allowed_algs = vec![
         CoreJwsSigningAlgorithm::EcdsaP256Sha256,
         CoreJwsSigningAlgorithm::RsaSsaPkcs1V15Sha256,
@@ -267,9 +270,10 @@ pub async fn login(
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     // check if we've got an existing, valid session
     if let Some(signed_in) = session.get("signed_in").await.unwrap_or(Some(false))
-        && signed_in {
-            return Ok(Urls::ZonesList.redirect().into_response());
-        }
+        && signed_in
+    {
+        return Ok(Urls::ZonesList.redirect().into_response());
+    }
 
     let (query_state, query_code) = match (query.state, query.code) {
         (Some(state), Some(code)) => (state, code),
@@ -423,7 +427,13 @@ pub async fn login(
             // Check if there's a stored redirect path from before authentication
             let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
             match redirect {
-                Some(destination) => Ok(Redirect::to(&destination).into_response()),
+                Some(destination) if is_safe_redirect(&destination) => {
+                    Ok(Redirect::to(&destination).into_response())
+                }
+                Some(_) => {
+                    debug!("Ignoring unsafe redirect destination");
+                    Ok(Urls::ZonesList.redirect().into_response())
+                }
                 None => Ok(Urls::ZonesList.redirect().into_response()),
             }
         }
@@ -474,6 +484,8 @@ pub async fn build_auth_stores(
         .with_expiry(Expiry::OnInactivity(Duration::minutes(5)))
         .with_name(COOKIE_NAME)
         .with_secure(true)
+        .with_http_only(true)
+        .with_same_site(tower_sessions::cookie::SameSite::Lax)
         // If the cookies start being weird it's because they were appending a "." on the start...
         .with_domain(config.hostname.clone()))
 }
@@ -539,7 +551,13 @@ pub async fn signup(
                     // Check if there's a stored redirect path from before authentication
                     let redirect: Option<String> = session.remove("redirect").await.unwrap_or(None);
                     match redirect {
-                        Some(destination) => Ok(Redirect::to(&destination).into_response()),
+                        Some(destination) if is_safe_redirect(&destination) => {
+                            Ok(Redirect::to(&destination).into_response())
+                        }
+                        Some(_) => {
+                            debug!("Ignoring unsafe redirect destination on signup");
+                            Ok(Urls::ZonesList.redirect().into_response())
+                        }
                         None => Ok(Urls::ZonesList.redirect().into_response()),
                     }
                 }

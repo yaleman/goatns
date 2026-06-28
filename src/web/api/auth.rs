@@ -44,10 +44,7 @@ pub async fn api_token_login(
     session: Session,
     payload: Json<AuthPayload>,
 ) -> Result<(StatusCode, Json<AuthResponse>), (StatusCode, Json<AuthResponse>)> {
-    #[cfg(test)]
-    println!("Got login payload: token_key={}", payload.token_key);
-    #[cfg(not(test))]
-    debug!("Got login payload: token_key={}", payload.token_key);
+    debug!("api_token_login: token_key={}", payload.token_key);
     let txn = state.get_db_txn().await.map_err(|err| {
         error!("Failed to get DB transaction: {err:?}");
         (
@@ -106,7 +103,10 @@ pub async fn api_token_login(
 
     match validate_api_token(&token, &payload.token_secret) {
         Ok(_) => {
-            info!("Successfully validated token on login for user {}", user.username);
+            info!(
+                "Successfully validated token on login for user {}",
+                user.username
+            );
             let session_user = session.insert(SESSION_USER_KEY, &user).await;
 
             if session_user.is_err() {

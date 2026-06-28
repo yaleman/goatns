@@ -239,10 +239,7 @@ async fn handle_get_command(
                         .into_iter()
                         .filter_map(|rec| InternalResourceRecord::try_from(rec).ok())
                         .filter(|rr| {
-                            if let InternalResourceRecord::RRSIG {
-                                type_covered, ..
-                            } = rr
-                            {
+                            if let InternalResourceRecord::RRSIG { type_covered, .. } = rr {
                                 *type_covered == rrtype
                             } else {
                                 false
@@ -487,8 +484,16 @@ pub(crate) async fn handle_message(
             do_bit,
             resp,
         } => {
-            let res =
-                handle_get_command(server_hostname, &connpool, name, rrtype, rclass, do_bit, resp).await;
+            let res = handle_get_command(
+                server_hostname,
+                &connpool,
+                name,
+                rrtype,
+                rclass,
+                do_bit,
+                resp,
+            )
+            .await;
             if let Err(e) = res {
                 error!("{e:?}")
             };
