@@ -199,6 +199,22 @@ impl ConfigFile {
             ));
         };
 
+        if let Some(ref redirect_url) = config.oauth2_redirect_url.host_str()
+            && redirect_url != &config.hostname
+        {
+            errors.push(format!(
+                "oauth2_redirect_url host ({redirect_url}) does not match configured hostname ({})",
+                config.hostname
+            ));
+        }
+
+        if config.oauth2_redirect_url.scheme() != "https" {
+            errors.push(format!(
+                "oauth2_redirect_url must use https scheme, got: {}",
+                config.oauth2_redirect_url.scheme()
+            ));
+        }
+
         let _ = config.commit().await;
         match errors.is_empty() {
             true => Ok(()),
