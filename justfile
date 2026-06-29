@@ -118,8 +118,7 @@ doc_check:
 
 # Fix docs formatting
 doc_fix:
-	find . -type f  -not -path './target/*' -not -path '*/.venv/*' -not -path './vendor/*'\
-		-name \*.md \
+	find . -type f  -not -path './target/*' -not -path '*/.venv/*' -not -path './vendor/*' -name '*.md' \
 		-exec deno fmt --options-line-width=100 "{}" +
 
 # Run trivy on the image

@@ -128,7 +128,7 @@ pub async fn validate_csrf_expiry(user_input: &str, session: &mut Session) -> bo
 /// Store a CSRF token with an expiry in the session store
 ///
 /// Expiry defaults to 5 (minutes)
-async fn store_api_csrf_token(
+pub(crate) async fn store_api_csrf_token(
     session: &mut Session,
     expiry_plus_seconds: Option<i64>,
 ) -> Result<String, GoatNsError> {

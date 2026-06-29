@@ -19,3 +19,11 @@ tarpaulin-report.html
 .cargo/config.toml
 examples/knot/storage/.cargo/config.toml
 vendor/
+
+# Playwright
+node_modules/
+playwright-report/
+test-results/
+auth/
+tests/e2e/cookie-
+

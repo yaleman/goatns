@@ -5,9 +5,17 @@
 - `src/` contains the core Rust server and library code (DNS pipeline, web API/UI, datastore).
 - `src/tests/` holds integration/unit tests; `benches/` contains benchmarks.
 - `templates/` are Askama HTML templates; `static_files/` holds CSS/JS/images.
-- `docs/` is the mdBook source; configuration examples live in `goatns.example.json`,
-  `zones.json`, and `hello.goat.json`.
+- `docs/` is the mdBook source; configuration examples live in `goatns.example.json`, `zones.json`,
+  and `hello.goat.json`.
 - Workspace crates include `goatns-macros/` and `goat-lib/`.
+
+## Server Role & Design
+
+GoatNS is an **authoritative DNS server** — it is not a recursive resolver. It serves all configured
+zones authoritatively by design. The DoH endpoint (`/dns-query`) is intended to be public, meaning
+it accepts queries for any zone the server is authoritative for and returns responses without
+authentication. This is standard behavior for an authoritative-over-HTTPS server and is not a
+vulnerability.
 
 ## Build, Test, and Development Commands
 
@@ -35,10 +43,10 @@
 
 ## Commit & Pull Request Guidelines
 
-- Recent commit subjects are short and lowercase (e.g., “checkpoint”, “more test coverage”);
-  keep messages concise and descriptive.
-- PRs should include a clear summary, testing notes (commands run), and screenshots for UI
-  changes. Link relevant issues when applicable.
+- Recent commit subjects are short and lowercase (e.g., “checkpoint”, “more test coverage”); keep
+  messages concise and descriptive.
+- PRs should include a clear summary, testing notes (commands run), and screenshots for UI changes.
+  Link relevant issues when applicable.
 
 ## Security & Configuration Tips
 

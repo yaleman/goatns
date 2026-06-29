@@ -13,6 +13,9 @@ use tracing::{debug, error, trace};
 
 use crate::db::entities;
 use crate::enums::{Rcode, RecordClass, RecordType};
+
+const MIN_DOH_TTL: u32 = 1;
+const MAX_DOH_TTL: u32 = 86_400;
 use crate::reply::Reply;
 use crate::resourcerecord::InternalResourceRecord;
 use crate::servers::{QueryProtocol, parse_query};
@@ -244,10 +247,10 @@ pub async fn handle_get(
     trace!("Completed record request...");
 
     let min_ttl = match records.iter().map(|r| r.ttl).min() {
-        Some(val) => val,
+        Some(val) => val.clamp(MIN_DOH_TTL, MAX_DOH_TTL),
         None => {
             trace!("Failed to get minimum TTL from query, using 1");
-            1
+            MIN_DOH_TTL
         }
     };
 
@@ -399,8 +402,8 @@ pub async fn handle_post(
 
             let ttl = reply.answers.iter().map(|a| a.ttl()).min();
             let ttl = match ttl {
-                Some(ttl) => ttl.to_owned(),
-                None => 1,
+                Some(ttl) => ttl.to_owned().clamp(MIN_DOH_TTL, MAX_DOH_TTL),
+                None => MIN_DOH_TTL,
             };
 
             axum::response::Response::builder()

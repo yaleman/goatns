@@ -19,13 +19,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_full_run() -> Result<(), std::io::Error> {
-        test_logging().await;
-        crate::init_crypto();
-
         if in_github_actions() {
             eprintln!("Skipping this test because it won't work in GHA");
             return Ok(());
         }
+
+        test_logging().await;
+        crate::init_crypto();
 
         let config = crate::config::ConfigFile::try_as_cowcell(Some(PathBuf::from(
             "./examples/test_config/goatns-test.json",
@@ -53,7 +53,7 @@ mod tests {
 
         cw.db_path = db_path
             .path()
-            .with_file_name("goatns-test-e2e.db")
+            .join("goatns-test-e2e.db")
             .display()
             .to_string();
         cw.port = dns_addr.port();
@@ -215,7 +215,7 @@ mod tests {
 
         cw.db_path = db_path
             .path()
-            .with_file_name("goatns-test-dnssec.db")
+            .join("goatns-test-dnssec.db")
             .display()
             .to_string();
         cw.port = dns_addr.port();

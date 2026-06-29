@@ -1,6 +1,5 @@
 use super::GoatState;
 use crate::COOKIE_NAME;
-use crate::config::ConfigFile;
 use crate::db::entities;
 use crate::error::GoatNsError;
 use crate::web::GoatStateTrait;
@@ -14,7 +13,6 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Form, Router};
 use chrono::{DateTime, Utc};
-use concread::cowcell::asynch::CowCellReadTxn;
 use oauth2::{PkceCodeChallenge, PkceCodeVerifier, RedirectUrl};
 use openidconnect::EmptyAdditionalProviderMetadata;
 use openidconnect::{
@@ -463,7 +461,6 @@ pub async fn logout(session: Session) -> Result<Redirect, (axum::http::StatusCod
 }
 
 pub async fn build_auth_stores(
-    config: CowCellReadTxn<ConfigFile>,
     connpool: DatabaseConnection,
 ) -> Result<SessionManagerLayer<SqliteStore>, GoatNsError> {
     let session_store = SqliteStore::new(connpool.get_sqlite_connection_pool().clone())
@@ -485,9 +482,7 @@ pub async fn build_auth_stores(
         .with_name(COOKIE_NAME)
         .with_secure(true)
         .with_http_only(true)
-        .with_same_site(tower_sessions::cookie::SameSite::Lax)
-        // If the cookies start being weird it's because they were appending a "." on the start...
-        .with_domain(config.hostname.clone()))
+        .with_same_site(tower_sessions::cookie::SameSite::Strict))
 }
 
 #[derive(Deserialize, Debug)]

@@ -7,7 +7,7 @@ use std::time::Duration;
 use tokio::time;
 use tracing::*;
 
-pub(crate) mod entities;
+pub mod entities;
 pub mod migrations;
 #[cfg(test)]
 pub mod test;
