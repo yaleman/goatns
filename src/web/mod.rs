@@ -41,6 +41,7 @@ use tokio::sync::{RwLock, mpsc::Receiver};
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::services::ServeDir;
 use tracing::{debug, error, info, trace, warn};
 use utils::{Urls, handler_404};
@@ -179,7 +180,7 @@ async fn build_router(
     config: CowCellReadTxn<ConfigFile>,
     connpool: DatabaseConnection,
 ) -> Result<Router, GoatNsError> {
-    let session_layer = auth::build_auth_stores(config.clone(), connpool.clone()).await?;
+    let session_layer = auth::build_auth_stores(connpool.clone()).await?;
 
     let csp_matchers = vec![CspUrlMatcher::default_self(
         RegexSet::new([r"^(/|/ui)"]).map_err(|err| {
@@ -204,7 +205,23 @@ async fn build_router(
         rate_limit_state: crate::web::middleware::rate_limit::rate_limit_state(),
     }));
 
+    let cors_layer = CorsLayer::new()
+        .allow_origin(AllowOrigin::mirror_request())
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PUT,
+            axum::http::Method::DELETE,
+        ])
+        .allow_headers([
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::ACCEPT,
+        ])
+        .max_age(std::time::Duration::from_secs(3600));
+
     let service_layer = ServiceBuilder::new()
+        .layer(cors_layer)
         .layer(session_layer)
         .layer(from_fn_with_state(state.clone(), csp::cspheaders));
 

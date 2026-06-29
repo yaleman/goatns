@@ -5,6 +5,7 @@
 <h3>Assign Ownership for Zone ID: {{zone.name}}</h3>
 
 <form method="POST">
+    <input type="hidden" name="csrftoken" value="{{csrftoken}}" />
     <input type="text" name="username" placeholder="Username" value="{{user.clone().unwrap_or_default()}}" />
     <input type="submit" class="btn btn-primary" value="Assign Ownership" />
 </form>

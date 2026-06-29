@@ -1,6 +1,7 @@
 use crate::db::entities::{self, users};
 use crate::web::constants::SESSION_USER_KEY;
 use crate::web::middleware::admin::require_admin;
+use crate::web::ui::user_settings::{store_api_csrf_token, validate_csrf_expiry};
 use crate::web::utils::Urls;
 use crate::web::{GoatState, GoatStateTrait};
 use askama::Template;
@@ -119,16 +120,18 @@ pub(crate) struct AssignOwnershipTemplate {
     user_is_admin: bool,
     zone: entities::zones::Model,
     user: Option<String>,
+    csrftoken: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct AssignOwnershipForm {
     username: Option<String>,
+    csrftoken: String,
 }
 
 #[instrument(level = "info", skip(session, state))]
 pub(crate) async fn assign_zone_ownership_get(
-    session: Session,
+    mut session: Session,
     State(state): State<GoatState>,
     Path(id): Path<Uuid>,
 ) -> Result<AssignOwnershipTemplate, Redirect> {
@@ -152,16 +155,20 @@ pub(crate) async fn assign_zone_ownership_get(
         error!("No zone found with ID: {id}");
         return Err(Urls::Admin.redirect());
     };
+    let csrftoken = store_api_csrf_token(&mut session, None)
+        .await
+        .unwrap_or_default();
     Ok(AssignOwnershipTemplate {
         user_is_admin: current_user.admin,
         zone,
         user: None,
+        csrftoken,
     })
 }
 
 #[instrument(level = "info", skip(session, state))]
 pub(crate) async fn assign_zone_ownership_post(
-    session: Session,
+    mut session: Session,
     State(state): State<GoatState>,
     Path(id): Path<Uuid>,
     Form(form): Form<AssignOwnershipForm>,
@@ -170,6 +177,11 @@ pub(crate) async fn assign_zone_ownership_post(
         debug!("Admin assign_zone_ownership: no valid session user");
         return Err(Urls::Login.redirect());
     };
+
+    if !validate_csrf_expiry(&form.csrftoken, &mut session).await {
+        debug!("Failed to validate CSRF token for assign_zone_ownership");
+        return Err(Urls::Admin.redirect());
+    }
 
     let txn = state
         .get_db_txn()
@@ -201,7 +213,6 @@ pub(crate) async fn assign_zone_ownership_post(
             return Err(Urls::Admin.redirect());
         };
 
-        // Create ownership record
         let ownership = entities::ownership::ActiveModel {
             id: sea_orm::ActiveValue::NotSet,
             zoneid: Set(zone.id),
@@ -225,6 +236,7 @@ pub(crate) async fn assign_zone_ownership_post(
         user_is_admin: current_user.admin,
         zone,
         user: form.username,
+        csrftoken: String::new(),
     })
 }
 
