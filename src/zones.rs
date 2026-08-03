@@ -188,7 +188,7 @@ impl Display for ZoneRecord {
         f.write_fmt(format_args!(
             "Name: {:?} Name Bytes: {:?} Records: {:?}",
             from_utf8(&self.name),
-            &self.name,
+            self.name,
             self.typerecords,
         ))
     }
