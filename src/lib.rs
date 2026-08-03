@@ -307,7 +307,7 @@ impl Question {
             Ok(value) => Ok(value.to_lowercase()),
             Err(error) => Err(format!(
                 "Failed to normalize {:?}: {:?}",
-                &self.qname, error
+                self.qname, error
             )),
         }
     }

@@ -229,7 +229,7 @@ pub async fn main() {
                     continue;
                 }
                 println!("TCP Packet: {tcp_packet:?}");
-                println!("{:x?}", &tcp_slice);
+                println!("{:x?}", tcp_slice);
 
                 (tcp_packet.source_port, tcp_packet.dest_port)
             }
