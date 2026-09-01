@@ -1,2 +1,7 @@
 [tools]
 semgrep = "latest"
+shellcheck = "latest"
+
+
+[tasks.shellcheck]
+run = """find . -name '*.sh' -type f -exec shellcheck -e SC2148 '{}' + """
