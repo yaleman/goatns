@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 use super::GoatState;
 use crate::datastore::Command;
 use crate::db::entities;

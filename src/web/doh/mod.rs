@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 use axum::Router;
 use axum::body::{Body, Bytes};
 use axum::extract::{Query, State};

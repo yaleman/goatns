@@ -96,7 +96,9 @@ async fn run() -> Result<(), GoatNsError> {
     let next_step = match cli.command {
         Commands::Server { .. } => SystemState::Server,
         Commands::AddAdmin { .. } => {
-            let _ = add_admin_user(datastore_sender.clone()).await;
+            if let Err(error_msg) = add_admin_user(datastore_sender.clone()).await {
+                error!("Failed to add admin user: {error_msg}");
+            }
             SystemState::ShuttingDown
         }
         Commands::ImportZones {
