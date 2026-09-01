@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 use super::GoatState;
 use crate::COOKIE_NAME;
 use crate::db::entities;

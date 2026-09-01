@@ -177,15 +177,13 @@ pub async fn import_zones(
 }
 
 /// Presents the CLI UI to add an admin user.
-pub async fn add_admin_user(tx: mpsc::Sender<Command>) -> Result<(), ()> {
+pub async fn add_admin_user(tx: mpsc::Sender<Command>) -> Result<(), String> {
     // prompt for the username
     println!("Creating admin user, please enter their username from the identity provider");
     let username: String = Input::with_theme(&ColorfulTheme::default())
         .with_prompt("Username")
         .interact_text()
-        .map_err(|e| {
-            error!("Failed to get username from user: {e:?}");
-        })?;
+        .map_err(|e| format!("Failed to get username from user: {e:?}"))?;
 
     println!(
         "The authentication reference is the unique user identifier in the Identity Provider."
@@ -193,9 +191,7 @@ pub async fn add_admin_user(tx: mpsc::Sender<Command>) -> Result<(), ()> {
     let authref: String = Input::with_theme(&ColorfulTheme::default())
         .with_prompt("Authentication Reference:")
         .interact_text()
-        .map_err(|e| {
-            error!("Failed to get auth reference from user: {e:?}");
-        })?;
+        .map_err(|e| format!("Failed to get auth reference from user: {e:?}"))?;
 
     println!(
         r#"
@@ -215,9 +211,11 @@ Authref:  {authref}
 
     match confirm {
         Ok(Some(true)) => {}
-        Ok(Some(false)) | Ok(None) | Err(_) => {
-            warn!("Cancelled user creation");
-            return Err(());
+        Ok(Some(false)) | Ok(None) => {
+            return Err("Cancelled user creation".to_string());
+        }
+        Err(err) => {
+            return Err(format!("Failed to confirm user details: {err:?}"));
         }
     }
 
@@ -233,8 +231,9 @@ Authref:  {authref}
     };
     // send command
     if let Err(error) = tx.send(new_user).await {
-        error!("Failed to send new user command for username {username:?}: {error:?}");
-        return Err(());
+        return Err(format!(
+            "Failed to send new user command for username {username:?}: {error:?}"
+        ));
     };
     // wait for the response
     match rx_oneshot.await {
@@ -243,14 +242,10 @@ Authref:  {authref}
                 info!("Successfully created user!");
                 Ok(())
             }
-            false => {
-                error!("Failed to create user! Check datastore logs.");
-                Err(())
-            }
+            false => Err("Failed to create user! Check datastore logs.".to_string()),
         },
-        Err(error) => {
-            debug!("Failed to rx result from datastore: {error:?}");
-            Err(())
-        }
+        Err(error) => Err(format!(
+            "Failed to get result from backend datastore: {error:?}"
+        )),
     }
 }

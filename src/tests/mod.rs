@@ -12,7 +12,6 @@ pub mod test_harness;
 mod utils;
 mod zones;
 
-use crate::db::*;
 use prelude::*;
 
 use crate::enums::{RecordClass, RecordType};

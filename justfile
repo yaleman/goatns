@@ -109,6 +109,8 @@ coveralls:
 doc_check:
 	find . -type f  \
 		-not -path 'CLAUDE.md' \
+		-not -path 'AGENTS.md' \
+		-not -path './.*' \
 		-not -path './target/*' \
 		-not -path './docs/*' \
 		-not -path '*/.venv/*' -not -path './vendor/*'\
