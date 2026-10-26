@@ -21,19 +21,19 @@ vulnerability.
 
 - `cargo build --release`: build the release binary.
 - `cargo test`: run the Rust test suite.
-- `just run`: run the server in dev mode (`cargo run -- server`).
-- `just check`: run the full quality gate (clippy, codespell, tests, doc checks).
-- `just doc` or `just book`: build rustdoc or serve the mdBook locally.
-- `just docker_build`: build the local container image.
+- `mise serve`: run the server in dev mode (`cargo run -- server`).
+- `mise check`: run the full quality gate (clippy, codespell, tests, doc checks).
+- `mise run doc` or `mise run book`: build rustdoc or serve the mdBook locally.
+- `mise docker_build`: build the local container image.
 
-`just clippy` needs to pass before you consider any task complete.
+`mise clippy` needs to pass before you consider any task complete.
 
 ## Coding Style & Naming Conventions
 
 - Rust formatting is enforced via `rustfmt` (4-space indentation, standard Rust style).
 - Linting uses `clippy` with strict settings; avoid `unwrap`/`expect` in production code.
 - Follow Rust naming conventions: `snake_case` for functions/modules, `CamelCase` for types.
-- Markdown formatting is checked with `deno fmt` via `just doc_check`.
+- Markdown formatting is checked with `deno fmt` via `mise run doc_check`.
 
 ## Testing Guidelines
 
