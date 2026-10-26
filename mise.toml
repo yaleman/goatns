@@ -1,7 +1,103 @@
 [tools]
+"cargo:cargo-tarpaulin" = "latest"
+deno = "latest"
+mdbook = "latest"
+protoc = "latest"
 semgrep = "latest"
 shellcheck = "latest"
+uv = "latest"
 
+[tasks.codespell]
+run = """uvx codespell -c \
+	--ignore-words .codespell_ignore \
+	--skip='./Makefile' \
+	--skip='./target' \
+	--skip='./Cargo.lock' \
+	--skip='./tarpaulin-report.html' \
+	--skip='./static_files/*' \
+	--skip='./docs/*,./.git' \
+	--skip='./plugins/*'
+	"""
 
 [tasks.shellcheck]
 run = """find . -name '*.sh' -type f -exec shellcheck -e SC2148 '{}' + """
+
+[tasks.doc]
+run = "cargo doc --document-private-items --no-deps"
+
+[tasks.book_format]
+run = """find . -type f \
+-not -path './AGENTS.md' \
+-not -path './CLAUDE.md' \
+-not -path './target/*' \
+-not -path '*/.venv/*' \
+-name '*.md' \
+-exec deno fmt --check \
+--options-line-width=100 {} +"""
+
+[tasks.book_format_fix]
+run = """find . -type f \
+-not -path './AGENTS.md' \
+-not -path './CLAUDE.md' \
+-not -path './target/*' \
+-not -path '*/.venv/*' \
+-name '*.md' \
+-exec deno fmt --options-line-width=100 {} +"""
+
+[tasks.build_book]
+depends = ["book_format", "doc"]
+run = [
+	"""
+docker run --rm \
+--mount "type=bind,src=$(pwd)/docs,target=/book" \
+--mount "type=bind,src=$(pwd)/README.md,target=/README.md" \
+ghcr.io/peaceiris/mdbook:v0.5.0 build""",
+	"mkdir -p ./target/",
+	"sudo chown -R $(whoami) ./target/",
+	"sudo chown -R $(whoami) ./docs/",
+	"mv ./docs/book/ ./target/docs/",
+	"mkdir -p ./target/docs/rustdoc/",
+	"mv ./target/doc/* ./target/docs/rustdoc/",
+]
+
+[tasks.clippy]
+run = "cargo clippy --all-targets --all-features -- -D warnings"
+
+[tasks.test]
+run = "cargo test --quiet"
+
+[tasks.check]
+depends = ["clippy", "test", "shellcheck", "codespell"]
+
+[tasks.book]
+dir = "docs"
+run = "mdbook serve"
+
+[tasks.serve]
+run = "cargo run -- server"
+
+[tasks.semgrep]
+run = """
+semgrep ci --config auto ${OUTPUT:-} \
+--exclude-rule "yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha" \
+--exclude-rule "generic.html-templates.security.var-in-script-tag.var-in-script-tag" \
+--exclude-rule "javascript.express.security.audit.xss.mustache.var-in-href.var-in-href" \
+--exclude-rule "python.django.security.django-no-csrf-token.django-no-csrf-token" \
+--exclude-rule "python.django.security.audit.xss.template-href-var.template-href-var" \
+--exclude-rule "python.django.security.audit.xss.var-in-script-tag.var-in-script-tag" \
+--exclude-rule "python.flask.security.xss.audit.template-href-var.template-href-var" \
+--exclude-rule "python.flask.security.xss.audit.template-href-var.template-href-var"
+	"""
+
+[tasks.release_prep]
+depends = ["check", "doc"]
+run = ["cargo deny check", "cargo build --release --quiet"]
+
+[tasks.coverage]
+run = [
+	"cargo tarpaulin --out Html",
+	"""@echo "Coverage file at file://$(PWD)/tarpaulin-report.html" """,
+]
+
+[tasks.coveralls]
+run = "cargo tarpaulin --coveralls $COVERALLS_REPO_TOKEN"

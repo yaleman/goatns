@@ -15,19 +15,12 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Setup deno
-        # Documentation: https://github.com/denoland/setup-deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-      - name: Install just
-        uses: extractions/setup-just@v4
-      - name: Install protoc
-        run: sudo apt-get install -y protobuf-compiler
+      - name: Set up mise toolchain
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
       - name: Test document formatting
-        run: just book_format
+        run: mise run book_format
       - name: Build all the books
-        run: just build_book
+        run: mise run build_book
   deploy_book:
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'main' }}
@@ -39,4 +32,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

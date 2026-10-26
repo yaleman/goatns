@@ -1,3 +1,3 @@
 #!/bin/bash
 
-OUTPUT="--junit-xml --output results.xml" just semgrep
+OUTPUT="--junit-xml --output results.xml" mise run semgrep
