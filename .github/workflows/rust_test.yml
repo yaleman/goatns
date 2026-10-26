@@ -10,6 +10,8 @@ jobs:
   rust_test:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up mise toolchain
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
@@ -23,6 +25,6 @@ jobs:
       - name: Generate certs
         run: ./insecure_generate_tls.sh
       - name: Install linux dependencies
-        run: sudo apt-get install -y protobuf-compiler libpcap-dev
+        run: sudo apt-get install -y libpcap-dev
       - name: Run cargo test
         run: cargo test
