@@ -2016,7 +2016,6 @@ dependencies = [
  "sha2 0.10.9",
  "shellexpand",
  "sqlx",
- "syn 2.0.119",
  "tempfile",
  "thiserror 2.0.21",
  "time",
